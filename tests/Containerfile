@@ -48,11 +48,20 @@ RUN MONET_GRAPHICS_TESTING=1 sh /src/graphics/build.sh /out
 FROM desktop-runtime AS dock
 COPY image/dock /src/dock
 COPY tests/native/dock-launch /src/dock-launch
+COPY tests/native/dock-hover /src/dock-hover
 RUN sh /src/dock/build.sh /out \
  && cmake -S /src/dock-launch -B /tmp/dock-launch -DCMAKE_BUILD_TYPE=Release \
  && cmake --build /tmp/dock-launch --parallel 2 \
  && mkdir -p /out/tests \
- && cp /tmp/dock-launch/dock-launch /out/tests/
+ && cp /tmp/dock-launch/dock-launch /out/tests/ \
+ && cmake -S /src/dock-hover -B /tmp/dock-hover -DCMAKE_BUILD_TYPE=Release \
+ && cmake --build /tmp/dock-hover --parallel 2 \
+ && cp /tmp/dock-hover/dock-hover /out/tests/
+
+FROM desktop-runtime AS window-identity
+COPY image/window-identity /src/window-identity
+COPY LICENSE /src/window-identity/LICENSE
+RUN sh /src/window-identity/build.sh /out
 
 FROM desktop-runtime
 RUN dnf -y install binutils && dnf clean all
@@ -84,4 +93,9 @@ RUN python3 /tmp/monet-dock/bundle.py install /tmp/monet-dock \
  && rm -rf /tmp/monet-dock
 ENV MONET_DOCK_LAUNCH_FIXTURE=/opt/monet-test-dock/dock-launch
 ENV MONET_DOCK_AUDIO_QML=/opt/monet-test-dock/audio
+ENV MONET_DOCK_HOVER_FIXTURE=/opt/monet-test-dock/dock-hover
+COPY --from=window-identity /out /tmp/monet-window-identity
+RUN python3 /tmp/monet-window-identity/bundle.py install /tmp/monet-window-identity \
+ && rm -rf /tmp/monet-window-identity
+ENV MONET_TITLE_NATIVE=1
 CMD ["python3", "tools/test.py", "--require-desktop"]

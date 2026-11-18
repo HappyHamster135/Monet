@@ -3,7 +3,7 @@
 The native Plasma icons-only task applet gains an upward lift and smooth
 magnification under the pointer. Neighbouring icons ease into the effect, giving
 a continuous wave as the pointer moves along the dock. Only painting transforms
-change: click targets, task grouping, menus, reorder/drag behaviour, panel size
+change: click targets, task grouping, menus, panel size
 and running-app indicators stay in their native positions.
 
 Motion is limited to a single-row, bottom-edge icons-only dock. It is disabled
@@ -17,6 +17,13 @@ neighbour motion without blocking native tooltips or controls. Tracking uses the
 untransformed task bounds and follows the native task-reordering transform.
 The native Trash applet uses the same motion on the bottom dock, with its full
 painted icon and a stable click area during dragging and reduced-motion changes.
+
+Internal manual reordering on that dock uses the delegates' layout slots while
+their painted icons slide. It accepts the next pointer movement during an
+animation, including an immediate reversal. Initial layout seeds each delegate's
+position so its first reorder animates too. Other panel orientations, group
+popups and external drops retain upstream handling. Reorder animation still uses
+Plasma's duration preference, including instant motion.
 
 The tooltip's volume slider remembers an app's level for its next streams
 (`MonetAppVolume.qml`, `~/.config/monet/app-volume.ini`). A player's own level

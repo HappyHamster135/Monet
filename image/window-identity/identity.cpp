@@ -5,6 +5,8 @@
 #include <wayland/surface.h>
 #include <QDBusConnection>
 #include <QDBusMetaType>
+#include <qqml.h>
+#include "controls.h"
 
 class WindowIdentity final : public KWin::Plugin
 {
@@ -13,6 +15,7 @@ class WindowIdentity final : public KWin::Plugin
 public:
     WindowIdentity()
     {
+        qmlRegisterType<WindowControls>("org.monet.windowcontrols", 1, 0, "WindowControls");
         qDBusRegisterMetaType<QList<uint>>();
         registered = QDBusConnection::sessionBus().registerObject(QStringLiteral("/MonetWindowIdentity"), this, QDBusConnection::ExportScriptableSlots);
     }

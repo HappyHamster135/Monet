@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 
-def worker(output):
+def worker(output, kind):
     from PySide6.QtCore import QPoint, QPointF, QUrl, Qt
     from PySide6.QtGui import QGuiApplication, QWindow
     from PySide6.QtQml import QQmlApplicationEngine
@@ -25,13 +25,16 @@ def worker(output):
             QTest.qWait(20)
         assert condition(), label
 
-    SettingsNavigation.setUpClass()
-    app_id = "monet-controls-fixture"
+    from tests.test_store_navigation import StoreNavigation
+    Case = StoreNavigation if kind == "store" else SettingsNavigation
+    Case.setUpClass()
+    app_id = "monet-controls-fixture-" + kind
     QGuiApplication.instance().setDesktopFileName(app_id)
     apps = Path(os.environ["XDG_DATA_HOME"]) / "applications"
     apps.mkdir(parents=True, exist_ok=True)
     (apps / (app_id + ".desktop")).write_text("[Desktop Entry]\nType=Application\nName=Controls fixture\nExec=/usr/bin/false\n")
-    case = SettingsNavigation("test_reopening_settings_restores_its_maximized_state")
+    case = Case("test_opening_again_restores_maximized_and_preserves_the_requested_page" if kind == "store"
+                else "test_reopening_settings_restores_its_maximized_state")
     records = []
     restoration_sizes = []
     restoring = False
@@ -71,9 +74,14 @@ Window {
             matches = [item for item in model.snapshot().toVariant() if item["id"] == app_id + ".desktop"]
             return matches[0] if len(matches) == 1 else {}
 
-        until(lambda: state() and window.isExposed(), "Settings did not map")
+        until(lambda: state() and window.isExposed(), kind + " did not map")
+        def maximize():
+            button = case.item("windowMaximize")
+            QTest.mouseClick(window, Qt.LeftButton, Qt.NoModifier,
+                             button.mapToScene(QPointF(button.width() / 2, button.height() / 2)).toPoint())
+        screen = window.screen().availableGeometry()
         for name, show, expected in (("windowed", window.showNormal, QWindow.Windowed),
-                                     ("maximized", window.showMaximized, QWindow.Maximized),
+                                     ("maximized", maximize, QWindow.Maximized),
                                      ("fullscreen", window.showFullScreen, QWindow.FullScreen)):
             def restored():
                 found = state()
@@ -81,22 +89,28 @@ Window {
                         and found["fullscreen"] == (name == "fullscreen") and window.visibility() == expected)
             show()
             until(restored, "Initial " + name + ": " + str(state()))
+            if name == "maximized":
+                until(lambda: state().get("frame") == [screen.x(), screen.y(), screen.width(), screen.height()],
+                      "Maximized frame did not fill the available screen: " + str(state()))
             window.showMinimized()
             until(lambda: state().get("minimized") and not window.isExposed(), "Minimize " + name)
             restoration_sizes.clear()
             before_size = [window.width(), window.height()]
             restoring = True
-            case.helper.wanted.emit("sound")
+            if kind == "store": case.shop.wanted.emit("games")
+            else: case.helper.wanted.emit("sound")
             until(restored, "Restore " + name + ": " + str(state()))
             QTest.qWait(150)
             restoring = False
             assert restored(), "Late configure changed " + name
             if name != "windowed":
                 assert all(size == before_size for size in restoration_sizes), "Restore briefly shrank " + name + ": " + str(restoration_sizes)
-            records.append(dict(mode=name, compositor=state(), page=window.property("page"),
+            records.append(dict(mode=name, compositor=state(), page=window.property("section" if kind == "store" else "page"),
                                 available=[window.screen().availableGeometry().width(), window.screen().availableGeometry().height()],
                                 size=[window.width(), window.height()]))
-            assert window.property("page") == "sound"
+            assert window.property("section" if kind == "store" else "page") == ("games" if kind == "store" else "sound")
+            if name == "maximized":
+                assert state()["frame"] == [screen.x(), screen.y(), screen.width(), screen.height()], str(state())
         window.showNormal()
         until(lambda: state() and not state().get("maximized") and not state().get("fullscreen"), "Leave fullscreen before corner click")
         window.showMaximized()
@@ -117,11 +131,11 @@ Window {
         if hasattr(case, "window"):
             case.tearDown()
         case.doCleanups()
-        SettingsNavigation.tearDownClass()
+        Case.tearDownClass()
     return 0
 
 
-def parent(output):
+def parent(output, kind):
     from tools.test import private_session, stop
     output.mkdir(parents=True, exist_ok=True)
     with private_session() as env:
@@ -135,10 +149,10 @@ def parent(output):
         for key in ("QT_SCALE_FACTOR", "QT_SCREEN_SCALE_FACTORS", "QT_AUTO_SCREEN_SCALE_FACTOR"):
             env.pop(key, None)
         script = folder / "session.sh"
-        script.write_text("#!/bin/sh\nexec " + shlex.join([sys.executable, str(Path(__file__).resolve()), "worker", str(output)]) + "\n")
+        script.write_text("#!/bin/sh\nexec " + shlex.join([sys.executable, str(Path(__file__).resolve()), "worker", str(output), kind]) + "\n")
         script.chmod(0o700)
         with (output / "kwin.log").open("w") as log:
-            server = subprocess.Popen([str(binary), "--virtual", "--output-count", "1", "--width", "1280", "--height", "800",
+            server = subprocess.Popen([str(binary), "--virtual", "--output-count", "1", "--width", "1280", "--height", "1600" if kind == "store" else "800",
                                        "--no-lockscreen", "--no-global-shortcuts", "--no-kactivities", "--socket", "monet-controls-fixture",
                                        "--exit-with-session", str(script)], env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
             try:
@@ -151,5 +165,5 @@ def parent(output):
 
 if __name__ == "__main__":
     if sys.argv[1] == "worker":
-        sys.exit(worker(Path(sys.argv[2])))
-    parent(Path(sys.argv[1]))
+        sys.exit(worker(Path(sys.argv[2]), sys.argv[3]))
+    parent(Path(sys.argv[1]), sys.argv[2] if len(sys.argv) > 2 else "settings")

@@ -317,11 +317,11 @@ if QT:
             self.ticket += 1
             ticket, command = self.ticket, [str(c) for c in command]
             self.ran.append(command)
-            answer = {"library": [{"id": "steam:730", "name": "Counter-Strike 2", "store": "steam", "plays": "monet", "why": "",
+            answer = {"library": [{"id": "steam:730", "name": "Counter-Strike 2", "store": "steam", "plays": "monet", "state": "ready", "launcher": "steam", "why": "",
                                    "here": "steam:730", "windows": "", "shared": False, "move": False, "progress": None,
                                    "locate": "", "art": "", "last": 0, "minutes": 0, "size": 0, "favorite": False,
                                    "tall": "", "hero": ""},
-                                  {"id": "steam:570", "name": "Dota 2", "store": "steam", "plays": "monet", "why": "",
+                                  {"id": "steam:570", "name": "Dota 2", "store": "steam", "plays": "monet", "state": "ready", "launcher": "steam", "why": "",
                                    "here": "steam:570", "windows": "", "shared": False, "move": False, "progress": None,
                                    "locate": "", "art": "", "last": 0, "minutes": 0, "size": 0, "favorite": False,
                                    "tall": "", "hero": ""}],

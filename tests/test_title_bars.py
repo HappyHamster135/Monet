@@ -204,6 +204,14 @@ Item {
     property var titles: titlesLoader.item
     // An X11 app's window turns active only once it takes the focus, a moment after it's asked.
     property bool holdBack: false
+    property var mouseDrags: []
+    property QtObject mouseBridge: QtObject {
+        function beginMove(window, press, bar) {
+            scene.mouseDrags = scene.mouseDrags.concat([window.caption]);
+            window.move = true;
+            return true;
+        }
+    }
 
     component FakeWindow: QtObject {
         property string caption: ""
@@ -540,6 +548,19 @@ class Behaviour(unittest.TestCase):
         QTest.qWait(60)
         self.assertEqual(self.js("Workspace.calls"), ["move Files"])
         QTest.mouseRelease(self.bar, Qt.LeftButton, Qt.NoModifier, QPoint(290, 20))
+
+    def test_native_drag_targets_the_held_window_without_waiting_for_activation(self):
+        self.reveal()
+        self.js("titles.mouseMove = scene.mouseBridge; Workspace.activeWindow = scene.gtk; scene.holdBack = true")
+        self.js("Workspace.activeWindowChanged.connect(function () {"
+                " if (scene && scene.holdBack && Workspace.activeWindow === scene.app) Workspace.activeWindow = scene.gtk })")
+        QTest.mousePress(self.bar, Qt.LeftButton, Qt.NoModifier, QPoint(250, 20))
+        QTest.mouseMove(self.bar, QPoint(280, 22))
+        self.assertEqual(self.js("scene.mouseDrags"), ["Files"])
+        self.assertEqual(self.js("Workspace.calls"), [])
+        self.assertFalse(self.bar.property("held"))
+        QTest.mouseRelease(self.bar, Qt.LeftButton, Qt.NoModifier, QPoint(280, 22))
+        self.js("scene.app.move = false")
 
     def test_let_go_before_it_turns_active_nothing_sticks_to_the_pointer(self):
         self.reveal()

@@ -1,5 +1,36 @@
 # Testing Monet on real hardware
 
+## 0.9.8-8 dropdown dragging and dock reordering — 18 November 2026
+
+The private compositor reproduced the dropdown title bar warping the pointer
+and missing the next grab. Its old keyboard-move action is replaced on the image
+by a mouse-move bridge in the runtime-paired KWin module. The bridge retains the
+press offset and finishes Qt's old press when KWin takes over. The native fixture
+checks twelve repeated active/inactive drags across Wayland and XWayland, quick
+press/move/release, dragging down from maximized, and snapping back to the top.
+The scripting-only fallback also responds to activation without waiting for its
+retry timer.
+
+The compiled icons-only dock checks its first animated reorder, two immediate
+changes of destination while animation is running, and final settling. Internal
+bottom-dock reorders use layout slots rather than translated hit targets and no
+longer wait for each animation to finish. Hover, Trash and edit-mode checks still
+run against the compiled applets. These checks are included in the desktop CI
+image, along with the native title-bar bridge.
+
+Store maximization is checked with its actual maximize button on a private
+1280×1600 output: the frame fills the available height before and after minimize
+and reopening. Settings retains its landscape check. Two-screen checks at 125%,
+150% and 200% still require oversized windows to shrink with margins, while
+preserving a normal user-selected size that fits within the actual screen.
+The FACEIT fixture now supplies the required ready-state library data, matching
+the real helper's response. The focused run passes 122 checks with no skips.
+
+All these fixtures use private homes, buses, virtual outputs and simulated input.
+They establish behavior and rendered displacement, rather than physical GPU or
+input-device performance. VERSION remains 0.9.8-7 while development continues on
+`monet-0.9.8-8`; these changes do not publish a release or an OS image.
+
 ## 0.9.8-8 Settings and window controls — 18 November 2026
 
 Native fixtures reproduced an unclickable maximized screen corner, Settings

@@ -442,6 +442,37 @@ def apply(source):
             Translate { y: -monetMotion.lift }
         ]
 ''')
+    # Keep rapid internal reorders responsive while the delegates slide. Visual
+    # childAt() hits their in-flight transforms; insertion needs their layout slots.
+    prepend(applet/'qml/main.qml', '    property Task toolTipOpenedByClick', '''    readonly property bool monetReordering: iconsOnly && !vertical
+        && Plasmoid.location === PlasmaCore.Types.BottomEdge && taskList.rows === 1 && !!dragSource
+
+''')
+    prepend(applet/'qml/MouseHandler.qml', '    onPositionChanged: event => {', '''    function monetReorder(point) {
+        if (isGroupDialog || !tasks.monetReordering
+                || tasksModel.sortMode !== TaskManager.TasksModel.SortManual) return false;
+        const rtlSpacerAdjustment = target.LayoutMirroring.enabled ? tasks.width - target.width : 0;
+        const x = point.x - rtlSpacerAdjustment;
+        const above = target.children.find(item => item.visible && item.index >= 0
+            && item.model && x >= item.x && x < item.x + item.width
+            && point.y >= item.y && point.y < item.y + item.height);
+        if (above && tasks.dragSource.parent === above.parent && tasks.dragSource !== above
+                && tasks.dragSource.index !== above.index) {
+            tasksModel.move(tasks.dragSource.index, above.index);
+        }
+        return true;
+    }
+
+''')
+    replace(applet/'qml/MouseHandler.qml', '    onPositionChanged: event => {', '''    onPositionChanged: event => {
+        if (monetReorder(Qt.point(event.x, event.y))) return;''')
+    # First reorder must animate even for the delegate that initially sat at x=0.
+    # Seed after initial layout, before accepting the first displacement.
+    replace(applet/'qml/Task.qml', '        completed = true;', '''        Qt.callLater(() => {
+            oldX = x;
+            oldY = y;
+            completed = true;
+        });''')
     (applet/'qml/MonetDockMotion.qml').write_bytes(Path(__file__).with_name('MonetDockMotion.qml').read_bytes())
     (applet/'qml/MonetDockHover.qml').write_bytes(Path(__file__).with_name('MonetDockHover.qml').read_bytes())
     trash = source/'applets/trash'

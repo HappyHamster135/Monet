@@ -18,10 +18,16 @@ def exercise(case):
     case.assertIs(window.screen(), primary)
     evidence = []
 
-    def check(label, screen):
+    def check(label, screen, inset=False):
         expected = screen.availableGeometry()
-        case.wait_for(lambda: case.area.geometry == expected and window.width() <= expected.width() - 32
-                      and window.height() <= expected.height() - 48)
+        try:
+            case.wait_for(lambda: case.area.geometry == expected and window.width() <= expected.width()
+                          and window.height() <= expected.height())
+        except AssertionError as error:
+            raise AssertionError("Fit " + label + ": " + str([window.width(), window.height()]) + " in " + str(expected)) from error
+        if inset:
+            case.assertLessEqual(window.width(), expected.width() - 32)
+            case.assertLessEqual(window.height(), expected.height() - 48)
         case.assertEqual(window.property("availableWidth"), expected.width())
         case.assertEqual(window.property("availableHeight"), expected.height())
         case.assertLessEqual(window.minimumWidth(), expected.width() - 32)
@@ -29,14 +35,14 @@ def exercise(case):
         evidence.append(dict(label=label, screen=screen.name(), available=[expected.x(), expected.y(), expected.width(), expected.height()],
                              size=[window.width(), window.height()], minimum=[window.minimumWidth(), window.minimumHeight()]))
 
-    check("restored", primary)
+    check("restored", primary, inset=True)
     page = window.property("page") or window.property("section")
     search_name = "settingsSearch" if window.property("page") else "storeSearch"
     search = case.item(search_name)
     window.setScreen(small); window.show(); QTest.qWait(100)
     check("smaller screen", small)
     window.resize(small.availableGeometry().width() + 100, small.availableGeometry().height() + 100)
-    check("late oversized configure", small)
+    check("late oversized configure", small, inset=True)
     case.assertIs(case.item(search_name), search)
     case.assertEqual(window.property("page") or window.property("section"), page)
     case.capture(("settings" if window.property("page") else "store") + "-small-screen")

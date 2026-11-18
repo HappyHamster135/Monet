@@ -1,7 +1,7 @@
 {
   "KPlugin": {
     "Name": "Monet window identity",
-    "Description": "Read-only Wayland surface identity for window recovery",
+    "Description": "Wayland surface identity and native dropdown title-bar dragging",
     "License": "GPL-3.0-or-later",
     "EnabledByDefault": true
   }

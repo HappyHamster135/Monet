@@ -51,6 +51,23 @@ Item {
     property var pending: null
     property var newWindow: null
     property var preview: null
+    property QtObject mouseMove: null
+    Component.onCompleted: {
+        // The image supplies a bridge built against its exact KWin runtime.
+        // Generic tarballs can still use KWin's scripting-only move action.
+        try {
+            mouseMove = Qt.createQmlObject('import org.monet.windowcontrols 1.0; WindowControls {}', root, "MonetTitleMove")
+        } catch (error) { mouseMove = null }
+    }
+
+    function startMove() {
+        if (!bar.window || !bar.dragHeld) return
+        if (mouseMove) {
+            if (mouseMove.beginMove(bar.window, bar.dragOrigin, bar)) bar.letGo()
+        } else {
+            whenActive(bar.window, "move")
+        }
+    }
 
     // The bar's own window, which KWin lists with the rest.
     function ours(o) {
@@ -149,6 +166,7 @@ Item {
             }
         }
         function onWindowActivated(w) {
+            if (root.asked && root.asked.window === w) root.act()
             if (root.preview && root.preview !== w && !bar.held) bar.close()
         }
     }
@@ -239,10 +257,10 @@ Item {
         if (!w) {
             return
         }
+        asked = { window: w, what: what, tries: 0 }
         if (Workspace.activeWindow !== w) {
             Workspace.activeWindow = w
         }
-        asked = { window: w, what: what, tries: 0 }
         act()
     }
     function act() {
@@ -265,6 +283,7 @@ Item {
             return
         }
         asked = null
+        soon.stop()
         if (a.what === "move") {
             Workspace.slotWindowMove()
             bar.letGo()
@@ -309,7 +328,7 @@ Item {
                 Workspace.activeWindow = bar.window
             }
         }
-        onMoveAsked: root.whenActive(bar.window, "move")
+        onMoveAsked: root.startMove()
         onMenuAsked: root.whenActive(bar.window, "menu")
     }
 }

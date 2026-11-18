@@ -1,0 +1,225 @@
+"""Exercise real dropdown-bar grabs using only a private compositor's fake input."""
+import json
+import os
+from pathlib import Path
+import shlex
+import shutil
+import socket
+import struct
+import subprocess
+import sys
+import time
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+
+
+def client(platform, title):
+    from PySide6.QtWidgets import QApplication, QWidget
+    app = QApplication([])
+    app.setDesktopFileName("org.monet.TitleDragFixture")
+    window = QWidget()
+    window.setWindowTitle(title)
+    window.resize(600, 420)
+    window.show()
+    return app.exec()
+
+
+def worker(output):
+    from PySide6.QtCore import QCoreApplication
+    from tests.test_resume import r
+    from tools.test import stop
+    app = QCoreApplication([])
+    env = dict(os.environ)
+    processes = []
+    records = []
+
+    def until(check, label, timeout=6):
+        end = time.monotonic() + timeout
+        while time.monotonic() < end:
+            if check(): return
+            time.sleep(.015)
+        raise AssertionError((label, scene()))
+
+    def scene():
+        return r.kwin_script('reply({p:{x:workspace.cursorPos.x,y:workspace.cursorPos.y}, '
+            'stack:workspace.stackingOrder.filter(w=>!w.deleted).map(w => ({title:w.caption, active:w.active, '
+            'rect:rect(w.frameGeometry), client:rect(w.clientGeometry), move:w.move, '
+            'mode:Number(w.maximizeMode), minimized:w.minimized}))})')
+
+    def window(title):
+        return next((w for w in scene()['stack'] if w['title'] == title), {})
+
+    def action(title, body):
+        assert r.kwin_script('const w = windows().find(w => w.caption === '
+                             + json.dumps(title) + '); if(w){' + body + '} reply(!!w);')
+
+    def open_client(title, platform):
+        with (output/'clients.log').open('a') as log:
+            process = subprocess.Popen([sys.executable, __file__, 'client', platform, title],
+                env=dict(env, QT_QPA_PLATFORM=platform), stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+        processes.append(process)
+        until(lambda: process.poll() is None and window(title), 'Map ' + title)
+
+    class Pointer:
+        def __init__(self):
+            self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            self.sock.settimeout(3)
+            self.sock.connect(str(Path(env['XDG_RUNTIME_DIR'])/'monet-placement-fixture'))
+            self.send(1, 1, struct.pack('=I', 2))  # wl_display.get_registry(2)
+            self.send(1, 0, struct.pack('=I', 3))  # wl_display.sync(3)
+            while True:
+                obj, word = struct.unpack('=II', self.sock.recv(8, socket.MSG_WAITALL))
+                size, op = word >> 16, word & 0xffff
+                data = self.sock.recv(size-8, socket.MSG_WAITALL)
+                if obj == 2 and op == 0 and b'org_kde_kwin_fake_input\x00' in data:
+                    name = struct.unpack_from('=I', data)[0]
+                    self.send(2, 0, struct.pack('=I', name) + self.string('org_kde_kwin_fake_input')
+                              + struct.pack('=II', 3, 4))
+                    self.send(4, 0, self.string('Monet title bar fixture') + self.string('Private test session'))
+                    break
+                if obj == 3:
+                    raise AssertionError('Private KWin input protocol is unavailable')
+
+        def send(self, obj, op, data):
+            self.sock.sendall(struct.pack('=II', obj, ((8 + len(data)) << 16) | op) + data)
+
+        @staticmethod
+        def string(value):
+            data = value.encode() + b'\0'
+            return struct.pack('=I', len(data)) + data + b'\0' * (-len(data) % 4)
+
+        def point(self, x, y):
+            self.send(4, 9, struct.pack('=ii', round(x * 256), round(y * 256)))
+
+        def click(self, button=0x110):
+            self.button(True, button)
+            time.sleep(.025)
+            self.button(False, button)
+
+        def button(self, down, button=0x110):
+            self.send(4, 2, struct.pack('=II', button, int(down)))
+
+    pointer = Pointer()
+    try:
+        for platform in ('wayland', 'xcb'):
+            title = 'Title drag ' + platform
+            other = 'Other ' + platform
+            open_client(title, platform)
+            open_client(other, platform)
+            action(other, 'w.frameGeometry={x:950,y:550,width:260,height:210};')
+            time.sleep(.35)  # The other window's introduction must finish mapping first.
+
+            def reveal():
+                bounds = window(title)['client']
+                pointer.point(bounds['x']+150, bounds['y']+1)
+                until(lambda: window('Monet title bar').get('rect') == dict(x=round(bounds['x']), y=round(bounds['y']),
+                       width=round(bounds['width']), height=40), 'Reveal target bar')
+                return bounds['x']+200, bounds['y']+15
+
+            for iteration in range(6):
+                print('DRAG',platform,iteration,flush=True)
+                inactive = bool(iteration % 2)
+                action(title, 'w.setMaximize(false,false); w.frameGeometry={x:180,y:150,width:680,height:480};')
+                until(lambda: window(title)['rect'] == dict(x=180,y=150,width=680,height=480), 'Reset frame')
+                action(other if inactive else title, 'workspace.activeWindow=w;')
+                pointer.point(40,740)
+                time.sleep(.05)
+                x,y = reveal()
+                before = window(title)['rect']
+                pointer.point(x,y); time.sleep(.02)
+                pointer.button(True); time.sleep(.01)
+                pointer.point(x+24,y+3)
+                until(lambda: window(title).get('move'), 'Start held drag', timeout=1)
+                assert scene()['p'] == dict(x=x+24,y=y+3), 'Native move warped the pointer'
+                pointer.point(x+110,y+60)
+                until(lambda: window(title)['rect']['x'] == before['x']+110
+                      and window(title)['rect']['y'] == before['y']+60, 'Follow pointer')
+                pointer.button(False)
+                until(lambda: not window(title).get('move'), 'Release native drag')
+                after = window(title)['rect']
+                pointer.point(x+150,y+100); time.sleep(.04)
+                assert window(title)['rect'] == after, 'Window remained stuck to the pointer'
+                records.append(dict(platform=platform, inactive=inactive, before=before, after=after))
+
+            # A complete quick gesture must neither get lost nor leave a late move pending.
+            x,y = reveal()
+            quick_before = window(title)['rect']
+            pointer.point(x,y); time.sleep(.02)
+            pointer.button(True); pointer.point(x+25,y+3); pointer.point(x+75,y+40); pointer.button(False)
+            time.sleep(.15)
+            assert not window(title)['move'], 'Quick release left a pending move'
+            after = window(title)['rect']
+            assert after != quick_before, 'Quick drag was lost'
+            pointer.point(x+120,y+90); time.sleep(.04)
+            assert window(title)['rect'] == after
+
+            # Native dragging must still restore a maximized window and keep snapping.
+            action(title, 'workspace.activeWindow=w; w.setMaximize(true,true);')
+            until(lambda: window(title)['mode'] == 3, 'Maximize')
+            x,y = reveal(); pointer.point(x,y); time.sleep(.025)
+            pointer.button(True); pointer.point(x+25,y+80); time.sleep(.04)
+            pointer.point(x+80,y+160)
+            until(lambda: window(title)['move'] and window(title)['mode'] == 0, 'Drag maximized window down')
+            pointer.button(False)
+            until(lambda: not window(title)['move'], 'Release restored window')
+            x,y = reveal(); pointer.point(x,y); time.sleep(.025)
+            pointer.button(True); pointer.point(x+24,y+3); time.sleep(.04)
+            pointer.point(640,0); time.sleep(.25); pointer.button(False)
+            until(lambda: window(title)['mode'] == 3 and not window(title)['move'], 'Snap to top')
+            action(title, 'w.closeWindow();')
+            action(other, 'w.closeWindow();')
+            until(lambda: not window(title) and not window(other), 'Close clients')
+        result = dict(ok=True, drags=records, quick_release=True, restored_and_snapped=True,
+                      scope='Private virtual KWin, CPU rendering, Wayland and XWayland clients; no host session or input')
+        (output/'result.json').write_text(json.dumps(result,indent=2)+'\n')
+        print(json.dumps(result),flush=True)
+        return 0
+    finally:
+        pointer.button(False)
+        for process in processes:
+            if process.poll() is None: stop(process)
+
+
+def parent(output):
+    from tools.test import private_session, stop
+    output.mkdir(parents=True,exist_ok=True)
+    with private_session() as env:
+        data = Path(env['XDG_DATA_HOME'])
+        config = Path(env['XDG_CONFIG_HOME'])
+        config.joinpath('kwinrc').write_text('[Plugins]\nmonet-titlesEnabled=true\n'
+            '[org.kde.kdecoration2]\nlibrary=org.kde.kwin.aurorae\ntheme=__aurorae__svg__MonetBare\n')
+        shutil.copytree(ROOT/'linux/share/aurorae/themes/MonetBare',data/'aurorae/themes/MonetBare')
+        path = data/'kwin/scripts/monet-titles'
+        shutil.copytree(ROOT/'linux/share/kwin/scripts/monet-titles',path)
+        qml = path/'contents/ui/TitleBar.qml'
+        source = qml.read_text().replace('@DATADIR@',str(ROOT/'linux/share'))
+        qml.write_text(source)
+        # Optional override is only for checking a just-built candidate plugin locally.
+        if os.environ.get('MONET_TITLE_TEST_PLUGIN'):
+            plugins = Path(env['HOME'])/'plugins/kwin/plugins'
+            plugins.mkdir(parents=True)
+            shutil.copyfile(os.environ['MONET_TITLE_TEST_PLUGIN'],plugins/'monet_window_identity.so')
+            env['QT_PLUGIN_PATH'] = str(plugins.parents[1])
+        binary = Path(env['HOME'])/'kwin_wayland'
+        shutil.copyfile(shutil.which('kwin_wayland'),binary); binary.chmod(0o700)
+        env.update(KWIN_COMPOSE='O2',LIBGL_ALWAYS_SOFTWARE='1',QT_FORCE_STDERR_LOGGING='1',
+                   WAYLAND_DISPLAY='monet-placement-fixture')
+        script = Path(env['HOME'])/'session.sh'
+        script.write_text('#!/bin/sh\nexec '+shlex.join([sys.executable,__file__,'worker',str(output)])+'\n')
+        script.chmod(0o700)
+        with (output/'kwin.log').open('w') as log:
+            server = subprocess.Popen([str(binary),'--virtual','--output-count','1','--width','1280','--height','800',
+                '--xwayland','--no-lockscreen','--no-global-shortcuts','--no-kactivities',
+                '--socket','monet-placement-fixture','--exit-with-session',str(script)],
+                env=env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
+            try: code = server.wait(timeout=100)
+            finally: stop(server)
+        assert code == 0, 'Private title-drag session failed: '+str(code)
+        assert json.loads((output/'result.json').read_text())['ok']
+
+
+if __name__ == '__main__':
+    if sys.argv[1] == 'client': sys.exit(client(sys.argv[2],sys.argv[3]))
+    if sys.argv[1] == 'worker': sys.exit(worker(Path(sys.argv[2])))
+    parent(Path(sys.argv[1]))

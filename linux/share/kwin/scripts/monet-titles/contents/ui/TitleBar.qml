@@ -23,6 +23,7 @@ Window {
     readonly property var area: window && window.output ? Hover.barRect(window.clientGeometry, window.output.geometry)
                                                         : Hover.rect(0, 0, 1, 1)
     readonly property bool dragHeld: grip.holding
+    readonly property point dragOrigin: grip.origin
     readonly property bool held: dragHeld || (grip.pressedButtons & Qt.RightButton) !== 0
         || minimize.held || maximize.held || dismiss.held
     readonly property bool lit: window !== null && window.active
@@ -70,7 +71,7 @@ Window {
         }
     }
 
-    // Once KWin moves the window, the pointer is KWin's: the bar never hears the button let go.
+    // KWin consumes the physical release; its native bridge finishes Qt's press at handoff.
     function letGo() {
         grip.holding = false
     }
@@ -132,18 +133,21 @@ Window {
             id: grip
             objectName: "titleGrip"
             property point from: Qt.point(0, 0)
+            property point origin: Qt.point(0, 0)
             property bool asked: false
-            // Held down by the person. Not MouseArea's pressed: that stays set when KWin takes the
-            // pointer for a move, as no release ever comes.
+            // Track intent separately from MouseArea's press. The scripting-only
+            // fallback cannot finish Qt's press when KWin takes the pointer.
             property bool holding: false
             anchors.left: parent.left
             anchors.right: buttons.left
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             acceptedButtons: Qt.LeftButton | Qt.RightButton
-            enabled: bar.open
+            // KWin owns the pointer during a move; keep the grip idle until it finishes.
+            enabled: bar.open && !(bar.window && bar.window.move)
             onPressed: mouse => {
                 from = Qt.point(mouse.x, mouse.y)
+                origin = Qt.point(bar.x + mouse.x, bar.y + mouse.y)
                 asked = false
                 holding = mouse.button === Qt.LeftButton
                 if (holding) {

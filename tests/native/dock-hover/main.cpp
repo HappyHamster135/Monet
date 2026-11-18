@@ -68,6 +68,7 @@ int main(int argc, char **argv)
         config.writeEntry("taskHoverEffect", true);
         config.writeEntry("showToolTips", true);
         config.writeEntry("maxStripes", 1);
+        config.writeEntry("sortingStrategy", 1);
         config.sync();
         auto dock = PlasmaQuick::AppletQuickItem::itemForApplet(applet);
         require(dock, "Native task applet failed to instantiate");
@@ -104,6 +105,37 @@ int main(int argc, char **argv)
         QTest::mouseMove(&window, point); QTest::qWait(300);
         require(motion(buttons.first())->property("iconScale").toDouble() > 1.25, "Motion did not recover after edit mode");
 
+        QQuickItem *handler = nullptr;
+        for (auto item : descendants(dock)) {
+            if (item->metaObject()->indexOfMethod("monetReorder(QVariant)") >= 0) handler = item;
+        }
+        require(handler, "Compiled reorder handler is unavailable");
+        auto source = buttons.first();
+        dock->setProperty("dragSource", QVariant::fromValue(source));
+        require(dock->property("monetReordering").toBool(), "Manual bottom-dock reorder is unavailable");
+        auto reorder = [&](int slot) {
+            auto destination = tasks(dock).at(slot);
+            QVariant result;
+            require(QMetaObject::invokeMethod(handler, "monetReorder", Q_RETURN_ARG(QVariant, result),
+                    Q_ARG(QVariant, QPointF(destination->x() + destination->width() / 2,
+                                           destination->y() + destination->height() / 2))), "Reorder call failed");
+            require(result.toBool(), "Internal drag fell through to visual hit testing");
+            QTest::qWait(20);
+            require(source->property("index").toInt() == slot, "Reorder did not reach the requested slot");
+        };
+        reorder(1);
+        // The first delegate starts at x=0. Its very first move must slide too.
+        const auto painted = source->mapToItem(source->parentItem(), QPointF(0, 0));
+        require(qAbs(painted.x() - source->x()) > 1, "First reorder jumped without an animation");
+        require(source->parentItem()->property("animating").toBool(), "Reorder did not animate");
+        reorder(2); // Must accept the next slot before the first animation finishes.
+        reorder(0); // Reversing direction must not wait for a timer either.
+        dock->setProperty("dragSource", QVariant::fromValue<QQuickItem *>(nullptr));
+        QTest::qWait(400);
+        require(!source->parentItem()->property("animating").toBool(), "Reorder animation never settled");
+        require(qAbs(source->mapToItem(source->parentItem(), QPointF()).x() - source->x()) < 0.5,
+                "Reorder retained an obsolete translation");
+
         auto trashApplet = panel->createApplet(QStringLiteral("org.kde.plasma.trash"));
         auto trash = PlasmaQuick::AppletQuickItem::itemForApplet(trashApplet);
         require(trash, "Native Trash applet failed to instantiate");
@@ -115,7 +147,7 @@ int main(int argc, char **argv)
         QTest::mouseMove(&window, QPoint(10, 10)); QTest::qWait(300);
         require(qFuzzyCompare(motion(trash)->property("iconScale").toDouble(), 1.0), "Native Trash remained enlarged");
         window.close();
-        qInfo() << "Native task and Trash hover, tooltip delivery, exit and edit-mode recovery passed.";
+        qInfo() << "Native task and Trash hover, tooltip delivery, edit-mode recovery and rapid animated reordering passed.";
         return 0;
     } catch (const std::exception &error) {
         qCritical() << error.what();
