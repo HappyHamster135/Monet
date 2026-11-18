@@ -63,8 +63,14 @@ COPY image/window-identity /src/window-identity
 COPY LICENSE /src/window-identity/LICENSE
 RUN sh /src/window-identity/build.sh /out
 
+FROM dock AS quick-options-test
+COPY tests/native/quick-options /src/quick-options-test
+RUN cmake -S /src/quick-options-test -B /tmp/quick-options-test -DCMAKE_BUILD_TYPE=Release \
+ && cmake --build /tmp/quick-options-test --parallel 1 \
+ && cp /tmp/quick-options-test/quick-options-test /out/quick-options-test
+
 FROM desktop-runtime
-RUN dnf -y install binutils && dnf clean all
+RUN dnf -y install binutils kf6-bluez-qt bluedevil && dnf clean all
 COPY --from=archive-recovery /out /tmp/monet-archive-recovery
 RUN python3 /tmp/monet-archive-recovery/bundle.py install /tmp/monet-archive-recovery \
  && rm -rf /tmp/monet-archive-recovery
@@ -94,6 +100,8 @@ RUN python3 /tmp/monet-dock/bundle.py install /tmp/monet-dock \
 ENV MONET_DOCK_LAUNCH_FIXTURE=/opt/monet-test-dock/dock-launch
 ENV MONET_DOCK_AUDIO_QML=/opt/monet-test-dock/audio
 ENV MONET_DOCK_HOVER_FIXTURE=/opt/monet-test-dock/dock-hover
+COPY --from=quick-options-test /out/quick-options-test /opt/monet-test-quick/quick-options-test
+ENV MONET_QUICK_FIXTURE=/opt/monet-test-quick/quick-options-test
 COPY --from=window-identity /out /tmp/monet-window-identity
 RUN python3 /tmp/monet-window-identity/bundle.py install /tmp/monet-window-identity \
  && rm -rf /tmp/monet-window-identity

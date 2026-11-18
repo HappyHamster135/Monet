@@ -458,6 +458,122 @@ def bt_kind(info):
     return match.group(1) if match else ""
 
 
+def quick_night_state():
+    enabled, temperature = kread_values([("kwinrc", "NightColor", "Active", "false"),
+                                        ("kwinrc", "NightColor", "NightTemperature", "4500")])
+    value = max(1000, min(6500, int(temperature))) if temperature.isdigit() else 4500
+    return {"enabled": enabled == "true", "strength": round((6500 - value) / 55)}
+
+
+def quick_bluetooth_state():
+    """One BlueZ snapshot, rather than a process/timeout for every paired device."""
+    reply = busjson("--system", "call", "org.bluez", "/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects")
+    if not isinstance(reply, list) or not reply or not isinstance(reply[0], dict):
+        return {"ok": False, "enabled": None, "devices": []}
+    adapters, devices = [], []
+    for interfaces in reply[0].values():
+        if not isinstance(interfaces, dict):
+            continue
+        for interface, props in interfaces.items():
+            if not isinstance(props, dict):
+                continue
+            values = {key: value.get("data") for key, value in props.items() if isinstance(value, dict)}
+            if interface == "org.bluez.Adapter1" and isinstance(values.get("Powered"), bool):
+                adapters.append(values["Powered"])
+            elif interface == "org.bluez.Device1" and (values.get("Paired") is True or values.get("Connected") is True):
+                address = values.get("Address", "")
+                if not isinstance(address, str) or not re.fullmatch(r"(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}", address):
+                    continue
+                name = values.get("Alias") or values.get("Name") or address
+                icon = values.get("Icon", "")
+                devices.append({"address": address.upper(), "name": name[:256] if isinstance(name, str) else address,
+                                "connected": values.get("Connected") is True, "icon": icon if isinstance(icon, str) else ""})
+    return {"ok": bool(adapters), "enabled": any(adapters) if adapters else None,
+            "devices": sorted(devices, key=lambda item: (not item["connected"], item["name"].casefold()))[:128]}
+
+
+def quick_options(args):
+    """Bounded, verified actions for the Quick Settings detail panels."""
+    bad = {"ok": False, "problem": "invalid"}
+    try:
+        if args in (["wifi-list"], ["wifi-scan"]):
+            state = wifi_state()
+            if state is not True:
+                return {"ok": True, "networks": [], "enabled": state}
+            listing = run("env", "LANGUAGE=C", "LC_ALL=C.UTF-8", "nmcli", "--wait", "10", "-t", "-f",
+                          "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan",
+                          "yes" if args[0] == "wifi-scan" else "auto", timeout=15)
+            return {"ok": listing is not None, "networks": wifi_list(listing or "", saved_wifi()),
+                    "enabled": state}
+        if len(args) == 2 and args[0] == "wifi" and args[1] in ("on", "off", "disconnect"):
+            if args[1] == "disconnect":
+                active = run("nmcli", "-t", "-f", "UUID,TYPE", "connection", "show", "--active")
+                if active is None:
+                    return {"ok": False}
+                ids = [fields[0] for fields in map(nmcli_fields, active.splitlines()) if len(fields) == 2
+                       and fields[1] == "802-11-wireless" and re.fullmatch(r"[0-9a-fA-F-]{36}", fields[0])]
+                changed = not ids or run("nmcli", "connection", "down", "uuid", ids[0], timeout=20) is not None
+            else:
+                changed = run("nmcli", "radio", "wifi", args[1]) is not None
+            state = wifi_state()
+            return {"ok": changed and (args[1] == "disconnect" or state is (args[1] == "on")),
+                    "enabled": state}
+        if len(args) in (2, 3) and args[0] == "wifi-join":
+            if any(not re.fullmatch(r"(?:[0-9a-fA-F]{2}){1,2048}", value) for value in args[1:]):
+                return bad
+            ssid = bytes.fromhex(args[1]).decode("utf-8")
+            password = bytes.fromhex(args[2]).decode("utf-8") if len(args) == 3 else ""
+            if not 1 <= len(ssid.encode()) <= 32 or "\0" in ssid or "\0" in password:
+                return bad
+            command = ["nmcli", "--wait", "45", "device", "wifi", "connect", ssid]
+            if password:
+                command += ["password", password]
+            connected = run(*command, timeout=50) is not None
+            return {"ok": connected, "problem": "" if connected else "connect", "enabled": wifi_state()}
+        if args == ["bluetooth-list"]:
+            return quick_bluetooth_state()
+        if len(args) == 2 and args[0] == "bluetooth" and args[1] in ("on", "off"):
+            if args[1] == "on":
+                run("rfkill", "unblock", "bluetooth")
+            changed = run("bluetoothctl", "power", args[1], timeout=5) is not None
+            state = bluetooth_state()
+            return {"ok": changed and state is (args[1] == "on"), "enabled": state}
+        if len(args) == 3 and args[0] == "bluetooth-device" and args[1] in ("connect", "disconnect"):
+            address = args[2].upper()
+            if not re.fullmatch(r"(?:[0-9A-F]{2}:){5}[0-9A-F]{2}", address):
+                return bad
+            changed = run("bluetoothctl", args[1], address, timeout=20) is not None
+            devices = quick_bluetooth_state()["devices"]
+            device = next((d for d in devices if d["address"].upper() == address), None)
+            return {"ok": changed and device is not None and device["connected"] is (args[1] == "connect"),
+                    "devices": devices}
+        if args == ["bluetooth-pair"]:
+            wizard = shutil.which("bluedevil-wizard")
+            if not wizard or bluetooth_state() is not True:
+                return {"ok": False, "problem": "unavailable"}
+            subprocess.Popen([wizard], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            return {"ok": True}
+        if args == ["night"]:
+            return dict(quick_night_state(), ok=True)
+        if len(args) == 2 and args[0] in ("night", "night-strength"):
+            if args[0] == "night":
+                if args[1] not in ("on", "off"):
+                    return bad
+                key, value = "Active", "true" if args[1] == "on" else "false"
+            else:
+                if not args[1].isdigit() or not 0 <= int(args[1]) <= 100:
+                    return bad
+                key, value = "NightTemperature", str(6500 - int(args[1]) * 55)
+            changed = kwrite("kwinrc", "NightColor", key, value)
+            configured = busctl("call", "org.kde.KWin", "/KWin", "org.kde.KWin", "reconfigure") is not None if changed else False
+            state = quick_night_state()
+            verified = state["enabled"] is (args[1] == "on") if args[0] == "night" else state["strength"] == int(args[1])
+            return dict(state, ok=changed and configured and verified)
+    except (OSError, ValueError, UnicodeError, subprocess.TimeoutExpired):
+        return {"ok": False, "problem": "unavailable"}
+    return bad
+
+
 # Sound ---------------------------------------------------------------------
 
 def volume(target):
@@ -9884,6 +10000,10 @@ def main(argv):
     on = bool(args) and args[0] == "on"
     if cmd == "status":
         emit(status(args[0] if args else "all"))
+    elif cmd == "quick-options":
+        result = quick_options(args)
+        emit(result)
+        return 0 if result.get("ok") else 1
     elif cmd == "wifi":
         run("nmcli", "radio", "wifi", "on" if on else "off")
     elif cmd == "wifi-list":

@@ -1,5 +1,39 @@
 # Testing Monet on real hardware
 
+## 0.9.8-8 inline Quick Settings and early graphics — 18 November 2026
+
+The four Quick Settings chevrons now open choices inside the popup. Wi-Fi can
+scan, join, enter or replace a password and disconnect. Bluetooth can connect
+and disconnect paired devices and open the native pairing dialog. Night Light
+has an on/off switch and persistent strength slider; existing schedules remain
+in effect. Do Not Disturb offers one hour, four hours, until tomorrow and until
+turned off. All Settings and More settings remain explicit navigation actions.
+
+Native tests load the actual Plasma applet with a fake helper and click all four
+chevrons, verifying that they neither toggle the tiles nor launch Settings.
+Rendered panel checks cover password cancellation and retry, Bluetooth actions,
+all quiet durations, late replies, error recovery and a second strength change
+during an outstanding write. Backend checks use fake network/configuration
+services. Bluetooth changes use model events while its pane is open, with no new
+idle poll; Wi-Fi scans run only when needed or requested. Catalog generation
+preserves existing translations and includes the new messages. Focused runs cover
+115 checks with no skips, including the real isolated KWin grab/close and
+Settings/Store maximize checks.
+
+The boot candidate replaces the inherited unconditional graphics preloads with
+driver inclusion and hardware-based udev loading. The same Intel, AMD and NVIDIA
+modules remain available. An initramfs rule requests NVIDIA DRM/KMS on NVIDIA
+PCI add/bind events; native `udevadm verify` and isolated, capability-free udev
+simulations accept the rule and select it for the NVIDIA device, not the Intel
+device. Configuration tests also preserve other forced drivers and assignment
+semantics. See [the boot implementation notes](../image/boot/README.md).
+
+These are development-branch changes. No host radio, boot configuration or
+initramfs is changed by the fixtures. The complete image still needs reboot and
+display-handoff measurements on Intel, AMD, NVIDIA and hybrid PCs. In particular,
+the existing firmware and loader time prevents promising a few-second cold boot.
+Local builds and tests use low priority and a one-core limit per process/container.
+
 ## 0.9.8-8 reliable close clicks and saved-app startup — 18 November 2026
 
 New checks reproduced two missed-click paths: the resize overlay covered the
@@ -2572,7 +2606,7 @@ still a release step. Local evidence is in `target/098-security-vm/`.
 - [ ] Stretch a window's bottom edge to the bottom of the screen (or its top edge to the top): it takes the whole height, gliding there
 - [ ] Snapped windows (a drag, Snap Assist, Windows+arrows) meet each other and the screen's edges: no painting shows around them
 - [ ] Snap Settings to one half and another window to the other; make Settings wider by its glass edge: the other window gets narrower, and neither goes over the other. The same the other way round, from the other window's edge
-- [ ] Settings is a window like the others: Monet's title bar with its three dabs, it resizes from every side, double-clicking the title fills the screen, Windows+arrows and a drag snap it, the taskbar shows it, and it keeps its size after closing. Restart the bar (or let it crash): Settings stays open. Open it from the menu, Windows+I, Quick Settings' All Settings and a tile's arrow, and the desktop's Personalize: always one window, at the page asked for, coming to the front even from behind another window. Typing in its search works; Esc closes it
+- [ ] Settings is a window like the others: Monet's title bar with its three dabs, it resizes from every side, double-clicking the title fills the screen, Windows+arrows and a drag snap it, the taskbar shows it, and it keeps its size after closing. Restart the bar (or let it crash): Settings stays open. Open it from the menu, Windows+I, Quick Settings' All Settings and More settings, and the desktop's Personalize: always one window, at the page asked for, coming to the front even from behind another window. Typing in its search works; Esc closes it
 - [ ] Close Settings after it was snapped and open it again: its own size, in the middle, not the snapped one
 - [ ] Turn Bar steps aside off and on a few times: the three islands stay at the same height every time and look alike; off, a maximized window goes below all three of them
 - [ ] Right-click the desktop â†’ Add or Manage Widgets, then Done: the three islands stay on one row the whole time (they piled up a bar's height apart), the middle one centered; add a widget to the middle island while editing and it stays centered; with Bar steps aside on, a maximized window still makes them slide away afterwards

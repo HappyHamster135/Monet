@@ -3,8 +3,8 @@
  * brightness and Monet's light, in the clock island. The `monet-quick`
  * helper does the work; this draws it.
  *
- * Its tiles open Monet Settings, an app of its own (monet-settings, through
- * `monet-quick open`), at their page.
+ * Tile chevrons open everyday choices in this popup. Advanced configuration
+ * remains available through Monet Settings.
  */
 import QtQuick
 import QtQuick.Layouts
@@ -60,6 +60,31 @@ PlasmoidItem {
     property string quietRequest: ""
     // While a slider is held, don't let a status refresh move it.
     property bool dragging: false
+    property string optionsPage: ""
+    property var optionsAnchor: null
+    property var optionsItem: null
+    property var optionRequests: ({})
+    property int optionsRevision: 0
+    property int statusOptionsRevision: 0
+    onExpandedChanged: if (!expanded) closeOptions()
+
+    function askOptions(command, callback) {
+        const source = requestSource(command)
+        optionRequests[source] = callback
+        runner.connectSource(source)
+    }
+    function openOptions(page, anchor) {
+        optionRequests = ({})
+        optionsAnchor = anchor
+        optionsPage = page
+    }
+    function closeOptions() {
+        const anchor = optionsAnchor
+        optionRequests = ({})
+        optionsPage = ""
+        optionsAnchor = null
+        if (expanded && anchor) Qt.callLater(() => anchor.forceActiveFocus())
+    }
 
     Plasmoid.icon: "monet-quick-symbolic"
     TaskManagerAction { id: taskManager; menuApplet: Plasmoid }
@@ -73,6 +98,18 @@ PlasmoidItem {
         onNewData: (source, data) => {
             disconnectSource(source)
             const command = source.replace(/ # monet-quick-\d+$/, "")
+            if (root.optionRequests[source]) {
+                const callback = root.optionRequests[source]
+                delete root.optionRequests[source]
+                ++root.optionsRevision
+                // A network snapshot started before this reply must not undo its radio state.
+                if (command.startsWith(root.helper + " quick-options wifi")) {
+                    ++root.networkRevision
+                    if (root.expanded && activity.active) networkRefresh.start()
+                }
+                callback(data["stdout"] || "", data["exit code"])
+                return
+            }
             if (command === root.helper + " status wifi") {
                 if (source !== root.networkRequest) return
                 root.networkRequest = ""
@@ -88,6 +125,7 @@ PlasmoidItem {
             } else if (command === root.helper + " status" || command === root.helper + " status quick") {
                 if (source !== root.statusRequest) return
                 root.statusRequest = ""
+                if (root.statusOptionsRevision !== root.optionsRevision) { root.refresh(); return }
                 try {
                     const next = JSON.parse(data.stdout)
                     if (root.statusRevision !== root.networkRevision) {
@@ -144,6 +182,7 @@ PlasmoidItem {
         if (!activity.active) return
         if (!statusRequest) {
             statusRevision = networkRevision
+            statusOptionsRevision = optionsRevision
             statusRequest = requestSource(activity.nativeReady ? "status quick" : "status")
             runner.connectSource(statusRequest)
         }
@@ -160,6 +199,7 @@ PlasmoidItem {
 
     // Plugged in, unplugged, joined or left: just the network again, soon, while the popup is open.
     function networkChanged() {
+        if (optionsItem && optionsPage === "wifi") optionsItem.changedExternally()
         if (!activity.active || !expanded) return
         ++networkRevision
         networkRefresh.start()
@@ -347,7 +387,7 @@ PlasmoidItem {
         // A switch (Wi-Fi on or off), or only a way to its page (LAN, on a cable).
         property bool checkable: true
         property real speed: 1
-        // The page in Settings with more (networks to join, devices to pair): its chevron opens it.
+        // The associated settings page also identifies the tile's inline choices.
         property string page
         signal toggled()
         signal opened()
@@ -412,9 +452,10 @@ PlasmoidItem {
                 }
             }
 
-            // More, in Settings: a chevron of its own, apart from the switch.
+            // Inline choices: a chevron of its own, apart from the switch.
             Rectangle {
                 id: more
+                objectName: "quickMore-" + tile.page
                 visible: tile.page !== ""
                 Layout.preferredWidth: 28
                 Layout.preferredHeight: 40
@@ -473,11 +514,13 @@ PlasmoidItem {
         LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
         LayoutMirroring.childrenInherit: true
         Layout.preferredWidth: Kirigami.Units.gridUnit * 23
-        Layout.preferredHeight: column.implicitHeight + Kirigami.Units.largeSpacing * 2
+        Layout.preferredHeight: (root.optionsPage !== "" ? Math.min(460, Math.max(220, root.Screen.height - 120))
+            : column.implicitHeight) + Kirigami.Units.largeSpacing * 2
         collapseMarginsHint: true
 
         ColumnLayout {
             id: column
+            visible: root.optionsPage === ""
             anchors.fill: parent
             anchors.margins: Kirigami.Units.largeSpacing
             spacing: Kirigami.Units.largeSpacing
@@ -513,12 +556,13 @@ PlasmoidItem {
                         if (wired) networkTile.opened()
                         else root.flip("wifi", "wifi")
                     }
-                    onOpened: root.openSettings(page)
+                    onOpened: root.openOptions("wifi", networkTile)
                 }
                 Tile {
                     Layout.fillWidth: true
                     speed: root.speed
                     visible: root.info.bluetooth !== null
+                    id: bluetoothTile
                     title: i18n("Bluetooth")
                     icon: "network-bluetooth"
                     active: root.info.bluetooth === true
@@ -526,22 +570,24 @@ PlasmoidItem {
                     detail: !available ? i18n("Unavailable") : active ? i18n("On") : i18n("Off")
                     page: "bluetooth"
                     onToggled: root.flip("bluetooth", "bluetooth")
-                    onOpened: root.openSettings(page)
+                    onOpened: root.openOptions("bluetooth", bluetoothTile)
                 }
                 Tile {
                     Layout.fillWidth: true
                     speed: root.speed
+                    id: nightTile
                     title: i18n("Night Light")
                     icon: "weather-clear-night"
                     active: root.info.night === true
                     detail: active ? i18n("Warm after sunset") : i18n("Off")
                     page: "display"
                     onToggled: root.flip("night", "night")
-                    onOpened: root.openSettings(page)
+                    onOpened: root.openOptions("night", nightTile)
                 }
                 Tile {
                     Layout.fillWidth: true
                     speed: root.speed
+                    id: quietTile
                     title: i18n("Do Not Disturb")
                     icon: "notifications-disabled"
                     active: root.info.quiet === true
@@ -551,7 +597,7 @@ PlasmoidItem {
                         : i18n("Until %1", Qt.formatDateTime(new Date(root.info.quietUntil * 1000), Qt.locale().dateTimeFormat(Locale.ShortFormat)))
                     page: "notifications"
                     onToggled: root.changeQuiet(root.info.quiet ? "off" : "on")
-                    onOpened: root.openSettings(page)
+                    onOpened: root.openOptions("quiet", quietTile)
                 }
             }
 
@@ -878,5 +924,30 @@ PlasmoidItem {
                 }
             }
         }
+        Loader {
+            id: optionsView
+            anchors.fill: parent
+            anchors.margins: Kirigami.Units.largeSpacing
+            active: root.optionsPage !== ""
+            sourceComponent: Component {
+                QuickOptions {
+                    bridge: root
+                    page: root.optionsPage
+                    onDismissed: root.closeOptions()
+                }
+            }
+            onLoaded: { root.optionsItem = item; item.focusFirst() }
+            onActiveChanged: if (!active) root.optionsItem = null
+        }
+        Loader {
+            id: bluetoothEvents
+            active: root.expanded && root.optionsPage === "bluetooth"
+            source: "BluetoothEvents.qml"
+        }
+        Connections {
+            target: bluetoothEvents.item
+            function onChanged() { if (optionsView.item) optionsView.item.changedExternally() }
+        }
+
     }
 }

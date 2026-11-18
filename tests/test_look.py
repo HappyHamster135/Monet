@@ -2985,11 +2985,13 @@ class MonetSettings(unittest.TestCase):
         self.assertNotIn('asked[0] === "open"', main)
         self.assertFalse((self.QUICK / "MonetSettings.qml").exists())
         self.assertIn('onTapped: root.openSettings("")', main)  # All Settings, a pebble of glass
-        # Every tile's chevron opens its page (Night Light's is Display), apart from the switch.
+        # Chevrons open inline choices; the separate All Settings action still opens the app.
         self.assertIn('page: wired ? "wifi#lan" : "wifi"', main)
         for page in ("bluetooth", "display", "notifications"):
             self.assertIn(f'page: "{page}"', main)
-        self.assertEqual(main.count("onOpened: root.openSettings(page)"), 4)
+        for page, anchor in (("wifi", "networkTile"), ("bluetooth", "bluetoothTile"),
+                             ("night", "nightTile"), ("quiet", "quietTile")):
+            self.assertIn(f'onOpened: root.openOptions("{page}", {anchor})', main)
         self.assertIn('" listen")', main)
         self.assertNotIn('connectSource("systemsettings")', main)
 
@@ -3388,12 +3390,12 @@ GENERAL.STATE:100 (connected)
             self.assertEqual(quick.wired_networks(), {"available": True, "devices": []})
 
     def test_the_network_tile_says_lan_on_a_cable(self):
-        # On a cable the Wi-Fi tile becomes LAN: no switch to turn off, it opens Settings at LAN instead,
-        # and it shows even on a PC without Wi-Fi.
+        # On a cable the Wi-Fi tile becomes LAN and opens inline connection choices.
+        # It shows even on a PC without Wi-Fi; advanced settings still link to LAN.
         ui = PLASMA / "plasmoids/org.monet.quick/contents/ui"
         main = (ui / "main.qml").read_text(encoding="utf-8")
         tile = main[main.index("id: networkTile"):]
-        tile = tile[:tile.index("onOpened: root.openSettings(page)")]
+        tile = tile[:tile.index('onOpened: root.openOptions("wifi", networkTile)')]
         for piece in ("readonly property bool wired: root.info.lanConnected === true",
                       "visible: root.info.wifi !== null || wired",
                       'title: wired ? i18n("LAN") : i18n("Wi-Fi")',
