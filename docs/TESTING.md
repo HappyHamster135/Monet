@@ -1,5 +1,18 @@
 # Testing Monet on real hardware
 
+## 0.9.8-8 update recovery and game shortcuts — 18 November 2026
+
+Settings recovers its update controls after an invalid helper reply or an
+unsuccessful helper exit. A downloaded system update remains available for
+restart. Turning beta versions off during a check keeps the returned beta offer
+hidden. The Settings and update-policy suites pass 75 checks with five expected
+skips for the opt-in user-service fixture.
+
+A Windows shortcut whose path uses different capitalization now finds its
+installed executable in Games and the app menu. A fixture reproduced the missing
+game with the previous lookup. All 44 game-library and Windows-program checks
+pass with the corrected lookup.
+
 ## 0.9.8-8 shader processing follow-up — 17 November 2026
 
 The owner reports long Steam shader processing on every game on the desktop PC,

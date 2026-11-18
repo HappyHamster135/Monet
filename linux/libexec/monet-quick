@@ -6305,6 +6305,19 @@ def lnk_target(data):
         return ""
 
 
+def windows_program_path(prefix, target):
+    """Find a shortcut's validated drive path with Windows-style casing."""
+    path = prefix / f"drive_{target[0].lower()}"
+    try:
+        for part in Path(target[3:]).parts:
+            exact = path / part
+            path = exact if exact.exists() else next(
+                (entry for entry in path.iterdir() if entry.name.casefold() == part.casefold()), exact)
+    except OSError:
+        return None
+    return path
+
+
 def program_shortcuts(prefix):
     """Read executable shortcuts left by installers, including an ordinary Wine user."""
     menus = [prefix / SHARED_START_MENU, *(prefix / "drive_c/users").glob("*/" + USER_START_MENU)]
@@ -6319,9 +6332,10 @@ def program_shortcuts(prefix):
                 continue
             if not re.match(r"^[A-Za-z]:/", target) or not target.lower().endswith(".exe"):
                 continue
-            program = prefix / f"drive_{target[0].lower()}" / target[3:]
+            program = windows_program_path(prefix, target)
             name = " ".join(link.stem.split())
-            if (program.is_file() and name and not re.search(r"uninstall|unins\d*\.exe$", f"{name} {target}", re.I)
+            if (program is not None and program.is_file() and name
+                    and not re.search(r"uninstall|unins\d*\.exe$", f"{name} {target}", re.I)
                     and program_slug(name)):
                 yield name, program, link.relative_to(menu).parts[:-1]
 

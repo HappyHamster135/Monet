@@ -62,3 +62,13 @@ class LocalGames(unittest.TestCase):
         self.assertTrue(self.q.edit_local_game(key, remove=True, registry=self.registry))
         self.assertEqual(self.games(), {})
         self.assertTrue(path.is_file())
+
+    def test_windows_shortcut_case_does_not_hide_an_installed_game(self):
+        executable = self.file("drive_c/Program Files/Bird/fly.exe")
+        self.file("drive_c/ProgramData/Microsoft/Windows/Start Menu/Programs/Games/Bird.lnk",
+                  windows_shortcut(r"C:\PROGRAM FILES\BIRD\FLY.EXE"))
+        self.assertEqual({game["path"] for game in self.games().values()}, {executable})
+        applications = self.root / "applications"
+        self.assertEqual(self.q.program_menu(self.prefix, applications), 1)
+        shortcut = applications / "monet-program-bird.desktop"
+        self.assertIn(str(executable).encode().hex(), shortcut.read_text())
