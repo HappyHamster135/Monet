@@ -236,6 +236,68 @@ class LookFeedback(unittest.TestCase):
         self.wait_for(lambda: self.window.property("updateState") == "done")
         self.assertTrue(action.property("restartReady"))
 
+    def test_unreadable_update_check_recovers_without_losing_a_pending_restart(self):
+        self.helper.held_commands = {"update-check"}
+        self.helper.replies["update-history"] = '{"ok":true,"items":[],"state":"idle","staged":true}'
+        self.window.setProperty("page", "updates")
+        action = self.window.findChild(QObject, "updateAction")
+        restart = self.window.findChild(QObject, "stagedUpdateRestart")
+        self.wait_for(lambda: restart.property("visible"))
+        for response, code in (("null", 0), ('{"ok":true}', 0),
+                               ('{"ok":true,"system":false,"apps":0}', 1)):
+            with self.subTest(response=response, code=code):
+                QMetaObject.invokeMethod(action, "clicked")
+                self.wait_for(lambda: self.helper.pending_commands)
+                self.helper.done.emit(self.helper.pending_commands.pop(), response, code, "")
+                self.wait_for(lambda: self.window.property("updateState") == "failed")
+                self.assertTrue(action.property("enabled"))
+                self.assertTrue(action.property("restartReady"))
+                self.window.setProperty("updateState", "")
+        self.helper.held_commands.clear()
+        self.helper.replies["update-check"] = '{"ok":true,"system":false,"apps":0}'
+        QMetaObject.invokeMethod(action, "clicked")
+        self.wait_for(lambda: self.window.property("updateState") == "none")
+        self.assertTrue(restart.property("visible"))
+
+    def test_interrupted_install_reply_returns_controls_for_retry(self):
+        self.helper.held_commands = {"update"}
+        self.window.setProperty("page", "updates")
+        action = self.window.findChild(QObject, "updateAction")
+        for response, code in (("null", 0), ('{"ok":true,"staged":false}', 1)):
+            with self.subTest(response=response, code=code):
+                self.window.setProperty("updateState", "available")
+                QMetaObject.invokeMethod(action, "clicked")
+                self.wait_for(lambda: self.helper.pending_commands)
+                self.helper.done.emit(self.helper.pending_commands.pop(), response, code, "")
+                self.wait_for(lambda: self.window.property("updateState") == "failed")
+                self.assertEqual(action.property("text"), self.words.i18n("Try again"))
+                self.assertTrue(action.property("enabled"))
+
+    def test_beta_failure_recovers_and_a_disabled_beta_offer_stays_hidden(self):
+        beta = {"version": "0.9.8-8", "number": 1, "tag": "0.9.8-8-beta.1"}
+        self.helper.held_commands = {"update-check", "install-beta"}
+        self.window.setProperty("page", "updates")
+        self.window.setProperty("showBetas", True)
+        self.window.setProperty("betaFound", beta)
+        self.window.setProperty("betaChecked", True)
+        install = self.window.findChild(QObject, "betaInstall")
+        QMetaObject.invokeMethod(install, "clicked")
+        self.wait_for(lambda: self.helper.pending_commands)
+        self.helper.done.emit(self.helper.pending_commands.pop(), "null", 0, "")
+        self.wait_for(lambda: self.window.property("betaState") == "failed")
+        self.assertTrue(install.property("enabled"))
+
+        action = self.window.findChild(QObject, "updateAction")
+        QMetaObject.invokeMethod(action, "clicked")
+        self.wait_for(lambda: self.helper.pending_commands)
+        QMetaObject.invokeMethod(self.window, "flipBetas")
+        self.assertFalse(self.window.property("showBetas"))
+        self.helper.done.emit(self.helper.pending_commands.pop(), json.dumps(dict(ok=True, system=False,
+                              apps=0, beta=beta)), 0, "")
+        self.wait_for(lambda: self.window.property("updateState") == "none")
+        self.assertFalse(self.window.property("betaChecked"))
+        self.assertIsNone(self.window.property("betaFound"))
+
     def test_betas_show_only_when_asked_and_install_only_from_their_own_button(self):
         beta = {"version": "0.9.8-7", "number": 1, "tag": "0.9.8-7-beta.1",
                 "notes": "https://github.com/HappyHamster135/Monet/releases/tag/v0.9.8-7-beta.1"}

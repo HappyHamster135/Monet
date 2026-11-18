@@ -1224,12 +1224,14 @@ Shared.MonetWindow {
     function checkUpdates() {
         updateState = "checking"
         const betas = showBetas
-        ask("update-check" + (betas ? " beta" : ""), out => {
-            const found = sheet.json(out, { ok: false })
-            sheet.updateFound = found
-            sheet.updateMessage = found.message || ""
-            sheet.updateState = !found.ok ? "failed" : found.system || found.apps > 0 ? "available" : "none"
-            if (betas && found.ok) {
+        ask("update-check" + (betas ? " beta" : ""), (out, code) => {
+            const found = sheet.json(out, {}) || {}
+            const valid = code === 0 && found.ok === true && typeof found.system === "boolean"
+                && (found.apps === undefined || Number.isInteger(found.apps) && found.apps >= 0)
+            sheet.updateFound = valid ? found : {}
+            sheet.updateMessage = typeof found.message === "string" ? found.message : ""
+            sheet.updateState = !valid ? "failed" : found.system || found.apps > 0 ? "available" : "none"
+            if (betas && sheet.showBetas && valid) {
                 sheet.betaFound = found.beta || null
                 sheet.betaMessage = found.betaMessage || ""
                 sheet.betaChecked = true
@@ -1257,14 +1259,15 @@ Shared.MonetWindow {
         const beta = betaFound
         if (!beta || !/^\d{1,6}\.\d{1,6}\.\d{1,6}(-\d{1,6})?-beta\.[1-9]\d{0,5}$/.test(beta.tag || "")) return
         betaState = "installing"
-        ask("install-beta " + beta.tag, out => {
-            const result = sheet.json(out, { ok: false, message: "" })
-            const lines = (result.message || "").split("\n").map(l => l.trim()).filter(l => l !== "")
-            sheet.betaMessage = result.ok ? "" : lines.length > 0 ? lines[lines.length - 1] : ""
+        ask("install-beta " + beta.tag, (out, code) => {
+            const result = sheet.json(out, {}) || {}
+            const success = code === 0 && result.ok === true
+            const lines = typeof result.message === "string" ? result.message.trim().split("\n") : []
+            sheet.betaMessage = success ? "" : lines.length > 0 ? lines[lines.length - 1] : ""
             sheet.updateInstallRevision++
-            if (typeof result.staged === "boolean") sheet.updateStaged = result.staged
-            sheet.betaStaged = result.staged === true
-            sheet.betaState = result.ok ? "done" : "failed"
+            if (code === 0 && typeof result.staged === "boolean") sheet.updateStaged = result.staged
+            sheet.betaStaged = code === 0 && result.staged === true
+            sheet.betaState = success ? "done" : "failed"
         })
     }
 
@@ -1454,13 +1457,13 @@ Shared.MonetWindow {
 
     function installUpdates() {
         updateState = "installing"
-        ask("update", out => {
-            const result = sheet.json(out, { ok: false, message: "" })
-            const lines = (result.message || "").split("\n").map(l => l.trim()).filter(l => l !== "")
+        ask("update", (out, code) => {
+            const result = sheet.json(out, {}) || {}
+            const lines = typeof result.message === "string" ? result.message.trim().split("\n") : []
             sheet.updateMessage = lines.length > 0 ? lines[lines.length - 1] : ""
             sheet.updateInstallRevision++
-            if (typeof result.staged === "boolean") sheet.updateStaged = result.staged
-            sheet.updateState = result.ok ? "done" : "failed"
+            if (code === 0 && typeof result.staged === "boolean") sheet.updateStaged = result.staged
+            sheet.updateState = code === 0 && result.ok === true ? "done" : "failed"
             sheet.loadUpdateHistory()
         })
     }
