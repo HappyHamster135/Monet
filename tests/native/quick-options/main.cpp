@@ -50,16 +50,21 @@ int main(int argc, char **argv) {
         representation->setParentItem(window.contentItem()); representation->setSize(QSizeF(440, 520));
         window.show(); QTest::qWait(150);
         quick->setProperty("info", QVariantMap{{"wifi",true},{"bluetooth",true},{"night",false},{"quiet",false},
-            {"quietIndefinite",false},{"quietUntil",0},{"lanConnected",false}});
+            {"quietIndefinite",false},{"quietUntil",0},{"lanConnected",false},{"battery",72},{"minutes",90},{"plugged",false}});
         auto click = [&](const QString &name) {
             auto item = find(representation, name); require(item, "Missing visible action in Quick Settings");
             QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier,
                 item->mapToScene(QPointF(item->width()/2,item->height()/2)).toPoint());
         };
-        const QList<QPair<QString,QString>> pages{{"wifi","wifi"},{"bluetooth","bluetooth"},{"display","night"},{"notifications","quiet"}};
+        const QList<QPair<QString,QString>> pages{{"wifi","wifi"},{"bluetooth","bluetooth"},{"display","night"},{"notifications","quiet"},{"battery","power"}};
         for (const auto &[tile,page] : pages) {
+            if (tile == "battery") {
+                // This private profile has no UPower battery. Supply its fake laptop reading.
+                auto snapshot = info(quick); snapshot["battery"] = 72; snapshot["minutes"] = 90;
+                quick->setProperty("info", snapshot); QCoreApplication::processEvents();
+            }
             const auto before = info(quick);
-            click("quickMore-"+tile);
+            click(tile == "battery" ? "quickBatteryOptions" : "quickMore-"+tile);
             require(info(quick)==before, "Chevron also toggled the tile");
             require(quick->property("optionsPage").toString()==page, "Chevron opened Settings instead of inline choices");
             for(int i=0; i<200; ++i) {
@@ -76,7 +81,7 @@ int main(int argc, char **argv) {
             QTest::qWait(60);
         }
         window.close(); delete representation;
-        qInfo() << "Actual Quick Settings chevrons opened all four inline panels without toggling their radios.";
+        qInfo() << "Actual Quick Settings chevrons and battery button opened all five inline panels without toggling their controls.";
         return 0;
     } catch(const std::exception &error) { qCritical() << error.what(); return 1; }
 }

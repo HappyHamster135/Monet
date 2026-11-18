@@ -68,6 +68,7 @@ class SettingsNavigation(unittest.TestCase):
         self.engine = QQmlApplicationEngine(); self.helper = FakeHelper(); self.words = self.games.Words()
         self.area = self.games.WindowArea()
         self.helper.replies.update({"power": json.dumps({"mode": "balanced", "modes": ["balanced", "power-saver", "performance"]}),
+                                    "power-mode": '{"ok":true}', "battery-saver": '{"ok":true}',
                                     "battery-care": '{"supported":true,"limit":80}',
                                     **{name: "[]" for name in ("wifi-list", "bt-list", "apps-sound", "defaults")}})
         self.errors = []
@@ -718,6 +719,40 @@ class SettingsNavigation(unittest.TestCase):
         self.wait_for(lambda: replies.count() > before)
         self.assertIs(self.item("powerMode-power-saver"), choice)
         self.assertTrue(choice.hasActiveFocus())
+
+    def test_automatic_battery_saver_is_available_from_the_keyboard(self):
+        state = dict(mode="automatic", activeMode="balanced", modes=["automatic", "power-saver", "performance"],
+                     hasBattery=True, batterySaverAuto=True, batterySaverThreshold=20, batteryCriticalLevel=5)
+        self.helper.replies["power"] = json.dumps(state)
+        self.open("power")
+        self.assertTrue(self.item("powerMode-automatic").property("picked"))
+        self.capture("automatic-battery-saver-on")
+        row = self.item("automaticBatterySaver"); row.forceActiveFocus(Qt.TabFocusReason); QTest.qWait(30)
+        state = dict(state, batterySaverAuto=False)
+        self.helper.replies.update({"power": json.dumps(state), "battery-saver": json.dumps(dict(ok=True, state=state))})
+        self.helper.commands.clear(); QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: not self.window.property("powerBusy"))
+        self.assertIn(["helper", "battery-saver", "off"], self.helper.commands)
+        self.assertEqual(self.window.property("powerProblem"), "")
+        self.assertFalse(self.item("automaticBatterySaver").property("checked"))
+        self.assertFalse(self.item("batterySaverSwitch").property("active"))
+        QTest.qWait(250)
+        self.capture("automatic-battery-saver")
+
+    def test_failed_power_change_keeps_the_confirmed_mode_and_releases_controls(self):
+        state = dict(mode="automatic", activeMode="balanced", modes=["automatic", "power-saver", "performance"],
+                     hasBattery=True, batterySaverAuto=True, batterySaverThreshold=20)
+        self.helper.replies["power"] = json.dumps(state); self.open("power")
+        self.helper.held_commands.add("power-mode")
+        choice = self.item("powerMode-performance"); choice.forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertTrue(self.window.property("powerBusy"))
+        self.assertTrue(self.item("powerMode-automatic").property("picked"))
+        self.helper.done.emit(self.helper.pending_commands[-1], json.dumps(dict(ok=False, state=state)), 1, "")
+        QTest.qWait(50)
+        self.assertFalse(self.window.property("powerBusy"))
+        self.assertNotEqual(self.window.property("powerProblem"), "")
+        self.assertTrue(self.item("powerMode-automatic").property("picked"))
 
     def test_choice_reflow_keeps_focus_and_never_changes_a_preference(self):
         self.open("light")

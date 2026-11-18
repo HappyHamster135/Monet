@@ -616,6 +616,15 @@ look --file kwinrc --group Plugins --key monet-motionEnabled true
 # again, so it stays off and nothing opens twice; choosing it in KDE's settings keeps KDE's.
 look --file kwinrc --group Plugins --key monet-workEnabled true
 kw_default ksmserverrc General loginMode emptySession
+
+# PowerDevil reacts to battery/charger events; balanced lets the CPU scale with
+# demand. Only fill absent native keys, preserving existing manual power choices.
+kw --file powerdevilrc --group AC --group Performance --key PowerProfile balanced
+kw --file powerdevilrc --group Battery --group Performance --key PowerProfile balanced
+kw --file powerdevilrc --group LowBattery --group Performance --key PowerProfile power-saver
+kw_default powerdevilrc BatteryManagement BatteryLowLevel 20
+busctl --user call org.kde.Solid.PowerManagement /org/kde/Solid/PowerManagement \
+    org.kde.Solid.PowerManagement refreshStatus >/dev/null 2>&1 || true
 # Title bars that appear when you point at the top (Monet Titles, share/kwin): monet-light gives
 # windows the bare frame while that's on, as Settings → Light & Wallpaper has it (on unless turned off).
 look --file kwinrc --group Plugins --key monet-titlesEnabled true

@@ -121,7 +121,8 @@
     monet-quick power                    screen off, sleep, power button, lid and power mode, as JSON
     monet-quick power-time ac|battery screen|sleep SECONDS   (0 is never)
     monet-quick power-button|power-lid ACTION   PowerDevil's number for what it does
-    monet-quick power-mode power-saver|balanced|performance
+    monet-quick power-mode automatic|power-saver|balanced|performance
+    monet-quick battery-saver automatic|off|threshold PERCENT
     monet-quick input                    mouse, touchpad and keyboard layouts, as JSON
     monet-quick pointer mouse|touchpad speed 0-100 | natural|left|tap|typing on|off
     monet-quick layouts-known            every keyboard layout there is, as JSON
@@ -2902,12 +2903,36 @@ def has_lid():
 def power_mode():
     """(the mode now, the modes there are), or ("", []) without a power-profiles service."""
     for service, path in PROFILE_SERVICES:
-        profiles = busjson("--system", "get-property", service, path, service, "Profiles")
-        active = busjson("--system", "get-property", service, path, service, "ActiveProfile")
-        if profiles is not None and active:
-            names = [p.get("Profile", {}).get("data") for p in profiles]
+        reply = busjson("--system", "call", service, path, "org.freedesktop.DBus.Properties", "GetAll", "s", service)
+        if not isinstance(reply, list) or not reply or not isinstance(reply[0], dict):
+            continue
+        props = reply[0]
+        active = props.get("ActiveProfile", {}).get("data")
+        profiles = props.get("Profiles", {}).get("data")
+        if isinstance(profiles, list) and isinstance(active, str):
+            names = [p.get("Profile", {}).get("data") for p in profiles if isinstance(p, dict)]
             return active, [n for n in ("power-saver", "balanced", "performance") if n in names]
     return "", []
+
+
+def power_policy():
+    """PowerDevil owns the AC/low-battery transitions; the kernel scales CPU demand."""
+    mode, ac, battery, low, automatic, threshold, critical = kread_values([
+        ("powerdevilrc", "Monet", "PowerMode", ""),
+        ("powerdevilrc", ("AC", "Performance"), "PowerProfile", "balanced"),
+        ("powerdevilrc", ("Battery", "Performance"), "PowerProfile", "balanced"),
+        ("powerdevilrc", ("LowBattery", "Performance"), "PowerProfile", "power-saver"),
+        ("powerdevilrc", "Monet", "AutomaticBatterySaver", ""),
+        ("powerdevilrc", "BatteryManagement", "BatteryLowLevel", "20"),
+        ("powerdevilrc", "BatteryManagement", "BatteryCriticalLevel", "5"),
+    ])
+    # Older Monet saved a manual choice in both native profiles. Keep that choice.
+    if mode not in ("automatic", "power-saver", "balanced", "performance") or ac != battery or ac != ("balanced" if mode == "automatic" else mode):
+        mode = ac if ac == battery and ac in ("power-saver", "performance") else "automatic"
+    return dict(mode=mode if ac == battery else "", acMode=ac, batteryMode=battery,
+                batterySaverAuto=automatic == "true" if automatic in ("true", "false") else low == "power-saver",
+                batterySaverThreshold=max(1, min(99, int(threshold))) if threshold.isdigit() else 20,
+                batteryCriticalLevel=max(0, min(99, int(critical))) if critical.isdigit() else 5)
 
 
 def power_state():
@@ -2940,14 +2965,21 @@ def power_state():
         state["button"], state["lidAction"] = int(button), int(lid)
     except ValueError:
         state["button"], state["lidAction"] = ASK, SLEEP
-    state["mode"], state["modes"] = power_mode()
+    active, modes = power_mode()
+    state.update(power_policy())
+    state["activeMode"] = active
+    state["modes"] = ["automatic", *(m for m in modes if m != "balanced")] if "balanced" in modes else modes
+    if state["mode"] == "balanced" and "automatic" in state["modes"]:
+        state["mode"] = "automatic"
+    if state["mode"] not in state["modes"]:
+        state["mode"] = "automatic" if active == "balanced" and "automatic" in state["modes"] else active
     state.update(lock_state(tuple(values)))
     return state
 
 
 def reload_power():
-    busctl("call", "org.kde.Solid.PowerManagement", "/org/kde/Solid/PowerManagement",
-           "org.kde.Solid.PowerManagement", "refreshStatus")
+    return busctl("call", "org.kde.Solid.PowerManagement", "/org/kde/Solid/PowerManagement",
+                  "org.kde.Solid.PowerManagement", "refreshStatus")
 
 
 def set_power_time(name, what, seconds):
@@ -2974,13 +3006,55 @@ def set_power_action(key, action):
 
 
 def set_power_mode(mode):
-    """Now, and kept when the PC is plugged in or unplugged."""
-    for service, path in PROFILE_SERVICES:
-        if run("busctl", "--system", "set-property", service, path, service, "ActiveProfile", "s", mode, timeout=10) is not None:
+    return change_power_policy(mode=mode)
+
+
+def change_power_policy(mode=None, saver=None, threshold=None):
+    """Save native policy and refresh it once; no polling daemon or CPU-load loop."""
+    if mode is not None and mode not in ("automatic", "power-saver", "balanced", "performance") \
+            or saver is not None and type(saver) is not bool \
+            or threshold is not None and (type(threshold) is not int or not 1 <= threshold <= 99):
+        return dict(ok=False, problem="request")
+    policy = power_policy()
+    _, modes = power_mode()
+    chosen = mode if mode is not None else policy["mode"] or policy["batteryMode"]
+    base = "balanced" if chosen == "automatic" else chosen
+    saving = saver if saver is not None else policy["batterySaverAuto"]
+    level = threshold if threshold is not None else policy["batterySaverThreshold"]
+    if base not in modes or (saving and "power-saver" not in modes):
+        return dict(ok=False, problem="unavailable")
+    if (threshold is not None or saving) and level <= policy["batteryCriticalLevel"]:
+        return dict(ok=False, problem="critical-level")
+    changes = []
+    if mode is not None:
+        changes += [(('AC', 'Performance'), 'PowerProfile', base),
+                    (('Battery', 'Performance'), 'PowerProfile', base), ('Monet', 'PowerMode', chosen)]
+    changes += [(('LowBattery', 'Performance'), 'PowerProfile', 'power-saver' if saving else base),
+                ('Monet', 'AutomaticBatterySaver', 'true' if saving else 'false')]
+    changes.append(('BatteryManagement', 'BatteryLowLevel', str(level)))
+    absent = '__monet_absent_power_setting__'
+    before = kread_values([('powerdevilrc', group, key, absent) for group, key, value in changes])
+    touched = []
+    good = True
+    for index, (group, key, value) in enumerate(changes):
+        touched.append(index)
+        if not kwrite('powerdevilrc', group, key, value) or kread('powerdevilrc', group, key, absent) != value:
+            good = False
             break
-    for group in ("AC", "Battery"):
-        kwrite("powerdevilrc", (group, "Performance"), "PowerProfile", mode)
-    reload_power()
+    if good:
+        good = reload_power() is not None
+    if not good:
+        # A locked setting, failed write or missing desktop must not leave half a policy.
+        for index in reversed(touched):
+            group, key, value = changes[index]
+            if before[index] == absent:
+                names = (group,) if isinstance(group, str) else group
+                run('kwriteconfig6', '--notify', '--file', 'powerdevilrc',
+                    *(arg for name in names for arg in ('--group', name)), '--key', key, '--delete')
+            else:
+                kwrite('powerdevilrc', group, key, before[index])
+        reload_power()
+    return dict(ok=good, problem='' if good else 'unavailable', state=power_state())
 
 
 # Mouse & Keyboard ----------------------------------------------------------
@@ -10361,8 +10435,18 @@ def main(argv):
     elif cmd in ("power-button", "power-lid") and args and args[0].isdigit() \
             and int(args[0]) in (BUTTON_ACTIONS if cmd == "power-button" else LID_ACTIONS):
         set_power_action("PowerButtonAction" if cmd == "power-button" else "LidAction", int(args[0]))
-    elif cmd == "power-mode" and args and args[0] in ("power-saver", "balanced", "performance"):
-        set_power_mode(args[0])
+    elif cmd == "power-mode" and len(args) == 1:
+        result = set_power_mode(args[0]); emit(result)
+        return 0 if result.get("ok") else 1
+    elif cmd == "battery-saver":
+        if args in (["automatic"], ["off"]):
+            result = change_power_policy(saver=args[0] == "automatic")
+        elif len(args) == 2 and args[0] == "threshold" and args[1].isdigit():
+            result = change_power_policy(threshold=int(args[1]))
+        else:
+            result = dict(ok=False, problem="request")
+        emit(result)
+        return 0 if result.get("ok") else 1
     elif cmd == "input":
         emit(dict(pointer_state(input_devices()), **keyboard_state()))
     elif cmd == "pointer" and len(args) == 3 and args[0] in ("mouse", "touchpad") and args[1] in INPUT_SETTINGS:

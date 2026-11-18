@@ -16,6 +16,10 @@ Item {
     property var devices: []
     property var selectedNetwork: null
     property var night: ({enabled: false, strength: 36})
+    property var power: ({})
+    readonly property var saverLevels: [10, 20, 30, 50, power.batterySaverThreshold || 20]
+        .filter((value, index, values) => Number.isInteger(value) && value > (power.batteryCriticalLevel || 5) && values.indexOf(value) === index)
+        .sort((a, b) => a - b)
     property int epoch: 0
     property bool initialized: false
     property int draftStrength: 36
@@ -25,7 +29,10 @@ Item {
     readonly property bool enabledRadio: page === "wifi" ? bridge.info.wifi === true
         : page === "bluetooth" ? bridge.info.bluetooth === true : night.enabled === true
     readonly property string heading: page === "wifi" ? i18n("Wi-Fi") : page === "bluetooth" ? i18n("Bluetooth")
-        : page === "night" ? i18n("Night Light") : i18n("Do Not Disturb")
+        : page === "night" ? i18n("Night Light") : page === "power" ? i18n("Power & Battery") : i18n("Do Not Disturb")
+    readonly property string batteryZone: bridge.info.plugged === true ? "ac"
+        : typeof bridge.info.battery !== "number" ? "unknown" : bridge.info.battery <= (power.batterySaverThreshold || 20) ? "low" : "battery"
+    onBatteryZoneChanged: if (initialized && page === "power") changedExternally()
     implicitHeight: 460
     signal dismissed()
 
@@ -40,6 +47,10 @@ Item {
     }
     function focusFirst() { back.forceActiveFocus() }
     function updateState(result) {
+        if (page === "power") {
+            const state = result.state || result
+            if (typeof state.mode === "string" && Array.isArray(state.modes)) power = state
+        }
         if (page === "night" && typeof result.enabled === "boolean" && Number.isInteger(result.strength)) {
             night = result
             if (!strengthDirty && !strength.pressed) draftStrength = result.strength
@@ -64,7 +75,7 @@ Item {
             let result = {}
             try { const parsed = JSON.parse(out); if (parsed && !Array.isArray(parsed) && typeof parsed === "object") result = parsed } catch(e) {}
             updateState(result)
-            if (code !== 0 || result.ok !== true) {
+            if (code !== 0 || (result.ok !== true && !(page === "power" && command === "power" && Array.isArray(result.modes)))) {
                 error = i18n("That didn't work. Check the device or connection and try again.")
                 if (command.startsWith("quick-options wifi-join ")) error = i18n("Couldn't connect. Check the password and try again.")
             }
@@ -76,6 +87,7 @@ Item {
         if (page === "wifi") request("quick-options " + (scan ? "wifi-scan" : "wifi-list"))
         else if (page === "bluetooth") request("quick-options bluetooth-list")
         else if (page === "night") request("quick-options night")
+        else if (page === "power") request("power")
         else bridge.refresh()
     }
     function toggleRadio() {
@@ -162,7 +174,7 @@ Item {
                 spacing: 12
                 PC.Switch {
                     objectName: "quickOptionsRadio"
-                    Layout.fillWidth: true; visible: pane.page !== "quiet"
+                    Layout.fillWidth: true; visible: ["wifi", "bluetooth", "night"].indexOf(pane.page) !== -1
                     text: pane.heading; checked: pane.enabledRadio
                     enabled: !pane.busy && (pane.page === "night" || typeof pane.bridge.info[pane.page] === "boolean")
                     onClicked: pane.toggleRadio()
@@ -235,6 +247,48 @@ Item {
                         PC.Label { text: i18n("%1%", Math.round(strength.value)) }
                     }
                     PC.Label { Layout.fillWidth: true; text: i18n("Higher strength makes the screen warmer. Your Night Light schedule still applies."); wrapMode: Text.WordWrap; opacity: .7 }
+                }
+                ColumnLayout {
+                    Layout.fillWidth: true; visible: pane.page === "power"
+                    PC.Label { Layout.fillWidth: true; text: i18n("Power mode"); font.weight: Font.DemiBold }
+                    QQC2.ButtonGroup { id: powerButtons }
+                    Repeater {
+                        model: [{mode: "automatic", label: i18n("Automatic")}, {mode: "power-saver", label: i18n("Power saver")},
+                                {mode: "balanced", label: i18n("Balanced")}, {mode: "performance", label: i18n("Performance")}]
+                            .filter(choice => (pane.power.modes || []).indexOf(choice.mode) !== -1)
+                        PC.RadioButton {
+                            required property var modelData
+                            objectName: "quickPower-" + modelData.mode; Layout.fillWidth: true
+                            QQC2.ButtonGroup.group: powerButtons
+                            text: modelData.label; enabled: !pane.busy; checked: pane.power.mode === modelData.mode
+                            onClicked: pane.request("power-mode " + modelData.mode)
+                        }
+                    }
+                    PC.Label { Layout.fillWidth: true; text: i18n("Automatic gives demanding apps more power and saves energy during lighter work."); wrapMode: Text.WordWrap; opacity: .7 }
+                    PC.Label { Layout.fillWidth: true; visible: !pane.busy && (pane.power.modes || []).length === 0; text: i18n("This PC doesn't report adjustable power modes."); wrapMode: Text.WordWrap }
+                    PC.Switch {
+                        objectName: "quickAutoBatterySaver"; Layout.fillWidth: true
+                        visible: pane.power.hasBattery === true && (pane.power.modes || []).indexOf("power-saver") !== -1
+                        text: i18n("Automatic battery saver"); checked: pane.power.batterySaverAuto === true; enabled: !pane.busy
+                        onClicked: pane.request("battery-saver " + (pane.power.batterySaverAuto ? "off" : "automatic"))
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true; visible: pane.power.hasBattery === true && pane.power.batterySaverAuto === true
+                        PC.Label { Layout.fillWidth: true; text: i18n("Turn on at"); wrapMode: Text.WordWrap }
+                        PC.ComboBox {
+                            objectName: "quickSaverThreshold"
+                            implicitWidth: Kirigami.Units.gridUnit * 6
+                            implicitHeight: Math.max(Kirigami.Units.gridUnit * 2, font.pixelSize + 16)
+                            Accessible.name: i18n("Turn on battery saver at")
+                            model: pane.saverLevels.map(v => ({value: v, text: i18n("%1%", v)}))
+                            textRole: "text"; valueRole: "value"; currentIndex: pane.saverLevels.indexOf(pane.power.batterySaverThreshold || 20)
+                            enabled: !pane.busy
+                            onActivated: pane.request("battery-saver threshold " + currentValue)
+                        }
+                    }
+                    PC.Label { Layout.fillWidth: true; visible: pane.power.activeMode === "power-saver"; text: i18n("Power saver is active"); font.weight: Font.DemiBold; wrapMode: Text.WordWrap }
+                    PC.Label { Layout.fillWidth: true; visible: pane.power.hasBattery === true && pane.power.batterySaverAuto === true
+                        text: i18n("Automatic battery saving ends when you plug in. A manually selected Power saver stays on."); wrapMode: Text.WordWrap; opacity: .7 }
                 }
                 ColumnLayout {
                     Layout.fillWidth: true; visible: pane.page === "quiet"

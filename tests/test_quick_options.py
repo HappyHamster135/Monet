@@ -117,6 +117,7 @@ Window {
     id: scene; width: 420; height: 500; visible: true
     property var commands: []; property var advanced: []; property var pending: ({})
     property string hold: ""; property int dismissed: 0
+    property var powerState: ({mode:"automatic",activeMode:"balanced",modes:["automatic","power-saver","performance"],hasBattery:true,batterySaverAuto:true,batterySaverThreshold:20,batteryCriticalLevel:5})
     function answer(command, result, code) { const callback=pending[command]; delete pending[command]; callback(JSON.stringify(result), code) }
     QtObject {
         id: controller
@@ -128,6 +129,16 @@ Window {
             scene.commands=scene.commands.concat([command]);
             if (command===scene.hold) { scene.pending[command]=callback; return }
             let result={ok:true};
+            if(command==="power") result=scene.powerState;
+            if(command.indexOf("power-mode ")===0) {
+                scene.powerState=Object.assign({},scene.powerState,{mode:command.split(" ").pop()}); result={ok:true,state:scene.powerState};
+            }
+            if(command.indexOf("battery-saver ")===0) {
+                let next=Object.assign({},scene.powerState);
+                if(command.indexOf("threshold ")>=0) next.batterySaverThreshold=Number(command.split(" ").pop());
+                else next.batterySaverAuto=command.endsWith("automatic");
+                scene.powerState=next; result={ok:true,state:next};
+            }
             if(command.indexOf("wifi-list")>=0 || command.indexOf("wifi-scan")>=0) result={ok:true,enabled:true,networks:[
                 {name:"Home",secure:true,known:true,active:false,signal:90},
                 {name:"Café ;$(touch x)",secure:true,known:false,active:false,signal:70}]};
@@ -213,6 +224,27 @@ Window {
         self.assertTrue(component.isReady(), [e.toString() for e in component.errors()])
         events = component.create(); self.assertIsNotNone(events)
         QTest.qWait(30); events.deleteLater(); component.deleteLater(); QTest.qWait(20)
+
+    def test_power_mode_and_automatic_saver_stay_in_quick_settings(self):
+        self.page("power")
+        self.click("quickPower-power-saver")
+        self.assertIn("power-mode power-saver", self.js("commands"))
+        self.click("quickPower-automatic")
+        self.assertIn("power-mode automatic", self.js("commands"))
+        self.click("quickAutoBatterySaver")
+        self.assertIn("battery-saver off", self.js("commands"))
+        self.assertFalse(self.js("options.power.batterySaverAuto"))
+        self.assertEqual(self.js("advanced"), [])
+
+    def test_saver_threshold_can_be_changed_with_the_keyboard_and_custom_values_survive(self):
+        self.page("power")
+        choice = self.item("quickSaverThreshold"); choice.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Down); QTest.qWait(40)
+        self.assertIn("battery-saver threshold 30", self.js("commands"))
+        self.assertEqual(self.js("options.power.batterySaverThreshold"), 30)
+        self.js('options.updateState({mode:"automatic",modes:["automatic","power-saver"],hasBattery:true,batterySaverAuto:true,batterySaverThreshold:15})')
+        QTest.qWait(30)
+        self.assertEqual(choice.property("currentValue"), 15)
 
     def test_quiet_durations_do_not_open_settings(self):
         self.page("quiet")

@@ -26,6 +26,8 @@ info=dict(wifi=True,bluetooth=True,night=False,quiet=False,quietUntil=0,quietInd
 result={}
 if args and args[0]=='status': result=info
 elif args==['outputs']: result=[]
+elif args==['power']: result=dict(mode='automatic',activeMode='balanced',modes=['automatic','power-saver','performance'],
+                                hasBattery=True,batterySaverAuto=True,batterySaverThreshold=20,batteryCriticalLevel=5)
 elif args and args[0]=='quick-options':
     result={'ok':True}
     if args[1] in ('wifi-list','wifi-scan'): result.update(enabled=True,networks=[

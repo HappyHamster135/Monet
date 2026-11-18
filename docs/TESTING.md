@@ -1,5 +1,39 @@
 # Testing Monet on real hardware
 
+## 0.9.8-8 automatic power and battery saver — 18 November 2026
+
+Automatic is the normal power choice. It uses the system's balanced profile,
+which lets hardware scale with demand; Power saver and Performance remain manual
+choices. New or unset native preferences enable low-battery saving at 20%.
+Settings → Power & Sleep offers automatic saving and its threshold. The battery
+button in Quick Settings opens the same everyday choices without opening Settings.
+Custom thresholds remain visible, and keyboard users can change both the mode and
+the saving threshold. Unsupported power controls are omitted or explained.
+
+PowerDevil owns charger/low-battery transitions using its existing AC, Battery and
+LowBattery profiles. Plugging in restores the normal profile; explicitly choosing
+Power saver keeps that manual preference. This adds no CPU-utilization monitor,
+new background daemon or profile-switching poll. The [power profile service](https://upower.pages.freedesktop.org/power-profiles-daemon/gdbus-org.freedesktop.UPower.PowerProfiles.html)
+and [PowerDevil's native profile selection](https://github.com/KDE/powerdevil/blob/master/daemon/powerdevilcore.cpp)
+provide the underlying behavior. Battery-low warnings use the selected saver
+threshold; critical-battery actions, sleep timers, display brightness and charging
+limits are preserved.
+
+Profile reads now unwrap the actual busctl GetAll variants in one snapshot,
+including the legacy service alias. Policy changes verify native KConfig writes
+before reporting success. A locked key or unavailable desktop triggers rollback
+and visible feedback. Upgrade defaults use the existing reversible, default-only
+profile writer and preserve explicit AC/battery choices and thresholds.
+
+Tests use private profiles and fake power-service responses. They exercise native
+KConfig policy, immutable keys, rollback, upgrades and rendered Settings/Quick
+Settings interactions, including all five Quick Settings subpanels. They do not
+change the host's power mode. Focused runs cover 129 checks with no skips.
+Physical discharge, charger and suspend/resume tests
+on the complete image still need to confirm the device-specific result; these
+checks do not measure additional battery runtime. Local work remains capped at
+one CPU core per process/container with low priority.
+
 ## 0.9.8-8 inline Quick Settings and early graphics — 18 November 2026
 
 The four Quick Settings chevrons now open choices inside the popup. Wi-Fi can

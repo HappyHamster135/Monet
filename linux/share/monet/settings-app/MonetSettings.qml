@@ -381,6 +381,12 @@ Shared.MonetWindow {
     property bool guestBusy: false
     // Power & Sleep, Mouse & Keyboard, Notifications and Default Apps, as the helper reports them.
     property var powerInfo: ({})
+    property bool powerBusy: false
+    property string powerProblem: ""
+    readonly property string batteryPowerZone: typeof info.battery !== "number" ? "unknown"
+        : info.plugged === true ? "ac" : info.battery <= (powerInfo.batterySaverThreshold || 20) ? "low" : "battery"
+    onBatteryPowerZoneChanged: Qt.callLater(() => { if (pollingActive && page === "power") powerStateRefresh.restart() })
+    Timer { id: powerStateRefresh; interval: 150; onTriggered: if (sheet.pollingActive && sheet.page === "power" && !sheet.powerBusy) sheet.reloadPower() }
     property var inputInfo: ({})
     property var knownLayouts: []
     property var notifyInfo: ({})
@@ -1755,8 +1761,20 @@ Shared.MonetWindow {
             : "lock-resume " + (value ? "on" : "off"), () => sheet.reloadPower())
     }
     function powerMode(mode) {
-        powerInfo = changed(powerInfo, ["mode"], mode)
-        ask("power-mode " + mode, () => sheet.reloadPower())
+        changePower("power-mode " + mode)
+    }
+    function changePower(command) {
+        if (powerBusy) return
+        powerBusy = true; powerProblem = ""
+        ask(command, out => {
+            const result = sheet.json(out, {})
+            if (result.state && typeof result.state.mode === "string") sheet.powerInfo = result.state
+            sheet.powerBusy = false
+            if (result.ok !== true) sheet.powerProblem = result.problem === "critical-level"
+                ? i18n("Choose a battery saver level above the critical battery level.")
+                : i18n("The power setting couldn't be changed. Try again.")
+            sheet.reloadPower()
+        })
     }
     function reloadPower() {
         ask("power", out => sheet.powerInfo = sheet.json(out, sheet.powerInfo))
@@ -5551,13 +5569,15 @@ Shared.MonetWindow {
                         }
                     }
                 }
-                // How hard it works: three choices, like Light's.
+                // Native demand scaling in Automatic; fixed preferences remain available.
                 ChoiceGrid {
                     optionCount: powerModeOptions.count
                     visible: (sheet.powerInfo.modes || []).length > 0
                     Repeater {
                         id: powerModeOptions
                         model: [
+                            ["automatic", i18n("Automatic"), i18n("Uses more power when needed and saves energy during lighter work"),
+                             "M4 12h16M12 4v16M5 5l14 14M5 19L19 5"],
                             ["power-saver", i18n("Power saver"), sheet.powerInfo.hasBattery
                                 ? i18n("Uses less power to extend battery life") : i18n("Favors lower power use and less heat"),
                              "M5 19c0-9 5-14 14-14c0 9-5 14-14 14zM5 19l7-7"],
@@ -5571,6 +5591,7 @@ Shared.MonetWindow {
                             objectName: "powerMode-" + modelData[0]
                             required property var modelData
                             readonly property bool picked: sheet.powerInfo.mode === modelData[0]
+                            enabled: !sheet.powerBusy
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             Layout.preferredWidth: 1
@@ -5629,6 +5650,55 @@ Shared.MonetWindow {
                             Accessible.checked: picked
                             Accessible.onPressAction: sheet.powerMode(modelData[0])
                         }
+                    }
+                }
+                Text {
+                    objectName: "powerSettingProblem"
+                    Layout.fillWidth: true
+                    visible: sheet.powerProblem !== "" || sheet.powerBusy
+                    text: sheet.powerBusy ? i18n("Changing power settings…") : sheet.powerProblem
+                    wrapMode: Text.Wrap
+                    color: sheet.powerBusy ? look.dim : Kirigami.Theme.negativeTextColor
+                }
+                Card {
+                    tone: look
+                    visible: sheet.powerInfo.hasBattery === true && (sheet.powerInfo.modes || []).indexOf("power-saver") !== -1
+                    SettingRow {
+                        tone: look
+                        objectName: "automaticBatterySaver"
+                        title: i18n("Automatic battery saver")
+                        checkable: true
+                        checked: sheet.powerInfo.batterySaverAuto === true
+                        detail: sheet.powerInfo.batterySaverAuto === true
+                            ? i18n("Turns on at %1% on battery. Plug in to return to your normal power mode.", sheet.powerInfo.batterySaverThreshold || 20)
+                            : i18n("Choose when to use Power saver yourself.")
+                        tappable: !sheet.powerBusy
+                        onTapped: sheet.changePower("battery-saver " + (sheet.powerInfo.batterySaverAuto ? "off" : "automatic"))
+                        Switch { objectName: "batterySaverSwitch"; tone: look; active: sheet.powerInfo.batterySaverAuto === true }
+                    }
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        visible: sheet.powerInfo.batterySaverAuto === true
+                        title: i18n("Turn on battery saver at")
+                        objectName: "batterySaverThresholdRow"
+                        Segments {
+                            tone: look
+                            objectName: "batterySaverThreshold"
+                            enabled: !sheet.powerBusy
+                            options: [10, 20, 30, 50, sheet.powerInfo.batterySaverThreshold || 20]
+                                .filter((value, index, values) => value > (sheet.powerInfo.batteryCriticalLevel || 5) && values.indexOf(value) === index)
+                                .sort((a, b) => a - b).map(v => [v, i18n("%1%", v)])
+                            current: sheet.powerInfo.batterySaverThreshold || 20
+                            onPicked: value => sheet.changePower("battery-saver threshold " + value)
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        divider: false
+                        visible: sheet.powerInfo.activeMode === "power-saver"
+                        title: i18n("Power saver is active")
+                        detail: i18n("Background updates already wait while Power saver is on.")
                     }
                 }
                 // Plugged in, and on battery when there is one.
