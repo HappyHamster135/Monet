@@ -1,5 +1,24 @@
 # Testing Monet on real hardware
 
+## 0.9.8-8 app-library polish — 18 November 2026
+
+Native Apps and Games fixtures reproduced broken lists after null helper
+replies, overlapping refreshes, missing Back actions and a squeezed Games
+heading at its minimum width. The corrected views retain the last good list,
+offer a keyboard retry, serialize refreshes, and keep scroll and focus when the
+list is unchanged. Back dismisses a confirmation before leaving its page.
+
+A pixel check reproduced invisible game covers with Qt's software renderer.
+Covers, page artwork and dialog backgrounds now bypass unsupported shader
+effects in that renderer. The ordinary OpenGL path retains those effects.
+
+Seventy focused checks pass with no skips, covering the libraries, shared
+window controls and translation catalogs. Ten native interaction and render
+checks also pass in each of three private-display runs: Swedish at 150% with
+larger text, Arabic at 200%, and OpenGL through Mesa on Xvfb. The tests load
+Monet's fonts and use disposable homes and buses. Physical GPU and input-device
+testing remains open. The new recovery message is built in all 29 catalogs.
+
 ## 0.9.8-8 update recovery and game shortcuts — 18 November 2026
 
 Settings recovers its update controls after an invalid helper reply or an

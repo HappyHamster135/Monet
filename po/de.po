@@ -13676,3 +13676,7 @@ msgid ""
 "Its own installers open here, one after the other. Read their terms and accept them only if you agree: Monet never does that for you, and turns nothing off."
 msgstr ""
 "Seine eigenen Installer öffnen sich hier, einer nach dem anderen. Lies ihre Bedingungen und stimm nur zu, wenn du einverstanden bist: Monet tut das nie für dich und schaltet nichts ab."
+
+#: linux/share/monet/games/LibraryStatus.qml:29
+msgid "Couldn't load the library. Try again."
+msgstr "Die Bibliothek konnte nicht geladen werden. Versuche es erneut."

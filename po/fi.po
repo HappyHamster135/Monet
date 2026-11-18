@@ -13652,3 +13652,7 @@ msgid ""
 "Its own installers open here, one after the other. Read their terms and accept them only if you agree: Monet never does that for you, and turns nothing off."
 msgstr ""
 "Sen omat asennusohjelmat avautuvat tässä yksi kerrallaan. Lue niiden ehdot ja hyväksy ne vain, jos olet samaa mieltä: Monet ei koskaan tee sitä puolestasi eikä poista mitään käytöstä."
+
+#: linux/share/monet/games/LibraryStatus.qml:29
+msgid "Couldn't load the library. Try again."
+msgstr "Kirjastoa ei voitu ladata. Yritä uudelleen."

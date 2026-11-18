@@ -15,6 +15,7 @@ import QtQuick.Layouts
 import QtQuick.Templates as T
 import QtQuick.Window
 import org.kde.kirigami as Kirigami
+import "Library.js" as Library
 
 MonetWindow {
     id: root
@@ -30,6 +31,10 @@ MonetWindow {
     // [{id, name, detail, icon, source, store, group, last, removable}] (monet-quick app-library).
     property var apps: []
     property bool loaded: false
+    property bool libraryBusy: false
+    property bool libraryProblem: false
+    property bool libraryQueued: false
+    property string libraryText: ""
     // What's shown: "all", "recent", a source ("store", "system", "mine", "windows") or "kind:KIND".
     property string section: "all"
     // How they're sorted: "name" or "recent" (kept for next time).
@@ -74,13 +79,28 @@ MonetWindow {
         }
     }
     function refresh() {
-        run(["helper", "app-library"], out => {
-            try {
-                apps = JSON.parse(out)
-            } catch (e) {
-                // Keep what's shown rather than an empty library.
+        if (libraryBusy) {
+            libraryQueued = true
+            return
+        }
+        libraryBusy = true
+        run(["helper", "app-library"], (out, code) => {
+            const found = Library.read(out, code, ["id", "name", "detail", "icon", "source", "store", "group"])
+            libraryProblem = found === null
+            if (found !== null) {
+                const text = JSON.stringify(found)
+                if (text !== libraryText) {
+                    apps = found
+                    libraryText = text
+                }
+                loaded = true
             }
-            loaded = true
+            libraryBusy = false
+            libraryStatus.finish(found !== null)
+            if (libraryQueued) {
+                libraryQueued = false
+                refresh()
+            }
         })
     }
     Component.onCompleted: refresh()
@@ -127,6 +147,14 @@ MonetWindow {
         pageId = ""
         confirmRemove = false
         Qt.callLater(() => grid.forceActiveFocus())
+    }
+    function goBack() {
+        if (confirmRemove) {
+            confirmRemove = false
+            Qt.callLater(() => removeButton.forceActiveFocus())
+        } else if (current !== null) {
+            closePage()
+        }
     }
 
     // Words -----------------------------------------------------------------
@@ -235,7 +263,7 @@ MonetWindow {
     Shortcut {
         sequences: [StandardKey.Back, "Escape"]
         enabled: root.current !== null
-        onActivated: root.closePage()
+        onActivated: root.goBack()
     }
 
     // A canvas under the side, as faint as paper's grain.
@@ -253,6 +281,11 @@ MonetWindow {
         anchors.fill: parent
         LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
         LayoutMirroring.childrenInherit: true
+
+        TapHandler {
+            acceptedButtons: Qt.BackButton
+            onTapped: root.goBack()
+        }
 
         // The side: the name, search, then the sections ------------------------------
         Item {
@@ -578,6 +611,22 @@ MonetWindow {
                     }
                 }
 
+                LibraryStatus {
+                    id: libraryStatus
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: header.bottom
+                    anchors.leftMargin: 32
+                    anchors.rightMargin: 24
+                    anchors.topMargin: visible ? 12 : 0
+                    tone: look
+                    busy: root.libraryBusy
+                    failed: root.libraryProblem
+                    loaded: root.loaded
+                    onRetry: root.refresh()
+                    onRecovered: if (root.current === null) Qt.callLater(grid.enter)
+                }
+
                 GridView {
                     id: grid
                     objectName: "appsGrid"
@@ -585,7 +634,7 @@ MonetWindow {
                     ScrollInput { view: grid }
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    anchors.top: header.bottom
+                    anchors.top: libraryStatus.bottom
                     anchors.bottom: parent.bottom
                     anchors.topMargin: 16
                     anchors.leftMargin: 24
@@ -707,7 +756,7 @@ MonetWindow {
                     tone: look
                     glyph: "M15 5l-7 7 7 7"
                     text: root.sectionEntry.name
-                    onClicked: root.closePage()
+                    onClicked: root.goBack()
                 }
 
                 ColumnLayout {
@@ -770,6 +819,7 @@ MonetWindow {
                                     onClicked: root.storePage(appPage.app)
                                 }
                                 Pill {
+                                    id: removeButton
                                     objectName: "appRemove"
                                     visible: appPage.app.removable === true && !root.confirmRemove
                                     tone: look

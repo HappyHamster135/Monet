@@ -13370,3 +13370,7 @@ msgstr "正在安裝 %1"
 msgid ""
 "Its own installers open here, one after the other. Read their terms and accept them only if you agree: Monet never does that for you, and turns nothing off."
 msgstr "它自己的安裝程式會在這裡依序開啟。請閱讀條款，只有在您同意時才接受：Monet 絕不會替您接受，也不會關閉任何東西。"
+
+#: linux/share/monet/games/LibraryStatus.qml:29
+msgid "Couldn't load the library. Try again."
+msgstr "無法載入收藏庫。請重試。"

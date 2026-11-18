@@ -13604,3 +13604,7 @@ msgid ""
 "Its own installers open here, one after the other. Read their terms and accept them only if you agree: Monet never does that for you, and turns nothing off."
 msgstr ""
 "Penginstal resminya terbuka di sini, satu per satu. Baca ketentuannya dan terima hanya jika Anda setuju: Monet tidak pernah melakukannya untuk Anda, dan tidak mematikan apa pun."
+
+#: linux/share/monet/games/LibraryStatus.qml:29
+msgid "Couldn't load the library. Try again."
+msgstr "Pustaka tidak dapat dimuat. Coba lagi."

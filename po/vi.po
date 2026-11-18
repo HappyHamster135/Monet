@@ -13584,3 +13584,7 @@ msgid ""
 "Its own installers open here, one after the other. Read their terms and accept them only if you agree: Monet never does that for you, and turns nothing off."
 msgstr ""
 "Chính trình cài đặt của nó sẽ mở ở đây, lần lượt từng cái. Hãy đọc điều khoản và chỉ chấp nhận nếu bạn đồng ý: Monet không bao giờ làm việc đó thay bạn, và không tắt bất cứ thứ gì."
+
+#: linux/share/monet/games/LibraryStatus.qml:29
+msgid "Couldn't load the library. Try again."
+msgstr "Không thể tải thư viện. Hãy thử lại."

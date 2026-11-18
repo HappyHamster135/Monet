@@ -13423,3 +13423,7 @@ msgid ""
 "Its own installers open here, one after the other. Read their terms and accept them only if you agree: Monet never does that for you, and turns nothing off."
 msgstr ""
 "공식 설치 프로그램이 여기서 차례로 열려요. 약관을 읽고 동의할 때만 수락하세요. Monet가 대신 수락하는 일은 없으며, 아무것도 끄지 않아요."
+
+#: linux/share/monet/games/LibraryStatus.qml:29
+msgid "Couldn't load the library. Try again."
+msgstr "라이브러리를 불러오지 못했습니다. 다시 시도하세요."

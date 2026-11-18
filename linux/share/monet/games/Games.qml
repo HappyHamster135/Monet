@@ -21,6 +21,7 @@ import QtQuick.Layouts
 import QtQuick.Templates as T
 import QtQuick.Window
 import org.kde.kirigami as Kirigami
+import "Library.js" as Library
 
 MonetWindow {
     id: root
@@ -52,6 +53,9 @@ MonetWindow {
     property var shared: ({})
     property bool sharing: false
     property bool loaded: false
+    property bool libraryBusy: false
+    property bool libraryProblem: false
+    property bool libraryQueued: false
     // What the covers are: "all", "favorites", "recent", "monet", "windows" or "store:STORE".
     property string section: "all"
     // How they're sorted: "recent", "name", "playtime" or "size" (kept for next time).
@@ -119,22 +123,35 @@ MonetWindow {
     // The library as it last came: the same again (a download's look while nothing moved) changes nothing.
     property string libraryText: ""
     function refresh() {
-        run(["helper", "library"], out => {
-            try {
-                if (out !== libraryText) {
-                    games = JSON.parse(out)
-                    libraryText = out
+        if (libraryBusy) {
+            libraryQueued = true
+            return
+        }
+        libraryBusy = true
+        run(["helper", "library"], (out, code) => {
+            const found = Library.read(out, code, ["id", "name", "store", "plays", "state"])
+            libraryProblem = found === null
+            if (found !== null) {
+                const text = JSON.stringify(found)
+                if (text !== libraryText) {
+                    games = found
+                    libraryText = text
                 }
-            } catch (e) {
-                // Keep what's shown rather than an empty library.
+                if (!loaded)
+                    Qt.callLater(grid.positionViewAtBeginning)
+                loaded = true
             }
-            if (!loaded)
-                Qt.callLater(grid.positionViewAtBeginning)
-            loaded = true
+            libraryBusy = false
+            libraryStatus.finish(found !== null)
+            if (libraryQueued) {
+                libraryQueued = false
+                refresh()
+            }
         })
-        run(["helper", "shared"], out => {
+        run(["helper", "shared"], (out, code) => {
             try {
-                shared = JSON.parse(out)
+                const found = JSON.parse(out)
+                if (code === 0 && found && typeof found === "object" && !Array.isArray(found)) shared = found
             } catch (e) {
             }
         })
@@ -361,6 +378,12 @@ MonetWindow {
         pageId = ""
         Qt.callLater(() => grid.forceActiveFocus())
     }
+    function goBack() {
+        if (menu.opened) menu.close()
+        else if (keyOpen) keyOpen = false
+        else if (sheetOpen) sheetOpen = false
+        else if (current !== null) closePage()
+    }
 
     // Words -----------------------------------------------------------------
 
@@ -512,6 +535,11 @@ MonetWindow {
         sequences: [StandardKey.Refresh]
         onActivated: root.refresh()
     }
+    Shortcut {
+        sequences: [StandardKey.Back]
+        enabled: root.current !== null || root.sheetOpen || root.keyOpen || menu.opened
+        onActivated: root.goBack()
+    }
 
     // A canvas under the side, as faint as paper's grain.
     Image {
@@ -587,6 +615,11 @@ MonetWindow {
         anchors.fill: parent
         LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
         LayoutMirroring.childrenInherit: true
+
+        TapHandler {
+            acceptedButtons: Qt.BackButton
+            onTapped: root.goBack()
+        }
 
         // The side: the name, search, the sections and the stores ----------------------
         Item {
@@ -864,7 +897,7 @@ MonetWindow {
                 visible: root.current === null
 
                 // The section's name, how many, and the order.
-                RowLayout {
+                GridLayout {
                     id: header
                     anchors.left: parent.left
                     anchors.right: parent.right
@@ -872,7 +905,9 @@ MonetWindow {
                     anchors.leftMargin: 32
                     anchors.rightMargin: 24
                     anchors.topMargin: 24
-                    spacing: 16
+                    columns: width < sorts.implicitWidth + addGame.implicitWidth + 180 ? 2 : 3
+                    columnSpacing: 16
+                    rowSpacing: 12
                     ColumnLayout {
                         Layout.fillWidth: true
                         spacing: 2
@@ -880,6 +915,7 @@ MonetWindow {
                             horizontalAlignment: Text.AlignLeft
                             Layout.fillWidth: true
                             text: root.query !== "" ? i18n("Games called “%1”", root.query.trim()) : root.sectionEntry.name
+                            objectName: "gameLibraryHeading"
                             color: look.ink
                             elide: Text.ElideRight
                             font.family: "Fraunces 72pt SuperSoft"
@@ -895,6 +931,8 @@ MonetWindow {
                         }
                     }
                     Pill {
+                        id: addGame
+                        objectName: "gameAdd"
                         tone: look
                         iconName: "list-add"
                         text: i18n("Add game")
@@ -903,6 +941,9 @@ MonetWindow {
                     // Recent, name, play time or size: the chosen one on a pebble, as Settings' choices are.
                     Rectangle {
                         id: sorts
+                        objectName: "gameSorts"
+                        Layout.columnSpan: header.columns === 2 ? 2 : 1
+                        Layout.alignment: Qt.AlignLeft
                         visible: root.section !== "recent" && root.shown.length > 1
                         implicitWidth: sortRow.implicitWidth + 6
                         implicitHeight: 36
@@ -957,13 +998,29 @@ MonetWindow {
                     }
                 }
 
+                LibraryStatus {
+                    id: libraryStatus
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: header.bottom
+                    anchors.leftMargin: 32
+                    anchors.rightMargin: 24
+                    anchors.topMargin: visible ? 12 : 0
+                    tone: look
+                    busy: root.libraryBusy
+                    failed: root.libraryProblem
+                    loaded: root.loaded
+                    onRetry: root.refresh()
+                    onRecovered: if (root.current === null && !root.keyOpen && !root.sheetOpen) Qt.callLater(grid.enter)
+                }
+
                 // All, installed or not installed, once there are games you own but haven't
                 // installed; and Steam's key, once someone's signed in to Steam here.
                 RowLayout {
                     id: filters
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    anchors.top: header.bottom
+                    anchors.top: libraryStatus.bottom
                     anchors.leftMargin: 32
                     anchors.rightMargin: 24
                     anchors.topMargin: visible ? 12 : 0
@@ -1142,6 +1199,7 @@ MonetWindow {
 
                 GridView {
                     id: grid
+                    objectName: "gamesGrid"
                     MouseScroll { view: grid }
                     anchors.left: parent.left
                     anchors.right: parent.right
@@ -1353,6 +1411,7 @@ MonetWindow {
 
                         Cover {
                             id: tileCover
+                            objectName: "gameCover-" + tile.modelData.id
                             x: 8
                             y: 8
                             width: parent.width - 16
@@ -1555,7 +1614,7 @@ MonetWindow {
                 app: root
                 tone: look
                 game: root.current || ({})
-                onBack: root.closePage()
+                onBack: root.goBack()
             }
         }
 
@@ -1576,7 +1635,7 @@ MonetWindow {
                 color: look.dark ? "#2D2C29" : "#FFFFFF"
                 border.width: 1
                 border.color: look.dark ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(0, 0, 0, 0.08)
-                layer.enabled: true
+                layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software
                 layer.effect: MultiEffect {
                     shadowEnabled: true
                     shadowColor: Qt.rgba(0, 0, 0, 0.28)
@@ -1672,7 +1731,7 @@ MonetWindow {
             Behavior on anchors.verticalCenterOffset {
                 NumberAnimation { duration: Math.round(380 * root.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.08, 1, 1] }
             }
-            layer.enabled: visible
+            layer.enabled: visible && GraphicsInfo.api !== GraphicsInfo.Software
             layer.effect: MultiEffect {
                 shadowEnabled: true
                 shadowColor: Qt.rgba(0, 0, 0, 0.3)
@@ -1811,7 +1870,7 @@ MonetWindow {
             Behavior on anchors.verticalCenterOffset {
                 NumberAnimation { duration: Math.round(380 * root.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.08, 1, 1] }
             }
-            layer.enabled: visible
+            layer.enabled: visible && GraphicsInfo.api !== GraphicsInfo.Software
             layer.effect: MultiEffect {
                 shadowEnabled: true
                 shadowColor: Qt.rgba(0, 0, 0, 0.3)

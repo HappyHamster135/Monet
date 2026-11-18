@@ -121,9 +121,10 @@ Flickable {
         // The picture, the name on it, and the way back. Its top corners follow the page's.
         Item {
             id: hero
+            objectName: "gameHero"
             width: parent.width
             height: Math.round(Math.min(Math.max(page.width * 0.36, 220), 380))
-            layer.enabled: true
+            layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software
             layer.effect: MultiEffect {
                 maskEnabled: true
                 maskSource: heroShapeBox
@@ -201,7 +202,7 @@ Flickable {
                     font.weight: Font.Light
                     font.pixelSize: Math.round(Math.min(48, Math.max(30, page.width / 22)))
                     font.letterSpacing: -0.6
-                    layer.enabled: true
+                    layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software
                     layer.effect: MultiEffect {
                         shadowEnabled: true
                         shadowColor: Qt.rgba(0, 0, 0, 0.5)

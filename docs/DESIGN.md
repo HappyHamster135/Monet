@@ -683,6 +683,14 @@ menu was on kept panels, with its shortcut, once.
 
 ## Apps
 
+**Apps and Games** keep the last working library when a refresh fails. A first
+load says Loading, and a failed read has Try again, reachable by keyboard.
+Overlapping refresh requests wait for one fresh follow-up. An unchanged list
+keeps its scroll position and keyboard selection. Alt+Left and the mouse's Back
+button return from a detail page; an open confirmation is dismissed first.
+Games puts sorting below its heading on a narrow window. Its covers, pages and
+dialogs remain visible when Qt uses its software renderer.
+
 **Files** (Dolphin with the Monet app style): glass title, toolbar and
 sidebar; the files on paper; folders big enough to see their paintings
 (80 px, previews on); a soft Lily wash for the selection instead of a solid
