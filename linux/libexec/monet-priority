@@ -61,7 +61,7 @@ RECHECK = 10                # while they do: apps started or ended, sound, the g
 SAVED = Path(os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}") / "monet/priority.json"
 # The desktop's own services, some of which Plasma starts in app.slice too (from autostart).
 DESKTOP = ("plasma", "kwin", "kded", "ksmserver", "pipewire", "wireplumber", "pulseaudio", "xdg-", "dbus",
-           "polkit", "xembedsniproxy", "gmenudbusmenuproxy", "kaccess", "at-spi", "ibus", "fcitx", "monet")
+           "polkit", "xembedsniproxy", "gmenudbusmenuproxy", "kaccess", "at-spi", "ibus", "fcitx", "monet", "spectacle")
 NAME_ON_BUS, PATH_ON_BUS = "org.monet.Priority", "/org/monet/Priority"
 
 

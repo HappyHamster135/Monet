@@ -1,0 +1,12 @@
+[Unit]
+Description=Prepare screenshot capture after the desktop is ready
+PartOf=graphical-session.target
+ConditionPathExists=/usr/bin/spectacle
+
+[Timer]
+OnActiveSec=3s
+AccuracySec=1s
+Unit=app-org.kde.spectacle.service
+
+[Install]
+WantedBy=graphical-session.target

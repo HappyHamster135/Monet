@@ -46,8 +46,7 @@ class Playback(unittest.TestCase):
         metadata = [sink(65, "Analog Output"), sink(73, "Analog Output"), sink(85, "HDMI / DisplayPort")]
         with patch.object(self.q, "run", side_effect=[status, json.dumps(metadata)]):
             names = [o["name"] for o in self.q.outputs()]
-        self.assertEqual(names, ["Analog Output · Built-in Audio Analog Stereo",
-                                 "Analog Output · USB DAC Analog Stereo", "HDMI / DisplayPort"])
+        self.assertEqual(names, ["Speakers", "USB DAC", "Display audio"])
 
     def test_missing_or_malformed_metadata_keeps_wpctl_fallback(self):
         for raw in (None, "bad json", "{}", '[null, {"properties": null}]'):

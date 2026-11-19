@@ -3,3 +3,5 @@ dist
 .git
 testbench
 __pycache__
+**/__pycache__
+**/*.pyc

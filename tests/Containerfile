@@ -63,6 +63,11 @@ COPY image/window-identity /src/window-identity
 COPY LICENSE /src/window-identity/LICENSE
 RUN sh /src/window-identity/build.sh /out
 
+FROM desktop-runtime AS task-manager
+COPY image/task-manager /src/task-manager
+COPY image/download-source-rpm.py /src/task-manager/download-source-rpm.py
+RUN sh /src/task-manager/build.sh /out
+
 FROM dock AS quick-options-test
 COPY tests/native/quick-options /src/quick-options-test
 RUN cmake -S /src/quick-options-test -B /tmp/quick-options-test -DCMAKE_BUILD_TYPE=Release \
@@ -70,7 +75,7 @@ RUN cmake -S /src/quick-options-test -B /tmp/quick-options-test -DCMAKE_BUILD_TY
  && cp /tmp/quick-options-test/quick-options-test /out/quick-options-test
 
 FROM desktop-runtime
-RUN dnf -y install binutils kf6-bluez-qt bluedevil && dnf clean all
+RUN dnf -y install binutils kf6-bluez-qt bluedevil spectacle filelight flatpak-libs python3-pyatspi at-spi2-core && dnf clean all
 COPY --from=archive-recovery /out /tmp/monet-archive-recovery
 RUN python3 /tmp/monet-archive-recovery/bundle.py install /tmp/monet-archive-recovery \
  && rm -rf /tmp/monet-archive-recovery
@@ -106,4 +111,8 @@ COPY --from=window-identity /out /tmp/monet-window-identity
 RUN python3 /tmp/monet-window-identity/bundle.py install /tmp/monet-window-identity \
  && rm -rf /tmp/monet-window-identity
 ENV MONET_TITLE_NATIVE=1
+COPY --from=task-manager /out /tmp/monet-task-manager
+RUN python3 /tmp/monet-task-manager/bundle.py install /tmp/monet-task-manager \
+ && rm -rf /tmp/monet-task-manager
+ENV MONET_TASK_MANAGER_NATIVE=1
 CMD ["python3", "tools/test.py", "--require-desktop"]

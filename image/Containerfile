@@ -27,6 +27,7 @@ RUN rustup toolchain install \
  && rm -rf /tmp/monet-driver-downloads
 
 FROM ${BASE} AS runtime
+RUN dnf -y install filelight flatpak-libs && dnf clean all
 # Tools for installing Windows from Monet: splitting Windows' install image
 # (wimlib), formatting its partition (ntfsprogs), and boot entries; ntfs-3g's
 # probe, which says when Windows' drive is safe to write (its Games folder for

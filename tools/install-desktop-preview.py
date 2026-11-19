@@ -122,6 +122,7 @@ def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None, native_bundle
             add(DATA / shortcut, ''.join(lines).encode())
     if monitor_binary:
         add(HELPERS / 'plasma-systemmonitor', monitor_binary.read_bytes(), 0o755)
+        add(HELPERS / 'libPlasmaSystemMonitorPage.so', (monitor_bundle / 'libPlasmaSystemMonitorPage.so').read_bytes(), 0o755)
         for name in ('runtime.json', 'source.tar.xz', 'README.md'):
             add(PRIVATE / 'task-manager' / name, (monitor_bundle / name).read_bytes())
     for name in LOCAL:

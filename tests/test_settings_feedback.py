@@ -1224,7 +1224,7 @@ class LookFeedback(unittest.TestCase):
             return [item.property("text")] + [text for child in item.childItems() for text in texts(child)]
 
         content = self.window.contentItem()
-        self.wait_for(lambda: "2001:db8::2/64" in texts(content))
+        self.wait_for(lambda: "2001:db8::2/64" in texts(content) and "Office Wi-Fi" in texts(content))
         labels = texts(content)
         for label in ("Internet", "LAN (Ethernet)", "Connected to LAN", "Office Ethernet", "Cable unplugged",
                       "192.0.2.53", "Manage wired connections…", "Wi-Fi", "Office Wi-Fi"):

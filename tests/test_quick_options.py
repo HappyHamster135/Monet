@@ -111,6 +111,7 @@ class QuickPanels(unittest.TestCase):
         self.folder = tempfile.TemporaryDirectory(); self.addCleanup(self.folder.cleanup)
         root = Path(self.folder.name); (root / "ui").mkdir()
         shutil.copyfile(UI / "QuickOptions.qml", root / "ui/QuickOptions.qml")
+        shutil.copyfile(ROOT / "linux/share/monet/widgets/ActionButton.qml", root / "ui/ActionButton.qml")
         source = '''import QtQuick
 import "ui" as Monet
 Window {

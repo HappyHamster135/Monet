@@ -65,6 +65,13 @@ class Fixture(unittest.TestCase):
 
 
 class Resting(Fixture):
+    def test_screenshot_service_stays_ready_under_memory_pressure(self):
+        self.unit('app-org.kde.spectacle.service', [10], 300)
+        state = {}
+        for now in (1000, 2000, 3000): self.look(state, now, memory(16, 1), [])
+        self.assertEqual(self.asked, [])
+        self.assertNotIn('app-org.kde.spectacle.service', state)
+
     def test_plenty_free_does_nothing_and_asks_kwin_nothing(self):
         self.unit('app-discord-1.scope', [10], 800)
         state = {}

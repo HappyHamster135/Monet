@@ -19,7 +19,7 @@ with private_session() as env:
     aliases = {name: 'org.monet.fixture.'+name.rsplit('.',1)[1] for name in ('org.kde.plasma.icontasks', 'org.kde.plasma.systemtray', 'org.kde.plasma.marginsseparator', 'org.kde.plasma.trash')}
     def inert(script):
         for original, substitute in aliases.items(): script=script.replace(original,substitute)
-        return script
+        return script.replace('catch (error) {', 'catch (error) { console.error("Panel migration failed:", String(error));')
     env.update(KWIN_COMPOSE="O2", LIBGL_ALWAYS_SOFTWARE="1", QT_FORCE_STDERR_LOGGING="1")
     processes = []
     logpath = Path(env['HOME']) / 'panel-fixture.log'

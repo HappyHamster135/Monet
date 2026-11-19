@@ -678,11 +678,68 @@ def disconnected_port(item):
                and port.get("availability") in ("not available", "no") for port in ports)
 
 
+def audio_names():
+    try:
+        names = json.loads((CONFIG / 'monet/audio-names.json').read_text())
+        return names if isinstance(names, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def set_audio_name(key, name):
+    if not isinstance(key, str) or not re.fullmatch(r'(?:[0-9a-f]{2}){1,4096}', key) or not isinstance(name, str) \
+            or len(name) > 80 or any(ord(c) < 32 or ord(c) == 127 for c in name):
+        return {'ok': False}
+    names = audio_names()
+    if name.strip(): names[key] = name.strip()
+    else: names.pop(key, None)
+    path = CONFIG / 'monet/audio-names.json'
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(mode='w', dir=path.parent, delete=False) as stream:
+            json.dump(names, stream); temporary = Path(stream.name)
+        temporary.replace(path)
+        return {'ok': audio_names().get(key, '') == name.strip()}
+    except OSError:
+        return {'ok': False}
+
+
+def output_name(listed, props, port):
+    """Describe what plays sound and how it is connected, rather than ALSA profiles."""
+    raw = str(props.get('node.name') or '')
+    bus = str(props.get('device.bus') or '')
+    form = str(props.get('device.form_factor') or '').lower()
+    port_name = str(port.get('name') or '').lower()
+    description = tidy_name(str(port.get('description') or listed))
+    hardware = next((str(props[k]) for k in ('device.nick', 'device.product.name', 'device.description', 'node.nick')
+                     if props.get(k) and not RAW_NODE.search(str(props[k]))), listed)
+    hardware = tidy_name(hardware)
+    hardware = re.sub(r'\s+(?:Analog Stereo|Digital Stereo(?: \([^)]*\))?|HiFi Stereo|High Fidelity Playback.*)$', '', hardware, flags=re.I).strip()
+    bluetooth = raw.startswith('bluez_output.') or bus == 'bluetooth'
+    usb = bus == 'usb' or '.usb-' in raw or re.search(r'\bUSB\b', hardware, re.I)
+    headset = form in ('headset', 'headphone') or re.search(r'headphone|headset', port_name + ' ' + description, re.I)
+    if bluetooth:
+        return hardware, tr('Bluetooth headphones') if headset else tr('Bluetooth audio')
+    if usb:
+        return hardware, tr('USB headset') if headset else tr('USB audio')
+    if 'hdmi' in raw.lower() or re.search(r'hdmi|displayport', description, re.I):
+        # Preserve the connector number when the monitor does not report a model.
+        connector = re.search(r'(?:hdmi|displayport)(-output)?[ -]?(\d+)', port_name, re.I)
+        return (hardware if not re.search(r'HDMI|Navi |NVIDIA|Radeon|Intel|pci-', hardware, re.I) else tr('Display audio')
+                ) + ((' · ' + str(int(connector[2]) + bool(connector[1]))) if connector else ''), tr('HDMI / DisplayPort')
+    if headset:
+        return tr('Headphones'), tr('Headphone jack')
+    if re.search(r'speaker|analog output', description, re.I) and not usb:
+        return tr('Speakers'), tr('Built-in audio')
+    return (node_label(description) if RAW_NODE.search(description) else description), hardware if hardware != description else ''
+
+
 def outputs():
     """Playable outputs, using the active port name where available."""
     found = sinks(run("wpctl", "status") or "")
     metadata = pulse_nodes("sinks")
     playable = []
+    aliases = audio_names()
     for sink in found:
         item = metadata.get(sink["id"])
         if item is not None:
@@ -694,14 +751,16 @@ def outputs():
             if isinstance(ports, list) and not sink["none"]:
                 active = next((port for port in ports if isinstance(port, dict)
                                and port.get("name") == item.get("active_port")), {})
-                if active.get("description"):
-                    sink["device"], sink["name"] = sink["name"], active["description"]
+                sink['device'] = sink['name']
+                sink['name'], sink['detail'] = output_name(sink['name'], props, active)
         else:
             props = node_details(sink["id"], {})[1]
             sink["none"] = props.get("node.name") == "auto_null"
         key = None if sink["none"] else node_key(props)
         if key:
             sink["key"] = key
+            if isinstance(aliases.get(key), str) and aliases[key].strip():
+                sink['name'] = aliases[key]
         playable.append(sink)
     # Two devices can share a port name ("Headphones", "Analog Output"); then
     # also say which device each one is.
@@ -921,6 +980,7 @@ def available_microphones():
     # them, with every input at once ("Focusrite Scarlett 2i2 2nd Gen 0"); it's meant to be hidden.
     behind = {props.get("api.alsa.split.name") for _, props in details.values() if props.get("api.alsa.split.position")}
     shown = []
+    aliases = audio_names()
     for source in found:
         description, props = details[source["id"]]
         if (disconnected_port(metadata.get(source["id"], {}))
@@ -929,6 +989,7 @@ def available_microphones():
                 or (props.get("node.name") and props.get("node.name") in behind)):
             continue
         name, key = source_name(source.get("name", ""), description, props), node_key(props)
+        if isinstance(aliases.get(key), str) and aliases[key].strip(): name = aliases[key]
         shown.append(dict(source, name=name, key=key) if key else dict(source, name=name))
     return shown
 
@@ -2098,6 +2159,9 @@ def app_source(folder, entry):
 
 def app_library(dirs=None, used=None):
     """[{id, name, detail, icon, source, store, group, last, removable}] for the Apps window."""
+    if dirs is None and (PROGRAMS_PREFIX / 'drive_c').is_dir():
+        try: program_menu()
+        except OSError: pass
     folders = app_dirs() if dirs is None else dirs
     used = last_opened() if used is None else used
     seen, found = set(), []
@@ -2141,6 +2205,57 @@ def app_remove(app_id, folder=None):
         return False
     path.unlink()
     return True
+
+
+def app_management(app_id, token=None, erase=True):
+    import importlib.util
+    if not isinstance(app_id, str) or not app_id.endswith('.desktop') or '/' in app_id or '\\' in app_id:
+        return {'ok': False, 'problem': 'request'}
+    try:
+        spec = importlib.util.spec_from_file_location('monet_app_management', Path(DATADIR) / 'monet/monet_runtime/app_management.py')
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        for folder in app_dirs():
+            path = folder / app_id
+            if not path.is_file():
+                path = next((p for p in folder.rglob('*.desktop') if '-'.join(p.relative_to(folder).parts) == app_id), None)
+            if path is None or not path.is_file(): continue
+            with path.open(encoding='utf-8') as stream: raw = stream.read(65537)
+            if len(raw) > 65536: return {'ok': False, 'problem': 'request'}
+            entry = desktop_entry(raw)
+            plan = module.review(path, entry, HOME, DATA_HOME, run=run)
+            if token is None: return plan
+            return module.uninstall(plan, token, erase, run)
+        return {'ok': False, 'problem': 'gone'}
+    except (OSError, ValueError, UnicodeError, ImportError):
+        return {'ok': False, 'problem': 'unavailable'}
+
+
+def app_wine_uninstaller(app_id):
+    plan = app_management(app_id)
+    if not plan.get('ok') or plan.get('kind') != 'wine':
+        return {'ok': False}
+    try:
+        with Path(plan['entry']).open() as stream: entry = desktop_entry(stream.read(65537))
+        argv = shlex.split(entry.get('Exec', ''))
+        env = dict(os.environ)
+        if Path(plan['entry']).name.startswith('monet-program-'):
+            # Monet installs programs through Proton, even on PCs without Wine.
+            uninstaller = PROGRAMS_PREFIX / 'drive_c/windows/system32/uninstaller.exe'
+            if not shutil.which('umu-run') or not uninstaller.is_file(): return {'ok': False}
+            env.update(WINEPREFIX=str(PROGRAMS_PREFIX), GAMEID='0')
+            env.pop('PROTONPATH', None)
+            proton = steam_proton()
+            if proton and (proton / 'toolmanifest.vdf').is_file(): env['PROTONPATH'] = str(proton)
+            command = ['umu-run', str(uninstaller)]
+        else:
+            if not shutil.which('wine'): return {'ok': False}
+            prefix = next((value.split('=', 1)[1] for value in argv if value.startswith('WINEPREFIX=')), '')
+            if prefix: env['WINEPREFIX'] = prefix
+            command = ['wine', 'uninstaller']
+        subprocess.Popen(command, env=env, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return {'ok': True, 'external': True}
+    except (OSError, ValueError):
+        return {'ok': False}
 
 
 def native_executable(path):
@@ -3643,6 +3758,16 @@ def storage_capacity():
                 measured=False, downloadsPath=str(downloads_dir()))
 
 
+def storage_details(cleanup=None):
+    import importlib.util
+    try:
+        spec = importlib.util.spec_from_file_location('monet_storage_details', Path(DATADIR) / 'monet/monet_runtime/storage_details.py')
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        return module.cleanup(cleanup, run) if cleanup is not None else module.scan(HOME, downloads_dir(), Path(os.environ.get('XDG_CACHE_HOME') or HOME / '.cache'))
+    except (OSError, ValueError, ImportError):
+        return {'ok': False}
+
+
 def storage():
     """One bounded walk per tree; never repeatedly scan the same home folders."""
     measured = storage_scan()
@@ -5143,6 +5268,41 @@ def vdf_set(text, keys, name, value):
 # width, the sort), and from then on Monet's page with new columns is never read again.
 
 TASK_MANAGER_PAGES = ("monet-applications.page", "monet-processes.page")
+
+
+def task_manager_reset():
+    """The explicitly requested one-time 0.9.8-8 reset. Later customizations stay."""
+    backup = DATA_HOME / 'monet/task-manager-backups/0.9.8-8'
+    receipt = backup / 'complete.json'
+    if receipt.is_file():
+        return {'ok': True, 'changed': False, 'backup': str(backup)}
+    config = CONFIG / 'systemmonitorrc'
+    pages = DATA_HOME / 'plasma-systemmonitor'
+    if config.is_symlink() or pages.is_symlink():
+        return {'ok': False, 'problem': 'linked-profile'}
+    order = ['monet-applications.page', 'monet-performance.page', 'monet-graphics.page',
+             'monet-processes.page', 'monet-startup.page', 'monet-system.page']
+    hidden = 'applications.page,processes.page,overview.page,history.page'
+    try:
+        backup.mkdir(mode=0o700, parents=True, exist_ok=True)
+        # Do not replace the pre-update backup if an interrupted reset is retried.
+        if not (backup / 'prepared.json').exists():
+            if config.is_file(): shutil.copy2(config, backup / 'systemmonitorrc')
+            (backup / 'prepared.json').write_text(json.dumps({'config': config.is_file(), 'pages': pages.is_dir()}))
+        if pages.is_dir():
+            target = backup / 'pages'
+            if target.exists(): target = backup / ('interrupted-pages-' + str(time.time_ns()))
+            pages.rename(target)
+        config.parent.mkdir(parents=True, exist_ok=True)
+        text = '[General]\npageOrder=' + ','.join(order) + '\nstartPage=monet-applications.page\nlastVisitedPage=monet-applications.page\nhiddenPages=' + hidden + '\n'
+        with tempfile.NamedTemporaryFile(mode='w', dir=config.parent, delete=False) as stream:
+            stream.write(text); stage = Path(stream.name)
+        stage.replace(config)
+        receipt.write_text(json.dumps({'version':'0.9.8-8', 'pages':order}))
+        return {'ok': True, 'changed': True, 'backup': str(backup)}
+    except OSError:
+        # Leave the original backup available even after a partial reset.
+        return {'ok': False, 'problem': 'write', 'backup': str(backup)}
 
 
 def task_manager_graphics(folder=None):
@@ -7819,6 +7979,17 @@ def panel_layout(ident, layout=None):
 
 
 def fit_bars():
+    # Fit notifications from several applets must not race a one/three-bar move.
+    import fcntl
+    lock_dir = RUNTIME / "monet"
+    lock_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+    with (lock_dir / "panel-layout.lock").open("a") as lock:
+        try: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError: return
+        _fit_bars()
+
+
+def _fit_bars():
     # Only Monet's three bottom islands on the same screen are coordinated.
     # A range lets Plasma resize with its live contents. Fixing both limits to
     # a snapshot left an empty task-sized hole whenever an app closed.
@@ -10243,6 +10414,13 @@ def main(argv):
     # Root writes the limit; Monet's polkit rule lets this one program run without a password.
     elif cmd == "battery-limit" and args and args[0] in ("80", "100"):
         run("pkexec", f"{LIBEXECDIR}/monet-charge", args[0], timeout=60)
+    elif cmd == "audio-name" and len(args) == 2:
+        try:
+            result = set_audio_name(args[0], bytes.fromhex(args[1]).decode('utf-8'))
+        except (ValueError, UnicodeError):
+            result = {'ok': False}
+        emit(result)
+        return 0 if result['ok'] else 1
     elif cmd == "outputs":
         emit(outputs())
     elif cmd == "microphones":
@@ -10584,6 +10762,18 @@ def main(argv):
         set_overlay(args[0] == "on")
     elif cmd == "pair-controller" and shutil.which("bluedevil-wizard"):
         subprocess.Popen(["bluedevil-wizard"], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    elif cmd == "storage-details":
+        emit(storage_details())
+    elif cmd == "storage-unused-clean" and len(args) == 1 and re.fullmatch('[0-9a-f]{64}', args[0]):
+        result = storage_details(args[0]); emit(result)
+        return 0 if result.get('ok') else 1
+    elif cmd == "storage-map" and args in (['home'], ['disk']):
+        path = str(HOME) if args[0] == 'home' else '/'
+        try:
+            subprocess.Popen(['filelight', path], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            emit({'ok': True})
+        except OSError:
+            emit({'ok': False}); return 1
     elif cmd == "storage":
         emit(storage())
     elif cmd == "storage-disks" and len(args) in (0, 6):
@@ -10662,6 +10852,9 @@ def main(argv):
         protondb_refresh([a for a in args if a.isdigit()])
     elif cmd == "steam-share":
         emit({"done": steam_share(now=args[:1] == ["now"]), **shared_info()})
+    elif cmd == "task-manager-reset":
+        result = task_manager_reset(); emit(result)
+        return 0 if result['ok'] else 1
     elif cmd == "task-manager-graphics":
         emit({"changed": task_manager_graphics()})
     elif cmd == "game-names":
@@ -10814,6 +11007,15 @@ def main(argv):
         emit({"results": apps + everyday_search(query)})
     elif cmd == "app-library" and not args:
         emit(app_library())
+    elif cmd == "app-wine-uninstaller" and len(args) == 1:
+        result = app_wine_uninstaller(unhex(args[0])); emit(result)
+        return 0 if result['ok'] else 1
+    elif cmd == "app-removal-review" and len(args) == 1:
+        result = app_management(unhex(args[0])); emit(result)
+        return 0 if result['ok'] else 1
+    elif cmd == "app-uninstall" and len(args) == 3 and args[2] in ('erase', 'keep'):
+        result = app_management(unhex(args[0]), args[1], args[2] == 'erase'); emit(result)
+        return 0 if result['ok'] else 1
     elif cmd == "app-remove" and len(args) == 1 and re.fullmatch(r"(?:[0-9a-f]{2}){1,255}", args[0]):
         removed = app_remove(unhex(args[0]))
         emit({"ok": removed})

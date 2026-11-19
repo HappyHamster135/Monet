@@ -109,6 +109,8 @@ install -D -m 644 "$regional" "$LIBEXECDIR/monet_region.py"
 put 755 "$SRC/libexec/monet-region" "$LIBEXECDIR/monet-region"
 put 755 "$SRC/libexec/monet-files" "$BINDIR/monet-files"
 put 755 "$SRC/libexec/monet-file-jobs" "$LIBEXECDIR/monet-file-jobs"
+put 644 "$SRC/systemd/user/monet-screenshot-ready.timer" "$USERUNITDIR/monet-screenshot-ready.timer"
+put 644 "$SRC/systemd/user/app-org.kde.spectacle.service.d/monet.conf" "$USERUNITDIR/app-org.kde.spectacle.service.d/monet.conf"
 for tool in monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-work monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-priority monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
     put 755 "$SRC/libexec/$tool" "$LIBEXECDIR/$tool"
 done
@@ -183,6 +185,7 @@ put 644 "$SRC/share/applications/monet-passwords.desktop" "$DATADIR/applications
 put 644 "$SRC/share/applications/monet-games.desktop" "$DATADIR/applications/monet-games.desktop"
 # Apps, Games' sibling: every app in the menu, by where it came from and what it does.
 put 644 "$SRC/share/applications/monet-apps.desktop" "$DATADIR/applications/monet-apps.desktop"
+put 644 "$SRC/share/applications/org.kde.plasma-systemmonitor.desktop" "$DATADIR/applications/org.kde.plasma-systemmonitor.desktop"
 # The Store, Monet's own: Flathub's apps, and the Windows apps on the PC.
 put 644 "$SRC/share/applications/monet-store.desktop" "$DATADIR/applications/monet-store.desktop"
 # Windows+Alt+G: the last 30 seconds of a game, saved (its shortcut comes with Monet's look).
@@ -251,6 +254,7 @@ install -m 644 "$SRC"/share/plasma-systemmonitor/monet-*.page "$DATADIR/plasma-s
 tree "$SRC/share/ksysguard/sensorfaces/org.monet.hardware" "$DATADIR/ksysguard/sensorfaces/org.monet.hardware"
 tree "$SRC/share/ksysguard/sensorfaces/org.monet.totals" "$DATADIR/ksysguard/sensorfaces/org.monet.totals"
 tree "$SRC/share/ksysguard/sensorfaces/org.monet.performance" "$DATADIR/ksysguard/sensorfaces/org.monet.performance"
+tree "$SRC/share/ksysguard/sensorfaces/org.monet.graphics" "$DATADIR/ksysguard/sensorfaces/org.monet.graphics"
 tree "$SRC/share/ksysguard/sensorfaces/org.monet.system" "$DATADIR/ksysguard/sensorfaces/org.monet.system"
 tree "$SRC/share/ksysguard/sensorfaces/org.monet.startup" "$DATADIR/ksysguard/sensorfaces/org.monet.startup"
 tree "$SRC/share/ksysguard/sensorfaces/org.monet.applications" "$DATADIR/ksysguard/sensorfaces/org.monet.applications"
@@ -503,7 +507,7 @@ mv -f /etc/polkit-1/rules.d/49-monet.rules{.tmp,}
 if [ "$IMAGE" = 1 ]; then
     systemctl enable monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer monet-charge.service
     systemctl enable monet-login-brightness.service
-    systemctl --global enable monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path
+    systemctl --global enable monet-screenshot-ready.timer monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path
     systemctl enable monet-ready-leave.service monet-ready-boot.service
     systemctl --global enable monet-ready-lock.service monet-listening.service
     systemctl --global enable monet-work.service
@@ -712,7 +716,7 @@ else
     for unit in monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer monet-charge.service; do
         systemctl enable --now "$unit" >/dev/null 2>&1 || systemctl enable "$unit"
     done
-    systemctl --global enable monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path >/dev/null 2>&1 || true
+    systemctl --global enable monet-screenshot-ready.timer monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path >/dev/null 2>&1 || true
     systemctl enable --now monet-ready-leave.service >/dev/null 2>&1 || true
     systemctl enable monet-ready-boot.service >/dev/null 2>&1 || true
     systemctl --global enable monet-ready-lock.service monet-listening.service >/dev/null 2>&1 || true

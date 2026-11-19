@@ -135,7 +135,14 @@ if QT:
             self.ticket += 1
             ticket, command = self.ticket, [str(part) for part in command]
             self.asked.append(command)
-            out = json.dumps(self.library) if command[1:] == ["app-library"] else '{"ok": true}'
+            result = {"ok": True}
+            if command[1:] == ["app-library"]: result = self.library
+            elif command[1] == 'app-removal-review':
+                flatpak = bytes.fromhex(command[2]).decode() == 'app.zen_browser.zen.desktop'
+                result.update(kind='flatpak' if flatpak else 'shortcut', token='reviewed', eraseSupported=flatpak,
+                              data=['/private/.var/app/app.zen_browser.zen'] if flatpak else [])
+            elif command[1] == 'app-uninstall': result['removed'] = True
+            out = json.dumps(result)
             QTimer.singleShot(0, lambda: self.done.emit(ticket, out, 0, ""))
             return ticket
 
@@ -190,6 +197,13 @@ class Window(unittest.TestCase):
 
     def press(self, name):
         item = self.item(name)
+        parent = item.parentItem()
+        while parent:
+            if parent.property('contentY') is not None and parent.property('contentHeight') is not None:
+                local = item.mapToItem(parent, QPointF(0, 0))
+                parent.setProperty('contentY', max(0, min(parent.property('contentHeight') - parent.height(), parent.property('contentY') + local.y() - 40)))
+                QTest.qWait(30)
+            parent = parent.parentItem()
         point = item.mapToScene(QPointF(item.width() / 2, item.height() / 2)).toPoint()
         QTest.mouseClick(self.window, Qt.LeftButton, Qt.NoModifier, point)
         QTest.qWait(60)
@@ -205,7 +219,7 @@ class Window(unittest.TestCase):
         self.window.setProperty("pageId", "app.zen_browser.zen.desktop"); QTest.qWait(80)
         self.assertTrue(self.item("appPage").isVisible())
         self.assertTrue(self.item("appStore").isVisible())
-        self.assertFalse(self.item("appRemove").isVisible())
+        self.assertTrue(self.item("appRemove").isVisible())
         self.press("appOpen"); self.press("appStore")
         self.assertIn(["helper", "menu-app-open", "app.zen_browser.zen.desktop".encode().hex()], self.helper.asked)
         self.assertIn(["helper", "store-app", "app.zen_browser.zen"], self.helper.asked)
@@ -220,6 +234,18 @@ class Window(unittest.TestCase):
                       self.helper.asked)
         QTest.qWait(80)
         self.assertEqual(self.window.property("pageId"), "")
+
+    def test_store_apps_uninstall_with_data_by_default_and_offer_keep_data(self):
+        for keep in (False, True):
+            self.window.setProperty('pageId', 'app.zen_browser.zen.desktop'); QTest.qWait(80)
+            self.press('appRemove')
+            self.assertTrue(self.item('eraseAppData').property('checked'))
+            self.assertFalse(any(c[1] == 'app-uninstall' for c in self.helper.asked))
+            if keep: self.press('eraseAppData')
+            self.press('appUninstallConfirm')
+            self.assertIn(['helper', 'app-uninstall', 'app.zen_browser.zen.desktop'.encode().hex(),
+                           'reviewed', 'keep' if keep else 'erase'], self.helper.asked)
+            self.helper.asked.clear()
 
     def test_the_icons_fit_a_small_window(self):
         grid = self.item("appsGrid")

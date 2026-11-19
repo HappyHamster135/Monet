@@ -154,9 +154,9 @@ Item {
         spacing: 10
         RowLayout {
             Layout.fillWidth: true
-            PC.Button { id: back; objectName: "quickOptionsBack"; icon.name: "go-previous"; text: i18n("Back"); onClicked: pane.goBack() }
+            ActionButton { id: back; objectName: "quickOptionsBack"; icon.name: "go-previous"; text: i18n("Back"); onClicked: pane.goBack() }
             PC.Label { Layout.fillWidth: true; text: pane.heading; font.weight: Font.DemiBold; elide: Text.ElideRight }
-            PC.Button {
+            PC.ToolButton {
                 objectName: "quickOptionsRefresh"
                 icon.name: "view-refresh"; text: i18n("Refresh"); display: QQC2.AbstractButton.IconOnly
                 Accessible.name: text; enabled: !pane.busy; onClicked: pane.reload(true)
@@ -199,7 +199,7 @@ Item {
                                 PC.Label { Layout.fillWidth: true; text: modelData.name; textFormat: Text.PlainText; elide: Text.ElideRight }
                                 PC.Label { Layout.fillWidth: true; opacity: .7; text: modelData.active ? i18n("Connected") : modelData.secure ? i18n("Secured") : i18n("Open network") }
                             }
-                            PC.Button { objectName: "quickNetwork-" + modelData.name; text: modelData.active ? i18n("Disconnect") : i18n("Connect"); enabled: !pane.busy; onClicked: pane.selectNetwork(modelData) }
+                            ActionButton { objectName: "quickNetwork-" + modelData.name; text: modelData.active ? i18n("Disconnect") : i18n("Connect"); enabled: !pane.busy; onClicked: pane.selectNetwork(modelData) }
                         }
                     }
                 }
@@ -216,7 +216,7 @@ Item {
                         onAccepted: if (text && !pane.busy) pane.joinNetwork(pane.selectedNetwork, text)
                     }
                     PC.CheckBox { id: showPassword; text: i18n("Show password"); visible: password.visible; enabled: !pane.busy }
-                    PC.Button { objectName: "quickWifiJoin"; text: i18n("Connect"); visible: password.visible; enabled: !pane.busy && password.text.length > 0; onClicked: pane.joinNetwork(pane.selectedNetwork, password.text) }
+                    ActionButton { objectName: "quickWifiJoin"; text: i18n("Connect"); visible: password.visible; enabled: !pane.busy && password.text.length > 0; onClicked: pane.joinNetwork(pane.selectedNetwork, password.text) }
                 }
                 ColumnLayout {
                     Layout.fillWidth: true; visible: pane.page === "bluetooth" && pane.enabledRadio
@@ -231,11 +231,11 @@ Item {
                                 PC.Label { Layout.fillWidth: true; text: modelData.name; textFormat: Text.PlainText; elide: Text.ElideRight }
                                 PC.Label { Layout.fillWidth: true; opacity: .7; text: modelData.connected ? i18n("Connected") : i18n("Not connected") }
                             }
-                            PC.Button { objectName: "quickBluetooth-" + modelData.address; text: modelData.connected ? i18n("Disconnect") : i18n("Connect"); enabled: !pane.busy
+                            ActionButton { objectName: "quickBluetooth-" + modelData.address; text: modelData.connected ? i18n("Disconnect") : i18n("Connect"); enabled: !pane.busy
                                 onClicked: pane.request("quick-options bluetooth-device " + (modelData.connected ? "disconnect " : "connect ") + modelData.address, () => pane.bridge.refresh()) }
                         }
                     }
-                    PC.Button { objectName: "quickBluetoothPair"; text: i18n("Pair a new device…"); icon.name: "list-add"; enabled: !pane.busy; onClicked: pane.request("quick-options bluetooth-pair") }
+                    ActionButton { objectName: "quickBluetoothPair"; text: i18n("Pair a new device…"); icon.name: "list-add"; enabled: !pane.busy; onClicked: pane.request("quick-options bluetooth-pair") }
                 }
                 ColumnLayout {
                     Layout.fillWidth: true; visible: pane.page === "night"
@@ -313,7 +313,7 @@ Item {
                 }
             }
         }
-        PC.Button {
+        ActionButton {
             objectName: "quickOptionsAdvanced"; Layout.fillWidth: true
             text: i18n("More settings…")
             onClicked: pane.bridge.openSettings(pane.page === "night" ? "display" : pane.page === "quiet" ? "notifications"

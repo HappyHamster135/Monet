@@ -22,9 +22,12 @@ rpmbuild --nodeps -bp --define "_topdir $work/rpm" "$work/rpm/SPECS/plasma-syste
 source="$work/rpm/BUILD/plasma-systemmonitor-$version-build/plasma-systemmonitor-$version"
 python3 "$here/patch.py" "$source"
 cmake -S "$source" -B "$work/build" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
-    -DCMAKE_SKIP_RPATH=ON -DBUILD_TESTING=OFF
-cmake --build "$work/build" --target plasma-systemmonitor --parallel 4
+    -DCMAKE_SKIP_RPATH=OFF -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DCMAKE_INSTALL_RPATH='$ORIGIN' -DBUILD_TESTING=OFF
+cmake --build "$work/build" --target plasma-systemmonitor --parallel "${MONET_BUILD_JOBS:-1}"
 install -m 755 "$work/build/bin/plasma-systemmonitor" "$out/plasma-systemmonitor"
+page="$(find "$work/build" -name libPlasmaSystemMonitorPage.so -type f)"
+test -f "$page"
+install -m 755 "$page" "$out/libPlasmaSystemMonitorPage.so"
 cp -r "$here" "$work/monet-task-manager"
 cp "$helper" "$work/monet-task-manager/download-source-rpm.py"
 tar -cJf "$out/source.tar.xz" -C "$work" "$release.src.rpm" monet-task-manager

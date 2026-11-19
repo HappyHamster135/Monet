@@ -12,6 +12,7 @@
 import QtCore
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls as QQC2
 import QtQuick.Templates as T
 import QtQuick.Window
 import org.kde.kirigami as Kirigami
@@ -44,6 +45,9 @@ MonetWindow {
     property string pageId: ""
     readonly property var current: apps.find(a => a.id === pageId) || null
     property bool confirmRemove: false
+    property var removalPlan: null
+    property bool removalBusy: false
+    property bool eraseAppData: true
     property string problem: ""
     property var waiting: ({})
     readonly property string texture: brush
@@ -134,6 +138,29 @@ MonetWindow {
             }
         })
     }
+    function reviewRemoval(app) {
+        if (removalBusy) return
+        removalBusy = true; problem = ""; removalPlan = null; eraseAppData = true
+        run(["helper", "app-removal-review", hex(app.id)], (out, code) => {
+            root.removalBusy = false
+            let result = {}; try { result = JSON.parse(out) } catch(e) {}
+            if (code === 0 && result.ok === true) { root.removalPlan = result; root.confirmRemove = true }
+            else root.problem = i18n("The app couldn't be checked. Refresh the list and try again.")
+        })
+    }
+    function uninstall(app) {
+        if (removalBusy || !removalPlan) return
+        removalBusy = true; problem = ""
+        run(["helper", "app-uninstall", hex(app.id), removalPlan.token, eraseAppData ? "erase" : "keep"], (out, code) => {
+            root.removalBusy = false
+            let result = {}; try { result = JSON.parse(out) } catch(e) {}
+            if (code === 0 && result.ok === true && result.removed === true) {
+                root.confirmRemove = false; root.removalPlan = null; root.closePage(); root.refresh()
+            } else root.problem = result.problem === "running" ? i18n("Close the app before uninstalling, then try again.")
+                : result.problem === "changed" ? i18n("The app changed. Cancel and review its removal again.")
+                : i18n("The app couldn't be uninstalled completely. Check permissions and try again.")
+        })
+    }
     function openPage(app) {
         pageId = app.id
         confirmRemove = false
@@ -147,6 +174,7 @@ MonetWindow {
     }
     function goBack() {
         if (confirmRemove) {
+            if (removalBusy) return
             confirmRemove = false
             Qt.callLater(() => removeButton.forceActiveFocus())
         } else if (current !== null) {
@@ -756,13 +784,19 @@ MonetWindow {
                     onClicked: root.goBack()
                 }
 
-                ColumnLayout {
+                QQC2.ScrollView {
+                    id: appPageScroll
+                    objectName: "appPageScroll"
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.top: back.bottom
-                    anchors.leftMargin: 48
-                    anchors.rightMargin: 48
-                    anchors.topMargin: 28
+                    anchors.bottom: parent.bottom
+                    anchors.margins: 20
+                    clip: true
+                    contentWidth: availableWidth
+                    QQC2.ScrollBar.horizontal.policy: QQC2.ScrollBar.AlwaysOff
+                    ColumnLayout {
+                    width: appPageScroll.availableWidth
                     spacing: 18
 
                     RowLayout {
@@ -797,7 +831,8 @@ MonetWindow {
                                 wrapMode: Text.Wrap
                                 font.pixelSize: 15
                             }
-                            RowLayout {
+                            Flow {
+                                Layout.fillWidth: true
                                 Layout.topMargin: 12
                                 spacing: 10
                                 Pill {
@@ -812,16 +847,17 @@ MonetWindow {
                                     objectName: "appStore"
                                     visible: appPage.app.source === "store" && appPage.app.store !== ""
                                     tone: look
-                                    text: i18n("Update or remove in the Store")
+                                    text: i18n("Open in Store")
                                     onClicked: root.storePage(appPage.app)
                                 }
                                 Pill {
                                     id: removeButton
                                     objectName: "appRemove"
-                                    visible: appPage.app.removable === true && !root.confirmRemove
+                                    visible: !root.confirmRemove
+                                    enabled: !root.removalBusy
                                     tone: look
-                                    text: i18n("Remove…")
-                                    onClicked: root.confirmRemove = true
+                                    text: appPage.app.source === "store" || appPage.app.removable ? i18n("Uninstall…") : i18n("Manage removal…")
+                                    onClicked: root.reviewRemoval(appPage.app)
                                 }
                             }
                         }
@@ -834,7 +870,7 @@ MonetWindow {
                         implicitHeight: confirmRow.implicitHeight + 28
                         radius: 14
                         color: look.wash
-                        RowLayout {
+                        ColumnLayout {
                             id: confirmRow
                             anchors.fill: parent
                             anchors.margins: 14
@@ -842,22 +878,63 @@ MonetWindow {
                             Text {
                                 horizontalAlignment: Text.AlignLeft
                                 Layout.fillWidth: true
-                                text: i18n("Remove %1 from your apps? The program itself stays where it is.", appPage.app.name || "")
+                                text: !root.removalPlan ? "" : root.removalPlan.kind === "flatpak"
+                                    ? i18n("Uninstall %1 from this PC?", appPage.app.name || "")
+                                    : root.removalPlan.kind === "portable" ? i18n("Delete this program file: %1", root.removalPlan.program)
+                                    : root.removalPlan.kind === "wine" ? i18n("Use the Windows program's own uninstaller to remove it and choose what data to erase.")
+                                    : root.removalPlan.kind === "windows" ? i18n("This app is installed in Windows. Uninstall it from Windows to remove the program and its data.")
+                                    : root.removalPlan.kind === "shortcut" ? i18n("This entry points to a program managed elsewhere. You can remove its shortcut here.")
+                                    : i18n("This app is part of the operating-system image. Removing its files individually would not survive a system update. Optional apps installed from the Store can be uninstalled here.")
                                 color: look.ink
                                 wrapMode: Text.Wrap
                                 font.pixelSize: 14
                             }
-                            Pill {
-                                tone: look
-                                text: i18n("Cancel")
-                                onClicked: root.confirmRemove = false
+                            QQC2.CheckBox {
+                                objectName: "eraseAppData"
+                                visible: root.removalPlan && root.removalPlan.eraseSupported === true
+                                text: root.removalPlan && root.removalPlan.kind === "portable"
+                                    ? i18n("Also permanently erase the portable app data shown below")
+                                    : i18n("Also permanently erase this app's saved data and settings in the folder below")
+                                checked: root.eraseAppData; enabled: !root.removalBusy
+                                onToggled: root.eraseAppData = checked
                             }
-                            Pill {
-                                objectName: "appRemoveConfirm"
-                                tone: look
-                                kind: "lily"
-                                text: i18n("Remove")
-                                onClicked: root.remove(appPage.app)
+                            Text {
+                                Layout.fillWidth: true
+                                text: root.removalPlan ? (root.removalPlan.data || []).join("\n") : ""
+                                visible: text !== "" && root.eraseAppData
+                                textFormat: Text.PlainText; wrapMode: Text.WrapAnywhere; color: look.dim
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                visible: root.removalPlan && root.removalPlan.kind === "flatpak" && root.eraseAppData
+                                text: i18n("Files saved elsewhere, such as documents you created, are kept.")
+                                wrapMode: Text.Wrap; color: look.dim
+                            }
+                            Flow {
+                                Layout.fillWidth: true; spacing: 8
+                                Pill { tone: look; text: i18n("Cancel"); enabled: !root.removalBusy; onClicked: root.confirmRemove = false }
+                                Pill {
+                                    objectName: "appUninstallConfirm"; tone: look; kind: "lily"
+                                    visible: root.removalPlan && ["flatpak", "portable"].indexOf(root.removalPlan.kind) >= 0
+                                    enabled: !root.removalBusy
+                                    text: root.removalBusy ? i18n("Uninstalling…") : root.removalPlan && root.removalPlan.kind === "portable"
+                                        ? root.eraseAppData && root.removalPlan.eraseSupported ? i18n("Delete program and portable data") : i18n("Delete program file")
+                                        : root.eraseAppData ? i18n("Uninstall and erase data") : i18n("Uninstall")
+                                    onClicked: root.uninstall(appPage.app)
+                                }
+                                Pill {
+                                    objectName: "appRemoveConfirm"; tone: look
+                                    visible: root.removalPlan && root.removalPlan.kind === "shortcut" && appPage.app.removable === true
+                                    text: i18n("Remove shortcut"); onClicked: root.remove(appPage.app)
+                                }
+                                Pill {
+                                    tone: look; text: i18n("Open Windows app uninstaller")
+                                    visible: root.removalPlan && root.removalPlan.kind === "wine"
+                                    onClicked: root.run(["helper", "app-wine-uninstaller", root.hex(appPage.app.id)], (out, code) => {
+                                        let result = {}; try { result = JSON.parse(out) } catch(e) {}
+                                        if (code !== 0 || result.ok !== true) root.problem = i18n("The program's uninstaller couldn't open. Check that Windows app support is installed and try again.")
+                                    })
+                                }
                             }
                         }
                     }
@@ -885,6 +962,7 @@ MonetWindow {
                         Text { text: root.kindName(appPage.app.group); color: look.ink; font.pixelSize: 14 }
                         Text { text: i18n("Last opened"); color: look.dim; font.pixelSize: 14 }
                         Text { text: root.lastText(appPage.app.last); color: look.ink; font.pixelSize: 14 }
+                    }
                     }
                 }
             }

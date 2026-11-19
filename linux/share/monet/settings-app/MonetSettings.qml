@@ -330,6 +330,9 @@ Shared.MonetWindow {
     property bool netsLoaded: false
     property var devices: []
     property var outputs: []
+    property var audioRename: null
+    property bool audioRenameBusy: false
+    property string audioRenameProblem: ""
     // The apps playing sound, each with its own volume.
     property var appsSound: []
     property bool appsSoundLoading: false
@@ -4698,7 +4701,7 @@ Shared.MonetWindow {
                             strong: false
                             title: modelData.name
                             // Asked for: checked only once the sound is seen playing there.
-                            detail: sheet.outputBusy && sheet.sameDevice(modelData, sheet.outputWanted) ? i18n("Changing…") : ""
+                            detail: sheet.outputBusy && sheet.sameDevice(modelData, sheet.outputWanted) ? i18n("Changing…") : modelData.detail || ""
                             onTapped: sheet.pickOutput(modelData)
                             lead: Glyph {
                                 width: 18
@@ -4710,6 +4713,44 @@ Shared.MonetWindow {
                             Check {
                                 tone: look
                                 active: modelData.default === true
+                            }
+                            Pill {
+                                tone: look
+                                visible: typeof modelData.key === "string"
+                                text: i18n("Rename…")
+                                objectName: "renameOutput-" + modelData.id
+                                onClicked: { sheet.audioRename = {key:modelData.key, name:modelData.name}; sheet.audioRenameProblem = ""; audioName.text = modelData.name; Qt.callLater(() => audioName.forceActiveFocus()) }
+                            }
+                        }
+                    }
+                    SettingRow {
+                        tone: look
+                        visible: sheet.audioRename !== null
+                        title: i18n("Device name")
+                        detail: sheet.audioRenameProblem || i18n("This name is used in Settings and the taskbar. Leave it empty to use the device's original name.")
+                        ColumnLayout {
+                            QQC2.TextField {
+                                id: audioName
+                                objectName: "audioDeviceName"
+                                maximumLength: 80
+                                enabled: !sheet.audioRenameBusy
+                                Accessible.name: i18n("Device name")
+                                Keys.onEscapePressed: event => { sheet.audioRename = null; event.accepted = true }
+                            }
+                            RowLayout {
+                                Pill { tone: look; text: i18n("Cancel"); enabledPill: !sheet.audioRenameBusy; onClicked: sheet.audioRename = null }
+                                Pill {
+                                    tone: look; text: i18n("Save"); enabledPill: !sheet.audioRenameBusy
+                                    onClicked: {
+                                        if (!sheet.audioRename) return
+                                        sheet.audioRenameBusy = true
+                                        sheet.call(["helper", "audio-name", sheet.audioRename.key, sheet.hex(audioName.text)], out => {
+                                            sheet.audioRenameBusy = false
+                                            if (sheet.json(out, {}).ok === true) { sheet.audioRename = null; sheet.refresh() }
+                                            else sheet.audioRenameProblem = i18n("The name couldn't be saved. Try again.")
+                                        })
+                                    }
+                                }
                             }
                         }
                     }
@@ -6476,6 +6517,25 @@ Shared.MonetWindow {
                     detail: i18n("What fills this PC, and room to make.")
                 }
                 // Physical drives and their volumes are independent of the folder-size scan.
+                Pill {
+                    objectName: "moreStorageSettings"
+                    tone: look
+                    text: i18n("More storage settings…")
+                    onClicked: storageDetailsDialog.open()
+                }
+                QQC2.Dialog {
+                    id: storageDetailsDialog
+                    objectName: "storageDetailsDialog"
+                    parent: QQC2.Overlay.overlay
+                    anchors.centerIn: parent
+                    title: i18n("More storage settings")
+                    width: Math.min(700, parent ? parent.width - 32 : 700)
+                    height: Math.min(650, parent ? parent.height - 48 : 650)
+                    modal: true
+                    standardButtons: QQC2.Dialog.Close
+                    contentItem: StorageDetails { id: storageDetails; host: sheet }
+                    onOpened: storageDetails.refresh()
+                }
                 Card {
                     id: disksCard
                     objectName: "search-disks"

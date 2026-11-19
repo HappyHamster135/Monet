@@ -98,6 +98,19 @@ function monetTray(tray) {
             })) throw new Error("remaining");
             plan.order.forEach(function (entry) {
                 var p = panelById(entry.panel);
+                p.widgets().forEach(function (w) {
+                    if (w.type !== "org.kde.plasma.icontasks" && w.type !== "org.kde.plasma.taskmanager") return;
+                    var previous = read(w, "islandFill", "");
+                    w.currentConfigGroup = ["General"];
+                    if (plan.choice === "one") {
+                        if (previous === "") write(w, "islandFill", String(w.readConfig("fill", false)));
+                        w.currentConfigGroup = ["General"]; w.writeConfig("fill", true);
+                    } else if (previous !== "") {
+                        w.writeConfig("fill", previous === "true");
+                        write(w, "islandFill", "");
+                    }
+                    w.reloadConfig();
+                });
                 entry.ids.forEach(function (id) { write(p.widgetById(id), "role", entry.role); });
                 write(p, "group", plan.group); write(p, "role", plan.choice === "one" ? "one" : entry.role);
                 p.alignment = plan.choice === "one" || entry.role === "middle" ? "center" : entry.role;

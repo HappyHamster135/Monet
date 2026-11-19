@@ -129,6 +129,16 @@ class PanelLayouts(unittest.TestCase):
             self.assertFalse(self.quick.panel_layout('7','four')['ok'])
             bus.assert_not_called()
 
+    def test_single_bar_fills_its_task_space_and_three_bars_restore_the_user_choice(self):
+        self.js('task.currentConfigGroup=["General"]; task.writeConfig("fill",false)')
+        self.assertTrue(self.choose('right','one')['ok'])
+        self.assertTrue(self.state('task.data["General/fill"]'))
+        self.assertTrue(self.choose('right','three')['ok'])
+        self.assertFalse(self.state('task.data["General/fill"]'))
+        self.js('task.currentConfigGroup=["General"]; task.writeConfig("fill",true)')
+        for choice in ('one','three'): self.assertTrue(self.choose('right',choice)['ok'])
+        self.assertTrue(self.state('task.data["General/fill"]'))
+
 
 @unittest.skipUnless(shutil.which('kwin_wayland'), 'native Plasma virtual compositor')
 class NativePanelLayout(unittest.TestCase):

@@ -29,7 +29,7 @@ if [ "$(id -u)" -ne 0 ]; then
             -e '/^\[KDE Action Restrictions\]$/,/^\[/{/^\[KDE Action Restrictions\]$/d;/^\[/!d}' "$kdeglobals"
     fi
     systemctl --user stop monet-keep-awake.service monet-brightness.service monet-priority.service >/dev/null 2>&1 || true
-    systemctl --user disable --now monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path monet-onedrive.service >/dev/null 2>&1 || true
+    systemctl --user disable --now monet-screenshot-ready.timer monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path monet-onedrive.service >/dev/null 2>&1 || true
     systemctl --user disable --now monet-game-names.path >/dev/null 2>&1 || true
     # The canvases Monet put under other apps' icons (monet-quick frames), and only those.
     grep -rl --include='*.svg' 'Monet frame:' "${XDG_DATA_HOME:-$HOME/.local/share}/icons/Monet" 2>/dev/null | xargs -r rm -f || true
@@ -105,7 +105,8 @@ rm -f /etc/systemd/system/monet-windows-drive.service /etc/systemd/system/monet-
     /var/lib/monet/windows-files.json /var/lib/monet/windows-steam-shots.json
 systemctl daemon-reload
 
-systemctl --global disable monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path >/dev/null 2>&1 || true
+systemctl --global disable monet-screenshot-ready.timer monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path >/dev/null 2>&1 || true
+rm -f /etc/systemd/user/monet-screenshot-ready.timer /etc/systemd/user/app-org.kde.spectacle.service.d/monet.conf
 rm -f /etc/systemd/user/monet-light.service /etc/systemd/user/monet-light.timer \
     /etc/systemd/user/monet-password-offers.service \
     /etc/systemd/user/monet-light-sync.service /etc/systemd/user/monet-light-sync.path /etc/systemd/user/monet-fresh.service /etc/systemd/user/monet-keys.service \
@@ -164,7 +165,9 @@ rm -f "$PREFIX/share/applications/monet-windows.desktop" "$PREFIX/share/applicat
     "$PREFIX/share/applications/monet-games.desktop" "$PREFIX/share/applications/monet-apps.desktop" \
     "$PREFIX/share/applications/monet-store.desktop"
 rm -f "$PREFIX/share/color-schemes/MonetLight.colors" "$PREFIX/share/color-schemes/MonetDark.colors"
-rm -f "$PREFIX/share/plasma-systemmonitor/monet-performance.page"
+rm -f "$PREFIX/share/plasma-systemmonitor/monet-performance.page" "$PREFIX/share/plasma-systemmonitor/monet-graphics.page"
+rm -f "$PREFIX/share/applications/org.kde.plasma-systemmonitor.desktop"
+rm -rf "$PREFIX/share/ksysguard/sensorfaces/org.monet.graphics"
 rm -f "$PREFIX/share/plasma-systemmonitor/monet-startup.page"
 rm -rf "$PREFIX/share/ksysguard/sensorfaces/org.monet.startup"
 rm -f "$PREFIX/libexec/monet-startup" "$PREFIX/libexec/monet-storage-recovery"

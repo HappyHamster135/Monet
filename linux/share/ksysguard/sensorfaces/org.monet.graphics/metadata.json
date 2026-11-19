@@ -1,0 +1,11 @@
+{
+    "KPackageStructure": "KSysguard/SensorFace",
+    "KPlugin": {
+        "Id": "org.monet.graphics",
+        "Name": "Graphics",
+        "Description": "Graphics processor workload, memory and temperature",
+        "Icon": "video-display",
+        "License": "GPL-3.0-or-later",
+        "Version": "0.9.8"
+    }
+}

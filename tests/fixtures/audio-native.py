@@ -315,6 +315,12 @@ def check_notification_volume(pulsectl):
 
             try:
                 wait_for(playing, 'stereo notification playback')
+                # The stream-created event precedes WirePlumber's restore policy.
+                # Check the observed volume after that policy has had its turn.
+                def restored():
+                    stream = playing()
+                    return stream and all(abs(value - 0.62) < 0.001 for value in stream.volume.values)
+                wait_for(restored, 'notification stream volume restored')
                 stream = playing()
                 assert stream.channel_list == stereo and not stream.mute, stream
                 assert all(abs(value - 0.62) < 0.001 for value in stream.volume.values), stream

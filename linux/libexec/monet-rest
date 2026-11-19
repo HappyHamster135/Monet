@@ -337,6 +337,11 @@ def plan(now, state, found, shown, playing, proc=Path("/proc")):
         by_unit.setdefault(unit_of(window.get("pid", 0), proc), []).append(window)
     ready = []
     for name, folder in found.items():
+        # A windowless capture service must answer a screenshot shortcut at once.
+        # Paging out its UI while a game is running makes the next capture stall.
+        if 'spectacle' in name.lower():
+            seen.pop(name, None)
+            continue
         pids = pids_of(folder)
         mine = by_unit.get(name, [])
         cpu = read_number(folder / "cpu.stat", "usage_usec")

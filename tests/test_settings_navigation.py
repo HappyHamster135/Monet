@@ -764,3 +764,34 @@ class SettingsNavigation(unittest.TestCase):
             self.assertTrue(choice.hasActiveFocus())
             self.assert_visible_in(choice, self.item("settingsScroller"))
         self.assertFalse(any(c[1] in ("light", "series", "power-mode") for c in self.helper.commands))
+
+    def test_storage_details_scan_is_on_demand_and_escape_closes_the_dialog(self):
+        self.helper.replies['storage-details'] = json.dumps(dict(ok=True, unused=[], unusedKnown=True,
+            oldDownloads=[], cacheSize=1024, cache='file:///private/cache', downloads='file:///private/Downloads'))
+        self.open('storage')
+        self.assertFalse(any(c[1] == 'storage-details' for c in self.helper.commands))
+        button = self.item('moreStorageSettings'); button.forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: any(c[1] == 'storage-details' for c in self.helper.commands))
+        view = self.item('storageDetailsView')
+        self.assertTrue(view.isVisible())
+        QTest.keyClick(self.window, Qt.Key_Escape); QTest.qWait(200)
+        self.assertFalse(view.isVisible())
+
+    def test_storage_cleanup_needs_review_and_failure_keeps_candidates(self):
+        self.helper.replies['storage-details'] = json.dumps(dict(ok=True, unusedKnown=True, token='reviewed',
+            unused=[dict(name='Old support files', ref='runtime/org.example.Platform/x86_64/1', size=1024)], oldDownloads=[]))
+        self.helper.replies['storage-unused-clean'] = '{"ok":false}'
+        self.open('storage')
+        self.item('moreStorageSettings').forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Return); QTest.qWait(200)
+        self.assertFalse(any(c[1] == 'storage-unused-clean' for c in self.helper.commands))
+        review = self.item('storageUnusedReview')
+        review.forceActiveFocus(Qt.TabFocusReason); QTest.keyClick(self.window, Qt.Key_Space); QTest.qWait(40)
+        confirm = self.item('storageUnusedConfirm'); self.assertTrue(confirm.property('visible'))
+        confirm.forceActiveFocus(Qt.TabFocusReason); QTest.keyClick(self.window, Qt.Key_Space)
+        self.wait_for(lambda: ['helper','storage-unused-clean','reviewed'] in self.helper.commands)
+        QTest.qWait(40)
+        view = self.item('storageDetailsView')
+        self.assertEqual(len(view.property('info').toVariant()['unused']), 1)
+        self.assertNotEqual(view.property('message'), '')

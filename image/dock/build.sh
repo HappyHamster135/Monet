@@ -34,7 +34,7 @@ cp "$here/MonetAppVolume.qml" "$out/tests/audio/"
 cmake -S "$here" -B "$work/build" \
     -DUPSTREAM_SOURCE="$source" -DUPSTREAM_VERSION="$version" \
     -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_SKIP_INSTALL_RPATH=ON
-cmake --build "$work/build" --parallel "$(nproc)"
+cmake --build "$work/build" --parallel "${MONET_BUILD_JOBS:-1}"
 DESTDIR="$work/installed" cmake --install "$work/build"
 for name in org.kde.plasma.taskmanager.so org.kde.plasma.trash.so; do
     plugin="$(find "$work/installed" -name "$name" -type f)"

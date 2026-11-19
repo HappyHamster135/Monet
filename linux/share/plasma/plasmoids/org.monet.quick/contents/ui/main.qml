@@ -859,12 +859,11 @@ PlasmoidItem {
 
             RowLayout {
                 Layout.fillWidth: true
-                PlasmaComponents.Button {
+                ActionButton {
                     id: batteryOptions
                     objectName: "quickBatteryOptions"
                     Layout.fillWidth: true
                     visible: typeof root.info.battery === "number"
-                    flat: true
                     onClicked: root.openOptions("power", batteryOptions)
                     text: root.info.charging ? i18n("Battery %1%, charging", root.info.battery)
                         : root.info.plugged ? i18n("Battery %1%, plugged in", root.info.battery)

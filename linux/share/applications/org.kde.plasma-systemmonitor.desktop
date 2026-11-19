@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Task Manager
+GenericName=System Monitor
+Comment=Manage apps and inspect CPU, memory, graphics, network and storage
+Icon=org.kde.plasma-systemmonitor
+Exec=plasma-systemmonitor
+Terminal=false
+DBusActivatable=false
+Categories=Qt;KDE;System;Monitor;
+StartupNotify=true
+StartupWMClass=org.kde.plasma-systemmonitor
+X-KDE-Shortcuts=Ctrl+Shift+Escape
+X-KDE-Wayland-Interfaces=org_kde_plasma_window_management

@@ -352,6 +352,64 @@ def apply(source):
     replace(context, 'text: editModeAction ? editModeAction.text : ""',
             'text: editModeAction ? i18nd("monet", "Customize Home Bar…") : ""')
     replace(applet/'CMakeLists.txt','        qml/Task.qml','        qml/Task.qml\n        qml/MonetDockMotion.qml\n        qml/MonetDockHover.qml\n        qml/MonetAppVolume.qml')
+    prepend(applet/'qml/main.qml', 'import QtQuick\n', 'import QtQuick.Controls as MonetControls\n')
+    prepend(applet/'qml/main.qml', '    property Task toolTipOpenedByClick', '''    readonly property bool monetSingleRowDock: iconsOnly && !vertical
+        && Plasmoid.location === PlasmaCore.Types.BottomEdge && taskList.rows === 1
+    readonly property real monetRequiredWidth: Math.max(taskList.implicitWidth, taskList.count * TaskManagerApplet.LayoutMetrics.preferredMinWidth())
+    readonly property bool monetOverflow: monetSingleRowDock && monetRequiredWidth > width + 1
+    function monetRevealTask(item) {
+        if (!monetOverflow || !item || item.parent !== taskList) return;
+        const point = item.mapToItem(monetViewport.contentItem, 0, 0);
+        if (point.x < monetViewport.contentX) monetViewport.contentX = Math.max(0, point.x);
+        else if (point.x + item.width > monetViewport.contentX + monetViewport.width)
+            monetViewport.contentX = Math.min(monetViewport.contentWidth - monetViewport.width, point.x + item.width - monetViewport.width);
+    }
+
+''')
+    replace(applet/'qml/main.qml', '''        TriangleMouseFilter {
+            id: tmf''', '''        Flickable {
+            id: monetViewport
+            objectName: "monetTaskViewport"
+            anchors.fill: parent
+            anchors.leftMargin: tasks.monetOverflow ? 24 : 0
+            anchors.rightMargin: tasks.monetOverflow ? 24 : 0
+            contentWidth: tasks.monetOverflow ? Math.max(width, tasks.monetRequiredWidth) : width
+            contentHeight: height
+            clip: tasks.monetOverflow
+            interactive: false // Native task drags retain their press and reordering.
+            onWidthChanged: contentX = Math.max(0, Math.min(contentX, contentWidth - width))
+            onContentWidthChanged: contentX = tasks.monetOverflow ? Math.max(0, Math.min(contentX, contentWidth - width)) : 0
+        }
+        MonetControls.ToolButton {
+            objectName: "monetPreviousTasks"
+            anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
+            width: 24; height: Math.min(40, parent.height)
+            visible: tasks.monetOverflow
+            enabled: monetViewport.contentX > 0
+            text: i18nd("monet", "Show previous apps")
+            icon.name: "arrow-left"; display: MonetControls.AbstractButton.IconOnly
+            onClicked: monetViewport.contentX = Math.max(0, monetViewport.contentX - monetViewport.width * .7)
+        }
+        MonetControls.ToolButton {
+            objectName: "monetNextTasks"
+            anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+            width: 24; height: Math.min(40, parent.height)
+            visible: tasks.monetOverflow
+            enabled: monetViewport.contentX < monetViewport.contentWidth - monetViewport.width
+            text: i18nd("monet", "Show more apps")
+            icon.name: "arrow-right"; display: MonetControls.AbstractButton.IconOnly
+            onClicked: monetViewport.contentX = Math.min(monetViewport.contentWidth - monetViewport.width, monetViewport.contentX + monetViewport.width * .7)
+        }
+        TriangleMouseFilter {
+            id: tmf
+            parent: monetViewport.contentItem''')
+    replace(applet/'qml/main.qml', 'return Math.min(tasks.width, Layout.maximumWidth);',
+            'return Math.min(monetViewport.contentWidth, Layout.maximumWidth);')
+    prepend(applet/'qml/Task.qml', '    onXChanged: {', '''    readonly property bool monetWindowActive: model.IsActive === true
+    onMonetWindowActiveChanged: if (monetWindowActive) Qt.callLater(() => tasksRoot.monetRevealTask(task))
+    onActiveFocusChanged: if (activeFocus) Qt.callLater(() => tasksRoot.monetRevealTask(task))
+
+''')
     # Standalone build keeps the upstream generated settings in their original folder.
     replace(applet/'CMakeLists.txt','${CMAKE_SOURCE_DIR}/kcms/recentFiles/', '${UPSTREAM_SOURCE}/kcms/recentFiles/')
     prepend(applet/'qml/main.qml','    property Task toolTipOpenedByClick', '''    // Passive hover tracking never takes clicks or grabs away from task controls.
@@ -498,6 +556,23 @@ def apply(source):
             id: trashIcon
             roundToIconSize: !root.monetBottomDock
             source: root.monetBottomDock ? (root.hasContents ? "user-trash-full" : "user-trash") : Plasmoid.icon
+            property real dropScale: root.containsAcceptableDrag ? 1.10 : 1.0
+            readonly property real dropLift: root.containsAcceptableDrag && Kirigami.Units.shortDuration > 0 ? 3 : 0
+            Behavior on dropScale { enabled: Kirigami.Units.shortDuration > 0; NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic } }
+            Rectangle {
+                objectName: "monetTrashDropFeedback"
+                anchors.fill: parent
+                anchors.margins: -4
+                z: -1
+                radius: Math.min(width, height) / 3
+                color: "#357F72"
+                border.color: "#92D6C4"
+                border.width: 2
+                opacity: root.containsAcceptableDrag ? .45 : 0
+                visible: opacity > 0
+                Behavior on opacity { enabled: Kirigami.Units.shortDuration > 0; NumberAnimation { duration: Kirigami.Units.shortDuration } }
+                Accessible.name: i18nd("monet", "Release to move to Trash")
+            }
             MonetDockMotion {
                 id: monetMotion
                 objectName: "monetDockMotion"
@@ -509,8 +584,8 @@ def apply(source):
             }
             transform: [
                 Scale { origin.x: trashIcon.width / 2; origin.y: trashIcon.height / 2;
-                    xScale: monetMotion.iconScale; yScale: monetMotion.iconScale },
-                Translate { y: -monetMotion.lift }
+                    xScale: monetMotion.iconScale * trashIcon.dropScale; yScale: monetMotion.iconScale * trashIcon.dropScale },
+                Translate { y: -monetMotion.lift - trashIcon.dropLift }
             ]''')
     (trash/'MonetDockMotion.qml').write_bytes(Path(__file__).with_name('MonetDockMotion.qml').read_bytes())
     (trash/'MonetDockHover.qml').write_bytes(Path(__file__).with_name('MonetDockHover.qml').read_bytes())

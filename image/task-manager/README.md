@@ -1,8 +1,14 @@
 Monet Task Manager sidebar
 =========================
 
-A small patch to Main.qml in the distribution's matching plasma-systemmonitor
-source RPM. The native process/sensor backends remain installed unchanged.
+Small patches to the application and its native page editor in the distribution's matching plasma-systemmonitor
+source RPM. The matching Page library ships with the executable; process and sensor backends stay native.
+The editor has layout guidance, keyboard-accessible chart selection and common
+CPU, memory, graphics, network and disk presets. On the first 0.9.8-8 launch,
+Monet backs up and resets the old layout before PageManager loads it. Later
+customizations stay. The Page library is checksummed with the executable and
+source; a local preview carries it beside the executable using its relative
+library lookup, without changing the system library.
 The hamburger toggles the sidebar, its empty space accepts the page menu,
 and custom pages can be removed with confirmation and a safe navigation fallback.
 Monet's built-in pages are excluded from the direct Remove Current Page action.

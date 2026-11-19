@@ -12,6 +12,7 @@ ColumnLayout {
     objectName: "monetPerformance"
     property var availableSensors: []
     property int section: 0
+    property bool graphicsOnly: false
     property bool paused: false
     property int graphicsIndex: 0
     // A minimized QQuickWindow still leaves its items visible. Stop subscriptions
@@ -70,7 +71,7 @@ ColumnLayout {
             {label: i18nd("monet", "Total space"), sensor: "disk/all/total"}]
         return []
     }
-    SummaryReadings { id: totals; sampling: dashboard.monitoringActive && !dashboard.paused; gpu: dashboard.gpu }
+    SummaryReadings { id: totals; sampling: dashboard.monitoringActive && !dashboard.paused && !dashboard.graphicsOnly; gpu: dashboard.gpu }
     readonly property var tabReadings: totals.values.map((value, index) => index === 3 ? value.replace("  ", "\n") : index === 4 ? value.replace(" · ", "\n") : value)
     readonly property var choices: headings.map((label, index) => label + (tabReadings[index] ? " · " + tabReadings[index] : ""))
     onSectionChanged: paused = false
@@ -122,9 +123,9 @@ ColumnLayout {
         objectName: "resourceTabs"
         Layout.fillWidth: true
         implicitWidth: 620
-        visible: dashboard.width >= 620
+        visible: !dashboard.graphicsOnly && dashboard.width >= 620
         currentIndex: dashboard.section
-        onCurrentIndexChanged: dashboard.section = currentIndex
+        onCurrentIndexChanged: if (!dashboard.graphicsOnly && currentIndex >= 0) dashboard.section = currentIndex
         Repeater {
             model: dashboard.headings
             T.TabButton {
@@ -166,7 +167,7 @@ ColumnLayout {
     QQC2.ComboBox {
         objectName: "resourceSelector"
         Layout.fillWidth: true
-        visible: dashboard.width < 620
+        visible: !dashboard.graphicsOnly && dashboard.width < 620
         model: dashboard.choices
         currentIndex: dashboard.section
         onActivated: dashboard.section = currentIndex

@@ -1,6 +1,7 @@
 // Run only with a disposable home/config and private D-Bus session.
 #include <QApplication>
 #include <QDebug>
+#include <QImage>
 #include <QQuickWindow>
 #include <QTest>
 #include <KConfigGroup>
@@ -146,6 +147,18 @@ int main(int argc, char **argv)
         require(qAbs(source->mapToItem(source->parentItem(), QPointF()).x() - source->x()) < 0.5,
                 "Reorder retained an obsolete translation");
 
+        dock->setWidth(64); QTest::qWait(350);
+        auto viewport = dock->findChild<QQuickItem *>(QStringLiteral("monetTaskViewport"));
+        require(viewport && viewport->clip(), "Crowded task icons can paint over the neighbouring tray");
+        require(viewport->property("contentWidth").toDouble() > viewport->width(), "Crowded taskbar has no accessible overflow");
+        auto nextTasks = dock->findChild<QQuickItem *>(QStringLiteral("monetNextTasks"));
+        require(nextTasks && nextTasks->isVisible(), "Taskbar overflow cannot be reached");
+        QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, nextTasks->mapToScene(QPointF(nextTasks->width()/2, nextTasks->height()/2)).toPoint());
+        QTest::qWait(100);
+        require(viewport->property("contentX").toDouble() > 0, "More apps button did not scroll the taskbar");
+        dock->setWidth(520); QTest::qWait(350);
+        require(!viewport->clip() && viewport->property("contentX").toDouble() == 0, "Widening the taskbar retained stale overflow geometry");
+
         auto trashApplet = panel->createApplet(QStringLiteral("org.kde.plasma.trash"));
         auto trash = PlasmaQuick::AppletQuickItem::itemForApplet(trashApplet);
         require(trash, "Native Trash applet failed to instantiate");
@@ -156,6 +169,19 @@ int main(int argc, char **argv)
         require(motion(trash)->property("iconScale").toDouble() > 1.25, "Native Trash did not enlarge");
         QTest::mouseMove(&window, QPoint(10, 10)); QTest::qWait(300);
         require(qFuzzyCompare(motion(trash)->property("iconScale").toDouble(), 1.0), "Native Trash remained enlarged");
+        QQuickItem *dropFeedback = nullptr;
+        for (auto item : descendants(trash)) if (item->objectName() == QStringLiteral("monetTrashDropFeedback")) dropFeedback = item;
+        require(dropFeedback, "Trash drop feedback is missing");
+        const auto dropBounds = QRectF(trash->position(), trash->size());
+        const auto beforeDrop = window.grabWindow().copy(dropBounds.toRect());
+        trash->setProperty("containsAcceptableDrag", true); QTest::qWait(300);
+        require(dropFeedback->property("opacity").toDouble() > .4, "Accepted file drag has no Trash highlight");
+        const auto duringDrop = window.grabWindow().copy(dropBounds.toRect());
+        require(!beforeDrop.isNull() && !duringDrop.isNull() && beforeDrop != duringDrop,
+                "Trash accepted a drag without changing any rendered pixels");
+        require(QRectF(trash->position(), trash->size()) == dropBounds, "Trash drop feedback moved the drop target");
+        trash->setProperty("containsAcceptableDrag", false); QTest::qWait(300);
+        require(dropFeedback->property("opacity").toDouble() == 0, "Cancelled file drag left Trash highlighted");
         window.close();
         qInfo() << "Native task and Trash hover, tooltip delivery, edit-mode recovery and rapid animated reordering passed.";
         return 0;

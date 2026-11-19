@@ -1,5 +1,63 @@
 # Testing Monet on real hardware
 
+## 0.9.8-8 device names, Task Manager, app removal and storage — 19 November 2026
+
+Sound outputs now use recognizable names (Speakers, Headphones, device names for
+USB/Bluetooth and display-audio connectors), with a separate connection detail.
+Settings → Sound can rename an output; names are stored against stable PipeWire
+node names so they survive device ID changes. Empty names restore the default.
+
+The update deliberately resets Task Manager once, including customized profiles,
+and adds a dedicated Graphics page. Before changing anything it backs up
+`systemmonitorrc` and local pages under
+`$XDG_DATA_HOME/monet/task-manager-backups/0.9.8-8/`. Its native startup performs the
+reset before PageManager reads the old profile. Subsequent personal edits stay.
+The editor explains rows/groups/charts and Save/Discard, offers common chart
+presets, and supports keyboard and accessibility chart selection. Both the
+matching executable and Page library ship in the ABI-checked bundle; installing
+only the executable leaves the editor unchanged.
+
+Apps reviews actual removal before changing anything. Store apps use their
+Flatpak installation's uninstaller; **erase app data is checked by default**, with
+a keep-data option. Monet-registered owned portable programs can remove their
+actual executable and reviewed AppImage portable-data folders. Running apps,
+changed reviews and unconfirmed backend results remain failures. Windows programs installed in Monet open their own uninstaller in the original
+Wine/Proton prefix, without deleting other programs in that prefix. Imported
+Windows apps must be removed in Windows,
+and immutable OS components cannot be deleted individually. Unrecognized native
+app data is not guessed or silently claimed to be erased.
+
+Storage has an on-demand More storage settings dialog with Filelight disk maps,
+app management, cache-folder review and older Downloads to review. Older does
+not mean unused. Flatpak's own unused-runtime calculation excludes pinned and
+needed runtimes; cleanup requires explicit review, rechecks the plan and lets
+Flatpak re-evaluate usage inside its transaction. Failed cleanup keeps the list.
+No personal file is deleted by scanning or opening the dialog.
+
+The native Trash icon shows a finite halo/lift on an accepted file drag. Crowded
+single-row taskbars have a clipped viewport and previous/next app buttons instead
+of painting across the tray. Active/focused tasks are revealed. One-bar layouts
+fill the allocated task space; switching back restores the previous fill choice.
+Sizing and migration helpers share a lock to avoid overlapping layout changes.
+
+Screenshot preparation starts Spectacle's native `--dbus` service three seconds
+after the graphical session; a session-scoped drop-in warms it again after a
+successful capture exits. It takes no screenshot or visible window while idle.
+The capture service is excluded from game background-priority and memory-reclaim
+policies. A private virtual-KWin check measured cold/warm region-overlay first
+buffers around 4–5.4 seconds cold and 1.7–2.2 seconds warm; these are software-rendered test timings, not a
+physical-machine latency guarantee. The [native Spectacle D-Bus interface](https://github.com/KDE/spectacle/blob/master/dbus/org.kde.Spectacle.xml)
+provides the region-capture operation.
+
+Validation uses disposable profiles/buses and capped, single-core container
+builds. No candidate code is installed into the host session. Native fixtures are
+`tests/fixtures/task-manager-editor.py`, `tests/fixtures/screenshot-ready.py` and
+the compiled dock-motion harness; backend and Settings interaction coverage is
+in `tests/test_desktop_polish.py`, `tests/test_app_library.py` and Settings tests.
+Physical boot/shutdown, charger/battery transitions, multi-monitor/scale changes
+and repeated capture latency still need complete-image hardware acceptance.
+VERSION remains 0.9.8-7 on the 0.9.8-8 development branch until release preparation.
+
 ## 0.9.8-8 automatic power and battery saver — 18 November 2026
 
 Automatic is the normal power choice. It uses the system's balanced profile,
