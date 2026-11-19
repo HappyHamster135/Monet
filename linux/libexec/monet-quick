@@ -5282,7 +5282,7 @@ def task_manager_reset():
         return {'ok': False, 'problem': 'linked-profile'}
     order = ['monet-applications.page', 'monet-performance.page', 'monet-graphics.page',
              'monet-processes.page', 'monet-startup.page', 'monet-system.page']
-    hidden = 'applications.page,processes.page,overview.page,history.page'
+    hidden = 'applications.page,processes.page,overview.page,history.page,old-overview.page,old-history.page'
     try:
         backup.mkdir(mode=0o700, parents=True, exist_ok=True)
         # Do not replace the pre-update backup if an interrupted reset is retried.

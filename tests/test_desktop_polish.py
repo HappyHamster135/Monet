@@ -63,6 +63,7 @@ class TaskManagerReset(Profile):
         self.assertEqual((backup/'systemmonitorrc').read_bytes(), old)
         self.assertEqual((backup/'pages/my-own.page').read_text(), 'my chart')
         self.assertIn('monet-graphics.page', config.read_text())
+        self.assertIn('old-overview.page,old-history.page', config.read_text())
         config.write_text('new customization'); pages.mkdir(); (pages/'new.page').write_text('after update')
         self.assertFalse(self.q.task_manager_reset()['changed'])
         self.assertEqual(config.read_text(), 'new customization')
