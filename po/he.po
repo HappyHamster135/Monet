@@ -53,7 +53,7 @@ msgstr "פחות פרטים"
 msgid "Details"
 msgstr "פרטים"
 
-#: image/password/QuickAuthDialog.qml:361 linux/share/monet/games/Apps.qml:915 linux/share/monet/games/Games.qml:1831
+#: image/password/QuickAuthDialog.qml:361 linux/share/monet/games/Apps.qml:920 linux/share/monet/games/Games.qml:1831
 #: linux/share/monet/games/Games.qml:2004 linux/share/monet/logout/Logout.qml:416 linux/share/monet/settings-app/MonetSettings.qml:4165
 #: linux/share/monet/settings-app/MonetSettings.qml:4741 linux/share/monet/settings-app/MonetSettings.qml:5179 linux/share/monet/settings-app/MonetSettings.qml:5266
 #: linux/share/monet/settings-app/MonetSettings.qml:6965 linux/share/monet/settings-app/MonetSettings.qml:7088 linux/share/monet/settings-app/MonetSettings.qml:8121
@@ -852,7 +852,7 @@ msgstr "נוסף"
 msgid "+ Add"
 msgstr "+ הוספה"
 
-#: linux/share/monet/games/Apps.qml:23 linux/share/monet/games/Apps.qml:335 linux/share/monet/games/Apps.qml:678
+#: linux/share/monet/games/Apps.qml:23 linux/share/monet/games/Apps.qml:340 linux/share/monet/games/Apps.qml:683
 #: linux/share/monet/settings-app/MonetSettings.qml:6056 linux/share/monet/settings-app/MonetSettings.qml:6504
 msgid "Apps"
 msgstr "אפליקציות"
@@ -968,142 +968,142 @@ msgstr "בשימוש לאחרונה"
 msgid "Windows programs"
 msgstr "תוכנות Windows"
 
-#: linux/share/monet/games/Apps.qml:374 linux/share/monet/games/Apps.qml:394 linux/share/monet/store-app/Store.qml:702
+#: linux/share/monet/games/Apps.qml:379 linux/share/monet/games/Apps.qml:399 linux/share/monet/store-app/Store.qml:702
 #: linux/share/monet/store-app/Store.qml:714
 msgid "Find an app"
 msgstr "חיפוש אפליקציה"
 
-#: linux/share/monet/games/Apps.qml:471
+#: linux/share/monet/games/Apps.qml:476
 msgid "Kinds"
 msgstr "סוגים"
 
-#: linux/share/monet/games/Apps.qml:573
+#: linux/share/monet/games/Apps.qml:578
 msgid "Apps called “%1”"
 msgstr "אפליקציות בשם „%1”"
 
-#: linux/share/monet/games/Apps.qml:583 linux/share/monet/store-app/Store.qml:950
+#: linux/share/monet/games/Apps.qml:588 linux/share/monet/store-app/Store.qml:950
 msgid "%1 app"
 msgid_plural "%1 apps"
 msgstr[0] "אפליקציה אחת"
 msgstr[1] "%1 אפליקציות"
 
-#: linux/share/monet/games/Apps.qml:600 linux/share/monet/games/Games.qml:956 linux/share/monet/store-app/Shelf.qml:86
+#: linux/share/monet/games/Apps.qml:605 linux/share/monet/games/Games.qml:956 linux/share/monet/store-app/Shelf.qml:86
 #: setup/qml/Main.qml:549
 msgid "Name"
 msgstr "שם"
 
-#: linux/share/monet/games/Apps.qml:600 linux/share/monet/games/Apps.qml:963
+#: linux/share/monet/games/Apps.qml:605 linux/share/monet/games/Apps.qml:968
 msgid "Last opened"
 msgstr "נפתחה לאחרונה"
 
-#: linux/share/monet/games/Apps.qml:759
+#: linux/share/monet/games/Apps.qml:764
 msgid "No app is called “%1”."
 msgstr "אין אפליקציה בשם „%1”."
 
-#: linux/share/monet/games/Apps.qml:760
+#: linux/share/monet/games/Apps.qml:765
 msgid "The apps you open will be here."
 msgstr "האפליקציות שפותחים יופיעו כאן."
 
-#: linux/share/monet/games/Apps.qml:761
+#: linux/share/monet/games/Apps.qml:766
 msgid "No apps here."
 msgstr "אין כאן אפליקציות."
 
-#: linux/share/monet/games/Apps.qml:843 linux/share/monet/settings-app/MonetSettings.qml:4121 linux/share/monet/settings-app/MonetSettings.qml:7259
+#: linux/share/monet/games/Apps.qml:848 linux/share/monet/settings-app/MonetSettings.qml:4121 linux/share/monet/settings-app/MonetSettings.qml:7259
 #: linux/share/monet/store-app/AppPage.qml:232 linux/share/monet/store-app/Downloads.qml:196 linux/share/monet/store-app/Home.qml:224
 msgid "Open"
 msgstr "פתוחה"
 
-#: linux/share/monet/games/Apps.qml:850
+#: linux/share/monet/games/Apps.qml:855
 msgid "Open in Store"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:859 linux/share/monet/games/Games.qml:570
+#: linux/share/monet/games/Apps.qml:864 linux/share/monet/games/Games.qml:570
 msgid "Uninstall…"
 msgstr "הסרת התקנה…"
 
-#: linux/share/monet/games/Apps.qml:859
+#: linux/share/monet/games/Apps.qml:864
 msgid "Manage removal…"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:882
+#: linux/share/monet/games/Apps.qml:887
 msgid "Uninstall %1 from this PC?"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:883
+#: linux/share/monet/games/Apps.qml:888
 msgid "Delete this program file: %1"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:884
+#: linux/share/monet/games/Apps.qml:889
 msgid ""
 "Use the Windows program's own uninstaller to remove it and choose what data to erase."
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:885
+#: linux/share/monet/games/Apps.qml:890
 msgid ""
 "This app is installed in Windows. Uninstall it from Windows to remove the program and its data."
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:886
+#: linux/share/monet/games/Apps.qml:891
 msgid ""
 "This entry points to a program managed elsewhere. You can remove its shortcut here."
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:887
+#: linux/share/monet/games/Apps.qml:892
 msgid ""
 "This app is part of the operating-system image. Removing its files individually would not survive a system update. Optional apps installed from the Store can be uninstalled here."
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:896
+#: linux/share/monet/games/Apps.qml:901
 msgid "Also permanently erase the portable app data shown below"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:897
+#: linux/share/monet/games/Apps.qml:902
 msgid ""
 "Also permanently erase this app's saved data and settings in the folder below"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:910
+#: linux/share/monet/games/Apps.qml:915
 msgid "Files saved elsewhere, such as documents you created, are kept."
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:920
+#: linux/share/monet/games/Apps.qml:925
 msgid "Uninstalling…"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:921
+#: linux/share/monet/games/Apps.qml:926
 msgid "Delete program and portable data"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:921
+#: linux/share/monet/games/Apps.qml:926
 msgid "Delete program file"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:922
+#: linux/share/monet/games/Apps.qml:927
 msgid "Uninstall and erase data"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:922
+#: linux/share/monet/games/Apps.qml:927
 msgid "Uninstall"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:928
+#: linux/share/monet/games/Apps.qml:933
 msgid "Remove shortcut"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:931
+#: linux/share/monet/games/Apps.qml:936
 msgid "Open Windows app uninstaller"
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:935
+#: linux/share/monet/games/Apps.qml:940
 msgid ""
 "The program's uninstaller couldn't open. Check that Windows app support is installed and try again."
 msgstr ""
 
-#: linux/share/monet/games/Apps.qml:959
+#: linux/share/monet/games/Apps.qml:964
 msgid "Came from"
 msgstr "מקור"
 
-#: linux/share/monet/games/Apps.qml:961
+#: linux/share/monet/games/Apps.qml:966
 msgid "Kind"
 msgstr "סוג"
 

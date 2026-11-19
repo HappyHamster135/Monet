@@ -307,9 +307,14 @@ MonetWindow {
         LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
         LayoutMirroring.childrenInherit: true
 
-        TapHandler {
+        // ScrollView's Flickable can take an ancestor TapHandler's grab. Keep
+        // navigation above it while leaving normal clicks, drags and wheels alone.
+        MouseArea {
+            anchors.fill: parent
+            z: 1000
             acceptedButtons: Qt.BackButton
-            onTapped: root.goBack()
+            onClicked: root.goBack()
+            onWheel: wheel => wheel.accepted = false
         }
 
         // The side: the name, search, then the sections ------------------------------

@@ -6,11 +6,54 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 | File                               | What                                                                                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Monet-0.9.8-7-Make-USB-Stick.exe** | Start here on Windows to make a Monet USB stick. |
-| Monet-0.9.8-7-Setup.iso              | Monet Setup for writing the USB stick yourself. |
-| Monet-0.9.8-7-Installer.iso          | The Fedora-based fallback installer. |
-| Monet-0.9.8-7-Windows.zip            | Monet Bridge for an existing Windows installation. |
-| Monet-0.9.8-7-Linux.tar.gz           | Monet for an existing Bazzite installation. |
+| **Monet-0.9.8-8-Make-USB-Stick.exe** | Start here on Windows to make a Monet USB stick. |
+| Monet-0.9.8-8-Setup.iso              | Monet Setup for writing the USB stick yourself. |
+| Monet-0.9.8-8-Installer.iso          | The Fedora-based fallback installer. |
+| Monet-0.9.8-8-Windows.zip            | Monet Bridge for an existing Windows installation. |
+| Monet-0.9.8-8-Linux.tar.gz           | Monet for an existing Bazzite installation. |
+
+### New in 0.9.8-8: A steadier desktop, out to test
+
+- **No bright wallpaper after Restart or Shut down.** The late power screen is
+  black, including the next boot after restarting. Startup has a small dim Monet
+  wordmark; disk-password prompts still work. The desktop's own Restarting or
+  Shutting down screen covers apps while they close and keeps save prompts accessible.
+- **More reliable window controls.** Grabbing floating windows and clicking Close,
+  Minimize or Maximize uses steadier targets. Controls appear briefly when a window
+  opens so you can see where to find them. The Store fills the screen when maximized.
+- **Smoother Home Bar.** App icons animate as you reorder them. Crowded app lists
+  stay inside their space, with buttons to reach more apps. Switching between one
+  and three bars preserves your pins and restores the appropriate layout.
+- **Quick Settings does more itself.** Choose Wi-Fi networks, manage Bluetooth,
+  adjust Night Light and set Do Not Disturb without opening the full Settings app.
+- **Automatic power and battery saving.** Balanced hardware scaling is the normal
+  choice, with automatic low-battery saving at 20%, adjustable in Settings.
+- **Clearer sound outputs.** Speakers, headphones, USB, Bluetooth and display audio
+  have readable names and connection details. Rename an output in Settings if you wish.
+- **Task Manager starts from the standard layout once.** Graphics has its own page.
+  The editor explains rows and charts and offers common chart presets. Your previous
+  layout is backed up under `.local/share/monet/task-manager-backups/0.9.8-8/`;
+  customizations made after this reset are kept.
+- **Apps can uninstall programs.** Store apps and registered portable programs can
+  remove the actual installed program. Erasing supported app data is selected by
+  default in the confirmation, with an option to keep it. Windows programs installed
+  in Monet open their own Wine/Proton uninstaller; core OS components stay image-managed.
+- **More storage settings.** Open disk maps, find large folders, review cache and
+  older downloads, and explicitly remove unused Flatpak support files.
+- **Drag files to Trash with feedback.** The icon highlights and lifts when it will
+  accept your files. Screenshot capture is prepared in the background to reduce delay.
+- **A desktop ready sooner.** Optional startup work runs after the desktop is usable,
+  and early graphics loading follows the PC's actual hardware.
+
+#### Testing this beta
+
+In **Settings → Updates**, enable **Show beta versions**, choose **Install beta**,
+then restart. Please test the complete Restart and Shut down sequence on your
+laptop: the bright Monet wallpaper should never appear between the desktop and
+power-off or during the next boot. Also try floating-window controls, Home Bar
+reordering and the new Task Manager pages. Boot speed, physical display handoff
+and battery behavior vary with hardware and still need beta feedback. Repeated
+Steam shader processing remains a separate desktop-specific investigation.
 
 ### New in 0.9.8-7: Find your way back in the Store
 

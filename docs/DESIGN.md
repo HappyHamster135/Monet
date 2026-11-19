@@ -484,9 +484,10 @@ the same ink; anything not drawn falls back to Breeze.
 
 ## Starting and signing in
 
-- **Boot screen** (Plymouth `monet`, the same as Monet Setup's): the harbor
-  at dawn with the sun breathing. A disk password is asked for on it, in a
-  line of white with a dot per letter. Built into the image's initramfs.
+- **Boot screen** (Plymouth `monet`, shared with Monet Setup): black with a
+  small dim wordmark. Restart and shutdown stay black; the next boot never
+  brings back a full-brightness painting. Disk-password prompts remain white
+  text with a dot per letter. Built into the image's initramfs.
 - **Sign-in** (KDE's Plasma Login Manager, as Bazzite's desktop has it): the
   harbor at night, with Monet's fields, buttons, colors, icons and pointer
   (its home links to Monet's at every boot). Its layout is built into it, so
@@ -1170,8 +1171,8 @@ leave alone), applies at once.
 
 ## Signature moments
 
-- **Start:** the dawn painting comes out of the dark, the sun rises from its
-  reflection, the reflection ripples.
+- **Start:** a small dim wordmark on black, then the sign-in painting. No
+  full-screen wallpaper or idle animation in the boot/power splash.
 - **Play on Windows:** a sheet rises with the game's cover. On Restart & Play
   the sun sets: the screen fades to night and the sun sinks into the water.
 - **Lock screen and sign-in:** the same painting, in the same light.

@@ -13,7 +13,7 @@ from tests.test_games_library import game
 ROOT = Path(__file__).resolve().parents[1]
 try:
     from PySide6.QtCore import QObject, QLocale, QMetaObject, QPoint, QPointF, QTimer, QUrl, Signal, Slot, Qt, Q_ARG
-    from PySide6.QtGui import QFont, QFontDatabase, QGuiApplication
+    from PySide6.QtGui import QFont, QFontDatabase, QGuiApplication, QWheelEvent
     from PySide6.QtQml import QQmlApplicationEngine
     from PySide6.QtQuick import QQuickWindow, QSGRendererInterface
     from PySide6.QtTest import QSignalSpy, QTest
@@ -307,6 +307,26 @@ class LibraryFeedback(unittest.TestCase):
 
     def test_apps_back_keys_and_mouse_preserve_the_place_and_cancel_first(self):
         self.back("Apps")
+
+    def test_apps_removal_details_still_scroll_under_the_back_button_handler(self):
+        self.open('Apps'); library = self.library()
+        self.helper.reply(json.dumps(library)); self.wait_for(lambda: self.window.property('loaded'))
+        QMetaObject.invokeMethod(self.window, 'openPage', Q_ARG('QVariant', library[0]))
+        self.window.resize(760, 520)
+        self.window.setProperty('removalPlan', dict(kind='flatpak', eraseSupported=True, token='review',
+            data=['/private/app-data/folder-%d' % i for i in range(30)]))
+        self.window.setProperty('confirmRemove', True); QTest.qWait(100)
+        scroll = self.item('appPageScroll'); flick = scroll.property('contentItem')
+        self.assertGreater(flick.property('contentHeight'), flick.height())
+        point = scroll.mapToScene(QPointF(scroll.width()/2, scroll.height()/2)).toPoint()
+        event = QWheelEvent(QPointF(point), QPointF(self.window.mapToGlobal(point)), QPoint(), QPoint(0,-360),
+                            Qt.NoButton, Qt.NoModifier, Qt.NoScrollPhase, False)
+        self.app.sendEvent(self.window, event)
+        self.wait_for(lambda: flick.property('contentY') > 0)
+        QTest.mouseClick(self.window, Qt.BackButton, Qt.NoModifier, point)
+        self.wait_for(lambda: not self.window.property('confirmRemove'))
+        self.assertEqual(self.window.property('pageId'), library[0]['id'])
+        self.assertFalse(any(c[1:2] == ['app-uninstall'] for c in self.helper.calls))
 
     def test_games_back_keys_and_mouse_preserve_the_place(self):
         self.back("Games")

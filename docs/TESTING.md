@@ -1,5 +1,38 @@
 # Testing Monet on real hardware
 
+## 0.9.8-8 beta preparation — 19 November 2026
+
+The full GitHub desktop suite found that Apps' new ScrollView swallowed mouse
+Back clicks. A Back-only MouseArea now handles navigation above the scroll area;
+normal clicks, drags and wheel events still reach the controls below. The library
+suite checks keyboard/mouse Back, preserved list position, cancellation before
+navigation, and wheel scrolling through long removal details.
+
+Plymouth now loads no wallpaper in any mode. Reboot/shutdown are solid black;
+startup has only a small dim static wordmark on black, including the next boot
+after a restart. Disk-password/question prompts are preserved, without a breathing
+animation or a full-screen image. The OS image rebuilds its initramfs after copying
+this theme, so the installed boot payload gets the change too.
+
+A real Plymouth/KVM check used an unchanged kernel and a private initramfs whose
+only theme change was this source. The old theme reproduced the wallpaper during
+reboot (35,448 colors). The candidate's reboot and shutdown captures were entirely
+RGB(0,0,0), at both one and four seconds after readiness. Startup was 99.84% black;
+the encrypted-disk prompt still rendered (417 white text pixels). The test-only
+"System handoff message" in the boot capture is injected by the fixture.
+
+The unchanged native session patch and greeter checksum were verified against the
+installed source bundle. In isolated KWin, both Restart and Shut down kept the
+cover over ordinary apps, revealed a real native save prompt, restored the cover
+after it closed and exited on simulated cancellation. Actual power actions: zero.
+Physical ThinkPad/Razer/desktop display transitions remain a beta acceptance check;
+no test restarts or shuts down the development laptop.
+
+The beta workflow publishes signed, qualified beta images and a prerelease page
+only after the general/desktop checks, both graphics variants, installers and VM
+installation check succeed. Settings offers it through Show beta versions →
+Install beta. Stable :latest and the stable release are not advanced.
+
 ## 0.9.8-8 device names, Task Manager, app removal and storage — 19 November 2026
 
 Sound outputs now use recognizable names (Speakers, Headphones, device names for
@@ -56,7 +89,7 @@ the compiled dock-motion harness; backend and Settings interaction coverage is
 in `tests/test_desktop_polish.py`, `tests/test_app_library.py` and Settings tests.
 Physical boot/shutdown, charger/battery transitions, multi-monitor/scale changes
 and repeated capture latency still need complete-image hardware acceptance.
-VERSION remains 0.9.8-7 on the 0.9.8-8 development branch until release preparation.
+These changes are prepared for 0.9.8-8 beta; publication follows the beta-only release workflow.
 
 ## 0.9.8-8 automatic power and battery saver — 18 November 2026
 

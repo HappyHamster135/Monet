@@ -1,6 +1,6 @@
 [Plymouth Theme]
 Name=Monet
-Description=The harbor at dawn while Monet starts.
+Description=A dark startup and power handoff for Monet.
 ModuleName=script
 
 [script]

@@ -2504,19 +2504,20 @@ class StartAndSignIn(unittest.TestCase):
     def test_boot_screen_asks_for_a_disk_password(self):
         script = (self.PLYMOUTH / "monet.script").read_text()
         for hook in ("SetDisplayPasswordFunction", "SetDisplayQuestionFunction", "SetDisplayNormalFunction",
-                     "SetMessageFunction", "SetRefreshFunction"):
+                     "SetMessageFunction"):
             self.assertIn(f"Plymouth.{hook}(", script)
         for picture in re.findall(r'Image\("([^"]+)"\)', script):
             self.assertTrue((self.PLYMOUTH / picture).is_file(), picture)
 
-    def test_power_handoff_keeps_boot_art_in_boot_mode(self):
+    def test_power_handoff_never_loads_the_bright_wallpaper_even_on_the_next_boot(self):
         script = (self.PLYMOUTH / "monet.script").read_text()
         boot_art = re.search(r'if \(Plymouth\.GetMode\(\) == "boot"\) \{\n(.*?)\n\}', script, re.S)
         self.assertIsNotNone(boot_art)
         self.assertIn("\nback = Sprite();\n", script[:boot_art.start()])
-        self.assertEqual(re.findall(r'Image\("([^"]+)"\)', boot_art[1]), ["painting.png", "mark.png"])
-        self.assertEqual(script.count('Image("painting.png")'), 1)
-        self.assertEqual(script.count('Image("mark.png")'), 1)
+        self.assertIn('Image.Text("Monet", 0.45, 0.45, 0.45', boot_art[1])
+        self.assertNotIn('Image("painting.png")', script)
+        self.assertNotIn('Image("mark.png")', script)
+        self.assertNotIn('SetRefreshFunction', script)  # Static; no idle animation loop.
 
     def test_monet_boots_with_its_own_screen(self):
         containerfile = (ROOT / "image/Containerfile").read_text()

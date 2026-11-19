@@ -1,33 +1,17 @@
-// The dawn painting, filling the screen, and Monet's sun breathing over it.
-// Used by Monet Setup and by Monet itself while it starts.
-// Plymouth has separate reboot and shutdown modes. Only show the painting
-// during startup so both handoffs from Plasma stay black.
+// A dark handoff in every mode, including the next boot after a restart.
+// Do not decode or display the wallpaper: Plymouth has no session night-light
+// transform, so the painting can flash at full brightness during the handoff.
 Window.SetBackgroundTopColor(0, 0, 0);
 Window.SetBackgroundBottomColor(0, 0, 0);
 // Keep a sprite even when it has no image: Plymouth's script renderer needs
 // one to draw the background on Fedora.
 back = Sprite();
 if (Plymouth.GetMode() == "boot") {
-    painting = Image("painting.png");
-    scale = Math.Max(Window.GetWidth() / painting.GetWidth(), Window.GetHeight() / painting.GetHeight());
-    filled = painting.Scale(painting.GetWidth() * scale, painting.GetHeight() * scale);
-    back.SetImage(filled);
-    back.SetX(Window.GetX() + (Window.GetWidth() - filled.GetWidth()) / 2);
-    back.SetY(Window.GetY() + (Window.GetHeight() - filled.GetHeight()) / 2);
-    back.SetZ(-10);
-
-    mark = Image("mark.png");
-    sun = Sprite(mark);
-    sun.SetX(Window.GetX() + (Window.GetWidth() - mark.GetWidth()) / 2);
-    sun.SetY(Window.GetY() + Window.GetHeight() * 0.78 - mark.GetHeight() / 2);
-    sun.SetZ(10);
-
-    t = 0;
-    fun refresh() {
-        t++;
-        sun.SetOpacity(0.55 + 0.45 * Math.Abs(Math.Sin(t / 40)));
-    }
-    Plymouth.SetRefreshFunction(refresh);
+    // A small static wordmark gives boot feedback without lighting the screen.
+    name = Image.Text("Monet", 0.45, 0.45, 0.45, 1, "Sans 20");
+    brand = Sprite(name);
+    brand.SetX(Window.GetX() + (Window.GetWidth() - name.GetWidth()) / 2);
+    brand.SetY(Window.GetY() + Window.GetHeight() * 0.42);
 }
 
 // A line of white text, centered at height y (a fraction of the screen).

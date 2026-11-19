@@ -188,8 +188,8 @@ RUN --mount=type=bind,from=notifications,source=/out,target=/tmp/monet-notificat
     python3 /tmp/monet-notifications/bundle.py install /tmp/monet-notifications
 RUN --mount=type=bind,from=dock,source=/out,target=/tmp/monet-dock,ro \
     python3 /tmp/monet-dock/bundle.py install /tmp/monet-dock
-# Monet's boot screen, the same as Monet Setup's: the harbor at dawn with the
-# sun breathing, instead of Bazzite's. It lives in the initramfs, so that's
+# Monet's dark boot/power screen, shared with Setup: no bright wallpaper at
+# shutdown, restart or the next boot. It lives in the initramfs, so that's
 # rebuilt the way Bazzite builds it, with what unlocks an encrypted disk by
 # itself (the TPM's libraries, which systemd-cryptsetup asks for there).
 COPY image/setup/files/usr/share/plymouth/themes/monet /usr/share/plymouth/themes/monet
