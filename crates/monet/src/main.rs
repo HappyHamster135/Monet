@@ -68,6 +68,11 @@ type Res<T> = Result<T, String>;
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    // Help must return before dispatching any command, including privileged helpers.
+    if args.iter().any(|arg| arg == "--help") {
+        print!("{HELP}");
+        return ExitCode::SUCCESS;
+    }
     if matches!(args.as_slice(), [helper, command, ..] if helper == "helper" && command == "switch-desktop") {
         let result = match args.as_slice() {
             [_, _, game, task, checkpoint] => {
@@ -101,10 +106,6 @@ fn main() -> ExitCode {
     let result = match words.as_slice() {
         [] if args.iter().any(|a| a == "--version") => {
             println!("monet {}", monet_core::VERSION);
-            Ok(())
-        }
-        [] if args.iter().any(|a| a == "--help") => {
-            print!("{HELP}");
             Ok(())
         }
         [] | ["status"] => status(),

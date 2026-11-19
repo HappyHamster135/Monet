@@ -60,7 +60,7 @@ msgstr "Detalles"
 #: linux/share/monet/settings-app/MonetSettings.qml:8299 linux/share/monet/settings-app/MonetSettings.qml:8731 linux/share/monet/settings-app/MonetSettings.qml:9105
 #: linux/share/monet/settings-app/StorageDetails.qml:86 linux/share/monet/store-app/AppPage.qml:331 linux/share/monet/store-app/Downloads.qml:209
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/WindowsProgram.qml:290 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:406 linux/share/plasma/plasmoids/org.monet.transfers/contents/ui/main.qml:445
-#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:521 linux/libexec/monet-leave:59 crates/monet/src/main.rs:1511
+#: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/main.qml:521 linux/libexec/monet-leave:59 crates/monet/src/main.rs:1512
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -1659,11 +1659,11 @@ msgstr "Abrir Steam"
 msgid "Couldn't open Windows"
 msgstr "No se pudo abrir Windows"
 
-#: linux/share/monet/games/Games.qml:1779 crates/monet/src/main.rs:384
+#: linux/share/monet/games/Games.qml:1779 crates/monet/src/main.rs:385
 msgid "Set up FACEIT in Windows?"
 msgstr "¿Instalar FACEIT en Windows?"
 
-#: linux/share/monet/games/Games.qml:1780 crates/monet/src/main.rs:379
+#: linux/share/monet/games/Games.qml:1780 crates/monet/src/main.rs:380
 msgid "Play %1 on FACEIT?"
 msgstr "¿Jugar a %1 en FACEIT?"
 
@@ -1675,7 +1675,7 @@ msgstr "%1 necesita Windows"
 msgid "Play %1?"
 msgstr "¿Jugar a %1?"
 
-#: linux/share/monet/games/Games.qml:1783 linux/share/monet/settings-app/MonetSettings.qml:8669 crates/monet/src/main.rs:386
+#: linux/share/monet/games/Games.qml:1783 linux/share/monet/settings-app/MonetSettings.qml:8669 crates/monet/src/main.rs:387
 msgid "Restart in Windows?"
 msgstr "¿Reiniciar en Windows?"
 
@@ -1730,8 +1730,8 @@ msgstr "Reiniciar & jugar"
 #: linux/share/monet/games/Games.qml:1842 linux/share/monet/logout/Logout.qml:337 linux/share/monet/logout/Logout.qml:346
 #: linux/share/monet/logout/Logout.qml:391 linux/share/monet/logout/Logout.qml:400 linux/share/monet/settings-app/MonetSettings.qml:1416
 #: linux/share/monet/settings-app/MonetSettings.qml:8132 linux/share/monet/settings-app/MonetSettings.qml:8152 linux/share/monet/settings-app/MonetSettings.qml:8412
-#: linux/share/monet/settings-app/MonetSettings.qml:8740 setup/qml/Main.qml:231 crates/monet/src/main.rs:398
-#: crates/monet/src/main.rs:953
+#: linux/share/monet/settings-app/MonetSettings.qml:8740 setup/qml/Main.qml:231 crates/monet/src/main.rs:399
+#: crates/monet/src/main.rs:954
 msgid "Restart"
 msgstr "Reiniciar"
 
@@ -5763,7 +5763,7 @@ msgstr "Imprimiendo"
 msgid "Turned off"
 msgstr "Apagada"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7650 crates/monet/src/main.rs:317
+#: linux/share/monet/settings-app/MonetSettings.qml:7650 crates/monet/src/main.rs:318
 msgid "Ready"
 msgstr "Lista"
 
@@ -6485,11 +6485,11 @@ msgstr "Juegos que necesitan Windows, a un reinicio de distancia."
 msgid "Restarting in Windows…"
 msgstr "Reiniciando en Windows…"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8667 crates/monet/src/main.rs:383
+#: linux/share/monet/settings-app/MonetSettings.qml:8667 crates/monet/src/main.rs:384
 msgid "Sign in to your game launchers?"
 msgstr "¿Iniciar sesión en tus launchers de juegos?"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8668 crates/monet/src/main.rs:385
+#: linux/share/monet/settings-app/MonetSettings.qml:8668 crates/monet/src/main.rs:386
 msgid "Update Windows games?"
 msgstr "¿Actualizar los juegos de Windows?"
 
@@ -6497,7 +6497,7 @@ msgstr "¿Actualizar los juegos de Windows?"
 msgid "Windows is ready to install"
 msgstr "Windows está listo para instalarse"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8671 linux/libexec/monet-prepare-windows:1149 crates/monet/src/main.rs:1029
+#: linux/share/monet/settings-app/MonetSettings.qml:8671 linux/libexec/monet-prepare-windows:1149 crates/monet/src/main.rs:1030
 msgid "Getting Windows ready"
 msgstr "Preparando Windows"
 
@@ -6505,7 +6505,7 @@ msgstr "Preparando Windows"
 msgid "Windows setup did not finish"
 msgstr "La instalación de Windows no terminó"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8673 crates/monet/src/main.rs:971
+#: linux/share/monet/settings-app/MonetSettings.qml:8673 crates/monet/src/main.rs:972
 msgid "Windows setup stopped"
 msgstr "La instalación de Windows se detuvo"
 
@@ -6537,7 +6537,7 @@ msgstr "El último viaje no llegó a Windows"
 msgid "No Windows on this PC"
 msgstr "No hay Windows en este PC"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8681 crates/monet/src/main.rs:951
+#: linux/share/monet/settings-app/MonetSettings.qml:8681 crates/monet/src/main.rs:952
 msgid "Windows is ready"
 msgstr "Windows está listo"
 
@@ -6559,7 +6559,7 @@ msgstr ""
 msgid "Plug in the charger first."
 msgstr "Conecta antes el cargador."
 
-#: linux/share/monet/settings-app/MonetSettings.qml:8697 crates/monet/src/main.rs:920
+#: linux/share/monet/settings-app/MonetSettings.qml:8697 crates/monet/src/main.rs:921
 msgid ""
 "You can keep using Monet while Windows is prepared. Monet asks before restarting."
 msgstr ""
@@ -11036,7 +11036,7 @@ msgid ""
 "Windows couldn't be started. Your PC hasn't restarted. Save your work and try again."
 msgstr ""
 
-#: linux/libexec/monet-leave:139 crates/monet/src/main.rs:405
+#: linux/libexec/monet-leave:139 crates/monet/src/main.rs:406
 msgid ""
 "Monet couldn't start the safe switch. Your PC hasn't restarted. Try again from your desktop."
 msgstr ""
@@ -11093,7 +11093,7 @@ msgid ""
 "The switch was cancelled. Some apps couldn't be reopened. Review your recovery list in Settings."
 msgstr ""
 
-#: linux/libexec/monet-leave:277 crates/monet/src/main.rs:737
+#: linux/libexec/monet-leave:277 crates/monet/src/main.rs:738
 msgid "The switch to Windows was cancelled."
 msgstr ""
 
@@ -13632,196 +13632,196 @@ msgctxt "an app's name in the menu"
 msgid "System Details"
 msgstr ""
 
-#: crates/monet/src/main.rs:276 crates/monet/src/main.rs:367
+#: crates/monet/src/main.rs:277 crates/monet/src/main.rs:368
 msgid ""
 "Windows isn't installed yet. Choose Windows in the app menu to finish setting it up."
 msgstr ""
 "Windows aún no está instalado. Elige Windows en el menú de apps para terminar de configurarlo."
 
-#: crates/monet/src/main.rs:278
+#: crates/monet/src/main.rs:279
 msgid ""
 "Windows is encrypted with BitLocker. Type its recovery key in Settings › Games & Controllers, and Monet opens it and sets it up."
 msgstr ""
 "Windows está cifrado con BitLocker. Escribe su clave de recuperación en Ajustes › Juegos & mandos, y Monet lo abre y lo prepara."
 
-#: crates/monet/src/main.rs:283
+#: crates/monet/src/main.rs:284
 msgid ""
 "Windows is asleep, so Monet can't set it up yet. Open Windows, choose Restart, and Monet finishes the rest."
 msgstr ""
 "Windows está suspendido, así que Monet aún no puede configurarlo. Abre Windows, elige Reiniciar y Monet hará el resto."
 
-#: crates/monet/src/main.rs:291
+#: crates/monet/src/main.rs:292
 msgid "This PC didn't start in UEFI mode, so Monet can't switch to Windows."
 msgstr ""
 "Tu PC no se inició en modo UEFI, así que Monet no puede cambiar a Windows."
 
-#: crates/monet/src/main.rs:298 crates/monet/src/main.rs:625
+#: crates/monet/src/main.rs:299 crates/monet/src/main.rs:626
 msgid ""
 "Windows wasn't found on this PC. Install Windows first, then try again."
 msgstr ""
 "No se encontró Windows en tu PC. Instala Windows primero e inténtalo de nuevo."
 
-#: crates/monet/src/main.rs:318
+#: crates/monet/src/main.rs:319
 msgid "Not found"
 msgstr "No encontrado"
 
-#: crates/monet/src/main.rs:320
+#: crates/monet/src/main.rs:321
 msgid "Unavailable (not a UEFI system)"
 msgstr "No disponible (no es un sistema UEFI)"
 
-#: crates/monet/src/main.rs:380
+#: crates/monet/src/main.rs:381
 msgid "Play %1 on Windows?"
 msgstr "¿Jugar a %1 en Windows?"
 
-#: crates/monet/src/main.rs:381
+#: crates/monet/src/main.rs:382
 msgid "Open in Windows?"
 msgstr "¿Abrir en Windows?"
 
-#: crates/monet/src/main.rs:382
+#: crates/monet/src/main.rs:383
 msgid "Play on Windows?"
 msgstr "¿Jugar en Windows?"
 
-#: crates/monet/src/main.rs:389
+#: crates/monet/src/main.rs:390
 msgid "Your PC will restart in Windows and open it. Open apps will close."
 msgstr ""
 "Tu PC se reiniciará en Windows y la abrirá. Las apps abiertas se cerrarán."
 
-#: crates/monet/src/main.rs:390
+#: crates/monet/src/main.rs:391
 msgid ""
 "Your PC will restart in Windows and open FACEIT, then the game. When you quit, it comes back to Monet."
 msgstr ""
 "Tu PC se reiniciará en Windows y abrirá FACEIT y luego el juego. Al salir, vuelve a Monet."
 
-#: crates/monet/src/main.rs:391
+#: crates/monet/src/main.rs:392
 msgid ""
 "Your PC will restart in Windows and start the game. When you quit, it comes back to Monet."
 msgstr ""
 "Tu PC se reiniciará en Windows y abrirá el juego. Al salir, volverá a Monet."
 
-#: crates/monet/src/main.rs:392
+#: crates/monet/src/main.rs:393
 msgid ""
 "Your PC will restart in Windows with your game launchers ready to sign in to. Open apps will close."
 msgstr ""
 "Tu PC se reiniciará en Windows con tus launchers de juegos listos para iniciar sesión. Las apps abiertas se cerrarán."
 
-#: crates/monet/src/main.rs:393
+#: crates/monet/src/main.rs:394
 msgid ""
 "Your PC will restart in Windows, where FACEIT's own installers open for you. Accept their terms only if you agree, then sign in. Open apps will close."
 msgstr ""
 "Tu PC se reiniciará en Windows, donde se abrirán los instaladores del propio FACEIT. Acepta sus condiciones solo si estás de acuerdo y luego inicia sesión. Las apps abiertas se cerrarán."
 
-#: crates/monet/src/main.rs:394
+#: crates/monet/src/main.rs:395
 msgid ""
 "Your PC will restart in Windows, update it and your games, and switch off when they're done. Open apps will close."
 msgstr ""
 "Tu PC se reiniciará en Windows, actualizará Windows y tus juegos, y se apagará cuando terminen. Las apps abiertas se cerrarán."
 
-#: crates/monet/src/main.rs:395
+#: crates/monet/src/main.rs:396
 msgid "Your PC will restart in Windows. Open apps will close."
 msgstr "Tu PC se reiniciará en Windows. Las apps abiertas se cerrarán."
 
-#: crates/monet/src/main.rs:397
+#: crates/monet/src/main.rs:398
 msgid ""
 "Save your work first. Unsaved changes and private tabs aren't captured. Downloads stop during the restart; check Store's Downloads when you return."
 msgstr ""
 
-#: crates/monet/src/main.rs:629
+#: crates/monet/src/main.rs:630
 msgid ""
 "Monet seems to have started from the Windows entry, which shouldn't happen."
 msgstr ""
 "Parece que Monet se inició desde la entrada de Windows, y eso no debería pasar."
 
-#: crates/monet/src/main.rs:668
+#: crates/monet/src/main.rs:669
 msgid ""
 "This PC's firmware didn't keep the switch to Windows. Restart and choose Windows in the PC's boot menu."
 msgstr ""
 "El firmware de tu PC no guardó el cambio a Windows. Reinicia y elige Windows en el menú de arranque."
 
-#: crates/monet/src/main.rs:699
+#: crates/monet/src/main.rs:700
 msgid ""
 "The restart was blocked. The switch to Windows was cancelled. Save your work and try again."
 msgstr ""
 
-#: crates/monet/src/main.rs:717
+#: crates/monet/src/main.rs:718
 msgid ""
 "Monet couldn't identify your desktop account. Start Windows from your desktop and try again."
 msgstr ""
 
-#: crates/monet/src/main.rs:723
+#: crates/monet/src/main.rs:724
 msgid "Your desktop account could not be found. The switch was cancelled."
 msgstr ""
 
-#: crates/monet/src/main.rs:847
+#: crates/monet/src/main.rs:848
 msgid "This copy of Monet can't install Windows by itself."
 msgstr "Esta copia de Monet no puede instalar Windows por sí sola."
 
-#: crates/monet/src/main.rs:906
+#: crates/monet/src/main.rs:907
 msgid ""
 "Monet can install Windows from %1. Your PC restarts and Windows installs itself."
 msgstr ""
 "Monet puede instalar Windows desde %1. Tu PC se reinicia y Windows se instala solo."
 
-#: crates/monet/src/main.rs:909
+#: crates/monet/src/main.rs:910
 msgid ""
 "Windows isn't installed yet. Monet downloads it from Microsoft (about 7 GB) and installs it. This takes about 30 minutes."
 msgstr ""
 "Windows aún no está instalado. Monet lo descarga de Microsoft (unos 7 GB) y lo instala. Tarda unos 30 minutos."
 
-#: crates/monet/src/main.rs:913
+#: crates/monet/src/main.rs:914
 msgid "Set up Windows?"
 msgstr "¿Configurar Windows?"
 
-#: crates/monet/src/main.rs:913
+#: crates/monet/src/main.rs:914
 msgid "Set Up"
 msgstr "Configurar"
 
-#: crates/monet/src/main.rs:917
+#: crates/monet/src/main.rs:918
 msgid "Getting Windows ready for your games"
 msgstr "Preparando Windows para tus juegos"
 
-#: crates/monet/src/main.rs:922
+#: crates/monet/src/main.rs:923
 msgid ""
 "Monet is downloading Windows (about 7 GB). You can keep using your PC; Monet asks before it restarts."
 msgstr ""
 "Monet está descargando Windows (unos 7 GB). Puedes seguir usando tu PC; Monet te preguntará antes de reiniciar."
 
-#: crates/monet/src/main.rs:952
+#: crates/monet/src/main.rs:953
 msgid ""
 "Restart now to install Windows? It takes about 10 minutes, then you're back in Monet."
 msgstr ""
 "¿Reiniciar ahora para instalar Windows? Tarda unos 10 minutos y luego vuelves a Monet."
 
-#: crates/monet/src/main.rs:962
+#: crates/monet/src/main.rs:963
 msgid ""
 "The restart was blocked. Save your work, then choose Restart and install in Play on Windows."
 msgstr ""
 "Se bloqueó el reinicio. Guarda tu trabajo y luego elige Reiniciar e instalar en Jugar en Windows."
 
-#: crates/monet/src/main.rs:968
+#: crates/monet/src/main.rs:969
 msgid "Windows setup stopped before it could use the installation media"
 msgstr ""
 "La instalación de Windows se detuvo antes de poder usar el medio de instalación"
 
-#: crates/monet/src/main.rs:970
+#: crates/monet/src/main.rs:971
 msgid "Open Play on Windows to retry the download or choose a Windows 11 ISO."
 msgstr ""
 "Abre Jugar en Windows para reintentar la descarga o elegir una ISO de Windows 11."
 
-#: crates/monet/src/main.rs:971
+#: crates/monet/src/main.rs:972
 msgid "Open Settings"
 msgstr "Abrir Ajustes"
 
-#: crates/monet/src/main.rs:980
+#: crates/monet/src/main.rs:981
 msgid "there isn't enough free space for Windows"
 msgstr "no hay suficiente espacio libre para Windows"
 
-#: crates/monet/src/main.rs:981
+#: crates/monet/src/main.rs:982
 msgid ""
 "Windows needs about 72 GB of the disk to itself, and 16 GB free in Monet while it downloads."
 msgstr ""
 "Windows necesita unos 72 GB del disco solo para él, y 16 GB libres en Monet mientras se descarga."
 
-#: crates/monet/src/main.rs:986
+#: crates/monet/src/main.rs:987
 msgid ""
 "Windows couldn't be set up this time. Choose Windows in the app menu to try again."
 msgstr ""

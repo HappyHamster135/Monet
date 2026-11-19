@@ -2,6 +2,25 @@
 
 ## 0.9.8-8 beta preparation — 19 November 2026
 
+The first candidate passed 2,328 desktop checks across 154 modules, the general
+checks, both signed graphics images and the Secure Boot installation. The installed
+VM showed the new dim wordmark on black and unlocked with the test password. Its
+first-run Steam login took focus during the screenshot tour, so the image named
+Settings is not evidence of the installed Settings window; separate native Settings
+and window-control tests passed.
+
+Linux packaging hit repeated Ubuntu mirror HTTP 503 errors and a further download
+stall longer than 20 minutes. CI now uses the primary Ubuntu archive over HTTPS,
+preserving suites, components, signing keys and apt verification. Download retries
+and timeouts are bounded, and package progress stays visible. This configuration
+helper refuses to run outside the disposable Ubuntu 24.04 GitHub runner.
+
+The CLI previously ignored `--help` after a command and could run Update instead.
+Help now returns before all dispatch, including privileged helpers. A real CLI
+regression test checks Update, Rollback and helper help with an empty executable
+search path, and verifies that no updater state is created. The next candidate
+requires a fresh general/desktop/build/install validation before publication.
+
 The release-wide checks also verify that the desktop migration receipt matches
 VERSION. The 0.9.8-8 receipt is stamped only after the content-based migration
 succeeds; existing display scaling and personal choices keep their guards.

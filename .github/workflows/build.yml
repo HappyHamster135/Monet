@@ -26,8 +26,9 @@ jobs:
         run: rustup toolchain install
       - name: Native storage test tools
         run: |
+          tools/configure-ci-apt.sh
           sudo apt-get update -q
-          sudo apt-get install -y -q cryptsetup-bin fdisk ntfs-3g dosfstools wimtools >/dev/null
+          sudo apt-get install -y -q cryptsetup-bin fdisk ntfs-3g dosfstools wimtools
       - name: Tests
         run: cargo test --workspace
       - name: Read-only boot cleanup in a private mount namespace
@@ -35,13 +36,13 @@ jobs:
       - name: Lint
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Shell scripts
-        run: for f in linux/install.sh linux/uninstall.sh linux/libexec/monet-session linux/libexec/monet-look linux/libexec/monet-light linux/libexec/monet-charge tools/package.sh tools/push-image.sh tools/build-settings-style.sh image/finish-image.sh image/*/build.sh image/setup/monet-trust image/setup/files/usr/libexec/monet-setup-session; do bash -n "$f"; done
+        run: for f in linux/install.sh linux/uninstall.sh linux/libexec/monet-session linux/libexec/monet-look linux/libexec/monet-light linux/libexec/monet-charge tools/configure-ci-apt.sh tools/package.sh tools/push-image.sh tools/build-settings-style.sh image/finish-image.sh image/*/build.sh image/setup/monet-trust image/setup/files/usr/libexec/monet-setup-session; do bash -n "$f"; done
       - name: Python helpers
         run: python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' linux/libexec/monet-quick linux/libexec/monet-startup linux/libexec/monet-storage-recovery linux/libexec/monet-files-tools linux/libexec/monet-system-info linux/libexec/monet-resume linux/libexec/monet-leave linux/libexec/monet-files-session linux/libexec/monet-editor-session linux/libexec/monet-pdf-session linux/libexec/monet-browser-session linux/libexec/monet-bookmarks linux/libexec/monet-ready linux/libexec/monet-keep linux/libexec/monet-boot linux/libexec/monet-reset linux/libexec/monet-seal linux/libexec/monet-pairings linux/libexec/monet-secure linux/libexec/monet-windows-drive linux/libexec/monet-paint linux/libexec/monet-guest linux/libexec/monet-games linux/libexec/monet-settings linux/libexec/monet-store linux/libexec/monet-store-jobs linux/libexec/monet-profile linux/libexec/monet-passwords linux/libexec/monet-passwords-browser linux/libexec/monet-priority linux/share/monet/passwords/*.py tools/*.py setup/monet-setup setup/monet_setup/*.py image/*/*.py image/installer/product/usr/libexec/monet-download
       - name: Installer tests
         run: |
           # GTK 3, to check the installer's stylesheet the way Anaconda loads it.
-          sudo apt-get install -y -q gir1.2-gtk-3.0 python3-gi python3-nacl dbus-daemon dbus-bin >/dev/null
+          sudo apt-get install -y -q gir1.2-gtk-3.0 python3-gi python3-nacl dbus-daemon dbus-bin
           python3 tools/test.py
 
   desktop:
@@ -88,8 +89,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Rust (version from rust-toolchain.toml)
         run: |
+          tools/configure-ci-apt.sh
           sudo apt-get update -q
-          sudo apt-get install -y -q mingw-w64 cmake qt6-base-dev python3-pip >/dev/null
+          sudo apt-get install -y -q mingw-w64 cmake qt6-base-dev python3-pip
           rustup toolchain install && rustup target add x86_64-unknown-linux-musl x86_64-pc-windows-gnu
       - name: Build
         run: |
@@ -277,6 +279,9 @@ jobs:
           status=0
           python3 tools/beta-release.py newest "$VERSION" "$NUMBER" || status=$?
           if [ "$status" = 3 ]; then exit 0; elif [ "$status" != 0 ]; then exit "$status"; fi
+          tools/configure-ci-apt.sh
+          sudo apt-get update -q
+          sudo apt-get install -y -q skopeo
           if ! gh release view "$RELEASE" >/dev/null 2>&1; then
             cd dist && sha256sum * > SHA256SUMS.txt && cd ..
             python3 tools/beta-release.py notes "$VERSION" "$NUMBER" RELEASE_NOTES.md > this-release.md
@@ -287,7 +292,6 @@ jobs:
               --target "$GITHUB_SHA"
           fi
           # Then :beta, which installed Monets offer from: only a whole beta, with its release.
-          sudo apt-get install -y -q skopeo
           trap 'rm -f "$REGISTRY_AUTH_FILE"' EXIT
           printf '%s' "$GH_TOKEN" | skopeo login --authfile "$REGISTRY_AUTH_FILE" --username "$GITHUB_ACTOR" --password-stdin ghcr.io
           IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/monet"

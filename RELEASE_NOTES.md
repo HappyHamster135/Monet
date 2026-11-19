@@ -44,6 +44,8 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   accept your files. Screenshot capture is prepared in the background to reduce delay.
 - **A desktop ready sooner.** Optional startup work runs after the desktop is usable,
   and early graphics loading follows the PC's actual hardware.
+- **CLI help only shows help.** Adding `--help` to Update, Rollback or a helper command
+  returns the instructions without starting an update, requesting elevation or writing state.
 
 #### Testing this beta
 
