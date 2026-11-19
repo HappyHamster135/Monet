@@ -2,6 +2,10 @@
 
 ## 0.9.8-8 beta preparation — 19 November 2026
 
+The release-wide checks also verify that the desktop migration receipt matches
+VERSION. The 0.9.8-8 receipt is stamped only after the content-based migration
+succeeds; existing display scaling and personal choices keep their guards.
+
 The full GitHub desktop suite found that Apps' new ScrollView swallowed mouse
 Back clicks. A Back-only MouseArea now handles navigation above the scroll area;
 normal clicks, drags and wheel events still reach the controls below. The library
