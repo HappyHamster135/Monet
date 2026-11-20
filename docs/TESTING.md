@@ -1,5 +1,41 @@
 # Testing Monet on real hardware
 
+## 0.9.8-8 Store and helper reliability — 20 November 2026
+
+Completing a Store transaction no longer runs `flatpak list` on the GUI thread.
+Installed-app refreshes use one worker at a time, coalesce pending requests and
+publish their results on the GUI thread. Revision checks prevent an older query
+or the initial catalog load from replacing a newer installed-app snapshot.
+Successful live transactions update their app's state immediately; reopening old
+download history does not replay those changes. An unsuccessful listing keeps
+the last known list instead of treating the PC as empty. Unchanged snapshots do
+not rebuild the displayed lists, and installed-state updates preserve the open
+app page, scroll position and keyboard focus. There is no new idle polling.
+
+The shared Settings/Apps/Games/Store process helper now delivers completion after
+the caller has registered its callback, including rejected commands and launch
+failures. Each process completes once and failed launches release their native
+process objects. Crash reporting, stdin delivery and subsequent requests are
+covered with real QProcess children and QML callbacks. No transaction timeout
+or cancellation policy was changed.
+
+In three isolated one-core samples with a deliberately delayed 200 ms Flatpak
+listing, the original Store's completion callback took a median 201.8 ms and
+the new callback 1.8 ms. The longest GUI heartbeat gap fell from 212.6 ms to
+13.2 ms. These measure UI responsiveness during that artificial delay, not disk
+speed or boot time. Both helper regressions fail against the original source.
+Separate three-sample first/ready-frame checks for Settings and Store complete
+successfully with overlapping baseline/candidate timing ranges; this batch does
+not claim a startup speed improvement. Existing first-frame-before-catalog and
+deferred catalog-cache serialization checks remain required.
+
+Relevant validation covers 183 Python/native Qt checks with no skips, including
+the Store's queue observation, transactions, navigation and open-page updates,
+Settings and library feedback, real helper processes and native startup order.
+All local checks and measurements use one CPU core, disposable profiles and a
+private session bus. These are development-branch changes for the next beta;
+the published beta.2 and stable update channels have not been replaced.
+
 ## 0.9.8-8 sign-in and maintenance work — 20 November 2026
 
 The current laptop's recorded system startup is 41.3 seconds in systemd's report,

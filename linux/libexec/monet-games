@@ -238,29 +238,40 @@ class Helper(QObject):
         ticket = self._next
         program = PROGRAMS.get(str(command[0]) if command else "")
         if program is None:
-            self.done.emit(ticket, "", 1, f"not a program Games runs: {command[:1]}")
+            # QML registers its callback with the returned ticket. Even an
+            # immediate failure must arrive after run()/feed() has returned.
+            QTimer.singleShot(0, self, lambda: self.done.emit(
+                ticket, "", 1, f"not a program Games runs: {command[:1]}"))
             return ticket
         self.start(ticket, program, [str(a) for a in command[1:]], text)
         return ticket
 
     def start(self, ticket, program, args, text=None):
         process = QProcess(self)
+        settled = False
 
-        def finished(code, _status):
+        def complete(code, error=""):
+            nonlocal settled
+            if settled:
+                return
+            settled = True
             out = bytes(process.readAllStandardOutput()).decode("utf-8", "replace")
-            err = bytes(process.readAllStandardError()).decode("utf-8", "replace")
+            err = error or bytes(process.readAllStandardError()).decode("utf-8", "replace")
             process.deleteLater()
-            self.done.emit(ticket, out, code, err)
+            QTimer.singleShot(0, self, lambda: self.done.emit(ticket, out, code, err))
+
+        def finished(code, status):
+            complete(code if code or status != QProcess.CrashExit else 1)
 
         def failed(error):
             # Never started, so never finishes either.
             if error == QProcess.FailedToStart:
-                self.done.emit(ticket, "", 1, process.errorString())
+                complete(1, process.errorString())
 
         process.finished.connect(finished)
         process.errorOccurred.connect(failed)
         process.start(program, args)
-        if text is not None:
+        if text is not None and process.state() != QProcess.NotRunning:
             process.write(str(text).encode("utf-8"))
             process.closeWriteChannel()
 

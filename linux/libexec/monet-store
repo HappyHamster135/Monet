@@ -546,13 +546,15 @@ def similar(apps, app_id, popular, limit=6):
 
 # ---------------------------------------------------------------- what's on the PC
 
-def installed_apps(run=None):
+def installed_apps(run=None, *, strict=False):
     """{id: "system" | "user"} of the Flatpak apps installed."""
     import subprocess
-    run = run or (lambda args: subprocess.run(args, capture_output=True, text=True, timeout=30).stdout)
+    run = run or (lambda args: subprocess.run(args, capture_output=True, text=True, timeout=30, check=True).stdout)
     try:
         out = run(["flatpak", "list", "--app", "--columns=application,installation"])
-    except (OSError, subprocess.TimeoutExpired):
+    except (OSError, subprocess.SubprocessError):
+        if strict:
+            raise
         return {}
     found = {}
     for line in out.splitlines():
@@ -900,21 +902,17 @@ def jobs_module():
 
 # ---------------------------------------------------------------- the window
 
-def main():
-    from PySide6.QtCore import QObject, QTimer, QUrl, Signal, Slot, Qt, QMetaObject
-    from PySide6.QtGui import QGuiApplication, QIcon
-    from PySide6.QtNetwork import QLocalServer, QNetworkAccessManager, QNetworkDiskCache
-    from PySide6.QtQml import QQmlApplicationEngine, QQmlNetworkAccessManagerFactory
-
-    loader = SourceFileLoader("monet_games", f"{LIBEXECDIR}/monet-games")
-    import importlib.util
-    games = importlib.util.module_from_spec(importlib.util.spec_from_loader("monet_games", loader))
-    loader.exec_module(games)
+def shop_type(games):
+    # Keep the catalog/worker entry points usable without importing Qt.
+    from PySide6.QtCore import QObject, Signal, Slot
 
     class Shop(QObject):
         """The catalog, the PC's apps and Windows', for the window; and what the window asks of them."""
 
         loaded = Signal()
+        installedChanged = Signal()
+        installedReady = Signal(int, object)
+        catalogReady = Signal(object, int, object)
         cacheFrame = Signal(object)
         facts = Signal(str, "QVariant")  # app, {reach: [...], download, installed}
         wanted = Signal(str)
@@ -929,6 +927,10 @@ def main():
             self.queue = self.jobs.Queue()
             self.downloads = []
             self.loading = False
+            self.installed_revision = 0
+            self.installed_running = False
+            self.installedReady.connect(self.installed_ready)
+            self.catalogReady.connect(self.catalog_ready)
             self.observer = self.jobs.watch_queue(self.queue, self)
             self.observer.changed.connect(self.jobs_changed)
             self.observer.problem.connect(self.queueProblem.emit)
@@ -940,18 +942,71 @@ def main():
         def jobs_changed(self, jobs):
             before = {j["token"]: j["state"] for j in self.downloads}
             self.downloads = jobs
-            # Refresh installed apps after terminal transitions, not each progress tick.
-            if any(j["state"] not in self.jobs.ACTIVE and before.get(j["token"]) != j["state"] for j in jobs):
-                self.installed = installed_apps()
+            terminal = [j for j in jobs if j["state"] not in self.jobs.ACTIVE
+                        and before.get(j["token"]) != j["state"]]
+            # A confirmed transaction is usable immediately, even if Flatpak's
+            # next listing is slow. Historical jobs aren't proof of current state.
+            for job in terminal:
+                if job["state"] == "done" and before.get(job["token"]) in self.jobs.ACTIVE:
+                    if job["action"] == "install":
+                        self.installed[job["id"]] = job["installation"]
+                    elif self.installed.get(job["id"]) == job["installation"]:
+                        self.installed.pop(job["id"], None)
+            if terminal:
+                self.refresh_installed()
             self.jobsChanged.emit(jobs)
+
+        @staticmethod
+        def read_installed():
+            import subprocess
+            try:
+                return installed_apps(strict=True)
+            except (OSError, subprocess.SubprocessError):
+                # Failure is different from an empty installation.
+                return None
+
+        def refresh_installed(self):
+            self.installed_revision += 1
+            if not self.installed_running:
+                self.start_installed()
+
+        def start_installed(self):
+            self.installed_running = True
+            revision = self.installed_revision
+
+            def read():
+                found = self.read_installed()
+                self.installedReady.emit(revision, found)
+            threading.Thread(target=read, daemon=True).start()
+
+        @Slot(int, object)
+        def installed_ready(self, revision, found):
+            self.installed_running = False
+            if revision != self.installed_revision:
+                # Coalesce a burst of completed jobs into one latest query.
+                self.start_installed()
+            elif found is not None and found != self.installed:
+                self.installed = found
+                self.installedChanged.emit()
+
+        @Slot(object, int, object)
+        def catalog_ready(self, apps, revision, installed):
+            self.apps = apps
+            if revision == self.installed_revision and installed is not None:
+                self.installed = installed
+            self.ready = True
+            self.loading = False
+            self.loaded.emit()
 
         @Slot()
         def reload(self):
             if not self.loading:
                 self.loading = True
+                self.installed_revision += 1
                 threading.Thread(target=lambda: self.load(True), daemon=True).start()
 
         def load(self, refresh=False):
+            revision = self.installed_revision
             langs = languages()
             blocked = blocklist()
             # A new Monet may not have Flathub's catalog yet (Flatpak refreshes it with its updates).
@@ -968,10 +1023,7 @@ def main():
                 for app_id, app in cached_catalog(folder, langs, blocked, refresh=refresh,
                         note=lambda phase: games.startup_event('store', phase, STARTUP_STARTED), deferred=deferred).items():
                     apps.setdefault(app_id, app)
-            self.apps, self.installed = apps, installed_apps()
-            self.ready = True
-            self.loading = False
-            self.loaded.emit()
+            self.catalogReady.emit(apps, revision, self.read_installed())
             if deferred:
                 # Let the actual catalog frame through before serializing a
                 # rebuildable cache. Reuse this worker rather than add a daemon.
@@ -1124,6 +1176,20 @@ def main():
                 self.facts.emit(app_id, found)
             threading.Thread(target=work, daemon=True).start()
 
+    return Shop
+
+
+def main():
+    from PySide6.QtCore import QObject, QTimer, QUrl, Slot, Qt, QMetaObject
+    from PySide6.QtGui import QGuiApplication, QIcon
+    from PySide6.QtNetwork import QLocalServer, QNetworkAccessManager, QNetworkDiskCache
+    from PySide6.QtQml import QQmlApplicationEngine, QQmlNetworkAccessManagerFactory
+
+    loader = SourceFileLoader("monet_games", f"{LIBEXECDIR}/monet-games")
+    import importlib.util
+    games = importlib.util.module_from_spec(importlib.util.spec_from_loader("monet_games", loader))
+    loader.exec_module(games)
+
     class KeptPictures(QQmlNetworkAccessManagerFactory):
         def create(self, parent):
             manager = QNetworkAccessManager(parent)
@@ -1151,7 +1217,7 @@ def main():
     helper = games.Helper()
     area = games.WindowArea()
     games.answer(server, helper)
-    shop = Shop(helper)
+    shop = shop_type(games)(helper)
     helper.wanted.connect(shop.wanted)
     engine = QQmlApplicationEngine()
     pictures = KeptPictures()

@@ -561,6 +561,9 @@ MonetWindow {
                 root.show(what)
             }
         }
+        function onInstalledChanged() {
+            if (root.loaded) root.refresh()
+        }
         function onFacts(id, facts) {
             if (id === root.pageId)
                 root.pageFacts = facts

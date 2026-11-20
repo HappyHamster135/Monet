@@ -19,6 +19,7 @@ if QT:
 
     class Shop(QObject):
         loaded = Signal(); changed = Signal(str, bool, str); progress = Signal(str, float)
+        installedChanged = Signal()
         facts = Signal(str, "QVariant"); wanted = Signal(str)
         jobsChanged = Signal("QVariant"); queueProblem = Signal(str)
 
@@ -295,6 +296,20 @@ class StoreNavigation(unittest.TestCase):
         QTest.qWait(50)
         self.assertAlmostEqual(page.property("contentY"), where, delta=1)
         self.assert_visible_in(self.window.activeFocusItem(), page)
+
+    def test_installed_refresh_updates_the_open_page_without_losing_position_or_keys(self):
+        ident = self.open_app()
+        page, gallery = self.item("storeAppPage"), self.item("storeScreenshotGallery")
+        gallery.forceActiveFocus(Qt.TabFocusReason)
+        QTest.qWait(100)
+        where = page.property("contentY")
+        self.shop.apps[0]["state"] = "installed"
+        self.shop.installedChanged.emit()
+        QTest.qWait(100)
+        self.assertEqual(self.window.property("pageId"), ident)
+        self.assertEqual(self.window.property("pageApp")["state"], "installed")
+        self.assertAlmostEqual(page.property("contentY"), where, delta=1)
+        self.assertTrue(gallery.hasActiveFocus())
 
     def test_keys_moved_on_right_after_forward_are_followed(self):
         self.shop.apps[0]["similar"] = [self.shop.apps[1]]

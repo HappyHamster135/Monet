@@ -415,6 +415,7 @@ except ImportError:
 if QT:
     class FakeShop(QObject):
         loaded = Signal(); changed = Signal(str, bool, str); progress = Signal(str, float)
+        installedChanged = Signal()
         facts = Signal(str, "QVariant"); wanted = Signal(str)
         jobsChanged = Signal("QVariant"); queueProblem = Signal(str)
         def __init__(self):
