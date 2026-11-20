@@ -1,0 +1,49 @@
+name: Verify installed 0.9.8-8 Settings
+
+on:
+  push:
+    branches: ['qa/0.9.8-8-installed-settings']
+
+permissions:
+  contents: read
+
+jobs:
+  installed-settings:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Fetch the existing tested installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          expected=287b10f8e1f750951e4afe52a2081a5535485443
+          actual=$(git ls-remote origin refs/tags/v0.9.8-8-beta.3 | cut -f1)
+          [ "$actual" = "$expected" ]
+          mkdir -p candidate
+          gh release download v0.9.8-8-beta.3 --dir candidate \
+            --pattern Monet-0.9.8-8-Setup.iso --pattern SHA256SUMS.txt
+          (cd candidate && sha256sum --check --ignore-missing SHA256SUMS.txt)
+      - name: Prepare the isolated Secure Boot VM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+          tools/configure-ci-apt.sh
+          sudo apt-get update -q
+          sudo apt-get install -y -q qemu-system-x86 ovmf qemu-utils python3-pil
+      - name: Install the existing images and open Settings with Meta+I
+        run: |
+          set -o pipefail
+          python3 tools/vm-test.py candidate/Monet-0.9.8-8-Setup.iso screens --install | tee vm-test.log
+      - name: Preserve the installed-system evidence
+        if: always()
+        run: |
+          mkdir -p screens
+          cp vm-test.log screens/ || :
+          cp vm-work/serial.log screens/ || :
+          grep -E '^(fallback|stick|monet|tour):' vm-test.log >> "$GITHUB_STEP_SUMMARY" || :
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: installed-settings-evidence
+          path: screens

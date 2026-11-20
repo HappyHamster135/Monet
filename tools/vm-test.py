@@ -362,11 +362,9 @@ def tour(vm, run):
     run.shot("files")
     vm.keys("alt-f4")
     time.sleep(3)
-    vm.keys("alt-spc")
-    time.sleep(3)
-    vm.type("Monet Settings")
-    time.sleep(3)
-    vm.keys("ret")
+    # Monet configures Meta+I for Settings and Meta+R for Run. Alt+Space
+    # does not open the launcher; typing there can reach an unrelated app.
+    vm.keys("meta_l-i")
     time.sleep(8)
     settle(vm, 60)
     run.shot("settings")
