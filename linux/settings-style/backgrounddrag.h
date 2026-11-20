@@ -53,14 +53,22 @@ protected:
     bool eventFilter(QObject *object, QEvent *event) override
     {
         if (event->type() == QEvent::MouseButtonPress) {
-            candidate.clear();
             auto mouse = static_cast<QMouseEvent *>(event);
             auto widget = qobject_cast<QWidget *>(object);
+            // An ignored blank-child press propagates to its ancestors. Keep
+            // the original candidate through that same event, including when
+            // the outer window itself is not a draggable surface.
+            if (candidate && widget && widget != candidate && widget->isAncestorOf(candidate)
+                && mouse->timestamp() == pressTime && mouse->globalPosition() == origin
+                && mouse->button() == Qt::LeftButton && mouse->modifiers() == Qt::NoModifier)
+                return false;
+            candidate.clear();
             if (mouse->button() == Qt::LeftButton && mouse->modifiers() == Qt::NoModifier
                 && mouse->source() == Qt::MouseEventNotSynthesized
                 && eligible(widget, mouse->position().toPoint())) {
                 candidate = widget;
                 origin = mouse->globalPosition();
+                pressTime = mouse->timestamp();
                 // A click is still a click until the pointer crosses the drag
                 // threshold. Native/custom surfaces may handle the press too.
                 // Swallowing it here leaves them seeing only a release.
@@ -86,4 +94,5 @@ protected:
 private:
     QPointer<QWidget> candidate;
     QPointF origin;
+    quint64 pressTime = 0;
 };

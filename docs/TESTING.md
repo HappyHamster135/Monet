@@ -14,6 +14,9 @@ consuming the initial press. It takes over only after the drag threshold. A
 custom native surface's five small-movement clicks previously received zero
 presses; the candidate receives five matched press/release pairs. The unchanged
 threshold, modified gestures, editors and ordinary buttons also pass.
+An ignored blank-child press retains its drag candidate while that same event
+propagates to parent widgets, so blank areas inside a native main window still
+start moving after the threshold. A separate regression checks that case.
 
 Dropdown-title pointer handling now checks the window's reveal geometry before
 testing occlusion. A regression test sends 10,000 content-area pointer positions

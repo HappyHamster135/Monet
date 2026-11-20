@@ -3,6 +3,7 @@
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QLineEdit>
+#include <QMainWindow>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QScrollBar>
@@ -217,6 +218,28 @@ private slots:
         QCOMPARE(surface.presses, 5);
         QCOMPARE(surface.releases, 5);
         QCOMPARE(drag.moves, 0);
+        qApp->removeEventFilter(&drag);
+    }
+
+    void backgroundDragSurvivesPressPropagationFromBlankChildren()
+    {
+        QMainWindow window;
+        window.setFocusPolicy(Qt::StrongFocus);
+        QWidget blank(&window);
+        blank.setGeometry(20, 20, 250, 100);
+        window.resize(400, 200);
+        window.show();
+        QTest::qWait(20);
+        QVERIFY(BackgroundDrag::eligible(&blank, QPoint(100, 50)));
+        QVERIFY(!BackgroundDrag::eligible(&window, QPoint(100, 50)));
+        ObservedDrag drag;
+        qApp->installEventFilter(&drag);
+        QTest::mousePress(&blank, Qt::LeftButton, Qt::NoModifier, QPoint(100, 50));
+        QTest::mouseMove(&blank, QPoint(101, 50));
+        QCOMPARE(drag.moves, 0);
+        QTest::mouseMove(&blank, QPoint(130, 50));
+        QCOMPARE(drag.moves, 1);
+        QTest::mouseRelease(&blank, Qt::LeftButton, Qt::NoModifier, QPoint(130, 50));
         qApp->removeEventFilter(&drag);
     }
 };
