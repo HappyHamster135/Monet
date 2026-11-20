@@ -12,6 +12,7 @@ import math
 import os
 from pathlib import Path
 import re
+import stat
 import struct
 import subprocess
 import time
@@ -64,9 +65,33 @@ def profile_for_pid(pid):
                 target = Path(os.readlink(descriptor))
                 if target.name != ".parentlock":
                     continue
-                relative = target.parent.resolve().relative_to(root().resolve()).as_posix()
-                if profile_path(relative) == target.parent.resolve():
-                    return relative
+                opened = descriptor.stat()
+                if not stat.S_ISREG(opened.st_mode) or opened.st_uid != os.getuid():
+                    continue
+                candidates = {target.parent.name}
+                try:
+                    candidates.add(target.parent.resolve().relative_to(root().resolve()).as_posix())
+                except ValueError:
+                    pass
+                # /proc exposes the path in the browser's mount namespace.
+                # Flatpak's --persist=.zen gives the same inode a different
+                # visible path. Match only a confined host profile's lock file.
+                for index, part in enumerate(target.parent.parts):
+                    if part == ".zen" and index + 1 < len(target.parent.parts):
+                        candidates.add(Path(*target.parent.parts[index + 1:]).as_posix())
+                matches = set()
+                for name in candidates:
+                    profile = profile_path(name)
+                    if profile is None:
+                        continue
+                    try:
+                        lock = (profile / ".parentlock").stat()
+                        if (lock.st_dev, lock.st_ino) == (opened.st_dev, opened.st_ino):
+                            matches.add(profile.relative_to(root().resolve()).as_posix())
+                    except OSError:
+                        continue
+                if len(matches) == 1:
+                    return matches.pop()
             except (OSError, ValueError):
                 continue
     except (OSError, ValueError):
@@ -148,9 +173,14 @@ def summary(state):
     # Digest stays opaque. Never put URLs, titles, form state, cookies, closed tabs
     # or the session blob in Monet's checkpoint or logs. Window order may change.
     fingerprints = sorted(hashlib.sha256(json.dumps(s, ensure_ascii=True).encode()).hexdigest() for s in sequences)
+    # Zen can reorder tab records (notably blank/workspace tabs) on restore.
+    # Verify page membership separately without losing duplicates, pin state or
+    # window grouping. Tab-strip ordering remains the native browser's job.
+    contents = sorted(hashlib.sha256(json.dumps(sorted(s), ensure_ascii=True).encode()).hexdigest() for s in sequences)
     return {"session": session["startTime"], "updated": session["lastUpdate"],
             "windows": len(sequences), "tabs": count,
-            "digest": hashlib.sha256(json.dumps(fingerprints).encode()).hexdigest()}
+            "digest": hashlib.sha256(json.dumps(fingerprints).encode()).hexdigest(),
+            "content_digest": hashlib.sha256(json.dumps(contents).encode()).hexdigest()}
 
 
 def restored_summary(profile, state):
@@ -302,7 +332,7 @@ def prepare(saved):
     if (not state or not state["tabs"] or state["windows"] < saved["windows"] or state["session"] != saved["session"]
             or state["updated"] < saved["updated"]):
         return None
-    return {k: state[k] for k in ("digest", "windows", "tabs")}
+    return {k: state[k] for k in ("digest", "content_digest", "windows", "tabs")}
 
 
 def launch(saved):
@@ -330,8 +360,12 @@ def ready(saved, receipt):
     if not isinstance(expected.get("digest"), str):
         return None
     state = snapshot(profile, live=True)
-    if (state and state["written"] >= receipt["started"] and state["digest"] == expected["digest"]):
-        return pid
+    if state and state["written"] >= receipt["started"]:
+        same_contents = (isinstance(expected.get("content_digest"), str)
+                         and state["content_digest"] == expected["content_digest"]
+                         and state["windows"] == expected.get("windows") and state["tabs"] == expected.get("tabs"))
+        if state["digest"] == expected["digest"] or same_contents:
+            return pid
     return None
 
 

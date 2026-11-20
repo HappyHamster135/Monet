@@ -4,9 +4,12 @@
 
 BINDIR="@BINDIR@"
 LIBEXECDIR="@LIBEXECDIR@"
+DATADIR="@DATADIR@"
 
 # Repair a removed stacks widget's icon filter after an interrupted session.
-(sleep 5; "$BINDIR/monet-files" stacks-reconcile) >/dev/null 2>&1 &
+if [ "${1:-}" != --later ]; then
+    (sleep 5; "$BINDIR/monet-files" stacks-reconcile) >/dev/null 2>&1 &
+fi
 
 CACHE="${XDG_CACHE_HOME:-$HOME/.cache}"
 # A guest (monet-guest) sees nothing of Windows: no games from it, no notes about it.
@@ -14,9 +17,21 @@ GUEST=""
 [ "$(id -un)" = guest ] && GUEST=1
 DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
 
-# Reopen saved work as soon as the compositor can place it. The helper waits
-# for readiness itself; unrelated sharing/profile jobs must not add a delay.
-[ -z "$GUEST" ] && "$LIBEXECDIR/monet-quick" trip-apps-again >/dev/null 2>&1 &
+# New browser defaults must reach user.js before restored Zen starts. Only an
+# image change needs this preparation; the normal login keeps its fast path.
+# Keep this independent of unrelated sharing/profile maintenance.
+if [ -z "$GUEST" ] && [ "${1:-}" != --later ]; then
+    (
+        revision="$(cat "$DATADIR/monet/session-revision" 2>/dev/null)"
+        prepared="$CACHE/monet/zen-login-revision"
+        if [ -n "$revision" ] && [ "$(cat "$prepared" 2>/dev/null)" != "$revision" ]; then
+            if "$LIBEXECDIR/monet-quick" zen --login; then
+                mkdir -p "$(dirname "$prepared")" && printf '%s\n' "$revision" > "$prepared"
+            fi
+        fi
+        "$LIBEXECDIR/monet-quick" trip-apps-again
+    ) >/dev/null 2>&1 &
+fi
 
 # Monet's words in your language (monet-quick says them), English if it can't.
 say() {
@@ -28,6 +43,8 @@ say() {
 # Anything new there and they run again (while signed in, their .path units see to it).
 apps_now() {
     { "$BINDIR/monet" --version
+      cat "$DATADIR/monet/desktop-revision"
+      cat "$DATADIR/monet/session-revision"
       stat -c '%n %Y' /var/lib/flatpak/exports/share/applications "$DATA/flatpak/exports/share/applications" \
           "$DATA/applications" "$HOME/.var/app/app.zen_browser.zen/.zen" \
           "$DATA/Steam/steamapps" "$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps"

@@ -2783,6 +2783,10 @@ ZEN_PREFS = ('user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", t
              # Its welcome would offer a theme Monet's colors overrule, and Monet makes it the browser itself.
              'user_pref("zen.welcome-screen.seen", true);',
              'user_pref("browser.shell.checkDefaultBrowser", false);',
+             # Zen owns/restores its normal tabs. A generic tab-count warning
+             # must not cancel the OS restart; page beforeunload prompts stay.
+             'user_pref("browser.tabs.warnOnClose", false);',
+             'user_pref("browser.tabs.warnOnQuitShortcut", false);',
              # Nor Zen's own pages, opened as tabs: its welcome and privacy policy at the first start,
              # what's new after each update, and its Update Complete note (found in a test VM).
              'user_pref("startup.homepage_welcome_url", "");',
@@ -2875,7 +2879,7 @@ def write_if_changed(path, data):
         path.write_bytes(data)
 
 
-def zen():
+def zen(strict=False):
     """Dresses Zen in Monet's look, once Zen is installed. Returns the profile folders dressed."""
     if not any((folder / f"{ZEN_ID}.desktop").is_file() for folder in app_dirs()):
         return []
@@ -2887,10 +2891,15 @@ def zen():
             data = base64.b64encode((source / f"newtab-{light}.jpg").read_bytes()).decode()
             newtab = newtab.replace(f'url("newtab-{light}.jpg")', f'url("data:image/jpeg;base64,{data}")')
     except OSError:
+        if strict:
+            raise
         return []
     files["newtab.css"] = newtab.encode()
     dressed, older = [], older_here()
-    for profile in zen_profiles(zen_root()):
+    profiles = zen_profiles(zen_root())
+    if strict and not profiles:
+        raise OSError("Zen's profile list could not be prepared")
+    for profile in profiles:
         chrome = profile / "chrome"
         try:
             (chrome / "monet").mkdir(parents=True, exist_ok=True)
@@ -2909,6 +2918,8 @@ def zen():
             write_if_changed(prefs, with_part(text, (*ZEN_PREFS, *lighter, *download_preferences())).encode())
             bookmarks_for_zen(profile)
         except OSError:
+            if strict:
+                raise
             continue
         dressed.append(profile)
     return dressed
@@ -11055,7 +11066,10 @@ def main(argv):
     elif cmd == "frames":
         frames()
     elif cmd == "zen":
-        zen()
+        if args == ["--login"]:
+            zen(strict=True)
+        else:
+            zen()
     elif cmd == "bitlocker" and len(args) == 1 and re.fullmatch(r"(?:[0-9a-f]{2})+", args[0]):
         emit(unlock_windows(args[0]))
     elif cmd == "onedrive":

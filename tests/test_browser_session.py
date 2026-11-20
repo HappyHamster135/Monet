@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 import struct
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -41,6 +43,7 @@ class BrowserSession(unittest.TestCase):
         changed = fixture()
         changed["windows"][0]["tabs"].reverse()
         self.assertNotEqual(state["digest"], b.summary(changed)["digest"])
+        self.assertEqual(state["content_digest"], b.summary(changed)["content_digest"])
 
     def test_zen_placeholder_is_not_a_user_blank_tab(self):
         state = fixture()
@@ -128,6 +131,30 @@ class BrowserSession(unittest.TestCase):
         (self.profile / "user.js").write_text('user_pref("browser.privatebrowsing.autostart", true);\n')
         self.assertIsNone(b.prepare(self.saved))
 
+    def test_native_reordering_is_verified_without_accepting_missing_or_replaced_tabs(self):
+        original = fixture()
+        original['windows'][0]['tabs'].append(copy.deepcopy(original['windows'][0]['tabs'][0]))
+        expected = b.summary(original)
+        changed = copy.deepcopy(original); changed['windows'][0]['tabs'].reverse()
+        receipt = {'started':600, 'expected':{k:expected[k] for k in ('digest','content_digest','windows','tabs')}}
+        with patch.object(b, 'owner', return_value=42), patch.object(b, 'native_enabled', return_value=True):
+            with patch.object(b, 'snapshot', return_value=dict(b.summary(changed), written=700)):
+                self.assertEqual(b.ready(self.saved,receipt),42)
+            for state in [fixture(), copy.deepcopy(changed)]:
+                if len(state['windows'][0]['tabs']) == 3:
+                    state['windows'][0]['tabs'][0] = copy.deepcopy(state['windows'][0]['tabs'][1])
+                with patch.object(b, 'snapshot', return_value=dict(b.summary(state), written=700)):
+                    self.assertIsNone(b.ready(self.saved,receipt))
+
+    def test_verification_does_not_merge_separate_windows_with_the_same_total_tabs(self):
+        state = fixture()
+        state['windows'] = [{'tabs':[state['windows'][0]['tabs'][0]]}, {'tabs':[state['windows'][0]['tabs'][1]]}]
+        expected = b.summary(state)
+        receipt = {'started':600,'expected':{k:expected[k] for k in ('digest','content_digest','windows','tabs')}}
+        with patch.object(b, 'owner', return_value=42), patch.object(b, 'native_enabled', return_value=True), \
+                patch.object(b, 'snapshot', return_value=dict(b.summary(fixture()), written=700)):
+            self.assertIsNone(b.ready(self.saved,receipt))
+
     def test_ready_requires_new_native_write_and_matching_tabs(self):
         state = dict(b.summary(fixture()), written=600)
         receipt = {"started": 500, "expected": state}
@@ -154,6 +181,51 @@ class BrowserSession(unittest.TestCase):
 
 
 @unittest.skipIf(os.name == "nt", "Linux restore lock")
+@unittest.skipUnless(sys.platform == 'linux', 'native Linux process/profile descriptors')
+class ProfileIdentity(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name) / 'host' / '.zen'; self.root.mkdir(parents=True)
+        self.patch = patch.object(b, 'root', return_value=self.root); self.patch.start(); self.addCleanup(self.patch.stop)
+
+    def opened(self, name, linked=True):
+        profile = self.root / name; profile.mkdir(parents=True)
+        lock = profile / '.parentlock'; lock.touch()
+        # A bind mount exposes the same file under another path inside Flatpak.
+        # A hard link reproduces that path/inode relationship without a mount.
+        namespace = Path(self.temp.name) / 'sandbox' / '.zen' / name
+        namespace.mkdir(parents=True)
+        visible = namespace / '.parentlock'
+        if linked: os.link(lock, visible)
+        else: visible.touch()
+        process = subprocess.Popen(['zen', '-u', '-c',
+            'import sys; f=open(sys.argv[1], "rb"); print("ready", flush=True); sys.stdin.buffer.read()', str(visible)],
+            executable=sys.executable, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        def cleanup():
+            process.kill(); process.communicate(timeout=3)
+        self.addCleanup(cleanup)
+        self.assertEqual(process.stdout.readline(), b'ready\n')
+        return process, visible
+
+    def test_flatpak_visible_profile_path_matches_the_actual_open_file(self):
+        process, _ = self.opened('work profile')
+        self.assertEqual(b.profile_for_pid(process.pid), 'work profile')
+        self.assertEqual(b.owner('work profile'), process.pid)
+
+    def test_nested_profile_names_are_confined_and_identified(self):
+        process, _ = self.opened('profiles/work profile')
+        self.assertEqual(b.profile_for_pid(process.pid), 'profiles/work profile')
+
+    def test_a_same_named_lock_with_a_different_inode_is_not_the_profile(self):
+        process, _ = self.opened('work profile', linked=False)
+        self.assertIsNone(b.profile_for_pid(process.pid))
+
+    def test_an_unlinked_browser_lock_is_not_resurrected(self):
+        process, visible = self.opened('work profile')
+        visible.unlink()
+        self.assertIsNone(b.profile_for_pid(process.pid))
+
+
 class BrowserReceipt(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
@@ -203,6 +275,75 @@ class BrowserReceipt(unittest.TestCase):
         with patch.object(b, "owner", return_value=12):
             self.assertEqual(self.restore(), [])
         b.launch.assert_not_called()
+
+    def test_single_window_placement_waits_for_late_native_geometry_and_compositor_apply(self):
+        self.state['browser']['windows'] = 1
+        self.state['windows'] = [{'id': 'old', 'app': b.APP, 'rect': {'x': 90, 'y': 60, 'width': 850, 'height': 600},
+                                 'fullscreen': True}]
+        small = {'id': 'new', 'pid': 42, 'app': b.APP, 'rect': {'x': 0, 'y': 0, 'width': 640, 'height': 480}}
+        settled = dict(small, rect={'x': 20, 'y': 20, 'width': 1000, 'height': 700})
+        r.window_snapshot.side_effect = [[small], [settled], [copy.deepcopy(settled)]]
+        with patch.object(b, 'ready', return_value=42), patch.object(b, 'native_enabled', return_value=True), \
+                patch.object(b, 'profile_path', return_value=Path('/test-profile')), patch.object(r, 'remember_placement') as place:
+            job = r.restore_browser(self.path, self.state, self.off)
+            next(job)  # Launch and durable receipt.
+            next(job)  # Initial frame.
+            next(job)  # Browser's later configure.
+            place.assert_not_called()
+            next(job)  # Two matching observations: apply the saved frame.
+            place.assert_called_once_with(self.state, self.state['windows'], [settled], set())
+            self.assertIn('browser_launch', self.state)
+            with self.assertRaises(StopIteration) as done: next(job)
+            self.assertTrue(done.exception.value)
+            self.assertNotIn('browser_launch', self.state)
+
+    def test_private_and_multiple_windows_keep_native_browser_placement(self):
+        for captured_count, restored_count in [(2, 1), (2, 2), (1, 2)]:
+            self.state['browser']['windows'] = 1
+            self.state['windows'] = [{'id': str(i), 'app': b.APP,
+                                     'rect': {'x':90,'y':60,'width':850,'height':600}} for i in range(captured_count)]
+            r.window_snapshot.side_effect = None
+            r.window_snapshot.return_value = [{'id': 'new' + str(i), 'pid': 42, 'app': b.APP} for i in range(restored_count)]
+            with patch.object(b, 'ready', return_value=42), patch.object(b, 'native_enabled', return_value=True), \
+                    patch.object(b, 'profile_path', return_value=Path('/test-profile')), patch.object(r, 'remember_placement') as place:
+                job = r.restore_browser(self.path, self.state, self.off)
+                next(job)
+                with self.assertRaises(StopIteration) as done: next(job)
+                self.assertTrue(done.exception.value)
+                place.assert_not_called()
+
+    def test_a_browser_without_saved_bounds_keeps_native_placement_without_an_extra_wait(self):
+        self.state['browser']['windows'] = 1
+        self.state['windows'] = [{'id': 'old', 'app': b.APP}]
+        r.window_snapshot.return_value = [{'id': 'new', 'app': b.APP, 'pid': 42}]
+        with patch.object(b, 'ready', return_value=42), patch.object(b, 'native_enabled', return_value=True), \
+                patch.object(b, 'profile_path', return_value=Path('/test-profile')), patch.object(r, 'remember_placement') as place:
+            job = r.restore_browser(self.path, self.state, self.off)
+            next(job)
+            with self.assertRaises(StopIteration) as done: next(job)
+            self.assertTrue(done.exception.value)
+            place.assert_not_called()
+
+    def test_late_native_save_still_has_time_to_restore_its_window(self):
+        self.state['browser']['windows'] = 1
+        self.state['windows'] = [{'id':'old','app':b.APP,'rect':{'x':90,'y':60,'width':850,'height':600}}]
+        r.window_snapshot.return_value = [{'id':'new','pid':42,'app':b.APP,'rect':{'x':0,'y':0,'width':640,'height':480}}]
+        clock = [0]
+        with patch.object(r.time, 'monotonic', side_effect=lambda: clock[0]), \
+                patch.object(b, 'ready', side_effect=lambda *_: 42 if clock[0]>=22 else None), \
+                patch.object(b, 'profile_path', return_value=Path('/test-profile')), \
+                patch.object(b, 'native_enabled', return_value=True), patch.object(r, 'remember_placement') as place:
+            job = r.restore_browser(self.path,self.state,self.off)
+            next(job)
+            result = None
+            for tick in range(1,66):
+                clock[0] = tick*.4
+                try: next(job)
+                except StopIteration as done:
+                    result = done.value; break
+            self.assertTrue(result)
+            self.assertLess(clock[0],25)
+            place.assert_called_once()
 
     def test_off_stops_restore_without_launch(self):
         self.off.touch(); self.assertEqual(self.restore(), []); b.launch.assert_not_called()

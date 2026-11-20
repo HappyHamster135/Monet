@@ -1,5 +1,51 @@
 # Testing Monet on real hardware
 
+## 0.9.8-8 Zen restart and session restoration — 20 November 2026
+
+Zen's generic multiple-tab close and quit-shortcut warnings are disabled in
+Monet's managed browser defaults. Page warnings about unsaved changes remain
+enabled. Zen still owns its tabs, workspaces, private-browsing rules and session
+files; explicit choices to disable session restoration are preserved.
+
+The browser adapter now identifies a Flatpak profile by the device and inode of
+the browser's open profile lock, rather than requiring the sandbox's visible
+path to match the host path. Candidate profiles must remain inside Zen's profile
+root and match the actual open file. A different or deleted lock is rejected.
+Native session verification accepts Zen's reordered tab records while still
+checking the same pages, duplicate counts, pin state and window grouping in a
+fresh write owned by the launched browser. Only opaque digests and existing
+session metadata enter Monet's checkpoint, never URLs or page contents.
+
+For one unambiguous normal browser window, saved position, size, maximized and
+fullscreen state are applied after two matching native window observations,
+with a compositor turn before completion. Multiple or mixed private/normal
+windows retain Zen's own placement. The existing 25-second verification deadline
+now allows all its intended scheduler turns, including a late native save.
+
+Installation generates a separate content revision for session helpers and Zen
+assets. This changes for a repaired same-version beta without clearing QML
+caches. On an updated sign-in, browser preparation completes before saved apps
+reopen; failed preparation remains retryable. An unchanged sign-in skips that
+preparation. Deferred appearance maintenance no longer starts another app restore
+or redundant stacks-reconcile job, and its receipt includes both content
+revisions instead of relying on the public version and directory timestamps.
+
+Validation covers 132 distinct checks with no skips: browser profile identity
+using real process descriptors, native-session privacy and verification,
+interrupted/repeated app restoration, real KWin Wayland window placement,
+same-version update delivery, retry behavior, personal preferences, appearance
+and bookmarks. The original helpers fail the new Flatpak identity and update
+delivery regressions and reject a correctly reordered native session.
+
+An additional isolated Zen 1.24.3b test invokes the actual close-window command
+with multiple normal tabs, reopens the same disposable profile, confirms both
+test pages, verifies the native restore receipt and captures the second session.
+Its saved window bounds return unchanged. The browser runs without network
+access; automation is enabled only in this disposable test process, never by the
+production helper. All local execution uses one CPU core. No host browser profile,
+desktop setting or physical reboot was used. These changes are for the development
+branch and still need testing through the next beta on hardware.
+
 ## 0.9.8-8 login-screen dependency work — 20 November 2026
 
 Bazzite's original hardware receipt comparison now runs ahead of the tuning and

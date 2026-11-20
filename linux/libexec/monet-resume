@@ -1243,7 +1243,10 @@ def restore_browser(path, saved, off, checkpoint=None):
         saved["browser_launch"] = receipt
         atomic_write(path, checkpoint if checkpoint is not None else saved)
     deadline = time.monotonic() + 25
-    for _ in range(50):
+    previous_shape = None
+    # The cooperative scheduler advances every 0.4 s. Allow the full deadline,
+    # including the stable-frame/Wayland acknowledgement after a slow save.
+    for _ in range(64):
         yield
         if off.exists() or time.monotonic() > deadline:
             return False
@@ -1261,8 +1264,14 @@ def restore_browser(path, saved, off, checkpoint=None):
             frames = [w for w in frames if isinstance(w, dict) and w.get("app") == BROWSER] if isinstance(frames, list) else []
             # Only one captured/normal/restored window has an unambiguous identity.
             # Private + normal or multiple normal windows remain native-browser-owned.
-            if saved["browser_tabs_restored"] and state.get("windows") == 1 and len(frames) == len(fresh) == 1:
+            if (saved["browser_tabs_restored"] and state.get("windows") == 1 and len(frames) == len(fresh) == 1
+                    and frames[0].get("rect")):
+                shape = (fresh[0].get("id"), fresh[0].get("rect"), fresh[0].get("maximized"), fresh[0].get("fullscreen"))
+                if shape != previous_shape:
+                    previous_shape = shape
+                    continue
                 remember_placement(saved, frames, fresh, set())
+                yield  # Let the compositor apply the restored frame before finishing.
             saved.pop("browser_launch", None)
             return True
     return False

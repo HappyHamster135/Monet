@@ -17,6 +17,81 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @unittest.skipUnless(sys.platform == "linux" and shutil.which("dbus-daemon"), "requires private Linux session")
 class SessionStartup(unittest.TestCase):
+    def stage_revision_session(self, root, env):
+        helpers = root / 'helpers'; helpers.mkdir()
+        events = root / 'events'
+        share = root / 'share'; (share / 'monet').mkdir(parents=True)
+        (share / 'monet/desktop-revision').write_text('unchanged-qml\n')
+        revision = share / 'monet/session-revision'; revision.write_text('build-a\n')
+        stub = helpers / 'stub'
+        stub.write_text('''#!/usr/bin/python3
+import os,sys
+from pathlib import Path
+name=Path(sys.argv[0]).name
+command=sys.argv[1] if len(sys.argv)>1 else ''
+def record(event):
+    with open(os.environ['MONET_SESSION_EVENTS'],'a') as out: out.write(event+'\\n')
+if name=='monet-quick' and command=='zen':
+    record('zen-login' if '--login' in sys.argv else 'zen-later')
+    if Path(os.environ['MONET_ZEN_FAIL']).exists(): sys.exit(1)
+elif name=='monet-quick' and command=='trip-apps-again': record('restore')
+elif name=='monet-quick' and command=='older-pc': print('no')
+elif name=='monet' and command in ('version','--version'): print('monet 0.9.8-8')
+elif name=='monet-files' and command=='stacks-reconcile': record('stacks')
+''')
+        stub.chmod(0o755)
+        for name in ('monet','monet-quick','monet-files','monet-look','monet-light','monet-profile','notify-send','systemd-run'):
+            (helpers / name).symlink_to(stub)
+        session = root / 'monet-session'
+        session.write_text((ROOT / 'linux/libexec/monet-session').read_text().replace('@BINDIR@', str(helpers))
+                           .replace('@LIBEXECDIR@', str(helpers)).replace('@DATADIR@', str(share)))
+        env.update(PATH=str(helpers)+os.pathsep+env['PATH'], MONET_SESSION_EVENTS=str(events), MONET_ZEN_FAIL=str(root/'fail'))
+        return session, events, revision
+
+    def test_same_version_rebuild_prepares_zen_before_restore_and_failed_preparation_retries(self):
+        from tools.test import private_session, stop
+        with tempfile.TemporaryDirectory() as folder, private_session() as env:
+            root = Path(folder)
+            session, events, revision = self.stage_revision_session(root, env)
+            receipt = Path(env['XDG_CACHE_HOME']) / 'monet/zen-login-revision'
+            (root / 'fail').touch()
+            for build, prepare, fail in [('build-a',True,True), ('build-a',True,False),
+                                         ('build-a',False,False), ('build-b',True,False)]:
+                if not fail: (root / 'fail').unlink(missing_ok=True)
+                revision.write_text(build+'\n'); events.unlink(missing_ok=True)
+                process = subprocess.Popen(['bash',str(session)],env=env,start_new_session=True,
+                                           stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+                try:
+                    deadline=time.monotonic()+5
+                    while time.monotonic()<deadline:
+                        lines=events.read_text().splitlines() if events.exists() else []
+                        if 'restore' in lines: break
+                        time.sleep(.02)
+                    self.assertIn('restore',lines)
+                    self.assertEqual('zen-login' in lines,prepare)
+                    if prepare: self.assertLess(lines.index('zen-login'),lines.index('restore'))
+                    if fail: self.assertFalse(receipt.exists())
+                    else: self.assertEqual(receipt.read_text(),build+'\n')
+                finally: stop(process)
+
+    def test_later_maintenance_does_not_restore_apps_and_uses_the_build_revision(self):
+        from tools.test import private_session, stop
+        with tempfile.TemporaryDirectory() as folder, private_session() as env:
+            root=Path(folder)
+            session,events,revision=self.stage_revision_session(root,env)
+            seen=Path(env['XDG_CACHE_HOME'])/'monet/apps-seen'
+            signatures=[]
+            for build in ['build-a','build-b']:
+                revision.write_text(build+'\n'); events.unlink(missing_ok=True)
+                process=subprocess.Popen(['bash',str(session),'--later'],env=env,start_new_session=True,
+                                         stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+                try:
+                    self.assertEqual(process.wait(timeout=5),0)
+                    signatures.append(seen.read_text())
+                    self.assertEqual(events.read_text().splitlines(),['zen-later'])
+                finally: stop(process)
+            self.assertNotEqual(*signatures)
+
     def test_restore_starts_before_unrelated_sign_in_work_finishes(self):
         from tools.test import private_session, stop
         with tempfile.TemporaryDirectory() as folder, private_session() as env:

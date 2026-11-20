@@ -745,3 +745,10 @@ fi
         [ ! -f "$library" ] || sha256sum "$library"
     done
 ) | sha256sum | cut -d' ' -f1 > "$DATADIR/monet/desktop-revision"
+
+# Session helpers and browser assets can change without a version or QML change.
+# Keep their preparation receipt separate from the compiled desktop caches.
+(
+    cd "$SRC"
+    find libexec share/monet/zen -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum
+) | sha256sum | cut -d' ' -f1 > "$DATADIR/monet/session-revision"
