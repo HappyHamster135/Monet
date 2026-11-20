@@ -1,5 +1,32 @@
 # Testing Monet on real hardware
 
+## 0.9.8-8 before-desktop profile batching — 20 November 2026
+
+Menu/tray defaults in monet-fresh and keyboard defaults in monet-look --keys now
+share profile processes within each migration stage. The profile helper validates
+the complete batch first, holds its existing profile lock, reads the journal once
+and retains a durable write-ahead/finish record for each changed preference.
+Targets are checked again before use if earlier writes took time. Existing
+choices, including empty/false/zero values, and conflict-safe undo keep the same
+policy. Each stage flushes successfully before writing its completion marker;
+failed work remains retryable. Screenshot's forced migration stays separate.
+
+Paired three-sample measurements execute the original and candidate helpers with
+real KConfig tools, disposable profiles and one CPU core. Missing menu/tray
+defaults take about 2.3–2.4 seconds before and 1.2 seconds after; keyboard setup takes
+about 2.5 seconds before and 1.4 seconds after. Each path reduces profile launches
+from 13 to 4. Final menu and shortcut files match the original implementations,
+including the case with inherited factory menu defaults. Following sign-ins
+already have their completion markers and launch no profile helpers in these
+fixtures, taking around 26 ms for monet-fresh and 60–66 ms for --keys.
+
+The improvement is for defaults that need installation or migration before the
+desktop starts. It does not measure a full cold boot or reduce firmware/loader
+time. Validation covers 93 checks for real KConfig ownership, partial-failure
+recovery, path changes, shortcut preservation, startup ordering and script syntax,
+with no skips. Local execution remains limited to one CPU core. These changes
+are for the 0.9.8-8 development branch and have not replaced the published beta.
+
 ## 0.9.8-8 Store and helper reliability — 20 November 2026
 
 Completing a Store transaction no longer runs `flatpak list` on the GUI thread.

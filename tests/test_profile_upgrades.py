@@ -79,6 +79,76 @@ class ProfileUpgrades(unittest.TestCase):
         self.call("put", *self.spec(), "Monet", env=dict(self.env, MONET_PROFILE_FORCE="1"))
         self.assertEqual(self.read(), "Monet")
 
+    def test_batch_keeps_values_and_each_preferences_ownership(self):
+        self.call('put-many', *self.spec(), 'My font, 12', *self.spec('accent'), 'Green\tBlue',
+                  *self.spec('empty'), '')
+        self.assertEqual(self.read(), 'My font, 12')
+        self.assertEqual(self.read('accent'), 'Green\tBlue')
+        self.assertEqual(self.read('empty'), '')
+        self.assertEqual(len(self.record()['owned']), 3)
+        self.call('put-many', *self.spec(), 'Updated', *self.spec('accent'), 'Blue')
+        self.assertEqual(self.read(), 'Updated')
+        self.assertEqual(self.read('accent'), 'Blue')
+
+    def test_batch_defaults_preserve_existing_empty_false_zero_and_custom_values(self):
+        requests = []
+        for key, value in [('empty', ''), ('false', 'false'), ('zero', '0'), ('mine', 'My choice')]:
+            self.user(value, key)
+            requests.extend([*self.spec(key), 'Monet'])
+        self.call('put-many', '--default-only', *requests, *self.spec('new'), 'New default')
+        for key, value in [('empty', ''), ('false', 'false'), ('zero', '0'), ('mine', 'My choice')]:
+            self.assertEqual(self.read(key), value)
+        self.assertEqual(self.read('new'), 'New default')
+        self.assertEqual(len(self.record()['owned']), 1)
+
+    def test_batch_validates_all_requests_before_mutating_any_preference(self):
+        for tail in (['--file', 'incomplete'], ['--file', 'kdeglobals', '--key', 'no-group', 'bad'],
+                     ['--file', '/tmp/outside-this-account', '--group', 'General', '--key', 'bad', 'value']):
+            self.assertNotEqual(self.call('put-many', *self.spec(), 'Never applied', *tail, ok=False).returncode, 0)
+            self.assertEqual(self.read(), 'MISSING')
+            self.assertFalse((self.state / 'monet/profile/state.json').exists())
+
+    def test_batch_migration_rollback_preserves_later_user_edits(self):
+        import shlex
+        path = self.script(shlex.join([str(self.helper), 'put-many', *self.spec(), 'Monet',
+                                     *self.spec('accent'), 'Green']) + '\n')
+        self.call('run', str(path))
+        token, record = next(iter(self.record()['runs'].items()))
+        self.assertEqual(len(record['changes']), 2)
+        self.assertFalse(any(change['pending'] for change in record['changes'].values()))
+        self.user('My font')
+        self.assertEqual(self.call('rollback', token, ok=False).returncode, 1)
+        self.assertEqual(self.read(), 'My font')
+        self.assertEqual(self.read('accent'), 'MISSING')
+
+    def test_failed_batch_keeps_earlier_changes_recoverable(self):
+        import shlex
+        (self.config / 'not-a-config-file').mkdir()
+        path = self.script(shlex.join([str(self.helper), 'put-many', *self.spec(), 'After',
+            '--file', 'not-a-config-file', '--group', 'General', '--key', 'next', 'Fails']) + '\n')
+        self.assertNotEqual(self.call('run', str(path), ok=False).returncode, 0)
+        token, record = next(iter(self.record()['runs'].items()))
+        self.assertEqual(record['status'], 'failed')
+        self.assertEqual(self.read(), 'After')
+        self.call('rollback', token)
+        self.assertEqual(self.read(), 'MISSING')
+
+    def test_batch_does_not_follow_a_target_replaced_during_an_earlier_write(self):
+        outside, target = self.root / 'outside-profile', self.config / 'next'
+        outside.write_text('[General]\n')
+        tools = self.root / 'bin'; tools.mkdir()
+        writer = tools / 'kwriteconfig6'
+        writer.write_text('#!/bin/sh\n[ -e "$MONET_NEXT_TARGET" ] || ln -s "$MONET_OUTSIDE_TARGET" "$MONET_NEXT_TARGET"\n'
+                          'exec "$MONET_REAL_WRITER" "$@"\n')
+        writer.chmod(0o755)
+        env = dict(self.env, PATH=str(tools) + os.pathsep + self.env['PATH'],
+                   MONET_REAL_WRITER=shutil.which('kwriteconfig6'), MONET_NEXT_TARGET=str(target), MONET_OUTSIDE_TARGET=str(outside))
+        self.call('put-many', *self.spec(), 'Applied', '--file', 'next', '--group', 'General',
+                  '--key', 'next', 'Must stay untouched', env=env)
+        self.assertEqual(self.read(), 'Applied')
+        self.assertTrue(target.is_symlink())
+        self.assertEqual(outside.read_text(), '[General]\n')
+
     def test_changed_migration_runs_once_failed_runs_retry_and_old_revision_does_not_replay(self):
         first = f'"{self.helper}" put --file kdeglobals --group General --key upgradeFont First\n'
         path = self.script(first)
@@ -447,6 +517,64 @@ class ProfileUpgrades(unittest.TestCase):
         self.assertEqual(log.read_text().splitlines()[-1], 'monet-quick')
         self.assertEqual(rc.read_text(), '[ActionPlugins][0]\nRightButton;NoModifier=custom-menu\nMiddleButton;NoModifier=\n')
 
+    def test_keyboard_batches_retry_and_preserve_custom_bindings(self):
+        look = self.root / 'monet-look'
+        look.write_text((ROOT / 'linux/libexec/monet-look').read_text().replace('@LIBEXECDIR@', str(self.root)))
+        look.chmod(0o755)
+        applications = self.data / 'applications'; applications.mkdir()
+        (applications / 'org.kde.spectacle.desktop').write_text('[Desktop Entry]\n'
+            '[Desktop Action RectangularRegionScreenShot]\nX-KDE-Shortcuts=Meta+Shift+Print\n')
+        rc = self.config / 'kglobalshortcutsrc'
+        custom = 'Window Maximize=Meta+F10,Meta+PgUp,Maximize Window\n'
+        rc.write_text('[kwin]\n' + custom)
+        real = self.root / 'profile-real'; shutil.copyfile(self.helper, real); real.chmod(0o755)
+        self.helper.write_text('#!/bin/sh\nprintf "profile\\n" >> "$MONET_BATCH_LOG"\n'
+            '[ ! -e "$MONET_BATCH_FAIL" ] || exit 1\nexec "$MONET_REAL_PROFILE" "$@"\n')
+        log, failure = self.root / 'calls', self.root / 'fail'; failure.touch()
+        env = dict(self.env, MONET_REAL_PROFILE=str(real), MONET_BATCH_FAIL=str(failure), MONET_BATCH_LOG=str(log))
+        result = subprocess.run([str(look), '--keys'], env=env, capture_output=True, text=True, timeout=30)
+        self.assertNotEqual(result.returncode, 0)
+        for name in ('keys-094', 'keys-windows'): self.assertFalse((self.config / 'monet' / name).exists())
+        failure.unlink(); log.unlink()
+        subprocess.run([str(look), '--keys'], env=env, check=True, capture_output=True, timeout=30)
+        self.assertLessEqual(len(log.read_text().splitlines()), 4)
+        for name in ('keys-094', 'keys-windows'): self.assertTrue((self.config / 'monet' / name).exists())
+        self.assertIn(custom, rc.read_text())
+        self.assertIn('Overview=Meta+W\\tMeta+Tab,Meta+W,Toggle Overview\n', rc.read_text())
+        log.unlink()
+        subprocess.run([str(look), '--keys'], env=env, check=True, capture_output=True, timeout=30)
+        self.assertFalse(log.exists())
+
+    def test_failed_menu_batch_retries_before_claiming_its_receipt(self):
+        fresh = self.root / 'monet-fresh'
+        fresh.write_text((ROOT / 'linux/libexec/monet-fresh').read_text()
+            .replace('@LIBEXECDIR@', str(self.root)).replace('@BINDIR@', str(self.root)))
+        fresh.chmod(0o755)
+        flags = self.config / 'monet'; flags.mkdir()
+        for name in ('region-defaults-v1', 'files-defaults-v1', 'downloads-v2',
+                     'menu-add-widgets', 'tray-brightness-6'):
+            (flags / name).touch()
+        rc = self.config / 'plasma-org.kde.plasma.desktop-appletsrc'
+        rc.write_text('[ActionPlugins][0]\nRightButton;NoModifier=custom-menu\nMiddleButton;NoModifier=\n'
+                      '[ActionPlugins][0][RightButton;NoModifier]\nconfigure=true\n')
+        (self.root / 'monet').write_text('#!/bin/sh\necho test-version\n')
+        (self.root / 'monet').chmod(0o755)
+        cache = self.root / 'cache'; cache.mkdir()
+        (cache / 'monet-version').write_text('test-version\n')
+        real = self.root / 'profile-real'; shutil.copyfile(self.helper, real); real.chmod(0o755)
+        self.helper.write_text('#!/bin/sh\n[ ! -e "$MONET_BATCH_FAIL" ] || exit 1\nexec "$MONET_REAL_PROFILE" "$@"\n')
+        failure = self.root / 'fail'; failure.touch()
+        env = dict(self.env, XDG_CACHE_HOME=str(cache), MONET_REAL_PROFILE=str(real), MONET_BATCH_FAIL=str(failure))
+        result = subprocess.run([str(fresh)], env=env, capture_output=True, text=True, timeout=30)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((flags / 'menu-monet').exists())
+        failure.unlink()
+        subprocess.run([str(fresh)], env=env, check=True, capture_output=True, timeout=30)
+        self.assertTrue((flags / 'menu-monet').exists())
+        self.assertIn('configure=true\n', rc.read_text())
+        self.assertIn('_wallpaper=true\n', rc.read_text())
+        self.assertIn('RightButton;NoModifier=custom-menu\n', rc.read_text())
+
     def test_before_desktop_existing_menu_bindings_need_no_profile_process(self):
         path = self.root/'monet-fresh'
         path.write_text((ROOT/'linux/libexec/monet-fresh').read_text()
@@ -481,7 +609,7 @@ class ProfileUpgrades(unittest.TestCase):
         # A missing binding must still be repaired, even with all old receipts.
         rc.write_text('[ActionPlugins][0][RightButton;NoModifier]\nadd widgets=true\n')
         subprocess.run([str(path)], env=env, check=True, capture_output=True, timeout=15)
-        self.assertEqual(len(log.read_text().splitlines()), 2)
+        self.assertEqual(len(log.read_text().splitlines()), 1)
         value = subprocess.check_output(['kreadconfig6','--file',str(rc),'--group','ActionPlugins',
             '--group','0','--key','RightButton;NoModifier'],env=env,text=True).strip()
         self.assertEqual(value, 'org.kde.contextmenu')

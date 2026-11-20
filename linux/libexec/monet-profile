@@ -129,40 +129,84 @@ def finish(state, key, owner, after):
     save(state)
 
 
-def put(args, default=False, force=False):
+def preference(args):
+    if not args: raise ValueError("Invalid preference")
     value, spec = args[-1], args[:-1]
     if len(spec) < 6 or spec[0] != "--file" or spec[-2] != "--key": raise ValueError("Invalid preference")
     if len(spec[2:-2]) % 2 or any(spec[i] != "--group" for i in range(2, len(spec) - 2, 2)):
         raise ValueError("Invalid preference groups")
     legacy_id = " ".join(spec)
     raw_path = Path(spec[1]) if Path(spec[1]).is_absolute() else CONFIG / spec[1]
-    if raw_path.is_symlink(): return
+    if raw_path.is_symlink(): return None
     spec[1] = str(safe_path(spec[1]))
+    return value, spec, legacy_id
+
+
+def put(args, default=False, force=False):
+    request = preference(args)
+    if request is not None:
+        with lock():
+            put_preference(load(), *request, default, force)
+
+
+def put_many(args, default=False, force=False):
+    """Adjacent --file/.../--key/key/value requests, one startup and journal read.
+
+    Validate the entire batch before writing. Each preference retains its own
+    durable write-ahead/finish records, just as with separate put commands.
+    """
+    requests = []
+    offset = 0
+    while offset < len(args):
+        start = offset
+        if args[offset:offset + 1] != ["--file"] or offset + 1 >= len(args):
+            raise ValueError("Invalid preference batch")
+        offset += 2
+        while args[offset:offset + 1] == ["--group"] and offset + 1 < len(args):
+            offset += 2
+        if args[offset:offset + 1] != ["--key"] or offset + 2 >= len(args):
+            raise ValueError("Invalid preference batch")
+        offset += 3
+        request = preference(args[start:offset])
+        if request is not None:
+            requests.append(request)
+    if requests:
+        with lock():
+            state = load()
+            for request in requests:
+                # An earlier write can take time. Recheck the next target before
+                # touching it, preserving put's policy if a path changed meanwhile.
+                path = Path(request[1][1])
+                if path.is_symlink(): continue
+                if safe_path(path) != path: raise ValueError("Profile path changed during batch")
+                put_preference(state, *request, default, force)
+
+
+def put_preference(state, value, spec, legacy_id, default, force):
     key = "key:" + json.dumps(spec)
-    with lock():
-        state = load(); current = read_key(spec)
-        owner = state["owned"].get(key)
-        if not force:
-            if default and current is not None: return
-            if owner is not None and current != owner["value"]: return
-            if owner is None and current is not None:
-                # Import the former ledger only when it proves the current value is Monet's.
-                previous = None
-                try:
-                    for line in (CONFIG / "monet/look-written").read_text().splitlines():
-                        name, _, old = line.partition("\t")
-                        if name == legacy_id: previous = old
-                except FileNotFoundError: pass
-                if current != previous: return
-        if owner == {"value": current} and current == value: return
-        # System defaults may be locked; matching them needs no write or ownership claim.
-        if current is None and read_key(spec, inherited=True) == value: return
-        journal(state, key, "key", spec, current, value)
-        write_key(spec, value)
-        actual = read_key(spec)
-        # KConfig can omit an explicit value equal to a system default.
-        if actual not in (None, value): raise OSError("Preference did not take effect")
-        finish(state, key, {"value": actual}, actual)
+    current = read_key(spec)
+    owner = state["owned"].get(key)
+    if not force:
+        if default and current is not None: return
+        if owner is not None and current != owner["value"]: return
+        if owner is None and current is not None:
+            # Import the former ledger only when it proves the current value is Monet's.
+            previous = None
+            try:
+                for line in (CONFIG / "monet/look-written").read_text().splitlines():
+                    name, _, old = line.partition("\t")
+                    if name == legacy_id: previous = old
+            except FileNotFoundError: pass
+            if current != previous: return
+    if owner == {"value": current} and current == value: return
+    # System defaults may be locked; matching them needs no write or ownership claim.
+    if current is None and read_key(spec, inherited=True) == value: return
+    journal(state, key, "key", spec, current, value)
+    write_key(spec, value)
+    actual = read_key(spec)
+    # KConfig can omit an explicit value equal to a system default.
+    if actual not in (None, value): raise OSError("Preference did not take effect")
+    finish(state, key, {"value": actual}, actual)
 
 
 def fields(raw):
@@ -401,6 +445,9 @@ def main(args):
     if args[0] == "put":
         default = "--default-only" in args; force = os.environ.get("MONET_PROFILE_FORCE") == "1"
         put([a for a in args[1:] if a != "--default-only"], default, force)
+    elif args[0] == "put-many":
+        default = args[1:2] == ["--default-only"]
+        put_many(args[2:] if default else args[1:], default, os.environ.get("MONET_PROFILE_FORCE") == "1")
     elif args[0] == "file": file_update(args[1], args[2], "--alias" in args)
     elif args[0] == "remove" and len(args) == 2: file_remove(args[1])
     elif args[0] == "run": return run(args[1:])

@@ -481,6 +481,18 @@ screenshot_keys() {
     fi
 }
 if [ "${1:-}" = --keys ]; then
+    # These defaults target separate shortcuts. Share the profile process and
+    # journal read, flushing before each completion receipt. Other look modes
+    # retain their immediate writes; screenshot's forced migration does too.
+    pending_keys=()
+    kw() { pending_keys+=("$@"); }
+    flush_keys() {
+        [ "${#pending_keys[@]}" = 0 ] && return 0
+        local result=0
+        "$PROFILE" put-many --default-only "${pending_keys[@]}" || { failed=1; result=1; }
+        pending_keys=()
+        return "$result"
+    }
     # 0.9.4, once for every account (those that had Windows' keys already too): Windows+Space for
     # the next keyboard layout beside KDE's own key, and Windows+Tab for the overview of the
     # windows, as Windows' Task View (it was a second Alt+Tab here).
@@ -492,9 +504,11 @@ if [ "${1:-}" = --keys ]; then
         # Windows+G is Games, as Windows' Game Bar (--widget-keys gives it to the bar's button):
         # KWin's Grid View held it, so the button never got it.
         kwin_keys "Grid View" "none" "Meta+G,Toggle Grid View"
+        flush_keys
         [ "$failed" = 0 ] && mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/keys-094"
     fi
     screenshot_keys
+    flush_keys
     [ -e "$CONFIG/monet/keys-windows" ] && exit "$failed"
     add_launch org.kde.plasma-systemmonitor.desktop _launch "Ctrl+Shift+Esc"
     add_launch monet-settings.desktop _launch "Meta+I"
@@ -504,6 +518,7 @@ if [ "${1:-}" = --keys ]; then
     kwin_keys "Window Quick Tile Top" "none" "Meta+Up,Quick Tile Window to the Top"
     kwin_keys "Window Minimize" "Meta+Down$(printf '\t')Meta+PgDown" "Meta+PgDown,Minimize Window"
     kwin_keys "Window Quick Tile Bottom" "none" "Meta+Down,Quick Tile Window to the Bottom"
+    flush_keys
     [ "$failed" = 0 ] && mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/keys-windows"
     exit "$failed"
 fi

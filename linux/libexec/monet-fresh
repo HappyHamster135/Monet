@@ -11,7 +11,15 @@ BINDIR="@BINDIR@"
 LIBEXECDIR="@LIBEXECDIR@"
 DATADIR="@DATADIR@"
 failed=0
-kw() { "$LIBEXECDIR/monet-profile" put --default-only "$@" || { failed=1; return 1; }; }
+pending=()
+kw() { pending+=("$@"); }
+flush() {
+    [ "${#pending[@]}" = 0 ] && return 0
+    local result=0
+    "$LIBEXECDIR/monet-profile" put-many --default-only "${pending[@]}" || { failed=1; result=1; }
+    pending=()
+    return "$result"
+}
 CACHE="${XDG_CACHE_HOME:-$HOME/.cache}"
 CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
 stamp="$CACHE/monet-version"
@@ -50,6 +58,7 @@ if command -v kwriteconfig6 >/dev/null; then
         *M*) ;;
         *) kw --file "$rc" --group ActionPlugins --group 0 --key "MiddleButton;NoModifier" org.kde.paste ;;
     esac
+    flush
 fi
 
 # The desktop's right-click menu offers Add or Manage Widgets, which KDE hides
@@ -62,6 +71,7 @@ if [ ! -e "$CONFIG/monet/menu-add-widgets" ] && command -v kwriteconfig6 >/dev/n
         kw --file "$rc" --group ActionPlugins --group 0 --key "MiddleButton;NoModifier" org.kde.paste
     fi
     kw --file "$rc" --group ActionPlugins --group 0 --group "RightButton;NoModifier" --key "add widgets" true
+    flush
     [ "$failed" = 0 ] && mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/menu-add-widgets"
 fi
 # And as Windows has it (0.9.4): New, Paste, Undo, Icons, Open Terminal and the widgets, then
@@ -75,6 +85,7 @@ if [ ! -e "$CONFIG/monet/menu-monet" ] && command -v kwriteconfig6 >/dev/null; t
         kw --file "$rc" --group ActionPlugins --group 0 --group "RightButton;NoModifier" \
             --key "${entry%=*}" "${entry#*=}"
     done
+    flush
     [ "$failed" = 0 ] && mkdir -p "$CONFIG/monet" && touch "$CONFIG/monet/menu-monet"
 fi
 
@@ -111,6 +122,7 @@ tray_swap() {
         kw "${general[@]}" --key extraItems "$extra"
         kw "${general[@]}" --key knownItems "$known"
     done <<< "$trays"
+    flush
     [ "$failed" = 0 ] && [ -n "$trays" ] && mkdir -p "$CONFIG/monet" && touch "$flag"
     return 0
 }
