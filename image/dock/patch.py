@@ -341,12 +341,10 @@ def apply(source):
                 top: parent.top
             }
 
-            height: taskList.height''', '''            anchors {
-                left: !tasks.vertical && Plasmoid.configuration.monetIconAlignment === "center" ? undefined : parent.left
-                top: tasks.vertical && Plasmoid.configuration.monetIconAlignment === "center" ? undefined : parent.top
-                horizontalCenter: !tasks.vertical && Plasmoid.configuration.monetIconAlignment === "center" ? parent.horizontalCenter : undefined
-                verticalCenter: tasks.vertical && Plasmoid.configuration.monetIconAlignment === "center" ? parent.verticalCenter : undefined
-            }
+            height: taskList.height''', '''            // Coordinates avoid competing anchors during a live edge change.
+            x: tasks.vertical ? 0 : Plasmoid.configuration.monetIconAlignment === "center" ? (parent.width - width) / 2
+                : tasks.shouldBeMirrored(Plasmoid.configuration.reverseMode, Application.layoutDirection, false) ? parent.width - width : 0
+            y: tasks.vertical && Plasmoid.configuration.monetIconAlignment === "center" ? (parent.height - height) / 2 : 0
 
             height: taskList.height''')
     replace(context, 'text: editModeAction ? editModeAction.text : ""',
@@ -354,8 +352,8 @@ def apply(source):
     replace(applet/'CMakeLists.txt','        qml/Task.qml','        qml/Task.qml\n        qml/MonetDockMotion.qml\n        qml/MonetDockHover.qml\n        qml/MonetAppVolume.qml')
     prepend(applet/'qml/main.qml', 'import QtQuick\n', 'import QtQuick.Controls as MonetControls\n')
     prepend(applet/'qml/main.qml', '    property Task toolTipOpenedByClick', '''    readonly property bool monetSingleRowDock: iconsOnly && !vertical
-        && Plasmoid.location === PlasmaCore.Types.BottomEdge && taskList.rows === 1
-    readonly property real monetRequiredWidth: Math.max(taskList.implicitWidth, taskList.count * TaskManagerApplet.LayoutMetrics.preferredMinWidth())
+        && Plasmoid.location === PlasmaCore.Types.BottomEdge && Plasmoid.configuration.maxStripes === 1
+    readonly property real monetRequiredWidth: taskList.count * TaskManagerApplet.LayoutMetrics.preferredMinWidth()
     readonly property bool monetOverflow: monetSingleRowDock && monetRequiredWidth > width + 1
     function monetRevealTask(item) {
         if (!monetOverflow || !item || item.parent !== taskList) return;
@@ -375,7 +373,7 @@ def apply(source):
             anchors.rightMargin: tasks.monetOverflow ? 24 : 0
             contentWidth: tasks.monetOverflow ? Math.max(width, tasks.monetRequiredWidth) : width
             contentHeight: height
-            clip: tasks.monetOverflow
+            clip: tasks.monetOverflow || tasks.monetLayoutSettling || tasks.monetInternalDragging
             interactive: false // Native task drags retain their press and reordering.
             onWidthChanged: contentX = Math.max(0, Math.min(contentX, contentWidth - width))
             onContentWidthChanged: contentX = tasks.monetOverflow ? Math.max(0, Math.min(contentX, contentWidth - width)) : 0
@@ -500,30 +498,202 @@ def apply(source):
             Translate { y: -monetMotion.lift }
         ]
 ''')
-    # Keep rapid internal reorders responsive while the delegates slide. Visual
-    # childAt() hits their in-flight transforms; insertion needs their layout slots.
+    # Keep rearrangement inside Qt Quick, without a GPU readback/platform drag
+    # loop. Only a launcher dragged outside the bar needs a native system drag.
     prepend(applet/'qml/main.qml', '    property Task toolTipOpenedByClick', '''    readonly property bool monetReordering: iconsOnly && !vertical
         && Plasmoid.location === PlasmaCore.Types.BottomEdge && taskList.rows === 1 && !!dragSource
 
+    readonly property bool monetManualDrag: iconsOnly && (vertical || Plasmoid.formFactor === PlasmaCore.Types.Horizontal)
+        && Plasmoid.configuration.maxStripes === 1
+        && tasksModel.sortMode === TaskManager.TasksModel.SortManual
+    property bool monetInternalDragging: false
+    property point monetDragPointer: Qt.point(0, 0)
+    property point monetDragOffset: Qt.point(0, 0)
+    property bool monetLayoutSettling: true
+    function monetSettleLayout() {
+        monetLayoutSettling = true;
+        monetHoverState.current = null;
+        if (monetInternalDragging) monetEndDrag();
+        monetLayoutTimer.restart();
+    }
+    onVerticalChanged: monetSettleLayout()
+    onWidthChanged: monetSettleLayout()
+    onHeightChanged: monetSettleLayout()
+    readonly property Timer monetLayoutTimer: Timer {
+        interval: 160
+        running: true
+        onTriggered: tasks.monetLayoutSettling = false
+    }
+    function monetBeginDrag(item, scenePoint) {
+        const point = taskList.mapFromItem(null, scenePoint.x, scenePoint.y);
+        monetDragPointer = point;
+        const painted = item.mapToItem(taskList, 0, 0);
+        monetDragOffset = Qt.point(point.x - painted.x, point.y - painted.y);
+        dragSource = item;
+        monetInternalDragging = true;
+    }
+    function monetUpdateDrag(scenePoint) {
+        monetDragPointer = taskList.mapFromItem(null, scenePoint.x, scenePoint.y);
+        mouseHandler.monetQueueReorder(taskList.mapToItem(mouseHandler, monetDragPointer.x, monetDragPointer.y));
+    }
+    function monetHandoffDrag() {
+        mouseHandler.monetFlushReorder();
+        monetInternalDragging = false;
+    }
+    function monetEndDrag() {
+        monetHandoffDrag();
+        dragSource = null; // Persist the final order once on release.
+    }
+
 ''')
     prepend(applet/'qml/MouseHandler.qml', '    onPositionChanged: event => {', '''    function monetReorder(point) {
-        if (isGroupDialog || !tasks.monetReordering
+        if (isGroupDialog || !tasks.monetManualDrag || !tasks.dragSource
                 || tasksModel.sortMode !== TaskManager.TasksModel.SortManual) return false;
         // The list can be centered or mirrored inside the full-width drop area.
         const local = target.mapFromItem(dropArea, point.x, point.y);
-        const above = target.children.find(item => item.visible && item.index >= 0
-            && item.model && local.x >= item.x && local.x < item.x + item.width
-            && local.y >= item.y && local.y < item.y + item.height);
-        if (above && tasks.dragSource.parent === above.parent && tasks.dragSource !== above
-                && tasks.dragSource.index !== above.index) {
-            tasksModel.move(tasks.dragSource.index, above.index);
+        const source = tasks.dragSource;
+        if (source.parent !== target) return false;
+        const coordinate = tasks.vertical ? local.y : local.x;
+        const origin = tasks.vertical ? source.y + source.height / 2 : source.x + source.width / 2;
+        let above = source;
+        let distance = 0;
+        // Use stable layout slots and cross their centres with a small dead
+        // band. In-flight painted positions otherwise oscillate under a still
+        // pointer. Choose the furthest crossed slot in either text direction.
+        for (const item of target.children) {
+            if (!item.visible || item.index < 0 || !item.model || item === source) continue;
+            const center = tasks.vertical ? item.y + item.height / 2 : item.x + item.width / 2;
+            if (((coordinate > origin && center > origin && coordinate >= center + 3)
+                    || (coordinate < origin && center < origin && coordinate <= center - 3))
+                    && Math.abs(center - origin) > distance) {
+                above = item;
+                distance = Math.abs(center - origin);
+            }
         }
+        if (above !== source) tasksModel.move(source.index, above.index);
         return true;
+    }
+    property point monetPendingPoint: Qt.point(0, 0)
+    function monetQueueReorder(point) {
+        monetPendingPoint = point;
+        if (!monetReorderFrame.running) monetReorderFrame.start();
+    }
+    function monetFlushReorder() {
+        if (!monetReorderFrame.running) return;
+        monetReorderFrame.stop();
+        monetReorder(monetPendingPoint);
+    }
+    Timer {
+        id: monetReorderFrame
+        interval: 16 // Coalesce input bursts; never poll while idle.
+        onTriggered: dropArea.monetReorder(dropArea.monetPendingPoint)
     }
 
 ''')
     replace(applet/'qml/MouseHandler.qml', '    onPositionChanged: event => {', '''    onPositionChanged: event => {
-        if (monetReorder(Qt.point(event.x, event.y))) return;''')
+        if (!isGroupDialog && tasks.monetManualDrag && tasks.dragSource) {
+            monetQueueReorder(Qt.point(event.x, event.y));
+            return;
+        }''')
+    replace(applet/'qml/Task.qml', '''            onActiveChanged: {
+                if (active) {
+                    icon.grabToImage(result => {''', '''            target: !task.inPopup && task.tasksRoot.monetManualDrag ? null : parent
+            property bool monetLocal: false
+            property bool monetExported: false
+            function monetExport() {
+                if (monetExported) return;
+                monetExported = true;
+                if (monetLocal) {
+                    // Keep dragSource alive until the platform drag finishes:
+                    // saving launchers here can replace this very delegate.
+                    tasksRoot.monetHandoffDrag();
+                    monetLocal = false;
+                }
+                icon.grabToImage(result => {''')
+    replace(applet/'qml/Task.qml', '''                    });
+                } else {
+                    setRequestedInhibitDnd(false);
+                    dragHelper.Drag.active = false;
+                    dragHelper.Drag.imageSource = "";
+                }
+            }
+        }
+    }
+
+    Loader {''', '''                });
+            }
+            onCentroidChanged: {
+                if (!active || !monetLocal) return;
+                const point = tasksRoot.mapFromItem(null, centroid.scenePosition.x, centroid.scenePosition.y);
+                const outside = point.x < -24 || point.x > tasksRoot.width + 24
+                    || point.y < -24 || point.y > tasksRoot.height + 24;
+                if (outside) monetExport();
+                else if (tasksRoot.monetInternalDragging) tasksRoot.monetUpdateDrag(centroid.scenePosition);
+            }
+            onActiveChanged: {
+                if (active) {
+                    monetExported = false;
+                    monetLocal = !task.inPopup && tasksRoot.monetManualDrag;
+                    if (monetLocal) {
+                        setRequestedInhibitDnd(true);
+                        tasksRoot.monetBeginDrag(task, centroid.scenePosition);
+                    } else monetExport();
+                } else {
+                    // A quick release can beat the asynchronous export image.
+                    // In that case no platform drag-finished signal will arrive.
+                    const finishLocal = monetLocal || (monetExported
+                        && tasksRoot.dragSource === task && !dragHelper.Drag.active);
+                    monetLocal = false;
+                    setRequestedInhibitDnd(false);
+                    dragHelper.Drag.active = false;
+                    dragHelper.Drag.imageSource = "";
+                    if (finishLocal) tasksRoot.monetEndDrag();
+                }
+            }
+        }
+    }
+
+    Loader {''')
+    replace(applet/'qml/Task.qml', 'if (!dragHandler.active) {', 'if (!dragHandler || !dragHandler.active) {')
+    prepend(applet/'qml/Task.qml', '    onXChanged: {', '''    readonly property bool monetDragged: tasksRoot.monetInternalDragging && tasksRoot.dragSource === task
+    z: monetDragged ? 100 : 0
+    function monetResetMovement() {
+        moveAnim.stop();
+        translateTransform.x = 0;
+        translateTransform.y = 0;
+        oldX = x;
+        oldY = y;
+    }
+    onMonetDraggedChanged: {
+        monetResetMovement();
+        if (!monetDragged && !tasksRoot.monetLayoutSettling) {
+            moveAnim.x = tasksRoot.monetDragPointer.x - tasksRoot.monetDragOffset.x - x;
+            moveAnim.y = tasksRoot.monetDragPointer.y - tasksRoot.monetDragOffset.y - y;
+            moveAnim.restart();
+        }
+    }
+    Connections {
+        target: task.tasksRoot
+        function onMonetLayoutSettlingChanged() { task.monetResetMovement(); }
+    }
+
+''')
+    replace(applet/'qml/Task.qml', '''    onXChanged: {
+        if (!completed) {''', '''    onXChanged: {
+        if (tasksRoot.monetLayoutSettling || monetDragged) { monetResetMovement(); return; }
+        if (!completed) {''')
+    replace(applet/'qml/Task.qml', '''    onYChanged: {
+        if (!completed) {''', '''    onYChanged: {
+        if (tasksRoot.monetLayoutSettling || monetDragged) { monetResetMovement(); return; }
+        if (!completed) {''')
+    replace(applet/'qml/Task.qml', '''    transform: Translate {
+        id: translateTransform
+    }''', '''    transform: [Translate {
+        id: translateTransform
+    }, Translate {
+        x: task.monetDragged ? task.tasksRoot.monetDragPointer.x - task.tasksRoot.monetDragOffset.x - task.x : 0
+        y: task.monetDragged ? task.tasksRoot.monetDragPointer.y - task.tasksRoot.monetDragOffset.y - task.y : 0
+    }]''')
     # First reorder must animate even for the delegate that initially sat at x=0.
     # Seed after initial layout, before accepting the first displacement.
     replace(applet/'qml/Task.qml', '        completed = true;', '''        Qt.callLater(() => {

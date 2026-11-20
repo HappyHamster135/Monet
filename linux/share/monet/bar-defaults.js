@@ -10,13 +10,14 @@ function monetTray(tray) {
         "org.kde.plasma.keyboardindicator", "org.kde.plasma.vault"];
     // Keyboard layout switching stays available for multilingual users. Camera/privacy
     // indicators, print jobs and other apps retain their normal active/passive behavior.
-    var visible = ["org.kde.plasma.networkmanagement"];
-    var enabled = visible.concat(["org.kde.plasma.notifications", "org.kde.plasma.battery",
-        "org.kde.plasma.devicenotifier", "org.kde.plasma.clipboard"]);
+    var visible = [];
+    var overflow = ["org.kde.plasma.networkmanagement", "org.kde.plasma.clipboard"];
+    var enabled = overflow.concat(["org.kde.plasma.notifications", "org.kde.plasma.battery",
+        "org.kde.plasma.devicenotifier"]);
     tray.writeConfig("knownItems", union(list("knownItems"), removed.concat(enabled)));
     tray.writeConfig("extraItems", union(list("extraItems").filter(function (id) { return removed.indexOf(id) < 0; }), enabled));
-    tray.writeConfig("shownItems", union(list("shownItems").filter(function (id) { return removed.indexOf(id) < 0; }), visible));
-    tray.writeConfig("hiddenItems", union(list("hiddenItems").filter(function (id) { return visible.indexOf(id) < 0; }), ["org.kde.plasma.clipboard"]));
+    tray.writeConfig("shownItems", union(list("shownItems").filter(function (id) { return removed.concat(overflow).indexOf(id) < 0; }), visible));
+    tray.writeConfig("hiddenItems", union(list("hiddenItems").filter(function (id) { return visible.indexOf(id) < 0; }), overflow.concat(removed)));
     // Hide only its status icon; the compatibility service continues screen sharing.
     tray.writeConfig("disabledStatusNotifiers", union(list("disabledStatusNotifiers"), ["Xwayland Video Bridge"]));
     tray.reloadConfig();

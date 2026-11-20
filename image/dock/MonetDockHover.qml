@@ -14,6 +14,10 @@ HoverHandler {
     target: null
     blocking: false
 
+    onTrackingEnabledChanged: {
+        if (!trackingEnabled && coordinator && coordinator.current === tracker) coordinator.current = null
+    }
+
     onHoveredChanged: {
         if (!coordinator) return
         if (hovered) coordinator.current = tracker

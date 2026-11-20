@@ -231,8 +231,11 @@ class TrayDuplicates(unittest.TestCase):
             self.assertFalse(result.isError(), result.toString())
         monet, no_sound, plain = json.loads(engine.evaluate('JSON.stringify(panels().map(p=>p.config))').toString())
         self.assertEqual(monet['extraItems'], 'org.kde.plasma.networkmanagement,custom')
-        self.assertEqual(monet['shownItems'], 'org.kde.plasma.networkmanagement')
-        self.assertEqual(monet['hiddenItems'], 'org.kde.plasma.clipboard')
+        self.assertEqual(monet['shownItems'], '')
+        self.assertEqual(set(monet['hiddenItems'].split(',')),
+                         {'org.kde.plasma.clipboard', 'org.kde.plasma.volume', 'org.kde.plasma.bluetooth',
+                          'org.kde.plasma.brightness', 'org.kde.plasma.networkmanagement'})
+        self.assertEqual(len(monet['hiddenItems'].split(',')), 5)
         # Known, or Plasma adds them back as new; each once, however often it runs.
         self.assertEqual(monet['knownItems'].split(','),
                          ['custom', 'org.kde.plasma.bluetooth', 'org.kde.plasma.brightness', 'org.kde.plasma.volume'])
@@ -243,7 +246,7 @@ class TrayDuplicates(unittest.TestCase):
         self.assertIn('org.kde.plasma.bluetooth', plain['extraItems'])
         self.assertEqual(plain['knownItems'], 'custom')
         look = (ROOT / 'linux/libexec/monet-look').read_text()
-        self.assertIn('tray_repair="$CONFIG/monet/tray-deduplicated-v1"', look)
+        self.assertIn('tray_repair="$CONFIG/monet/tray-deduplicated-v2"', look)
         self.assertIn('"$(cat "$DATADIR/monet/tray-duplicates.js")"', look)
         self.assertIn('"$SRC/share/monet/tray-duplicates.js"', (ROOT / 'linux/install.sh').read_text())
 

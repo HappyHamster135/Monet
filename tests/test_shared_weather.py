@@ -188,6 +188,16 @@ class EverydayBar(unittest.TestCase):
         self.assertIn("org.kde.plasma.weather", result["config"]["knownItems"])
         self.assertNotIn("org.kde.plasma.weather", result["config"]["extraItems"])
 
+    def test_duplicate_controls_stay_out_of_the_visible_tray(self):
+        duplicates = ('org.kde.plasma.networkmanagement', 'org.kde.plasma.clipboard',
+                      'org.kde.plasma.bluetooth', 'org.kde.plasma.brightness', 'org.kde.plasma.volume')
+        config = self.policy({'shownItems': ','.join(duplicates)}, repeat=2)['config']
+        for item in duplicates:
+            self.assertNotIn(item, config['shownItems'].split(','))
+            self.assertIn(item, config['hiddenItems'].split(','))
+        self.assertIn('org.kde.plasma.clipboard', config['extraItems'])
+        self.assertIn('org.kde.plasma.networkmanagement', config['extraItems'])
+
 
 @unittest.skipUnless(QJSEngine, "Qt JavaScript runtime")
 class ForecastPresentation(unittest.TestCase):

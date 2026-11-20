@@ -2,8 +2,12 @@
 #include <QApplication>
 #include <QDebug>
 #include <QImage>
+#include <QIcon>
 #include <QQuickWindow>
+#include <QQmlEngine>
+#include <QQmlExpression>
 #include <QTest>
+#include <QTimer>
 #include <KConfigGroup>
 #include <KLocalizedString>
 #include <Plasma/Applet>
@@ -50,9 +54,19 @@ static QQuickItem *motion(QQuickItem *task)
     throw std::runtime_error("Compiled applet did not load Monet's motion component");
 }
 
+static QString launcher(QQuickItem *task)
+{
+    QQmlExpression expression(QQmlEngine::contextForObject(task), task,
+                             QStringLiteral("String(model.LauncherUrlWithoutIcon)"));
+    const auto value = expression.evaluate();
+    require(!expression.hasError(), "Cannot read the launcher's stable URL");
+    return value.toString();
+}
+
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
+    QIcon::setThemeName(QStringLiteral("breeze"));
     if (app.arguments().contains(QStringLiteral("--rtl"))) app.setLayoutDirection(Qt::RightToLeft);
     KLocalizedString::setApplicationDomain("monet");
     try {
@@ -80,11 +94,13 @@ int main(int argc, char **argv)
         dock->setParentItem(window.contentItem());
         dock->setPosition(QPointF(48, 100));
         dock->setSize(QSizeF(440, 64));
+        dock->setVisible(true);
         window.show();
         for (int i = 0; i < 100 && tasks(dock).size() < 3; ++i) QTest::qWait(20);
         QTest::qWait(350); // Initial mirrored/centered layout must settle before pointer targeting.
         auto buttons = tasks(dock);
         require(buttons.size() >= 3, "Native launcher delegates did not appear");
+        require(buttons.first()->isVisible(), "Native launcher delegates are not visible");
         require(dock->property("monetMotionEnabled").toBool(), "Dock motion unexpectedly disabled");
         QTest::mouseMove(&window, QPoint(10, 10));
         for (int round = 0; round < 2; ++round) {
@@ -126,7 +142,8 @@ int main(int argc, char **argv)
             // Drop events are in the full applet's coordinates, including the
             // space beside a centered or mirrored task list. Ignore translations.
             const auto position = destination->parentItem()->mapToItem(handler,
-                QPointF(destination->x() + destination->width() / 2, destination->y() + destination->height() / 2));
+                QPointF(destination->x() + destination->width() / 2 + (destination->x() > source->x() ? 6 : -6),
+                        destination->y() + destination->height() / 2));
             QVariant result;
             require(QMetaObject::invokeMethod(handler, "monetReorder", Q_RETURN_ARG(QVariant, result),
                     Q_ARG(QVariant, position)), "Reorder call failed");
@@ -159,6 +176,117 @@ int main(int argc, char **argv)
         dock->setWidth(520); QTest::qWait(350);
         require(!viewport->clip() && viewport->property("contentX").toDouble() == 0, "Widening the taskbar retained stale overflow geometry");
 
+        // Exercise the real press/hold/move/release path. Calling monetReorder
+        // alone cannot catch platform QDrag freezes or lost handler grabs.
+        for (int round = 0; round < 3; ++round) {
+            buttons = tasks(dock);
+            source = buttons.first();
+            const auto sourceId = launcher(source);
+            require(!sourceId.isEmpty(), "Fixture launcher has no stable identity");
+            auto neighbour = buttons[1];
+            const int destinationIndex = neighbour->property("index").toInt();
+            const auto press = source->mapToScene(QPointF(source->width()/2, source->height()/2)).toPoint();
+            const auto destination = neighbour->mapToScene(QPointF(neighbour->width()/2 + 8, neighbour->height()/2)).toPoint();
+            QTest::mouseMove(&window, press); QTest::qWait(180);
+            QTest::mousePress(&window, Qt::LeftButton, Qt::NoModifier, press);
+            QTest::mouseMove(&window, press + QPoint(18, 0)); QTest::qWait(20);
+            require(dock->property("monetInternalDragging").toBool(), "Real icon drag entered the platform drag loop or failed to grab");
+            require(viewport->clip(), "Held icon can paint over neighbouring tray widgets");
+            int ticks = 0;
+            QTimer heartbeat;
+            QObject::connect(&heartbeat, &QTimer::timeout, [&] { ++ticks; });
+            heartbeat.start(10);
+            QTest::mouseMove(&window, destination); QTest::qWait(35);
+            require(source->property("index").toInt() == destinationIndex, "Held icon did not reorder through actual pointer input");
+            require(source->parentItem()->property("animating").toBool(), "Neighbour did not slide aside during a real drag");
+            const auto moving = neighbour->mapToItem(neighbour->parentItem(), QPointF());
+            require(qAbs(moving.x() - neighbour->x()) > 1, "Neighbour jumped instead of sliding");
+            const auto followed = source->mapToScene(QPointF(source->width()/2, source->height()/2));
+            require(qAbs(followed.x() - destination.x()) < 22, "Held icon did not follow the pointer");
+            const auto during = window.grabWindow();
+            QTest::qWait(320);
+            require(ticks >= 15, "Holding an icon starved the UI event loop");
+            require(source->property("index").toInt() == destinationIndex, "Stationary held pointer made the order oscillate");
+            require(!source->parentItem()->property("animating").toBool(), "Stationary drag kept restarting animations");
+            const auto after = window.grabWindow();
+            if (qEnvironmentVariableIsSet("MONET_DOCK_CAPTURE")) {
+                const auto prefix = qEnvironmentVariable("MONET_DOCK_CAPTURE") + QString::number(round);
+                during.save(prefix + QStringLiteral("-during.png"));
+                after.save(prefix + QStringLiteral("-after.png"));
+            }
+            require(!during.isNull() && during != after, "Reordering did not animate rendered pixels");
+            QTest::mouseRelease(&window, Qt::LeftButton, Qt::NoModifier, destination);
+            QTest::qWait(350);
+            require(!dock->property("monetInternalDragging").toBool() && dock->property("dragSource").isNull(),
+                    "Releasing a real drag left the taskbar stuck");
+            const auto saved = tasks(dock);
+            const auto released = std::find_if(saved.begin(), saved.end(), [&](auto item) {
+                return launcher(item) == sourceId;
+            });
+            // syncLaunchers may replace delegates. Check the saved app's
+            // identity rather than dereferencing the old pointer after release.
+            require(released != saved.end() && (*released)->property("index").toInt() == destinationIndex,
+                    "Releasing a real drag restored the previous order");
+        }
+
+        // Leaving the bar keeps Plasma's system drag available. Cancelling it
+        // must not save launchers early and destroy the exporting delegate.
+        source = tasks(dock).first();
+        const auto exportPress = source->mapToScene(QPointF(source->width()/2, source->height()/2)).toPoint();
+        QTest::mousePress(&window, Qt::LeftButton, Qt::NoModifier, exportPress);
+        QTest::mouseMove(&window, exportPress + QPoint(18, 0)); QTest::qWait(30);
+        require(dock->property("monetInternalDragging").toBool(), "Export fixture did not start an internal drag");
+        QTimer::singleShot(200, &window, [&] { QTest::keyClick(&window, Qt::Key_Escape); });
+        const auto outside = exportPress - QPoint(0, 95);
+        QTest::mouseMove(&window, outside); QTest::qWait(260);
+        QTest::mouseRelease(&window, Qt::LeftButton, Qt::NoModifier, outside); QTest::qWait(350);
+        require(!dock->property("monetInternalDragging").toBool() && dock->property("dragSource").isNull(),
+                "Cancelled external drag left the bar stuck");
+        require(tasks(dock).size() == 3, "Exporting a launcher lost a pinned app");
+        for (int round = 0; round < 3; ++round) {
+            source = tasks(dock).first();
+            const auto press = source->mapToScene(QPointF(source->width()/2, source->height()/2)).toPoint();
+            QTest::mousePress(&window, Qt::LeftButton, Qt::NoModifier, press);
+            QTest::mouseMove(&window, press + QPoint(18, 0)); QTest::qWait(20);
+            QTimer::singleShot(100, &window, [&] { QTest::keyClick(&window, Qt::Key_Escape); });
+            const auto outside = press - QPoint(0, 95);
+            QTest::mouseMove(&window, outside);
+            QTest::mouseRelease(&window, Qt::LeftButton, Qt::NoModifier, outside);
+            QTest::qWait(250);
+            require(!dock->property("monetInternalDragging").toBool() && dock->property("dragSource").isNull(),
+                    "Quick release during export left a stale drag source");
+        }
+
+        // Rapid edge changes interrupt in-flight layout/hover animations. No
+        // old horizontal translation or overflow offset may survive the swap.
+        for (int round = 0; round < 16; ++round) {
+            panel->setLocation(Plasma::Types::LeftEdge);
+            panel->setFormFactor(Plasma::Types::Vertical);
+            dock->setSize(QSizeF(64, 200));
+            QTest::qWait(round % 2 ? 20 : 220);
+            panel->setLocation(Plasma::Types::BottomEdge);
+            panel->setFormFactor(Plasma::Types::Horizontal);
+            dock->setSize(QSizeF(round % 2 ? 64 : 520, 64));
+            QTest::qWait(round % 2 ? 20 : 220);
+        }
+        dock->setSize(QSizeF(520, 64)); QTest::qWait(350);
+        buttons = tasks(dock);
+        require(buttons.size() == 3, "Edge switching recreated or lost pinned apps");
+        for (int i = 0; i < buttons.size(); ++i) {
+            auto item = buttons[i];
+            const auto bounds = item->mapRectToItem(dock, item->boundingRect());
+            require(bounds.left() >= -1 && bounds.right() <= dock->width()+1
+                    && bounds.top() >= -1 && bounds.bottom() <= dock->height()+1,
+                    "Edge switching left an icon outside the taskbar");
+            require(qAbs(item->mapToItem(item->parentItem(), QPointF()).x() - item->x()) < .5,
+                    "Edge switching retained an obsolete reorder translation");
+            if (i) require(item->x() >= buttons[i-1]->x() + buttons[i-1]->width() - 1,
+                           "Edge switching left overlapping task icons");
+        }
+        require(!viewport->clip() && viewport->property("contentX").toDouble() == 0,
+                "Edge switching retained the previous orientation's overflow");
+        require(!buttons.first()->parentItem()->property("animating").toBool(), "Edge switching left animation permanently active");
+
         auto trashApplet = panel->createApplet(QStringLiteral("org.kde.plasma.trash"));
         auto trash = PlasmaQuick::AppletQuickItem::itemForApplet(trashApplet);
         require(trash, "Native Trash applet failed to instantiate");
@@ -183,7 +311,7 @@ int main(int argc, char **argv)
         trash->setProperty("containsAcceptableDrag", false); QTest::qWait(300);
         require(dropFeedback->property("opacity").toDouble() == 0, "Cancelled file drag left Trash highlighted");
         window.close();
-        qInfo() << "Native task and Trash hover, tooltip delivery, edit-mode recovery and rapid animated reordering passed.";
+        qInfo() << "Native hover, real animated pointer drags, event-loop responsiveness and repeated edge switching passed.";
         return 0;
     } catch (const std::exception &error) {
         qCritical() << error.what();

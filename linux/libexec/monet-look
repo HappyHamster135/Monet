@@ -790,8 +790,8 @@ if [ ! -e "$graphics_column" ] && [ -x "$LIBEXECDIR/monet-quick" ]; then
 fi
 
 # KDE's sound, Bluetooth and brightness items duplicate Monet's own controls: out of the
-# tray once (0.9.8-7), on --keep upgrades too. Bringing one back afterwards sticks.
-tray_repair="$CONFIG/monet/tray-deduplicated-v1"
+# tray once (0.9.8-8), on --keep upgrades too. Bringing one back afterwards sticks.
+tray_repair="$CONFIG/monet/tray-deduplicated-v2"
 if [ ! -e "$tray_repair" ] && [ -r "$DATADIR/monet/tray-duplicates.js" ]; then
     if busctl --user call org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell evaluateScript s \
         "$(cat "$DATADIR/monet/tray-duplicates.js")" >/dev/null 2>&1; then

@@ -1,5 +1,35 @@
 # Testing Monet on real hardware
 
+## 0.9.8-8 taskbar follow-up — 20 November 2026
+
+Repeated left/bottom edge changes no longer switch opposing anchors on the task
+list or replay movement transforms from the previous orientation. The panel
+editor cancels delayed manual buffer resizes when Plasma takes over an edge
+change. Overflow uses the icons' minimum slot widths, independent of the previous
+orientation's implicit size.
+
+Manual single-row icon dragging stays inside Qt Quick, without a GPU image grab
+or platform drag loop until the pointer leaves the bar. The held icon follows
+the pointer; neighbours slide into their new slots, with a small centre-crossing
+dead band and one model move at most per 16 ms input batch. The final order is
+saved on release. There is no idle timer for dragging.
+
+The compiled native fixture now sends real press/hold/move/release input, checks
+that neighbours change rendered pixels while sliding, verifies event-loop
+responsiveness and a stable saved order under a stationary pointer, checks
+cancelled exports and quick releases before image readback, and repeats rapid
+left/bottom/narrow/wide transitions. These passed in both text directions. The
+private Wayland panel test also passed one/three-bar migration, preserved pins
+and widget identities, and a Plasma restart. Native launch checks passed for
+normal clicks and explicitly opening new windows. Local builds used one CPU core.
+
+A new one-time tray migration hides duplicate connectivity/brightness/sound
+entries on Monet panels, including existing beta installs. Network status and
+clipboard history remain available in the tray overflow; other app indicators
+and panels keep their choices. Fresh layouts and one/three-bar conversions use
+the same policy. The relevant local suites passed 498 checks with zero skips;
+this is not a claim of physical ThinkPad/Razer/desktop verification.
+
 ## 0.9.8-8 beta preparation — 19 November 2026
 
 The first candidate passed 2,328 desktop checks across 154 modules, the general

@@ -18,6 +18,15 @@ untransformed task bounds and follows the native task-reordering transform.
 The native Trash applet uses the same motion on the bottom dock, with its full
 painted icon and a stable click area during dragging and reduced-motion changes.
 
+Manual single-row icon reordering uses an in-process pointer grab: the held icon
+follows the pointer and neighbouring icons slide into their new slots. Input
+bursts are coalesced to at most one model move per 16 ms, using slot centres and
+a small dead band instead of hit-testing moving pictures. The final launcher
+order is saved on release. Leaving the bar hands off to Plasma's normal system
+drag, so launchers can still be dropped elsewhere. Neither path polls at idle.
+Changing screen edge clears old hover and movement transforms; the list uses
+coordinates instead of switching opposing anchors during an orientation change.
+
 Internal manual reordering on that dock uses the delegates' layout slots while
 their painted icons slide. It accepts the next pointer movement during an
 animation, including an immediate reversal. Initial layout seeds each delegate's

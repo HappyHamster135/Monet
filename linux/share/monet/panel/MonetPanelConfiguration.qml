@@ -101,7 +101,13 @@ Item {
             sizeInput.text = String(editor.draftSize)
             editor.schedulePlacement(true)
         }
-        function onLocationChanged() { editor.schedulePlacement(true) }
+        function onLocationChanged() {
+            // PanelView owns the orientation change. A delayed setGeometry()
+            // can otherwise apply the previous edge's buffer size to the new
+            // edge after several quick moves.
+            editor.surfaceResizePending = false
+            editor.schedulePlacement()
+        }
         function onFloatingChanged() { editor.schedulePlacement(true) }
         function onLengthModeChanged() { editor.schedulePlacement(true) }
         function onAlignmentChanged() { editor.schedulePlacement() }

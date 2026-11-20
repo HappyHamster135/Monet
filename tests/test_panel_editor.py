@@ -83,6 +83,8 @@ Window {
     QtObject {
         id: panel; objectName: "testPanel"
         property int location: PlasmaCore.Types.BottomEdge
+        readonly property int leftEdge: PlasmaCore.Types.LeftEdge
+        readonly property int bottomEdge: PlasmaCore.Types.BottomEdge
         property int lengthMode: Panel.FillAvailable
         property bool floating: false
         property bool floatingApplets: false
@@ -96,6 +98,15 @@ Window {
         property int opacityMode: Panel.Adaptive
         property bool adaptiveOpacityEnabled: false
         property QtObject screenToFollow: QtObject { property rect geometry: Qt.rect(0,0,1280,800) }
+        property int width: 1280
+        property int height: 60
+        property int length: 1280
+        property int x: 0
+        property int y: 0
+        property int geometryWrites: 0
+        property QtObject contentItem: QtObject { property var children: [{fixedTopFloatingPadding:0,
+            fixedBottomFloatingPadding:0, fixedLeftFloatingPadding:0, fixedRightFloatingPadding:0}] }
+        function setGeometry(x, y, width, height) { geometryWrites++ }
     }
     QtObject {
         id: plasmoid
@@ -158,6 +169,24 @@ Window {
         self.click('panelFullWidth')
         self.assertFalse(self.panel.property('floating'))
         self.assertTrue(self.item('panelFullWidth').property('checked'))
+
+    def test_edge_changes_cancel_delayed_surface_resizes(self):
+        editor = self.item('monetPanelEditor')
+        # A thickness/floating change may have queued a surface resize just
+        # before the user moves the bar. Plasma owns the new orientation.
+        editor.setProperty('surfaceResizePending', True)
+        for _ in range(10):
+            self.panel.setProperty('location', self.panel.property('leftEdge'))
+            self.panel.setProperty('width', 60)
+            self.panel.setProperty('height', 800)
+            QTest.qWait(10)
+            self.panel.setProperty('location', self.panel.property('bottomEdge'))
+            self.panel.setProperty('width', 1280)
+            self.panel.setProperty('height', 80)  # compositor's current buffer
+            QTest.qWait(10)
+        QTest.qWait(400)
+        self.assertFalse(editor.property('surfaceResizePending'))
+        self.assertEqual(self.panel.property('geometryWrites'), 0)
 
     def test_keyboard_focus_scrolls_controls_into_view_in_a_short_window(self):
         self.window.resize(360, 400); QTest.qWait(80)
