@@ -1,5 +1,37 @@
 # Testing Monet on real hardware
 
+## 0.9.8-8 click reliability and pointer work — 20 November 2026
+
+Settings' shared action pills, Games' Play/action buttons and Store tiles now
+animate their text/artwork inside fixed input bounds. Previously a press shrank
+the clickable item itself: a one-pixel pointer movement near its edge could
+cancel the click. The real Qt regression fixture exercises all four edges after
+the press animation, along with disabled buttons and cancellation outside the
+control. The old sources fail the new checks; the candidate activates once.
+
+More Settings' native background-drag helper records a possible drag without
+consuming the initial press. It takes over only after the drag threshold. A
+custom native surface's five small-movement clicks previously received zero
+presses; the candidate receives five matched press/release pairs. The unchanged
+threshold, modified gestures, editors and ordinary buttons also pass.
+
+Dropdown-title pointer handling now checks the window's reveal geometry before
+testing occlusion. A regression test sends 10,000 content-area pointer positions
+and verifies zero calls to the window-stack eligibility scan. Near-top positions
+and small overshoots still check coverage. This removes unnecessary compositor
+work during pointer movement without changing which windows get controls.
+
+The private KWin fixture now checks the first click inside an ordinary app after
+each move, for active and inactive Wayland and XWayland clients: twelve content
+clicks, twelve closes and twelve drags pass, including fast 5 ms clicks. These
+are compositor-level tests in a virtual session, not physical trackpad/USB mouse
+verification. Local builds and tests use one CPU core. Hardware-wide intermittent
+missed clicks still need acceptance testing on the affected machines.
+
+Relevant local validation passed 132 Python checks across ten modules with no
+skips, plus the native Qt style suite. The negative controls reproduce both the
+old edge-click failures and the consumed native presses.
+
 ## 0.9.8-8 taskbar follow-up — 20 November 2026
 
 Repeated left/bottom edge changes no longer switch opposing anchors on the task

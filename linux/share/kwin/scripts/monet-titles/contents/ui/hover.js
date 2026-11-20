@@ -51,6 +51,16 @@ function atTop(client, screen, p) {
         && p.y >= start && p.y < top + Math.min(depth, (client.y + client.height - top) / 3)
 }
 
+// Most pointer movement is inside app content. Reject that cheap geometry case
+// before eligibility walks KWin's window stack to check occlusion.
+function aimedAt(p, pick, eligible) {
+    var w = pick(p)
+    if (!w || w.desktopWindow) w = pick({ x: p.x, y: p.y + ABOVE })
+    if (!w || w.move || w.resize || !w.output
+            || !atTop(w.clientGeometry, w.output.geometry, p)) return null
+    return eligible(w) ? w : null
+}
+
 // Still on the bar, or only just off it: the bar stays until the pointer is away.
 function onBar(bar, p) {
     return p.x >= bar.x - SLACK && p.x < bar.x + bar.width + SLACK

@@ -84,6 +84,29 @@ class Arithmetic(unittest.TestCase):
                          dict(x=1920, y=0, width=960, height=40))
         self.assertEqual(self.run_js("BAR"), 40)
 
+    def test_pointer_motion_in_app_content_never_scans_the_window_stack(self):
+        self.js.evaluate('''
+            var target = {clientGeometry:rect(100,100,800,600), output:{geometry:rect(0,0,1920,1080)}};
+            var scans = 0;
+            function pick(p) { return target; }
+            function eligible(w) { ++scans; return true; }
+            for (var i=0; i<10000; ++i) aimedAt({x:200+i%600,y:300},pick,eligible);
+        ''')
+        self.assertEqual(self.run_js('scans'), 0)
+        self.assertTrue(self.run_js('aimedAt({x:200,y:105},pick,eligible) === target'))
+        self.assertEqual(self.run_js('scans'), 1)
+        self.assertIsNone(self.run_js('aimedAt({x:200,y:105},pick,w=>false)'))
+
+    def test_overshooting_a_window_top_still_checks_occlusion(self):
+        self.js.evaluate('''
+            var target = {clientGeometry:rect(100,100,800,600), output:{geometry:rect(0,0,1920,1080)}};
+            var scans = 0;
+            function pick(p) { return p.y < 100 ? {desktopWindow:true} : target; }
+            function eligible(w) { ++scans; return true; }
+        ''')
+        self.assertTrue(self.run_js('aimedAt({x:200,y:96},pick,eligible) === target'))
+        self.assertEqual(self.run_js('scans'), 1)
+
     def test_the_pointer_brings_it_only_at_the_very_top(self):
         screen = "rect(0, 0, 1920, 1080)"
         client = "rect(100, 100, 800, 600)"
@@ -687,7 +710,8 @@ class Script(unittest.TestCase):
         # and the scale effect leaves it alone (it animates managed normal windows, not popups).
         self.assertIn("flags: Qt.ToolTip | Qt.FramelessWindowHint | Qt.BypassWindowManagerHint | Qt.WindowDoesNotAcceptFocus", bar)
         # The pointer is KWin's API: the cursor, the window under it, the active window's move and menu.
-        for piece in ("function onCursorPosChanged()", "Workspace.windowAt(p, 2)", "Workspace.slotWindowMove()",
+        for piece in ("function onCursorPosChanged()", "Workspace.windowAt(Qt.point(p.x, p.y), 2)",
+                      "Hover.aimedAt(p, root.topWindow, root.canShow)", "Workspace.slotWindowMove()",
                       "Workspace.slotWindowOperations()", 'KWin.readConfig("Hover", true)', "target: Options",
                       "Workspace.isEffectActive(\"overview\")", "Kirigami.Units.longDuration / 200"):
             self.assertIn(piece, main)

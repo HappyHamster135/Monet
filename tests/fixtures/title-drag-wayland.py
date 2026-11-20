@@ -14,13 +14,19 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 
-def client(platform, title):
-    from PySide6.QtWidgets import QApplication, QWidget
+def client(platform, title, click_log):
+    from PySide6.QtWidgets import QApplication, QPushButton, QWidget
     app = QApplication([])
     app.setDesktopFileName("org.monet.TitleDragFixture")
     window = QWidget()
     window.setWindowTitle(title)
     window.resize(600, 420)
+    button = QPushButton('Click inside the app', window)
+    button.setGeometry(40, 100, 200, 44)
+    def clicked():
+        with Path(click_log).open('a') as log:
+            log.write(json.dumps({'title':title})+'\n')
+    button.clicked.connect(clicked)
     window.show()
     return app.exec()
 
@@ -34,6 +40,11 @@ def worker(output):
     processes = []
     records = []
     closes = []
+    body_clicks = []
+    click_log = output/'clicks.jsonl'
+
+    def click_count(title):
+        return sum(json.loads(line)['title']==title for line in click_log.read_text().splitlines()) if click_log.exists() else 0
 
     def until(check, label, timeout=6):
         end = time.monotonic() + timeout
@@ -57,7 +68,7 @@ def worker(output):
 
     def open_client(title, platform):
         with (output/'clients.log').open('a') as log:
-            process = subprocess.Popen([sys.executable, __file__, 'client', platform, title],
+            process = subprocess.Popen([sys.executable, __file__, 'client', platform, title, str(click_log)],
                 env=dict(env, QT_QPA_PLATFORM=platform), stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
         processes.append(process)
         until(lambda: process.poll() is None and window(title), 'Map ' + title)
@@ -108,6 +119,7 @@ def worker(output):
             other = 'Other ' + platform
             open_client(title, platform)
             open_client(other, platform)
+            action(other, 'w.frameGeometry={x:980,y:620,width:280,height:150};')
             action(other, 'w.frameGeometry={x:950,y:550,width:260,height:210};')
             time.sleep(.35)  # The other window's introduction must finish mapping first.
 
@@ -141,6 +153,16 @@ def worker(output):
                 after = window(title)['rect']
                 pointer.point(x+150,y+100); time.sleep(.04)
                 assert window(title)['rect'] == after, 'Window remained stuck to the pointer'
+                # The first content click must reach an ordinary app after a
+                # compositor move, including when it also activates the app.
+                action(other if inactive else title, 'workspace.activeWindow=w;')
+                client_bounds = window(title)['client']
+                before_click = click_count(title)
+                pointer.point(client_bounds['x']+140, client_bounds['y']+122)
+                pointer.button(True); time.sleep(.005); pointer.button(False)
+                until(lambda: click_count(title)==before_click+1, 'First app-content click was lost after moving')
+                assert window(title)['active'], 'Content click failed to activate the target app'
+                body_clicks.append(dict(platform=platform,inactive=inactive))
                 records.append(dict(platform=platform, inactive=inactive, before=before, after=after))
 
             # A complete quick gesture must neither get lost nor leave a late move pending.
@@ -187,7 +209,7 @@ def worker(output):
                 assert window(other), 'Close affected the wrong window'
             action(other, 'w.closeWindow();')
             until(lambda: not window(other), 'Close other client')
-        result = dict(ok=True, drags=records, closes=closes, quick_release=True, restored_and_snapped=True,
+        result = dict(ok=True, drags=records, closes=closes, body_clicks=body_clicks, quick_release=True, restored_and_snapped=True,
                       scope='Private virtual KWin, CPU rendering, Wayland and XWayland clients; no host session or input')
         (output/'result.json').write_text(json.dumps(result,indent=2)+'\n')
         print(json.dumps(result),flush=True)
@@ -237,6 +259,6 @@ def parent(output):
 
 
 if __name__ == '__main__':
-    if sys.argv[1] == 'client': sys.exit(client(sys.argv[2],sys.argv[3]))
+    if sys.argv[1] == 'client': sys.exit(client(sys.argv[2],sys.argv[3],sys.argv[4]))
     if sys.argv[1] == 'worker': sys.exit(worker(Path(sys.argv[2])))
     parent(Path(sys.argv[1]))

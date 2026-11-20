@@ -25,6 +25,15 @@ protected:
     bool startMove(QWindow *) override { ++moves; return true; }
 };
 
+class ClickSurface : public QWidget {
+public:
+    int presses = 0;
+    int releases = 0;
+protected:
+    void mousePressEvent(QMouseEvent *event) override { ++presses; event->accept(); }
+    void mouseReleaseEvent(QMouseEvent *event) override { ++releases; event->accept(); }
+};
+
 class LayoutTest : public QObject {
     Q_OBJECT
     QTemporaryDir config;
@@ -189,6 +198,25 @@ private slots:
         QTest::mouseMove(&window, QPoint(380, 250));
         QTest::mouseRelease(&window, Qt::LeftButton, Qt::ShiftModifier, QPoint(380, 250));
         QCOMPARE(drag.moves, 1);
+        qApp->removeEventFilter(&drag);
+    }
+
+    void backgroundDragPreservesClicksOnCustomNativeSurfaces()
+    {
+        ClickSurface surface;
+        surface.resize(300, 150);
+        surface.show();
+        QTest::qWait(20);
+        ObservedDrag drag;
+        qApp->installEventFilter(&drag);
+        for (int i = 0; i < 5; ++i) {
+            QTest::mousePress(&surface, Qt::LeftButton, Qt::NoModifier, QPoint(100, 60));
+            QTest::mouseMove(&surface, QPoint(101, 61));
+            QTest::mouseRelease(&surface, Qt::LeftButton, Qt::NoModifier, QPoint(101, 61));
+        }
+        QCOMPARE(surface.presses, 5);
+        QCOMPARE(surface.releases, 5);
+        QCOMPARE(drag.moves, 0);
         qApp->removeEventFilter(&drag);
     }
 };

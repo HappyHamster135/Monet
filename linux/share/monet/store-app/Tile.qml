@@ -20,15 +20,15 @@ Rectangle {
     color: lit ? tone.wash2 : tone.wash
     border.width: activeFocus ? 2 : 1
     border.color: activeFocus ? tone.lily : tone.line
-    scale: mouse.pressed ? 0.97 : 1
     Behavior on color { ColorAnimation { duration: Math.round(140 * tile.tone.speed) } }
-    Behavior on scale { NumberAnimation { duration: Math.round(160 * tile.tone.speed); easing.type: Easing.OutCubic } }
     activeFocusOnTab: true
     Keys.onReturnPressed: tile.chosen()
     Keys.onEnterPressed: tile.chosen()
     Keys.onSpacePressed: tile.chosen()
 
     ColumnLayout {
+        scale: mouse.pressed ? 0.97 : 1
+        Behavior on scale { NumberAnimation { duration: Math.round(160 * tile.tone.speed); easing.type: Easing.OutCubic } }
         anchors.fill: parent
         anchors.margins: 12
         spacing: 8

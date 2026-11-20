@@ -13,14 +13,14 @@ Rectangle {
     implicitHeight: size * 2.6
     radius: height / 2
     color: mouse.containsMouse ? "#FF6A42" : "#F2552C"
-    scale: mouse.pressed ? 0.95 : mouse.containsMouse ? 1.04 : 1
-    Behavior on scale {
-        NumberAnimation { duration: Math.round(160 * button.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] }
-    }
     Behavior on color { ColorAnimation { duration: Math.round(140 * button.speed) } }
 
     Text {
         id: label
+        scale: mouse.pressed ? 0.95 : mouse.containsMouse ? 1.04 : 1
+        Behavior on scale {
+            NumberAnimation { duration: Math.round(160 * button.speed); easing.type: Easing.OutCubic }
+        }
         horizontalAlignment: Text.AlignLeft
         anchors.centerIn: parent
         color: "#FFFFFF"

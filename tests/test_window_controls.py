@@ -53,6 +53,9 @@ class NativeTitleGrabs(unittest.TestCase):
             self.assertTrue(result["ok"])
             self.assertEqual(len(result["drags"]), 12)
             self.assertEqual(len(result["closes"]), 12)
+            self.assertEqual(len(result["body_clicks"]), 12)
+            self.assertEqual({(c["platform"], c["inactive"]) for c in result["body_clicks"]},
+                             {("wayland", False), ("wayland", True), ("xcb", False), ("xcb", True)})
             self.assertEqual({record["platform"] for record in result["drags"]}, {"wayland", "xcb"})
             self.assertTrue(result["quick_release"])
             self.assertTrue(result["restored_and_snapped"])

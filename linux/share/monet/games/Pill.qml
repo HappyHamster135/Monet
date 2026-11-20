@@ -25,20 +25,21 @@ Rectangle {
     color: kind === "lily" ? (lit ? "#3F9483" : "#357F72")
         : tone.dark ? Qt.rgba(1, 1, 1, lit ? 0.16 : 0.1)
         : Qt.rgba(0.11, 0.106, 0.098, lit ? 0.11 : 0.07)
-    scale: mouse.pressed ? 0.96 : 1
     border.width: activeFocus ? 2 : 0
     border.color: kind === "lily" ? "#FFFFFF" : tone.lily
     activeFocusOnTab: true
     Keys.onReturnPressed: if (enabled) pill.clicked()
     Keys.onEnterPressed: if (enabled) pill.clicked()
     Keys.onSpacePressed: if (enabled) pill.clicked()
-    Behavior on scale {
-        NumberAnimation { duration: Math.round(160 * pill.tone.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] }
-    }
     Behavior on color { ColorAnimation { duration: Math.round(140 * pill.tone.speed) } }
 
     RowLayout {
         id: row
+        // Paint feedback must not shrink the MouseArea under a held pointer.
+        scale: mouse.pressed ? 0.96 : 1
+        Behavior on scale {
+            NumberAnimation { duration: Math.round(160 * pill.tone.speed); easing.type: Easing.OutCubic }
+        }
         anchors.centerIn: parent
         spacing: 7
         Kirigami.Icon {

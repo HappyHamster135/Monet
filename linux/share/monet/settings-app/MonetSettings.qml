@@ -2451,18 +2451,18 @@ Shared.MonetWindow {
         color: kind === "sun" ? (hover.hovered ? "#FF6A42" : "#F2552C")
             : kind === "lily" ? (hover.hovered ? "#3F9483" : "#357F72")
             : (hover.hovered ? tone.press : tone.wash2)
-        scale: tap.pressed ? 0.96 : hover.hovered && kind === "sun" ? 1.04 : 1
         border.width: activeFocus ? 2 : 0
         border.color: kind === "plain" ? tone.lily : "#FFFFFF"
         activeFocusOnTab: enabledPill
         Keys.onSpacePressed: event => { if (enabledPill && !event.isAutoRepeat) pill.clicked() }
         Keys.onReturnPressed: event => { if (enabledPill && !event.isAutoRepeat) pill.clicked() }
         Keys.onEnterPressed: event => { if (enabledPill && !event.isAutoRepeat) pill.clicked() }
-        Behavior on scale { NumberAnimation { duration: Math.round(160 * pill.tone.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
         Behavior on color { ColorAnimation { duration: Math.round(140 * pill.tone.speed) } }
         Text {
             horizontalAlignment: Text.AlignHCenter
             id: label
+            scale: tap.pressed ? 0.96 : hover.hovered && pill.kind === "sun" ? 1.04 : 1
+            Behavior on scale { NumberAnimation { duration: Math.round(160 * pill.tone.speed); easing.type: Easing.OutCubic } }
             anchors.centerIn: parent
             width: Math.min(implicitWidth, Math.max(1, pill.width - 24))
             wrapMode: Text.Wrap

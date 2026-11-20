@@ -92,7 +92,7 @@ Item {
     }
 
     function topWindow(p) {
-        return Workspace.windowAt(p, 2).find(w => !ours(w))
+        return Workspace.windowAt(Qt.point(p.x, p.y), 2).find(w => !ours(w))
     }
 
     // The window whose top the pointer is at, if its bar may come there now.
@@ -100,17 +100,7 @@ Item {
         if (busy()) {
             return null
         }
-        let w = topWindow(p)
-        // Allow a small overshoot from the bare desktop, keeping the pointer
-        // with the app or menu it is actually on when there's one underneath.
-        if (!w || w.desktopWindow) w = topWindow(Qt.point(p.x, p.y + Hover.ABOVE))
-        if (!w || w.move || w.resize || !canShow(w)) {
-            return null
-        }
-        if (!Hover.atTop(w.clientGeometry, w.output.geometry, p)) {
-            return null
-        }
-        return w
+        return Hover.aimedAt(p, root.topWindow, root.canShow)
     }
 
     // As the pointer moves (once a frame at most): the bar stays while the pointer's on it or

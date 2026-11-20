@@ -61,7 +61,10 @@ protected:
                 && eligible(widget, mouse->position().toPoint())) {
                 candidate = widget;
                 origin = mouse->globalPosition();
-                return true;
+                // A click is still a click until the pointer crosses the drag
+                // threshold. Native/custom surfaces may handle the press too.
+                // Swallowing it here leaves them seeing only a release.
+                return false;
             }
         } else if (event->type() == QEvent::MouseMove && candidate) {
             auto mouse = static_cast<QMouseEvent *>(event);
