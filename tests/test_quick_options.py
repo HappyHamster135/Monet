@@ -295,7 +295,8 @@ Window {
 
 
 class NativeQuickApplet(unittest.TestCase):
-    @unittest.skipUnless(os.environ.get("MONET_QUICK_FIXTURE"), "requires the compiled Quick Settings applet fixture")
+    @unittest.skipUnless(os.environ.get("MONET_QUICK_FIXTURE") and os.environ.get("MONET_ACTIVITY_FIXTURE"),
+                         "requires the compiled Quick Settings and private battery fixtures")
     def test_actual_chevrons_open_inline_panels_without_toggling(self):
         with tempfile.TemporaryDirectory() as folder:
             result = subprocess.run([sys.executable, str(ROOT / 'tests/fixtures/quick-options-native.py'), folder],

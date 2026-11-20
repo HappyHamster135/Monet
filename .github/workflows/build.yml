@@ -63,7 +63,7 @@ jobs:
       - name: Pinned browser test input (the builder verifies its SHA-256)
         run: |
           mkdir -p target/desktop-tests
-          curl --fail --location --retry 3 \
+          curl --fail --location --retry 3 --retry-all-errors --connect-timeout 20 --max-time 120 \
             https://addons.mozilla.org/firefox/downloads/file/5078406/keepassxc_browser-1.10.4.1.xpi \
             -o target/desktop-tests/upstream.xpi
       - name: Required desktop tests (private home, bus and sound server)

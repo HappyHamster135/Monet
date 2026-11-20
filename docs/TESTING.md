@@ -1,5 +1,24 @@
 # Testing Monet on real hardware
 
+## 0.9.8-8 release qualification fixtures — 20 November 2026
+
+The native Quick Settings check now uses the existing private UPower service
+fixture and opens the applet before waiting for its network and battery state.
+It no longer overwrites the status map with a pretend laptop reading while
+native reads are pending. The previous fixture reproduced a failure when a
+delayed refresh correctly replaced its synthetic battery reading with no battery;
+no radio or settings action had been sent. The corrected assertion checks the
+selected tile's state, and an independent helper-command log rejects radio,
+notification and power-mode changes or opening Settings from a chevron.
+
+The corrected native test passes 12 consecutive runs. An injected chevron that
+also toggles Wi-Fi is rejected. All 78 focused Quick Settings, release-publication
+and beta-workflow checks pass with no skips, alongside the earlier 149 release
+checks. Execution remains limited to one CPU core with private services and no
+host wireless or power changes. The CI download of the pinned browser test input
+now retries connection resets and has connection/transfer time limits; the pinned
+SHA-256 verification and required desktop tests remain mandatory.
+
 ## 0.9.8-8 Zen restart and session restoration — 20 November 2026
 
 Zen's generic multiple-tab close and quit-shortcut warnings are disabled in

@@ -2,13 +2,14 @@
 import json
 import os
 from pathlib import Path
+import select
 import shutil
 import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from tools.test import private_session
+from tools.test import private_session, stop
 
 
 def run(output):
@@ -48,13 +49,23 @@ print(json.dumps(result))
             source.write_text(source.read_text().replace('@LIBEXECDIR@', str(helpers)).replace('@BINDIR@', str(helpers))
                               .replace('@DATADIR@', str(ROOT / 'linux/share')))
         calls = output / 'calls.jsonl'
-        env.update(MONET_QUICK_CALLS=str(calls), QT_FORCE_STDERR_LOGGING='1')
-        result = subprocess.run([os.environ['MONET_QUICK_FIXTURE'], str(output)], env=env,
-                                capture_output=True, text=True, timeout=40)
+        env.update(MONET_QUICK_CALLS=str(calls), QT_FORCE_STDERR_LOGGING='1',
+                   DBUS_SYSTEM_BUS_ADDRESS=env['DBUS_SESSION_BUS_ADDRESS'])
+        with (output / 'activity.log').open('w') as activity_log:
+            backend = subprocess.Popen([os.environ['MONET_ACTIVITY_FIXTURE'],'--fixture'],env=env,
+                                       stdout=subprocess.PIPE,stderr=activity_log,start_new_session=True)
+            try:
+                assert select.select([backend.stdout],[],[],5)[0], 'Private battery fixture did not start'
+                assert backend.stdout.readline()==b'READY\n', 'Private battery fixture failed to start'
+                result = subprocess.run([os.environ['MONET_QUICK_FIXTURE'], str(output)], env=env,
+                                        capture_output=True, text=True, timeout=40)
+            finally:
+                stop(backend); backend.stdout.close()
         (output / 'native.log').write_text(result.stdout + result.stderr)
-        assert result.returncode == 0, result.stdout + result.stderr
-        recorded = [json.loads(line) for line in calls.read_text().splitlines()]
-        assert not any(args and args[0] in ('open', 'wifi', 'bluetooth', 'night', 'quiet') for args in recorded), recorded
+        recorded = [json.loads(line) for line in calls.read_text().splitlines()] if calls.exists() else []
+        assert result.returncode == 0, result.stdout + result.stderr + '\nHelper calls: ' + repr(recorded)
+        assert not any(args and args[0] in ('open', 'wifi', 'bluetooth', 'night', 'quiet',
+                                          'power-mode', 'battery-saver') for args in recorded), recorded
         (output / 'result.json').write_text(json.dumps(dict(ok=True, calls=recorded, scope='Actual Plasma applet/full representation with fake helper; no host session or wireless changes'), indent=2)+'\n')
 
 

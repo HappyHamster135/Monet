@@ -48,9 +48,19 @@ int main(int argc, char **argv) {
         require(representation, "Quick Settings full representation failed to instantiate");
         QQuickWindow window; window.resize(440, 520);
         representation->setParentItem(window.contentItem()); representation->setSize(QSizeF(440, 520));
-        window.show(); QTest::qWait(150);
-        quick->setProperty("info", QVariantMap{{"wifi",true},{"bluetooth",true},{"night",false},{"quiet",false},
-            {"quietIndefinite",false},{"quietUntil",0},{"lanConnected",false},{"battery",72},{"minutes",90},{"plugged",false}});
+        window.show(); quick->setProperty("expanded", true);
+        // The Python fixture supplies a real private UPower service. Wait for
+        // the helper and native battery snapshot instead of overwriting info
+        // while those asynchronous reads are still finishing.
+        bool ready = false;
+        for (int i=0; i<200; ++i) {
+            const auto snapshot = info(quick);
+            ready = snapshot.value("wifi").toBool() && snapshot.value("bluetooth").toBool()
+                && snapshot.value("battery").toInt()==80 && quick->property("statusRequest").toString().isEmpty();
+            if (ready) break;
+            QTest::qWait(20);
+        }
+        require(ready, "Private network and native battery state did not become ready");
         auto click = [&](const QString &name) {
             auto item = find(representation, name); require(item, "Missing visible action in Quick Settings");
             QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier,
@@ -58,14 +68,16 @@ int main(int argc, char **argv) {
         };
         const QList<QPair<QString,QString>> pages{{"wifi","wifi"},{"bluetooth","bluetooth"},{"display","night"},{"notifications","quiet"},{"battery","power"}};
         for (const auto &[tile,page] : pages) {
-            if (tile == "battery") {
-                // This private profile has no UPower battery. Supply its fake laptop reading.
-                auto snapshot = info(quick); snapshot["battery"] = 72; snapshot["minutes"] = 90;
-                quick->setProperty("info", snapshot); QCoreApplication::processEvents();
-            }
             const auto before = info(quick);
             click(tile == "battery" ? "quickBatteryOptions" : "quickMore-"+tile);
-            require(info(quick)==before, "Chevron also toggled the tile");
+            // A status refresh may legitimately update other fields while a
+            // pointer event is delivered. Check this control, plus the Python
+            // fixture's independent check that no toggle command was sent.
+            if (tile != "battery") {
+                if (info(quick).value(page)!=before.value(page))
+                    qWarning() << "Changed during" << tile << ":" << before << info(quick);
+                require(info(quick).value(page)==before.value(page), "Chevron also toggled the tile");
+            }
             require(quick->property("optionsPage").toString()==page, "Chevron opened Settings instead of inline choices");
             for(int i=0; i<200; ++i) {
                 auto pane=find(representation,"quickOptionsPane");
