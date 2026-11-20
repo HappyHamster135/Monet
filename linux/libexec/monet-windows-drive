@@ -803,16 +803,27 @@ def open_drive():
         write_state("failed")
         return 1
     files = share_files(DRIVE)
+    # The lock must be available before signing in or switching back to Windows.
+    give_lock(DRIVE)
     write_state("open", path=str(SHARED), owner=person[0], files=str(FILES) if files else "",
                 launchers=windows_launchers(DRIVE, person[0]), faceit=windows_faceit(DRIVE, person[0]))
+    return 0
+
+
+def sync_wifi():
+    """Network profile exchange can finish after the login manager starts."""
+    try:
+        state = json.loads(STATE.read_text())
+    except (OSError, ValueError):
+        return 0
+    if not isinstance(state, dict) or state.get("state") != "open" or not os.path.ismount(DRIVE):
+        return 0
     # Wi-Fi in both: what Monet joined for Windows, what Windows joined for Monet.
     try:
         give_wifi(DRIVE)
         take_wifi(DRIVE)
     except Exception as e:  # the Games folder is shared all the same
         log(f"Wi-Fi in both didn't finish: {e}")
-    # The lock Monet Bridge locks the recovery key with, should Windows get encrypted.
-    give_lock(DRIVE)
     return 0
 
 
@@ -1620,7 +1631,7 @@ def unlock_from_settings():
     if result == "open":
         run("systemctl", "start", "monet-windows-setup.service", timeout=600)
         open_drive()
-        run("systemctl", "start", "--no-block", "monet-windows-files.service", timeout=30)
+        run("systemctl", "start", "--no-block", "monet-windows-files.service", "monet-windows-network.service", timeout=30)
     try:
         state = json.loads(STATE.read_text()).get("state", "")
     except (OSError, ValueError):
@@ -1635,6 +1646,8 @@ def main(argv):
         return 1
     if argv[:1] == ["bring"]:
         return bring_files()
+    if argv[:1] == ["wifi"]:
+        return sync_wifi()
     if argv[:1] == ["unlock"]:
         return unlock_from_settings()
     if argv[:1] == ["unlock-saved"]:

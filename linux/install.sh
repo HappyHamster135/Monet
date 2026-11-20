@@ -393,7 +393,7 @@ done
 # Windows' Bluetooth pairings, taken at every start.
 put 644 "$SRC/systemd/monet-pairings.service" "$UNITDIR/monet-pairings.service"
 # Windows' drive, opened at every start when it's safe: its Games folder, then its captures.
-for unit in monet-windows-drive.service monet-windows-files.service; do
+for unit in monet-windows-drive.service monet-windows-files.service monet-windows-network.service; do
     put 644 "$SRC/systemd/$unit" "$UNITDIR/$unit"
 done
 # The guest's home as new before every sign-in screen (while there's a guest).
@@ -518,7 +518,7 @@ if [ "$IMAGE" = 1 ]; then
     systemctl enable monet-boot-arm.service monet-boot-check.service monet-reset.service monet-seal.service \
         monet-seal-relearn.service
     systemctl enable monet-pairings.service
-    systemctl enable monet-windows-drive.service monet-windows-files.service
+    systemctl enable monet-windows-drive.service monet-windows-files.service monet-windows-network.service
     systemctl enable monet-guest-wipe.service
     # Monet's name, version, mark and links where the system describes itself (KDE's
     # About page, system information, the PC's name on the network, new boot entries' names).
@@ -732,7 +732,7 @@ else
     systemctl enable monet-boot-check.service monet-reset.service monet-seal.service monet-seal-relearn.service \
         >/dev/null 2>&1 || true
     systemctl enable monet-pairings.service >/dev/null 2>&1 || true
-    systemctl enable monet-windows-drive.service monet-windows-files.service >/dev/null 2>&1 || true
+    systemctl enable monet-windows-drive.service monet-windows-files.service monet-windows-network.service >/dev/null 2>&1 || true
     systemctl enable monet-guest-wipe.service >/dev/null 2>&1 || true
 fi
 

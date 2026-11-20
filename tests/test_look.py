@@ -6256,7 +6256,7 @@ class OneGamesFolderForBoth(unittest.TestCase):
 
     def test_units_run_it_before_the_sign_in_screen(self):
         unit = (ROOT / "linux/systemd/monet-windows-drive.service").read_text()
-        for line in ("ExecStart=@LIBEXECDIR@/monet-windows-drive", "After=local-fs.target monet-windows-setup.service NetworkManager.service",
+        for line in ("ExecStart=@LIBEXECDIR@/monet-windows-drive", "After=local-fs.target monet-windows-setup.service",
                      "Before=display-manager.service plasmalogin.service", "RemainAfterExit=yes"):
             self.assertIn(line, unit)
         files = (ROOT / "linux/systemd/monet-windows-files.service").read_text()

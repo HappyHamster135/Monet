@@ -1,6 +1,6 @@
 [Unit]
-Description=Monet: Windows' Games folder for Steam on both sides, and Wi-Fi in both, when Windows' drive is safe to write
-After=local-fs.target monet-windows-setup.service NetworkManager.service
+Description=Monet: Windows' Games folder for Steam on both sides when Windows' drive is safe to write
+After=local-fs.target monet-windows-setup.service
 Before=display-manager.service plasmalogin.service
 
 [Service]

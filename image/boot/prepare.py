@@ -7,6 +7,43 @@ import sys
 
 GRAPHICS = {"i915", "amdgpu", "nvidia", "nvidia_drm", "nvidia_modeset", "nvidia_uvm"}
 ASSIGN = re.compile(r'^(\s*)force_drivers(\+?=)([\"\'])([^\"\']*)\3\s*(#.*)?$')
+HARDWARE_WAIT = '# Monet: wait for setup dependencies only when hardware migration is needed.\n'
+
+
+def hardware_config(script, unit):
+    """Keep Bazzite's early-return check ahead of its slow daemon dependencies."""
+    after = 'After=rpm-ostreed.service tuned.service\n'
+    replacement = 'After=local-fs.target\n'
+    if HARDWARE_WAIT in script and replacement in unit and after not in unit:
+        return script, unit
+    guard = ('if [[ "$KNOWN_IMAGE_NAME" == "$IMAGE_NAME" && \\\n'
+             '    "$KNOWN_IMAGE_BRANCH" == "$IMAGE_BRANCH" && \\\n'
+             '    "$KNOWN_FEDORA_VERSION" == "$FEDORA_VERSION" && \\\n'
+             '    "$HWS_VER_RAN" == "$HWS_VER" ]]; then\n'
+             '  echo "Hardware setup already ran for version $HWS_VER_RAN, skipping"\n'
+             '  exit 0\nfi\n')
+    if (script.count('# GLOBAL\n') != 1 or guard not in script.partition('# GLOBAL\n')[0]
+            or unit.count(after) != 1 or HARDWARE_WAIT in script):
+        raise ValueError('Unrecognized Bazzite hardware setup; review its startup prerequisites')
+    # After= orders jobs even when they fail; it does not require success. Keep
+    # that behavior and the original migration itself, including its own receipts.
+    script = script.replace('# GLOBAL\n', HARDWARE_WAIT
+        + 'systemctl start rpm-ostreed.service tuned.service || true\n\n# GLOBAL\n', 1)
+    return script, unit.replace(after, replacement, 1)
+
+
+def prepare_hardware(root):
+    script = root / 'usr/libexec/bazzite-hardware-setup'
+    unit = root / 'usr/lib/systemd/system/bazzite-hardware-setup.service'
+    if script.is_symlink() or unit.is_symlink():
+        raise ValueError('Refusing symlinked image hardware setup')
+    if not script.exists() and not unit.exists():
+        return
+    before = script.read_text(), unit.read_text()
+    after = hardware_config(*before)
+    for path, old, new in zip((script, unit), before, after):
+        if old != new:
+            path.write_text(new)
 
 
 def autoload_config(text):
@@ -34,6 +71,7 @@ def autoload_config(text):
 
 def prepare(root):
     root = Path(root)
+    prepare_hardware(root)
     config = root / 'usr/lib/dracut/dracut.conf.d/99-nvidia.conf'
     if config.is_symlink():
         raise ValueError('Refusing a symlinked image graphics configuration')

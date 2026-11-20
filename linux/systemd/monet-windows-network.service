@@ -1,0 +1,18 @@
+[Unit]
+Description=Monet: exchange Wi-Fi profiles with Windows after the login manager starts
+Requires=monet-windows-drive.service
+After=monet-windows-drive.service NetworkManager.service display-manager.service plasmalogin.service
+ConditionPathIsMountPoint=/run/monet/windows-drive/c
+
+[Service]
+Type=oneshot
+ExecStart=@LIBEXECDIR@/monet-windows-drive wifi
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+CPUWeight=20
+IOWeight=20
+TimeoutStartSec=5min
+
+[Install]
+WantedBy=multi-user.target

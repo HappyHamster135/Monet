@@ -26,3 +26,23 @@ few-second power-on time.
 
 Dracut documents [driver inclusion and force loading](https://dracut-ng.github.io/dracut/man/dracut.8.html)
 and [module installation](https://dracut-ng.github.io/dracut/developer/modules.html).
+
+## Login prerequisites
+
+The image also moves Bazzite's tuning/package-daemon wait behind its original
+hardware receipt check. An already configured PC can finish that check before
+those daemons start. A changed image, branch, Fedora version or hardware-setup
+revision still waits for both daemons before running the original migration.
+The migration body and its completion records are unchanged. Image preparation
+rejects an unrecognized upstream guard or dependency layout for review.
+
+Windows storage preparation retains its safe-mount, key-export and login-screen
+ordering, and no longer depends on NetworkManager. Wi-Fi profile exchange is a
+separate low-priority unit after the login manager, network manager and confirmed
+Windows mount. Settings' manual unlock starts that exchange too. This lets the
+login screen start without waiting for profile export/import.
+
+The login manager's udev-settle safeguard remains: upstream added it to avoid
+[black screens when DRM devices are still initializing](https://github.com/KDE/plasma-login-manager/commit/a8c752fe28c36fa7d3b95461a7b24ce2d9de7f69).
+These changes need boot qualification on the complete image; isolated dependency
+and helper measurements do not establish a new power-on-to-login time.

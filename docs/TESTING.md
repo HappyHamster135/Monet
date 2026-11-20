@@ -1,5 +1,39 @@
 # Testing Monet on real hardware
 
+## 0.9.8-8 login-screen dependency work — 20 November 2026
+
+Bazzite's original hardware receipt comparison now runs ahead of the tuning and
+package-daemon wait. An unchanged installation keeps its fast
+hardware-setup exit without waiting for those services. A changed image identity,
+branch, Fedora version or setup revision still waits for them before the original
+migration. The image transformation preserves the rest of the script and its
+unit prerequisites, is idempotent and rejects an unexpected upstream layout.
+It has also been checked against the installed vendor script and unit.
+
+Windows-drive preparation no longer waits for NetworkManager. Its safe mounting,
+shared game library and encryption-key export still finish before login starts.
+Wi-Fi profile exchange now runs separately after the login manager and network
+manager, at reduced CPU and I/O priority. A successful manual unlock in Settings
+starts that unit alongside the existing file import. A missing, unconfirmed or
+unmounted Windows drive does no network work, and a network failure does not
+invalidate a completed storage mount.
+
+Validation covers 82 checks with no skips, including real shell receipt checks,
+native systemd unit verification, mount/network ordering, Windows sharing and
+BitLocker behavior, manual-unlock scheduling, startup ordering and syntax.
+A paired one-core helper measurement injects 250 ms each into Wi-Fi export and
+import: the original mount/login prerequisite waits for both, while the candidate
+returns before either runs. Deferred exchange still performs both operations and
+the resulting storage state matches. The original helper fails the new regression.
+This is a controlled dependency measurement with mocked storage operations, not a
+measurement of a real disk or a complete boot.
+
+The login manager's graphics-device wait remains because upstream added it for
+DRM initialization races that can otherwise leave a black login screen. New image
+boot timings on hardware are still required. No host service, firmware setting,
+initramfs or bootloader configuration was changed during these tests. Local work
+uses one CPU core; these are development-branch changes for the next beta.
+
 ## 0.9.8-8 before-desktop profile batching — 20 November 2026
 
 Menu/tray defaults in monet-fresh and keyboard defaults in monet-look --keys now
