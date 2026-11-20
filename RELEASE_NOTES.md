@@ -12,7 +12,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 | Monet-0.9.8-8-Windows.zip            | Monet Bridge for an existing Windows installation. |
 | Monet-0.9.8-8-Linux.tar.gz           | Monet for an existing Bazzite installation. |
 
-### New in 0.9.8-8: A steadier desktop, out to test
+### New in 0.9.8-8: A steadier, faster desktop
 
 - **No bright wallpaper after Restart or Shut down.** The late power screen is
   black, including the next boot after restarting. Startup has a small dim Monet
@@ -23,7 +23,13 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   opens so you can see where to find them. The Store fills the screen when maximized.
 - **Smoother Home Bar.** App icons animate as you reorder them. Crowded app lists
   stay inside their space, with buttons to reach more apps. Switching between one
-  and three bars preserves your pins and restores the appropriate layout.
+  and three bars preserves your pins and restores the appropriate layout. Repeated
+  changes between the side and bottom keep a consistent layout, and duplicate
+  quick controls are removed from the tray.
+- **Your work returns more reliably.** Zen's normal tabs and saved window placement
+  return after restarting. Its generic multiple-tabs warning no longer interrupts
+  restarting; warnings about unsaved page changes remain. Restoring apps no longer
+  runs again during delayed desktop maintenance.
 - **Quick Settings does more itself.** Choose Wi-Fi networks, manage Bluetooth,
   adjust Night Light and set Do Not Disturb without opening the full Settings app.
 - **Automatic power and battery saving.** Balanced hardware scaling is the normal
@@ -43,19 +49,18 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 - **Drag files to Trash with feedback.** The icon highlights and lifts when it will
   accept your files. Screenshot capture is prepared in the background to reduce delay.
 - **A desktop ready sooner.** Optional startup work runs after the desktop is usable,
-  and early graphics loading follows the PC's actual hardware.
+  unchanged hardware skips unnecessary setup waits, and early graphics loading
+  follows the PC's actual hardware. Profile setup launches fewer helper processes,
+  and Store refreshes leave the interface responsive while checking installed apps.
 - **CLI help only shows help.** Adding `--help` to Update, Rollback or a helper command
   returns the instructions without starting an update, requesting elevation or writing state.
 
-#### Testing this beta
+#### Installing the update
 
-In **Settings → Updates**, enable **Show beta versions**, choose **Install beta**,
-then restart. Please test the complete Restart and Shut down sequence on your
-laptop: the bright Monet wallpaper should never appear between the desktop and
-power-off or during the next boot. Also try floating-window controls, Home Bar
-reordering and the new Task Manager pages. Boot speed, physical display handoff
-and battery behavior vary with hardware and still need beta feedback. Repeated
-Steam shader processing remains a separate desktop-specific investigation.
+Open **Settings → Updates**, choose **Check for updates** and **Install**, then
+restart. This is the regular **0.9.8-8** release. Boot speed and battery savings
+depend on the PC's hardware. Repeated Steam shader processing remains a separate
+desktop-specific investigation.
 
 ### New in 0.9.8-7: Find your way back in the Store
 

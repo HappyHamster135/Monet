@@ -894,8 +894,10 @@ class Packaging(unittest.TestCase):
         for line in ("PartOf=graphical-session.target", "ExecStart=@LIBEXECDIR@/monet-work", "WantedBy=graphical-session.target"):
             self.assertIn(line, unit)
         session = (ROOT / "linux/libexec/monet-session").read_text()
-        restore = '[ -z "$GUEST" ] && "$LIBEXECDIR/monet-quick" trip-apps-again'
+        restore = '"$LIBEXECDIR/monet-quick" trip-apps-again'
         self.assertIn(restore, session)
+        self.assertEqual(session.count(restore), 1)
+        self.assertIn('if [ -z "$GUEST" ] && [ "${1:-}" != --later ]; then', session)
         self.assertLess(session.index(restore), session.index('"$LIBEXECDIR/monet-quick" steam-share'))
 
     def test_settings_offers_one_switch_on_power_and_windows_and_a_restart_summary(self):

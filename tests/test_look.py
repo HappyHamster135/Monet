@@ -4577,8 +4577,9 @@ class SignInWaitsLess(unittest.TestCase):
         jobs = ('"$LIBEXECDIR/monet-quick" frames', '"$LIBEXECDIR/monet-look" --games-gpu', '"$LIBEXECDIR/monet-quick" zen')
         for job in jobs:
             self.assertIn(job, later)
-            # Not at sign-in itself any more.
-            self.assertEqual(session.count(job), 1, job)
+            # The ordinary maintenance command only runs later. A changed
+            # build prepares Zen with --login before saved apps reopen.
+            self.assertEqual(session.count(job + ' >/dev/null 2>&1'), 1, job)
         # What they looked at is noted after they ran, and the sign-in itself never runs in --later.
         self.assertGreater(later.index('apps_now > "$apps_seen"'), later.index('"$LIBEXECDIR/monet-quick" zen'))
         self.assertIn("exit 0", later)

@@ -40,7 +40,8 @@ elif name=='monet' and command in ('version','--version'): print('monet 0.9.8-8'
 elif name=='monet-files' and command=='stacks-reconcile': record('stacks')
 ''')
         stub.chmod(0o755)
-        for name in ('monet','monet-quick','monet-files','monet-look','monet-light','monet-profile','notify-send','systemd-run'):
+        for name in ('monet','monet-quick','monet-files','monet-look','monet-light','monet-profile',
+                     'monet-widgets','notify-send','systemd-run'):
             (helpers / name).symlink_to(stub)
         session = root / 'monet-session'
         session.write_text((ROOT / 'linux/libexec/monet-session').read_text().replace('@BINDIR@', str(helpers))
@@ -91,6 +92,23 @@ elif name=='monet-files' and command=='stacks-reconcile': record('stacks')
                     self.assertEqual(events.read_text().splitlines(),['zen-later'])
                 finally: stop(process)
             self.assertNotEqual(*signatures)
+
+    def test_guest_login_does_not_prepare_personal_profiles_or_restore_apps(self):
+        from tools.test import private_session, stop
+        with tempfile.TemporaryDirectory() as folder, private_session() as env:
+            root = Path(folder)
+            session, events, revision = self.stage_revision_session(root, env)
+            identity = root / 'helpers/id'
+            identity.write_text('#!/bin/sh\nprintf "guest\\n"\n'); identity.chmod(0o755)
+            process = subprocess.Popen(['bash',str(session)],env=env,start_new_session=True,
+                                       stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+            try:
+                self.assertEqual(process.wait(timeout=5),0)
+                lines = events.read_text().splitlines() if events.exists() else []
+                self.assertNotIn('restore',lines)
+                self.assertNotIn('zen-login',lines)
+                self.assertFalse((Path(env['XDG_CACHE_HOME'])/'monet/zen-login-revision').exists())
+            finally: stop(process)
 
     def test_restore_starts_before_unrelated_sign_in_work_finishes(self):
         from tools.test import private_session, stop
