@@ -446,3 +446,42 @@ class ProfileUpgrades(unittest.TestCase):
         (flags/'files-defaults-v1').unlink(); fresh()
         self.assertEqual(log.read_text().splitlines()[-1], 'monet-quick')
         self.assertEqual(rc.read_text(), '[ActionPlugins][0]\nRightButton;NoModifier=custom-menu\nMiddleButton;NoModifier=\n')
+
+    def test_before_desktop_existing_menu_bindings_need_no_profile_process(self):
+        path = self.root/'monet-fresh'
+        path.write_text((ROOT/'linux/libexec/monet-fresh').read_text()
+            .replace('@LIBEXECDIR@', str(self.root)).replace('@BINDIR@', str(self.root)))
+        path.chmod(0o755)
+        flags = self.config/'monet'; flags.mkdir()
+        for name in ('region-defaults-v1', 'files-defaults-v1', 'downloads-v2',
+                     'menu-add-widgets', 'menu-monet', 'tray-brightness-6'):
+            (flags/name).touch()
+        (self.root/'monet').write_text('#!/bin/sh\necho test-version\n')
+        (self.root/'monet').chmod(0o755)
+        cache = self.root/'cache'; cache.mkdir()
+        (cache/'monet-version').write_text('test-version\n')
+        real = self.root/'profile-real'; shutil.copyfile(self.helper, real); real.chmod(0o755)
+        self.helper.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$MONET_PROFILE_CALL_LOG"\nexec "$MONET_REAL_PROFILE" "$@"\n')
+        log = self.root/'profile-calls'
+        env = dict(self.env, XDG_CACHE_HOME=str(cache), MONET_PROFILE_CALL_LOG=str(log), MONET_REAL_PROFILE=str(real))
+        rc = self.config/'plasma-org.kde.plasma.desktop-appletsrc'
+        chosen = '[ActionPlugins][0]\nRightButton;NoModifier=custom-menu\nMiddleButton;NoModifier=\n'
+        rc.write_text(chosen)
+        for _ in range(2): subprocess.run([str(path)], env=env, check=True, capture_output=True, timeout=15)
+        self.assertFalse(log.exists())
+        self.assertEqual(rc.read_text(), chosen)
+        # A common account has only the right-click binding locally. Do not
+        # start a profile process for it merely because middle-click is inherited.
+        rc.write_text('[ActionPlugins][0]\nRightButton;NoModifier=custom-menu\n')
+        subprocess.run([str(path)], env=env, check=True, capture_output=True, timeout=15)
+        self.assertEqual(len(log.read_text().splitlines()), 1)
+        self.assertIn('--key MiddleButton;NoModifier', log.read_text())
+        self.assertIn('RightButton;NoModifier=custom-menu\n', rc.read_text())
+        log.unlink()
+        # A missing binding must still be repaired, even with all old receipts.
+        rc.write_text('[ActionPlugins][0][RightButton;NoModifier]\nadd widgets=true\n')
+        subprocess.run([str(path)], env=env, check=True, capture_output=True, timeout=15)
+        self.assertEqual(len(log.read_text().splitlines()), 2)
+        value = subprocess.check_output(['kreadconfig6','--file',str(rc),'--group','ActionPlugins',
+            '--group','0','--key','RightButton;NoModifier'],env=env,text=True).strip()
+        self.assertEqual(value, 'org.kde.contextmenu')

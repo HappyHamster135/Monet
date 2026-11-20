@@ -225,6 +225,7 @@ import html
 import json
 import math
 import os
+import stat
 import re
 import select
 import shlex
@@ -2509,6 +2510,7 @@ def entry_by_id(app_id):
 FRAME_MARK = "Monet frame:"
 FRAME_BOX = (26, 26, 76)  # where the app's icon sits on the canvas: x, y and size on the 128 grid
 INHERITED = ("breeze", "hicolor")  # what Monet's index.theme inherits, nearest first
+ICON_FILE_CACHE = Path(os.environ.get("XDG_CACHE_HOME") or HOME / ".cache") / "monet/icon-files-v1.json"
 SVG_NS, XLINK = "http://www.w3.org/2000/svg", "http://www.w3.org/1999/xlink"
 ICON_NAME = re.compile(r"[\w+-][\w.+-]*")
 ROOT_ONLY = {"xmlns", "width", "height", "viewBox", "version", "baseProfile", "id", "x", "y", "transform",
@@ -2541,18 +2543,97 @@ def icon_size(parts):
     return max(sizes, default=0)
 
 
+def icon_boot_identity():
+    # Immutable images can normalize filesystem metadata. Rebuild once after
+    # boot rather than trusting an older deployment's directory index forever.
+    try:
+        return Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+    except OSError:
+        return ''
+
+
+def icon_directory_stamp(path):
+    """Directory identity detects new/deleted/renamed icons, even with restored mtimes."""
+    try:
+        st = path.stat()
+        return [st.st_dev, st.st_ino, st.st_mtime_ns, st.st_ctime_ns]
+    except OSError:
+        return None
+
+
 def icon_files(names):
     """Each name's icon files in the themes Monet inherits, then the pixmaps, as (rank, size, path)."""
-    found = {}
+    if not names:
+        return {}
     roots = [(rank, base / "icons" / theme) for rank, theme in enumerate(INHERITED) for base in data_dirs()]
     roots += [(len(INHERITED), base / "pixmaps") for base in data_dirs()]
+    identity = [[rank, str(root)] for rank, root in roots]
+    boot = icon_boot_identity()
+    try:
+        if not boot:
+            raise ValueError('No boot identity for the icon index')
+        fd = os.open(ICON_FILE_CACHE, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+        with os.fdopen(fd, 'rb') as stream:
+            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                raise ValueError('Not a regular icon index')
+            raw = stream.read(8 * 1024 * 1024 + 1)
+        if len(raw) > 8 * 1024 * 1024:
+            raise ValueError('Oversized icon index')
+        saved = json.loads(raw)
+        directories = saved['directories']
+        if (saved['version'] != 1 or saved['boot'] != boot
+                or saved['roots'] != identity or saved['names'] != sorted(names)
+                or not isinstance(directories, dict)
+                or any(str(root) not in directories for _, root in roots)
+                or any(icon_directory_stamp(Path(path)) != stamp for path, stamp in directories.items())):
+            raise ValueError('Changed icon directories')
+        found = {}
+        for name, entries in saved['found'].items():
+            if name not in names:
+                raise ValueError('Unexpected icon name')
+            found[name] = []
+            for rank, size, filename in entries:
+                path = Path(filename)
+                if (not isinstance(rank, int) or not isinstance(size, int) or size < 0
+                        or path.stem != name or path.suffix.lower() not in ('.png', '.svg', '.svgz')
+                        or str(path.parent) not in directories
+                        or not any(rank == r and path.is_relative_to(root) for r, root in roots)):
+                    raise ValueError('Invalid icon index entry')
+                found[name].append((rank, size, path))
+        return found
+    except (OSError, ValueError, TypeError, KeyError, AttributeError):
+        pass
+
+    found, directories, complete = {}, {}, True
+    def failed_walk(error):
+        nonlocal complete
+        complete = False
     for rank, root in roots:
-        for folder, _, files in os.walk(root):
+        # Capture each directory before os.walk lists it: the root here, and
+        # children while their parent is yielded. A concurrent install must not
+        # leave a seemingly current cache that silently missed its new icon.
+        directories.setdefault(str(root), icon_directory_stamp(root))
+        if directories[str(root)] is None:
+            continue
+        for folder, children, files in os.walk(root, onerror=failed_walk):
+            if directories.get(str(folder)) != icon_directory_stamp(Path(folder)):
+                complete = False
+            for child in children:
+                path = Path(folder) / child
+                directories.setdefault(str(path), icon_directory_stamp(path))
             for f in files:
                 stem, ext = os.path.splitext(f)
                 if stem in names and ext.lower() in (".png", ".svg", ".svgz"):
                     size = icon_size(Path(folder).relative_to(root).parts)
                     found.setdefault(stem, []).append((rank, size, Path(folder) / f))
+    if boot and complete and all(icon_directory_stamp(Path(path)) == stamp for path, stamp in directories.items()):
+        saved = dict(version=1, boot=boot, roots=identity, names=sorted(names), directories=directories,
+                     found={name: [[rank, size, str(path)] for rank, size, path in entries]
+                            for name, entries in found.items()})
+        try:
+            write_private(ICON_FILE_CACHE, json.dumps(saved))
+        except OSError:
+            pass  # An unwritable/partial cache must never prevent app icons.
     return found
 
 

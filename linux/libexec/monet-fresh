@@ -30,8 +30,26 @@ revision="$(cat "$DATADIR/monet/desktop-revision" 2>/dev/null)"
 # empty value or a different plugin is a user choice and is left alone.
 if command -v kwriteconfig6 >/dev/null; then
     rc=plasma-org.kde.plasma.desktop-appletsrc
-    kw --file "$rc" --group ActionPlugins --group 0 --key "RightButton;NoModifier" org.kde.contextmenu
-    kw --file "$rc" --group ActionPlugins --group 0 --key "MiddleButton;NoModifier" org.kde.paste
+    # Existing account bindings (including explicit empty/custom ones) need no
+    # profile process or KConfig startup. Only accept the unambiguous canonical
+    # form here; missing/flagged entries still use the ownership-aware helper.
+    known_bindings="$(awk '
+        { sub(/^[[:space:]]+/, ""); sub(/[[:space:]]+$/, "") }
+        /^\[ActionPlugins\]\[0\]\[\$/ { flagged = 1 }
+        /^\[/ { inside = ($0 == "[ActionPlugins][0]"); next }
+        inside && /^RightButton;NoModifier=/ { right = 1 }
+        inside && /^MiddleButton;NoModifier=/ { middle = 1 }
+        inside && /^(Right|Middle)Button;NoModifier\[\$/ { flagged = 1 }
+        END { if (!flagged) printf "%s%s", right ? "R" : "", middle ? "M" : "" }
+    ' "$CONFIG/$rc" 2>/dev/null)" || known_bindings=""
+    case "$known_bindings" in
+        *R*) ;; # A local value, even empty, already belongs to the account.
+        *) kw --file "$rc" --group ActionPlugins --group 0 --key "RightButton;NoModifier" org.kde.contextmenu ;;
+    esac
+    case "$known_bindings" in
+        *M*) ;;
+        *) kw --file "$rc" --group ActionPlugins --group 0 --key "MiddleButton;NoModifier" org.kde.paste ;;
+    esac
 fi
 
 # The desktop's right-click menu offers Add or Manage Widgets, which KDE hides

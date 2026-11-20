@@ -1,5 +1,45 @@
 # Testing Monet on real hardware
 
+## 0.9.8-8 sign-in and maintenance work — 20 November 2026
+
+The current laptop's recorded system startup is 41.3 seconds in systemd's report,
+including 14.3 seconds in firmware and 9.0 seconds in the loader. That report is
+not a measurement of when the desktop becomes usable. These source changes have
+not been installed/reboot-timed on the laptop.
+
+Before Plasma starts, monet-fresh now skips the profile/KConfig process for each
+menu binding already present in the account, including explicit empty/custom
+choices. Missing or flagged entries retain the normal ownership-aware check.
+This also helps accounts with one local binding and one inherited/default
+binding. Cache repair after an image change and failed-default retries remain.
+
+On one CPU core, five-sample isolated medians for an unchanged account with both
+bindings present fell from 297 ms to 25 ms, removing two profile processes from
+that path. The native KConfig regression also checks missing-binding repair and
+that a single existing binding avoids its own helper process.
+
+App-icon maintenance now reuses a directory index within the same boot. Root,
+directory identity/mtime/ctime, requested names and search-order changes rebuild
+it; source image content is still read fresh. The next boot rebuilds the index
+to handle immutable images whose timestamps can be normalized. Corrupt,
+unwritable or non-regular cache files fall back to discovery, and a concurrent
+icon installation cannot publish an incomplete index.
+
+In a synthetic tree with 20,000 unrelated files and 30 requested icons, median
+lookup fell from 32.2 ms to 2.4 ms on a cache hit. The first indexed scan was
+36.2 ms. These helper numbers do not predict a full-machine boot improvement.
+
+Icon framing, app renaming and browser appearance maintenance use background.slice,
+Nice=10, best-effort I/O at priority 7 and reduced CPU/I/O weights, so cosmetic
+work yields to apps while profile writes can still make progress on a busy disk.
+No recurring timer was added. User app startup and session restoration retain
+their current ordering.
+
+Relevant validation passes 78 Python checks with no skips, plus verification of
+all three staged user-service definitions. The old sources fail the new
+no-repeat-scan and no-unnecessary-profile-process regressions. Local builds,
+benchmarks and tests use one CPU core.
+
 ## 0.9.8-8 click reliability and pointer work — 20 November 2026
 
 Settings' shared action pills, Games' Play/action buttons and Store tiles now
