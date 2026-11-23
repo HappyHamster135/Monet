@@ -4,8 +4,11 @@
 
 `tools/bench-boot.py` cold-starts a disposable qcow2 overlay under KVM, including
 UEFI, GRUB and the installed kernel/initrd. The input disk is never modified.
-One warm-up boot is excluded; three subsequent power-ons are timed. Each guest
-gets one CPU and 8 GiB of memory. Host page cache is uncontrolled. These VM
+One warm-up boot is excluded; three subsequent power-ons are timed. Timed guests
+get one CPU and 8 GiB of memory. The separate installer and image build use up
+to two CI cores; installation time is not included in boot measurements. The
+installer is bounded to twenty minutes and records guest memory, I/O pressure,
+process state and journal diagnostics. Host page cache is uncontrolled. These VM
 measurements are separate from physical laptop timings and from Secure Boot
 qualification; the benchmark uses ordinary OVMF without enrolled keys.
 
@@ -31,8 +34,9 @@ Recorded physical boot metadata is currently 23.454174 s before the kernel
 (firmware plus loader) and 11.718795 s from kernel start to login-manager process
 start: about 35.17 s combined. This is not a first-visible-login measurement, and
 is not a measured 0.9.8-9 improvement. The new tests must finish before recording
-a new end-to-end result. Six focused checks validate phase accounting, real
-release qualification frames and provisioning-input validation.
+a new end-to-end result. Seven focused checks validate phase accounting, real
+release qualification frames, provisioning-input validation and preservation of
+the installer's status/SSH streams.
 
 Initramfs compression was also checked against the exact published AMD/Intel
 payload, on one pinned CPU at low priority. Levels 3, 6, 9, 12, 15 and 19 all

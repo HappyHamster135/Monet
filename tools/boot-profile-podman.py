@@ -31,7 +31,12 @@ def prepare(arguments):
     if not script.startswith(header):
         raise ValueError('Review the changed bcvk entrypoint before adapting it')
     source.write_text(script.replace(header, header +
-        'exec > /run/bcvk-console-log/entrypoint.log 2>&1\nset -x\n', 1))
+        # Only the main invocation runs QEMU. Secondary invocations carry SSH
+        # and status streams that must keep their original stdout and stderr.
+        'if [[ $# -eq 0 ]]; then\n'
+        '    exec >> /run/bcvk-console-log/entrypoint.log 2>&1\n'
+        '    set -x\n'
+        'fi\n', 1))
     return arguments
 
 
