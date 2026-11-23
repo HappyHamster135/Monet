@@ -109,11 +109,14 @@ def credentials(public_key):
             'systemd.unit-dropin.multi-user.target':'[Unit]\nWants=sshd.service\n'}
 
 
-def ssh(port, key, command, timeout=15):
-    return subprocess.run(['ssh','-i',str(key),'-p',str(port),'-o','IdentitiesOnly=yes',
+def ssh_command(port, key, command):
+    return ['ssh','-i',str(key),'-p',str(port),'-o','IdentitiesOnly=yes',
         '-o','StrictHostKeyChecking=no','-o','UserKnownHostsFile=/dev/null',
-        '-o','ConnectTimeout=2','-o','BatchMode=yes','root@127.0.0.1',command],
-        capture_output=True,text=True,timeout=timeout)
+        '-o','ConnectTimeout=2','-o','BatchMode=yes','root@127.0.0.1',command]
+
+
+def ssh(port, key, command, timeout=15):
+    return subprocess.run(ssh_command(port,key,command),capture_output=True,text=True,timeout=timeout)
 
 
 def boot(args, disk, variables, key, index, runtime):
@@ -137,7 +140,7 @@ def boot(args, disk, variables, key, index, runtime):
     for name, value in credentials(key.with_suffix('.pub').read_text().strip()).items():
         payload = base64.b64encode(value.encode()).decode()
         command += ['-smbios', f'type=11,value=io.systemd.credential.binary:{name}={payload}']
-    process = None; started = time.monotonic(); first = None; stable = 0
+    process = None; probe = None; started = time.monotonic(); first = None; stable = 0
     clock_frame = None; input_sent = None; input_verified = None
     try:
         with (work/'qemu.log').open('w') as log:
@@ -146,10 +149,17 @@ def boot(args, disk, variables, key, index, runtime):
         while time.monotonic() < deadline:
             if process.poll() is not None: raise RuntimeError('VM exited before its login screen')
             if shutil.disk_usage(args.output).free < 8 * 1024**3: raise RuntimeError('Keeping 8 GiB disk headroom')
-            if time.monotonic() >= next_ssh:
-                reply = ssh(port,key,'systemctl is-active plasmalogin.service',timeout=5)
-                active = reply.returncode == 0 and reply.stdout.strip() == 'active'
-                next_ssh = time.monotonic()+2
+            # SSH readiness must not block first-frame sampling. In particular,
+            # a refused connection or slow PAM handshake is not a display delay.
+            if probe is not None and (probe.poll() is not None or time.monotonic()-probe_started > 5):
+                if probe.poll() is None: probe.kill()
+                output,_ = probe.communicate()
+                active = probe.returncode == 0 and output.strip() == 'active'
+                probe = None; next_ssh = time.monotonic()+2
+            if not active and probe is None and time.monotonic() >= next_ssh:
+                probe = subprocess.Popen(ssh_command(port,key,'systemctl is-active plasmalogin.service'),
+                    stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True)
+                probe_started = time.monotonic()
             if monitor.exists():
                 qmp(monitor,'screendump',filename=str(frame))
                 captured=time.monotonic()-started
@@ -212,6 +222,9 @@ def boot(args, disk, variables, key, index, runtime):
         except subprocess.TimeoutExpired: raise RuntimeError('VM did not shut down cleanly; refusing another sample')
         return result
     finally:
+        if probe is not None:
+            if probe.poll() is None: probe.kill()
+            probe.wait()
         if process and process.poll() is None: process.kill(); process.wait()
 
 

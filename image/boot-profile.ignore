@@ -1,0 +1,10 @@
+.git
+dist
+testbench
+__pycache__
+**/__pycache__
+**/*.pyc
+target/*
+!target/boot-profile
+target/boot-profile/*
+!target/boot-profile/package

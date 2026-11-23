@@ -45,7 +45,7 @@ def main():
         folder=installs[0].parent
         for child in folder.iterdir():child.rename(package/child.name)
         folder.rmdir()
-    if not (package/'install.sh').is_file() or not (package/'bin/monet').is_file():
+    if not (package/'install.sh').is_file() or not (package/'monet').is_file():
         raise RuntimeError('Linux package layout changed')
     (root/'package-source.json').write_text(json.dumps(dict(sha=sha,run=run['id'],artifact=artifact['id'],version=version),indent=2)+'\n')
 

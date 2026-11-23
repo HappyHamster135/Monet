@@ -9,6 +9,7 @@ on:
     paths:
       - .github/workflows/boot-profile.yml
       - image/BootProfile.Containerfile
+      - image/boot-profile.ignore
       - image/boot/**
       - tools/bench-boot.py
       - tools/boot-profile-package.py
@@ -55,7 +56,7 @@ jobs:
           sudo rm target/boot-profile/baseline/working.qcow2 target/boot-profile/baseline.qcow2
       - name: Build the development preview without publishing
         run: |
-          sudo taskset -c "$PROFILE_CPU" nice -n 10 podman build -f image/BootProfile.Containerfile --build-arg BASE="$BASE" --build-arg VERSION="$(cat VERSION)" --build-arg REVISION="$GITHUB_SHA" -t localhost/monet-boot-profile:candidate .
+          sudo taskset -c "$PROFILE_CPU" nice -n 10 podman build --ignorefile image/boot-profile.ignore -f image/BootProfile.Containerfile --build-arg BASE="$BASE" --build-arg VERSION="$(cat VERSION)" --build-arg REVISION="$GITHUB_SHA" -t localhost/monet-boot-profile:candidate .
           sudo podman image prune -f
       - name: Candidate installed-disk cold boots
         run: |
