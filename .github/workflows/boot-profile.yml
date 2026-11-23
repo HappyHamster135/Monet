@@ -1,0 +1,74 @@
+name: Development boot timing
+
+# Private runner-local images/disks only. No image push, tag, release, signing key
+# or modification of the default branch. The production Secure Boot qualification
+# remains separate; these repeatable A/B timings use ordinary OVMF under KVM.
+on:
+  push:
+    branches: [monet-0.9.8-9]
+    paths:
+      - .github/workflows/boot-profile.yml
+      - image/BootProfile.Containerfile
+      - image/boot/**
+      - tools/bench-boot.py
+      - tools/boot-profile-package.py
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+  packages: read
+concurrency:
+  group: development-boot-timing
+  cancel-in-progress: false
+jobs:
+  measure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      BASE: ghcr.io/happyhamster135/monet-amd@sha256:15a82fc9df8aab6b90177e87a686b3ff89a68393c5ecea9c4acb42ae80dd4363
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Prepare the isolated KVM bench
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker system prune -af >/dev/null
+          tools/configure-ci-apt.sh
+          sudo apt-get update -q
+          sudo apt-get install -y -q qemu-system-x86 qemu-utils ovmf virtiofsd python3-pil podman
+          echo "PROFILE_CPU=$(python3 -c 'import os; print(min(os.sched_getaffinity(0)))')" >> "$GITHUB_ENV"
+          test -r /dev/kvm
+          mkdir -p target/boot-profile
+          curl --fail --location --retry 3 https://github.com/bootc-dev/bcvk/releases/download/v0.22.0/bcvk-x86_64-unknown-linux-gnu.tar.gz -o target/boot-profile/bcvk.tar.gz
+          echo 'eb72198c0d36fab75bfcadbb6794a87afa6f496a4da6b1b34d27728243fa6474  target/boot-profile/bcvk.tar.gz' | sha256sum -c
+          tar -xzf target/boot-profile/bcvk.tar.gz -C target/boot-profile
+          df -h /
+      - name: Fetch the exact source-matched Linux package
+        run: python3 tools/boot-profile-package.py
+      - name: Baseline installed-disk cold boots
+        run: |
+          sudo taskset -c "$PROFILE_CPU" nice -n 10 podman pull "$BASE"
+          sudo taskset -c "$PROFILE_CPU" nice -n 10 target/boot-profile/bcvk-x86_64-unknown-linux-gnu to-disk --format qcow2 --filesystem btrfs --disk-size 64G --vcpus 1 --memory 8G --target-transport containers-storage "$BASE" target/boot-profile/baseline.qcow2
+          sudo taskset -c "$PROFILE_CPU" nice -n 10 python3 tools/bench-boot.py target/boot-profile/baseline.qcow2 target/boot-profile/baseline
+          sudo rm target/boot-profile/baseline/working.qcow2 target/boot-profile/baseline.qcow2
+      - name: Build the development preview without publishing
+        run: |
+          sudo taskset -c "$PROFILE_CPU" nice -n 10 podman build -f image/BootProfile.Containerfile --build-arg BASE="$BASE" --build-arg VERSION="$(cat VERSION)" --build-arg REVISION="$GITHUB_SHA" -t localhost/monet-boot-profile:candidate .
+          sudo podman image prune -f
+      - name: Candidate installed-disk cold boots
+        run: |
+          sudo taskset -c "$PROFILE_CPU" nice -n 10 target/boot-profile/bcvk-x86_64-unknown-linux-gnu to-disk --format qcow2 --filesystem btrfs --disk-size 64G --vcpus 1 --memory 8G --target-transport containers-storage localhost/monet-boot-profile:candidate target/boot-profile/candidate.qcow2
+          sudo taskset -c "$PROFILE_CPU" nice -n 10 python3 tools/bench-boot.py target/boot-profile/candidate.qcow2 target/boot-profile/candidate
+          sudo rm target/boot-profile/candidate/working.qcow2 target/boot-profile/candidate.qcow2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: boot-timing-results
+          path: |
+            target/boot-profile/*/summary.json
+            target/boot-profile/*/boot-*/*.json
+            target/boot-profile/*/boot-*/*.txt
+            target/boot-profile/*/boot-*/*.log
+            target/boot-profile/*/boot-*/*.png
+            target/boot-profile/package-source.json
+          retention-days: 14

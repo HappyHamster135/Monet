@@ -1,5 +1,39 @@
 # Testing Monet on real hardware
 
+## 0.9.8-9 installed-disk boot profiling — 23 November 2026
+
+`tools/bench-boot.py` cold-starts a disposable qcow2 overlay under KVM, including
+UEFI, GRUB and the installed kernel/initrd. The input disk is never modified.
+One warm-up boot is excluded; three subsequent power-ons are timed. Each guest
+gets one CPU and 8 GiB of memory. Host page cache is uncontrolled. These VM
+measurements are separate from physical laptop timings and from Secure Boot
+qualification; the benchmark uses ordinary OVMF without enrolled keys.
+
+The runner captures the real Monet clock frame, sends a test keystroke and
+requires stable visible password controls plus an active login-manager service.
+It records visible-frame, controls and keyboard-verification times separately.
+SSH availability does not gate when the visible frame is timestamped. Screenshots,
+QEMU/guest logs, systemd phase properties and the login critical chain are saved.
+A visible wallpaper or a started systemd target alone cannot pass. A graphical
+autologin session is rejected. The synthetic account/key exist only inside the
+VM, and successful-boot flags are seeded between samples to measure normal boots
+without altering update trial counters. Private SSH keys are not uploaded.
+
+The development-only `boot-profile.yml` workflow fetches the exact commit's Linux
+CI artifact, then compares released 0.9.8-8 with a source-matched preview on the
+same pinned released AMD/Intel base. The preview reapplies installation scripts,
+boot preparation, initramfs generation and QML precompilation, while retaining
+that base's kernel/native ABI to isolate the source changes. Images remain local
+to the disposable runner; no registry tag or release is published. Only bounded
+measurement artifacts are retained, and the large guest disks are removed.
+
+Recorded physical boot metadata is currently 23.454174 s before the kernel
+(firmware plus loader) and 11.718795 s from kernel start to login-manager process
+start: about 35.17 s combined. This is not a first-visible-login measurement, and
+is not a measured 0.9.8-9 improvement. The new tests must finish before recording
+a new end-to-end result. Six focused checks validate phase accounting, real
+release qualification frames and provisioning-input validation.
+
 ## 0.9.8-9 startup and Settings development — 23 November 2026
 
 Settings now loads its 25 pages from separate QML files, compiling only the page

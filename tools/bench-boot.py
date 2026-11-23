@@ -1,0 +1,256 @@
+#!/usr/bin/env python3
+"""Cold-boot a disposable overlay of an installed Monet disk to its visible login form.
+
+No physical disks or host settings are changed. This measures a complete QEMU
+power-on, including UEFI/GRUB, rather than treating a systemd target as a screen.
+The VM-only provisioning credential adds a synthetic user and a temporary SSH key.
+"""
+import argparse
+import base64
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import socket
+import statistics
+import subprocess
+import tempfile
+import time
+
+
+
+def login_controls(image):
+    """Find a wide orange input outline/button in Monet's right-hand login panel.
+
+    Excludes the clock's small orange dot, round avatars, black power screens,
+    and text glyphs. Daemon activation is independently required by the caller.
+    """
+    image = image.convert('RGB').resize((320, 200))
+    pixels = image.load()
+    points = {(x, y) for y in range(40, 190) for x in range(145, 315)
+              if (lambda r, g, b: r > 95 and r > g * 1.65 and g > b * 1.1 and g < 150)(*pixels[x, y])}
+    while points:
+        start = points.pop(); todo = [start]; component = [start]
+        while todo:
+            x, y = todo.pop()
+            for neighbour in ((x-1,y), (x+1,y), (x,y-1), (x,y+1)):
+                if neighbour in points:
+                    points.remove(neighbour); todo.append(neighbour); component.append(neighbour)
+        xs, ys = zip(*component)
+        width, height = max(xs)-min(xs)+1, max(ys)-min(ys)+1
+        if len(component) >= 60 and width >= 25 and height >= 5 and width / height >= 2.2:
+            return True
+    return False
+
+
+def login_clock(image):
+    """Recognize the brand dot and large clock in the spacious greeter layout."""
+    pixels = image.convert('RGB').resize((320, 200)).load()
+    orange = sum(1 for y in range(55, 95) for x in range(60, 100)
+                 if (lambda r,g,b: r>140 and r>g*1.7 and g>b*1.1)(*pixels[x,y]))
+    white = sum(1 for y in range(75, 125) for x in range(25, 140)
+                if min(pixels[x,y])>165 and max(pixels[x,y])-min(pixels[x,y])<65)
+    return 1 <= orange <= 16 and white >= 90
+
+
+def timing_phases(values):
+    """systemd's firmware timestamp includes the loader; do not count it twice."""
+    firmware = int(values.get('FirmwareTimestampMonotonic', 0))
+    loader = int(values.get('LoaderTimestampMonotonic', 0))
+    initrd = int(values.get('InitRDTimestampMonotonic', 0))
+    userspace = int(values.get('UserspaceTimestampMonotonic', 0))
+    return dict(firmware_ms=max(0, firmware-loader)/1000 if firmware and loader else None,
+                loader_ms=loader/1000 if loader else None,
+                kernel_ms=initrd/1000 if initrd else userspace/1000,
+                initrd_ms=max(0, userspace-initrd)/1000 if initrd else 0,
+                userspace_start_ms=userspace/1000)
+
+
+def properties(text):
+    return dict(line.split('=', 1) for line in text.splitlines() if '=' in line)
+
+
+def qmp(path, command, **arguments):
+    with socket.socket(socket.AF_UNIX) as sock:
+        sock.settimeout(8); sock.connect(str(path))
+        with sock.makefile('rwb') as stream:
+            json.loads(stream.readline())
+            for request in ({'execute':'qmp_capabilities'}, {'execute':command, 'arguments':arguments}):
+                stream.write(json.dumps(request).encode()+b'\n'); stream.flush()
+                while True:
+                    reply = json.loads(stream.readline())
+                    if 'event' not in reply: break
+                if 'error' in reply: raise RuntimeError(str(reply['error']))
+            return reply.get('return')
+
+
+def credentials(public_key):
+    if not re.fullmatch(r'ssh-ed25519 [A-Za-z0-9+/=]+ monet-boot-benchmark', public_key):
+        raise ValueError('Unexpected benchmark public key')
+    setup = ('install -d -m 0700 /root/.ssh; '
+             f'printf "%s\\n" "{public_key}" > /root/.ssh/authorized_keys; '
+             'chmod 0600 /root/.ssh/authorized_keys; restorecon -RF /root/.ssh; '
+             'if ! id monet-bench >/dev/null 2>&1; then useradd -m monet-bench; '
+             'echo monet-bench:MonetBenchmarkOnly42 | chpasswd; fi')
+    unit = ('[Unit]\nDefaultDependencies=no\nAfter=local-fs.target systemd-tmpfiles-setup.service systemd-sysusers.service\n'
+            'Before=systemd-user-sessions.service plasmalogin.service sshd.service\n'
+            '[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/bin/sh -ec \''+setup+'\'\n')
+    return {'systemd.extra-unit.monet-boot-bench-setup.service':unit,
+            'systemd.unit-dropin.sysinit.target':'[Unit]\nWants=monet-boot-bench-setup.service monet-boot-bench-journal.service\n',
+            'systemd.extra-unit.monet-boot-bench-journal.service':
+                '[Unit]\nDefaultDependencies=no\nAfter=systemd-journald.socket\n[Service]\n'
+                "ExecStart=/bin/sh -c 'exec journalctl -b -f -o short-monotonic >/dev/ttyS0'\n",
+            'systemd.unit-dropin.sshd.service':
+                '[Unit]\nAfter=monet-boot-bench-setup.service\n[Service]\nExecStart=\n'
+                'ExecStart=/usr/sbin/sshd -D -e -f /dev/null -oPermitRootLogin=prohibit-password '
+                '-oUsePAM=yes -oPasswordAuthentication=no -oKbdInteractiveAuthentication=no '
+                '-oAuthorizedKeysFile=/root/.ssh/authorized_keys\n',
+            'systemd.unit-dropin.multi-user.target':'[Unit]\nWants=sshd.service\n'}
+
+
+def ssh(port, key, command, timeout=15):
+    return subprocess.run(['ssh','-i',str(key),'-p',str(port),'-o','IdentitiesOnly=yes',
+        '-o','StrictHostKeyChecking=no','-o','UserKnownHostsFile=/dev/null',
+        '-o','ConnectTimeout=2','-o','BatchMode=yes','root@127.0.0.1',command],
+        capture_output=True,text=True,timeout=timeout)
+
+
+def boot(args, disk, variables, key, index, runtime):
+    from PIL import Image
+    work = args.output / f'boot-{index:02d}'; work.mkdir()
+    with socket.socket() as sock:
+        sock.bind(('127.0.0.1',0)); port = sock.getsockname()[1]
+    monitor = runtime / 'qmp.sock'; monitor.unlink(missing_ok=True)
+    frame = runtime / 'frame.ppm'
+    command = ['qemu-system-x86_64','-machine','q35,smm=on','-accel','kvm','-cpu','host',
+        '-smp',str(args.cpus),'-m',str(args.memory),'-display','none',
+        '-drive',f'if=pflash,format=raw,unit=0,readonly=on,file={args.firmware_code}',
+        '-drive',f'if=pflash,format=raw,unit=1,file={variables}',
+        '-blockdev',json.dumps({'driver':'file','filename':str(disk),'node-name':'disk-file'}),
+        '-blockdev',json.dumps({'driver':'qcow2','file':'disk-file','node-name':'disk'}),
+        '-device','virtio-blk-pci,drive=disk,bootindex=1',
+        '-device','VGA,edid=on,xres=1280,yres=800,vgamem_mb=32',
+        '-device','qemu-xhci','-device','usb-tablet','-device','usb-kbd',
+        '-nic',f'user,model=virtio-net-pci,hostfwd=tcp:127.0.0.1:{port}-:22',
+        '-qmp',f'unix:{monitor},server,nowait','-serial',f'file:{work / "serial.log"}']
+    for name, value in credentials(key.with_suffix('.pub').read_text().strip()).items():
+        payload = base64.b64encode(value.encode()).decode()
+        command += ['-smbios', f'type=11,value=io.systemd.credential.binary:{name}={payload}']
+    process = None; started = time.monotonic(); first = None; stable = 0
+    clock_frame = None; input_sent = None; input_verified = None
+    try:
+        with (work/'qemu.log').open('w') as log:
+            process = subprocess.Popen(command,stdout=log,stderr=subprocess.STDOUT)
+        deadline = started + args.timeout; next_ssh = started; active = False
+        while time.monotonic() < deadline:
+            if process.poll() is not None: raise RuntimeError('VM exited before its login screen')
+            if shutil.disk_usage(args.output).free < 8 * 1024**3: raise RuntimeError('Keeping 8 GiB disk headroom')
+            if time.monotonic() >= next_ssh:
+                reply = ssh(port,key,'systemctl is-active plasmalogin.service',timeout=5)
+                active = reply.returncode == 0 and reply.stdout.strip() == 'active'
+                next_ssh = time.monotonic()+2
+            if monitor.exists():
+                qmp(monitor,'screendump',filename=str(frame))
+                captured=time.monotonic()-started
+                with Image.open(frame) as image:
+                    detected = login_controls(image)
+                    if clock_frame is None and (detected or login_clock(image)):
+                        clock_frame = captured
+                        image.save(work/'login-first-frame.png')
+                    if clock_frame is not None and input_sent is None:
+                        # A single test keystroke reveals the native prompt.
+                        # Never submit a password or authenticate a desktop.
+                        qmp(monitor,'send-key',keys=[{'type':'qcode','data':'spc'}],)
+                        input_sent = time.monotonic()-started
+                    if detected:
+                        if first is None: first = captured
+                        stable += 1
+                        if stable >= 2 and active:
+                            image.save(work/'login.png'); input_verified=time.monotonic()-started; break
+                    else: first = None; stable = 0
+            time.sleep(.25)
+        else:
+            if monitor.exists():
+                qmp(monitor,'screendump',filename=str(frame))
+                with Image.open(frame) as image:image.save(work/'timeout.png')
+            raise RuntimeError('No stable visible Monet login controls before timeout')
+        props = 'FirmwareTimestampMonotonic LoaderTimestampMonotonic InitRDTimestampMonotonic UserspaceTimestampMonotonic FinishTimestampMonotonic'
+        reply = ssh(port,key,'systemctl show '+ ' '.join('-p '+p for p in props.split()))
+        if reply.returncode: raise RuntimeError('Cannot collect guest boot timing')
+        values = properties(reply.stdout)
+        evidence = ssh(port,key,'monet --version; uname -r; bootc status --json; systemd-analyze time; systemd-analyze critical-chain plasmalogin.service; '
+            'systemd-analyze blame | head -n 20; printf "\\nBOOT_MENU\\n"; '
+            'grep -E "^[[:space:]]*set timeout(_style)?=" /boot/grub2/grub.cfg; '
+            'grub2-editenv - list | grep -E "^(boot_success|boot_indeterminate|menu_auto_hide|menu_show_once_timeout|boot_counter)="')
+        (work/'guest.txt').write_text(evidence.stdout+'\n'+evidence.stderr)
+        sessions = ssh(port,key,"loginctl list-sessions --no-legend | while read -r sid rest; do loginctl show-session \"$sid\" -p Type -p Class; echo; done")
+        for session in sessions.stdout.split('\n\n'):
+            fields=properties(session)
+            if fields.get('Type') in ('wayland','x11') and fields.get('Class')=='user':
+                raise RuntimeError('A desktop autologged in; this is not a login-screen sample')
+        result = dict(index=index,warmup=index==0,power_on_to_visible_login_ms=round(clock_frame*1000,3),
+                      power_on_to_controls_ms=round(first*1000,3),
+                      keyboard_verified_ms=round(input_verified*1000,3),
+                      sampling_interval_ms=250,guest_properties=values,guest_phases=timing_phases(values))
+        (work/'timing.json').write_text(json.dumps(result,indent=2)+'\n')
+        # Seed the next *normal* boot exactly as the stock successful-login helper
+        # would. No trial counters are changed. This is only the disposable VM.
+        marked = ssh(port,key,'grub2-set-bootflag boot_success')
+        if marked.returncode:
+            # Atomic systems can mount /boot read-only. Use Monet's existing
+            # private-mount-namespace writer, still solely inside this VM.
+            program = ("import importlib.machinery,importlib.util; "
+                "l=importlib.machinery.SourceFileLoader('bench_boot_flags','/usr/libexec/monet-boot'); "
+                "m=importlib.util.module_from_spec(importlib.util.spec_from_loader(l.name,l)); "
+                "l.exec_module(m); m.edit_grub('set','boot_success=1','boot_indeterminate=0')")
+            import shlex
+            marked = ssh(port,key,'python3 -c '+shlex.quote(program))
+        if marked.returncode: raise RuntimeError('Could not seed a successful normal boot: '+marked.stderr[-300:])
+        ssh(port,key,'systemctl --no-block poweroff',timeout=10)
+        try: process.wait(timeout=60)
+        except subprocess.TimeoutExpired: raise RuntimeError('VM did not shut down cleanly; refusing another sample')
+        return result
+    finally:
+        if process and process.poll() is None: process.kill(); process.wait()
+
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('disk',type=Path); parser.add_argument('output',type=Path)
+    parser.add_argument('--samples',type=int,default=3); parser.add_argument('--cpus',type=int,default=1)
+    parser.add_argument('--memory',type=int,default=8192); parser.add_argument('--timeout',type=int,default=240)
+    parser.add_argument('--firmware-code',type=Path,default=Path('/usr/share/OVMF/OVMF_CODE_4M.fd'))
+    parser.add_argument('--firmware-vars',type=Path,default=Path('/usr/share/OVMF/OVMF_VARS_4M.fd'))
+    args=parser.parse_args()
+    if not 1<=args.samples<=10 or not 1<=args.cpus<=4 or not 1<=args.timeout<=600: parser.error('Invalid sample/resource limits')
+    args.disk=args.disk.resolve(); args.output=args.output.resolve()
+    if not args.disk.is_file() or args.disk.suffix!='.qcow2': parser.error('An installed qcow2 file is required')
+    for path in (args.firmware_code,args.firmware_vars):
+        if not path.is_file(): parser.error('Missing UEFI firmware: '+str(path))
+    for path in (args.disk,args.output,args.firmware_code,args.firmware_vars):
+        if ',' in str(path) or '\n' in str(path): parser.error('QEMU paths cannot contain commas/newlines')
+    if not os.access('/dev/kvm',os.R_OK|os.W_OK):parser.error('KVM is required; do not benchmark TCG emulation')
+    args.output.mkdir(parents=True,exist_ok=False)
+    info=json.loads(subprocess.check_output(['qemu-img','info','--output=json',str(args.disk)],text=True))
+    if info['format']!='qcow2':parser.error('Not a qcow2 image')
+    disk=args.output/'working.qcow2'
+    subprocess.run(['qemu-img','create','-q','-f','qcow2','-F','qcow2','-b',str(args.disk),str(disk)],check=True)
+    variables=args.output/'vars.fd';shutil.copy2(args.firmware_vars,variables)
+    with tempfile.TemporaryDirectory(prefix='monet-boot-') as tmp:
+        runtime=Path(tmp);key=runtime/'key'
+        subprocess.run(['ssh-keygen','-q','-t','ed25519','-N','','-C','monet-boot-benchmark','-f',str(key)],check=True)
+        samples=[]
+        for index in range(args.samples+1):
+            result=boot(args,disk,variables,key,index,runtime);samples.append(result)
+            print(json.dumps(result),flush=True)
+    times=[r['power_on_to_visible_login_ms'] for r in samples if not r['warmup']]
+    report=dict(schema=1,scope='Installed disk cold boots under KVM; not physical laptop timings',
+        secure_boot=False,host_page_cache='uncontrolled',cpus=args.cpus,memory_mib=args.memory,first_boot_excluded=True,
+        boot_state='Successful normal boot seeded between samples; trial counters untouched',
+        median_ms=statistics.median(times),min_ms=min(times),max_ms=max(times),samples=samples)
+    (args.output/'summary.json').write_text(json.dumps(report,indent=2)+'\n')
+    print(json.dumps({k:v for k,v in report.items() if k!='samples'}),flush=True)
+
+
+if __name__=='__main__':main()
