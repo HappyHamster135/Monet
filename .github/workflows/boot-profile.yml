@@ -42,18 +42,28 @@ jobs:
           sudo test -r /dev/kvm
           sudo test -w /dev/kvm
           mkdir -p target/boot-profile
+          # Noble's older crun fails before the bcvk installer can start
+          # (setns mnt: Bad file descriptor). Pin the runner-only runtime;
+          # neither the Monet image nor the developer's host is changed.
+          curl --fail --location --retry 3 https://github.com/containers/crun/releases/download/1.31/crun-1.31-linux-amd64 -o target/boot-profile/crun
+          echo '8cacae171bb0e5f9e275adac2eeb2c6ec8c69fdedff7b008eadd8cdd25b0d349  target/boot-profile/crun' | sha256sum -c
+          sudo install -m 755 target/boot-profile/crun /usr/local/bin/monet-bench-crun
+          sudo mkdir -p /etc/containers/containers.conf.d
+          printf '[engine]\nruntime="crun"\n[engine.runtimes]\ncrun=["/usr/local/bin/monet-bench-crun"]\n' | sudo tee /etc/containers/containers.conf.d/99-monet-bench.conf
+          /usr/local/bin/monet-bench-crun --version | tee target/boot-profile/toolchain.txt
           curl --fail --location --retry 3 https://github.com/bootc-dev/bcvk/releases/download/v0.22.0/bcvk-x86_64-unknown-linux-gnu.tar.gz -o target/boot-profile/bcvk.tar.gz
           echo 'eb72198c0d36fab75bfcadbb6794a87afa6f496a4da6b1b34d27728243fa6474  target/boot-profile/bcvk.tar.gz' | sha256sum -c
           tar -xzf target/boot-profile/bcvk.tar.gz -C target/boot-profile
           df -h /
-      - name: Fetch the exact source-matched Linux package
-        run: python3 tools/boot-profile-package.py
       - name: Baseline installed-disk cold boots
         run: |
           sudo taskset -c "$PROFILE_CPU" nice -n 10 podman pull "$BASE"
+          sudo taskset -c "$PROFILE_CPU" nice -n 10 podman run --rm --group-add=keep-groups --cap-add=all --security-opt=seccomp=unconfined --entrypoint /bin/true "$BASE"
           sudo taskset -c "$PROFILE_CPU" nice -n 10 target/boot-profile/bcvk-x86_64-unknown-linux-gnu to-disk --format qcow2 --filesystem btrfs --disk-size 64G --vcpus 1 --memory 8G --target-transport containers-storage "$BASE" target/boot-profile/baseline.qcow2
           sudo taskset -c "$PROFILE_CPU" nice -n 10 python3 tools/bench-boot.py target/boot-profile/baseline.qcow2 target/boot-profile/baseline
           sudo rm target/boot-profile/baseline/working.qcow2 target/boot-profile/baseline.qcow2
+      - name: Fetch the exact source-matched Linux package
+        run: python3 tools/boot-profile-package.py
       - name: Build the development preview without publishing
         run: |
           sudo taskset -c "$PROFILE_CPU" nice -n 10 podman build --ignorefile image/boot-profile.ignore -f image/BootProfile.Containerfile --build-arg BASE="$BASE" --build-arg VERSION="$(cat VERSION)" --build-arg REVISION="$GITHUB_SHA" -t localhost/monet-boot-profile:candidate .
@@ -74,4 +84,5 @@ jobs:
             target/boot-profile/*/boot-*/*.log
             target/boot-profile/*/boot-*/*.png
             target/boot-profile/package-source.json
+            target/boot-profile/toolchain.txt
           retention-days: 14
