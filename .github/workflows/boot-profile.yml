@@ -13,6 +13,7 @@ on:
       - image/boot/**
       - tools/bench-boot.py
       - tools/boot-profile-package.py
+      - tools/boot-profile-podman.py
   workflow_dispatch:
 permissions:
   contents: read
@@ -52,6 +53,7 @@ jobs:
           /usr/local/bin/monet-bench-crun --version | tee target/boot-profile/toolchain.txt
           podman --version | tee -a target/boot-profile/toolchain.txt
           qemu-system-x86_64 --version | tee -a target/boot-profile/toolchain.txt
+          sudo install -m 755 tools/boot-profile-podman.py /usr/local/bin/podman
           curl --fail --location --retry 3 https://github.com/bootc-dev/bcvk/releases/download/v0.22.0/bcvk-x86_64-unknown-linux-gnu.tar.gz -o target/boot-profile/bcvk.tar.gz
           echo 'eb72198c0d36fab75bfcadbb6794a87afa6f496a4da6b1b34d27728243fa6474  target/boot-profile/bcvk.tar.gz' | sha256sum -c
           tar -xzf target/boot-profile/bcvk.tar.gz -C target/boot-profile
@@ -61,7 +63,7 @@ jobs:
           sudo taskset -c "$PROFILE_CPU" nice -n 10 podman pull "$BASE"
           sudo taskset -c "$PROFILE_CPU" nice -n 10 podman run --rm --group-add=keep-groups --cap-add=all --security-opt=seccomp=unconfined --entrypoint /bin/true "$BASE"
           mkdir -p target/boot-profile/baseline-install
-          sudo env RUST_LOG=bcvk=debug taskset -c "$PROFILE_CPU" nice -n 10 target/boot-profile/bcvk-x86_64-unknown-linux-gnu to-disk --log-dir "console=$PWD/target/boot-profile/baseline-install" --format qcow2 --filesystem btrfs --disk-size 64G --vcpus 1 --memory 8G --target-transport containers-storage "$BASE" target/boot-profile/baseline.qcow2
+          sudo env GITHUB_ACTIONS=true RUST_LOG=bcvk=debug taskset -c "$PROFILE_CPU" nice -n 10 target/boot-profile/bcvk-x86_64-unknown-linux-gnu to-disk --log-dir "console=$PWD/target/boot-profile/baseline-install" --format qcow2 --filesystem btrfs --disk-size 64G --vcpus 1 --memory 8G --target-transport containers-storage "$BASE" target/boot-profile/baseline.qcow2
           sudo taskset -c "$PROFILE_CPU" nice -n 10 python3 tools/bench-boot.py target/boot-profile/baseline.qcow2 target/boot-profile/baseline
           sudo rm target/boot-profile/baseline/working.qcow2 target/boot-profile/baseline.qcow2
       - name: Preserve the baseline before building the candidate
@@ -84,7 +86,7 @@ jobs:
       - name: Candidate installed-disk cold boots
         run: |
           mkdir -p target/boot-profile/candidate-install
-          sudo env RUST_LOG=bcvk=debug taskset -c "$PROFILE_CPU" nice -n 10 target/boot-profile/bcvk-x86_64-unknown-linux-gnu to-disk --log-dir "console=$PWD/target/boot-profile/candidate-install" --format qcow2 --filesystem btrfs --disk-size 64G --vcpus 1 --memory 8G --target-transport containers-storage localhost/monet-boot-profile:candidate target/boot-profile/candidate.qcow2
+          sudo env GITHUB_ACTIONS=true RUST_LOG=bcvk=debug taskset -c "$PROFILE_CPU" nice -n 10 target/boot-profile/bcvk-x86_64-unknown-linux-gnu to-disk --log-dir "console=$PWD/target/boot-profile/candidate-install" --format qcow2 --filesystem btrfs --disk-size 64G --vcpus 1 --memory 8G --target-transport containers-storage localhost/monet-boot-profile:candidate target/boot-profile/candidate.qcow2
           sudo taskset -c "$PROFILE_CPU" nice -n 10 python3 tools/bench-boot.py target/boot-profile/candidate.qcow2 target/boot-profile/candidate
           sudo rm target/boot-profile/candidate/working.qcow2 target/boot-profile/candidate.qcow2
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
@@ -100,4 +102,5 @@ jobs:
             target/boot-profile/package-source.json
             target/boot-profile/toolchain.txt
             target/boot-profile/*-install/*.txt
+            target/boot-profile/*-install/*.log
           retention-days: 14
