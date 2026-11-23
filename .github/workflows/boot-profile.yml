@@ -37,7 +37,9 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y -q qemu-system-x86 qemu-utils ovmf virtiofsd python3-pil podman
           echo "PROFILE_CPU=$(python3 -c 'import os; print(min(os.sched_getaffinity(0)))')" >> "$GITHUB_ENV"
-          test -r /dev/kvm
+          sudo modprobe kvm_intel || sudo modprobe kvm_amd || true
+          sudo test -r /dev/kvm
+          sudo test -w /dev/kvm
           mkdir -p target/boot-profile
           curl --fail --location --retry 3 https://github.com/bootc-dev/bcvk/releases/download/v0.22.0/bcvk-x86_64-unknown-linux-gnu.tar.gz -o target/boot-profile/bcvk.tar.gz
           echo 'eb72198c0d36fab75bfcadbb6794a87afa6f496a4da6b1b34d27728243fa6474  target/boot-profile/bcvk.tar.gz' | sha256sum -c

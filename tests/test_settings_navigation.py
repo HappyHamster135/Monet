@@ -100,7 +100,9 @@ class SettingsNavigation(unittest.TestCase):
         self.assertFalse(self.errors, "\n".join(self.errors))
 
     def item(self, name):
-        select_settings_page(self.window, self.window.property("page"))
+        # Store, panel and transfer fixtures also borrow this visual-tree finder.
+        if self.window.metaObject().indexOfProperty("pageReady") >= 0:
+            select_settings_page(self.window, self.window.property("page"))
         pending = [self.window.contentItem()]
         while pending:
             item = pending.pop()
