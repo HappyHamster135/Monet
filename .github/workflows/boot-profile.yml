@@ -62,8 +62,11 @@ jobs:
         run: |
           sudo taskset -c "$PROFILE_CPU" nice -n 10 podman pull "$BASE"
           sudo taskset -c "$PROFILE_CPU" nice -n 10 podman run --rm --group-add=keep-groups --cap-add=all --security-opt=seccomp=unconfined --entrypoint /bin/true "$BASE"
+          # Keep the verified immutable source, but allow the guest's storage
+          # copy to change compression without promising the original blob digest.
+          sudo podman tag "$BASE" localhost/monet-boot-profile:baseline
           mkdir -p target/boot-profile/baseline-install
-          sudo env GITHUB_ACTIONS=true RUST_LOG=bcvk=debug taskset -c "$PROFILE_CPU" nice -n 10 target/boot-profile/bcvk-x86_64-unknown-linux-gnu to-disk --log-dir "console=$PWD/target/boot-profile/baseline-install" --format qcow2 --filesystem btrfs --disk-size 64G --vcpus 1 --memory 8G --target-transport containers-storage "$BASE" target/boot-profile/baseline.qcow2
+          sudo env GITHUB_ACTIONS=true RUST_LOG=bcvk=debug taskset -c "$PROFILE_CPU" nice -n 10 target/boot-profile/bcvk-x86_64-unknown-linux-gnu to-disk --log-dir "console=$PWD/target/boot-profile/baseline-install" --format qcow2 --filesystem btrfs --disk-size 64G --vcpus 1 --memory 8G --target-transport containers-storage localhost/monet-boot-profile:baseline target/boot-profile/baseline.qcow2
           sudo taskset -c "$PROFILE_CPU" nice -n 10 python3 tools/bench-boot.py target/boot-profile/baseline.qcow2 target/boot-profile/baseline
           sudo rm target/boot-profile/baseline/working.qcow2 target/boot-profile/baseline.qcow2
       - name: Preserve the baseline before building the candidate
