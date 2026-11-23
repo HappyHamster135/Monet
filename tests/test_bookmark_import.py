@@ -7,6 +7,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+from tests.settings_support import select_settings_page
 import unittest
 from unittest.mock import Mock, patch
 
@@ -233,6 +234,7 @@ class BookmarkImportUI(unittest.TestCase):
         self.engine.load(QUrl.fromLocalFile(str(root / "linux/share/monet/settings-app/MonetSettings.qml")))
         self.assertTrue(self.engine.rootObjects())
         self.window = self.engine.rootObjects()[0]; QTest.qWait(150)
+        select_settings_page(self.window, self.window.property("page"))
         self.card = self.item("search-bookmarks")
 
     def tearDown(self):

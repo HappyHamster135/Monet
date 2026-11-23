@@ -2,7 +2,22 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 **Start here: [Install Monet](https://github.com/HappyHamster135/Monet/blob/HEAD/docs/INSTALL.md)**
 
-### Downloads
+### New in 0.9.8-9: Startup and Settings polish (in development)
+
+- **Less compilation at first login.** The OS image precompiles Monet's login,
+  desktop, window and app interfaces with its matching Qt runtime. Sources remain
+  installed, and Qt can fall back if bytecode is damaged or incompatible.
+- **Faster, smoother Settings.** Settings compiles only the selected page and
+  loads it asynchronously, keeping the window responsive during navigation.
+- **Less work before the window appears.** Initial hardware and data requests
+  wait until the window has drawn and the selected page has been constructed.
+- **Preserved preferences.** Existing app, bar and Task Manager customization is
+  retained. This update does not repeat 0.9.8-8's Task Manager reset.
+
+This work is on the development branch; 0.9.8-9 has not been released. Physical
+power-on-to-login timings still need validation with the new installed image.
+
+### Current stable downloads (0.9.8-8)
 
 | File                               | What                                                                                                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |

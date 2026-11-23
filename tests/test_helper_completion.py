@@ -82,6 +82,23 @@ QtObject {
             QTest.qWait(10)
         self.assertTrue(condition(), "helper request never completed")
 
+    def test_deferred_requests_keep_tickets_and_stdin_until_resumed_once(self):
+        helper = self.games.Helper(defer_start=True)
+        self.addCleanup(helper.deleteLater)
+        replies = []
+        helper.done.connect(lambda *reply: replies.append(reply))
+        with patch.dict(self.games.PROGRAMS, {"echo": sys.executable}):
+            first = helper.feed(["echo", "-c", "import sys; print(sys.stdin.read(), end='')"], "héllo")
+            second = helper.run(["echo", "-c", "print('second', end='')"])
+            QTest.qWait(30)
+            self.assertEqual(replies, [])
+            self.assertEqual(helper.findChildren(QProcess), [])
+            helper.resume(); helper.resume()
+            self.until(lambda: len(replies) == 2)
+        self.assertEqual(sorted(replies), [(first, "héllo", 0, ""), (second, "second", 0, "")])
+        QTest.qWait(30)
+        self.assertEqual(len(replies), 2)
+
     def test_rejected_command_reaches_the_callback_registered_by_qml(self):
         self.assertTrue(QMetaObject.invokeMethod(self.root, "rejected", Qt.DirectConnection))
         self.until(lambda: not self.root.property("busy"))

@@ -12,6 +12,7 @@ from pathlib import Path
 import re
 import shutil
 import tempfile
+from tests.settings_support import settings_source
 import unittest
 import xml.etree.ElementTree as ET
 
@@ -729,7 +730,7 @@ class Switch(unittest.TestCase):
     """Settings → Light & Wallpaper: on unless turned off, and off is today's glass title bars."""
 
     def test_settings_has_the_switch(self):
-        settings = SETTINGS_QML.read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('["titles", i18n("Title bars appear when you point at the top"), ', settings)
         # The page is found by the words people use.
         self.assertIn("title bar titlebar", settings)

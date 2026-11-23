@@ -202,6 +202,8 @@ COPY image/patch-shell-profiles.py /tmp/monet-shell-profiles.py
 # Use /tmp, as the native bundle mounts above do.
 RUN --mount=type=bind,from=build,source=/out,target=/tmp/monet-build-package,ro \
     --mount=type=bind,from=password,source=/out,target=/tmp/monet-build-password,ro \
+    --mount=type=bind,from=dock,source=/usr/lib64/qt6/libexec/qmlcachegen,target=/tmp/monet-qmlcachegen,ro \
+    --mount=type=bind,source=image/precompile-qml.py,target=/tmp/monet-precompile-qml.py,ro \
     --mount=type=bind,source=image/nvidia-flatpak,target=/tmp/monet-nvidia-flatpak,ro \
     --mount=type=bind,source=image/install-update-trust.py,target=/tmp/monet-install-update-trust.py,ro \
     --mount=type=bind,source=image/monet-update.pub,target=/tmp/monet-update.pub,ro \
@@ -219,4 +221,5 @@ RUN --mount=type=bind,from=build,source=/out,target=/tmp/monet-build-package,ro 
  && rm /tmp/monet-finish-image \
  && rm -rf /tmp/monet-boot-build \
  && python3 /tmp/monet-install-update-trust.py /tmp/monet-update.pub \
+ && python3 /tmp/monet-precompile-qml.py --compiler /tmp/monet-qmlcachegen \
  && bootc container lint

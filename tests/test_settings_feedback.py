@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import time
+from tests.settings_support import select_settings_page
 import unittest
 from unittest.mock import patch
 
@@ -121,6 +122,7 @@ class LookFeedback(unittest.TestCase):
         self.engine.load(QUrl.fromLocalFile(str(ROOT / "linux/share/monet/settings-app/MonetSettings.qml")))
         self.assertTrue(self.engine.rootObjects())
         self.window = self.engine.rootObjects()[0]
+        select_settings_page(self.window, self.window.property("page"))
         self.activity.watch(self.window); QTest.qWait(100)
 
     def tearDown(self):
@@ -135,7 +137,7 @@ class LookFeedback(unittest.TestCase):
 
     def test_notification_audio_can_retry_adjust_volume_and_play(self):
         self.helper.replies["notification-audio"] = '{"ok":false}'
-        self.window.setProperty("page", "sound")
+        select_settings_page(self.window, "sound")
         self.wait_for(lambda: self.window.property("notificationAudio").toVariant().get("ok") is False)
         row = next(item for item in self.window.findChildren(QObject)
                    if item.property("title") == self.words.i18n("Preview notification sound"))
@@ -166,7 +168,7 @@ class LookFeedback(unittest.TestCase):
 
     def test_reopening_updates_shows_restart_for_a_downloaded_update_without_a_network_check(self):
         self.helper.replies["update-history"] = '{"ok":false,"items":[],"state":"idle","staged":true}'
-        self.window.setProperty("page", "updates")
+        select_settings_page(self.window, "updates")
         action = self.window.findChild(QObject, "stagedUpdateRestart")
         check = self.window.findChild(QObject, "updateAction")
         self.assertIsNotNone(action)
@@ -188,7 +190,7 @@ class LookFeedback(unittest.TestCase):
         self.helper.hold_history = True
         self.helper.replies["update-check"] = '{"ok":true,"system":true,"version":"0.9.8-8"}'
         self.helper.replies["update"] = '{"ok":true,"staged":true}'
-        self.window.setProperty("page", "updates")
+        select_settings_page(self.window, "updates")
         action = self.window.findChild(QObject, "updateAction")
         self.assertIsNotNone(action)
         self.wait_for(lambda: self.helper.pending_history)
@@ -204,7 +206,7 @@ class LookFeedback(unittest.TestCase):
         self.assertTrue(action.property("restartReady"))
 
     def test_restart_follows_the_staged_update_even_if_an_app_update_fails(self):
-        self.window.setProperty("page", "updates")
+        select_settings_page(self.window, "updates")
         action = self.window.findChild(QObject, "updateAction")
         self.assertIsNotNone(action)
         self.helper.replies["update-check"] = '{"ok":true,"system":true,"version":"0.9.8-5"}'
@@ -224,7 +226,7 @@ class LookFeedback(unittest.TestCase):
                 self.assertEqual(action.property("restartReady"), restart_ready)
 
     def test_app_remote_failure_keeps_the_system_install_button_available(self):
-        self.window.setProperty("page", "updates")
+        select_settings_page(self.window, "updates")
         action = self.window.findChild(QObject, "updateAction")
         message = "App updates couldn't be checked. Remote unavailable."
         self.helper.replies["update-check"] = json.dumps(dict(ok=True, system=True,
@@ -242,7 +244,7 @@ class LookFeedback(unittest.TestCase):
     def test_unreadable_update_check_recovers_without_losing_a_pending_restart(self):
         self.helper.held_commands = {"update-check"}
         self.helper.replies["update-history"] = '{"ok":true,"items":[],"state":"idle","staged":true}'
-        self.window.setProperty("page", "updates")
+        select_settings_page(self.window, "updates")
         action = self.window.findChild(QObject, "updateAction")
         restart = self.window.findChild(QObject, "stagedUpdateRestart")
         self.wait_for(lambda: restart.property("visible"))
@@ -264,7 +266,7 @@ class LookFeedback(unittest.TestCase):
 
     def test_interrupted_install_reply_returns_controls_for_retry(self):
         self.helper.held_commands = {"update"}
-        self.window.setProperty("page", "updates")
+        select_settings_page(self.window, "updates")
         action = self.window.findChild(QObject, "updateAction")
         for response, code in (("null", 0), ('{"ok":true,"staged":false}', 1)):
             with self.subTest(response=response, code=code):
@@ -279,7 +281,7 @@ class LookFeedback(unittest.TestCase):
     def test_beta_failure_recovers_and_a_disabled_beta_offer_stays_hidden(self):
         beta = {"version": "0.9.8-8", "number": 1, "tag": "0.9.8-8-beta.1"}
         self.helper.held_commands = {"update-check", "install-beta"}
-        self.window.setProperty("page", "updates")
+        select_settings_page(self.window, "updates")
         self.window.setProperty("showBetas", True)
         self.window.setProperty("betaFound", beta)
         self.window.setProperty("betaChecked", True)
@@ -311,7 +313,7 @@ class LookFeedback(unittest.TestCase):
         self.window.setProperty("showBetas", False)
         self.helper.replies["about"] = json.dumps({"monet": "0.9.8-6", "beta": 0})
         self.helper.replies["update-check"] = json.dumps(dict(ok=True, system=False, apps=0, beta=beta, betaMessage=None))
-        self.window.setProperty("page", "updates")
+        select_settings_page(self.window, "updates")
         self.wait_for(lambda: self.item("updateTitle").property("text") == "Monet 0.9.8-6")
         switch, row, action = self.item("betaSwitch"), self.item("betaRow"), self.item("updateAction")
         self.assertFalse(self.window.property("showBetas"))
@@ -358,7 +360,7 @@ class LookFeedback(unittest.TestCase):
     def test_a_beta_says_so_and_its_release_is_not_called_fixes(self):
         self.window.setProperty("showBetas", False)
         self.helper.replies["about"] = json.dumps({"monet": "0.9.8-7", "beta": 2})
-        self.window.setProperty("page", "updates")
+        select_settings_page(self.window, "updates")
         self.wait_for(lambda: self.item("updateTitle").property("text") == "Monet 0.9.8-7 beta 2")
         self.helper.replies["update-check"] = '{"ok":true,"system":true,"apps":0,"version":"0.9.8-7"}'
         action = self.item("updateAction")
@@ -385,7 +387,7 @@ class LookFeedback(unittest.TestCase):
                      updateWaiting=False, network={"known": True, "devices": []})
         self.helper.replies["security"] = json.dumps(state)
         self.helper.replies["firmware-check"] = '{"ok":true,"updates":[]}'
-        self.window.setProperty("page", "security")
+        select_settings_page(self.window, "security")
         self.wait_for(lambda: self.window.property("securityChecked"))
         overview = self.window.findChild(QObject, "security-overview")
         self.assertIn("couldn’t be completed", overview.property("title"))
@@ -400,7 +402,7 @@ class LookFeedback(unittest.TestCase):
 
     def test_security_waits_for_the_first_result_before_showing_errors(self):
         self.helper.held_commands.add("security")
-        self.window.setProperty("page", "security")
+        select_settings_page(self.window, "security")
         self.wait_for(lambda: bool(self.helper.pending_commands))
         self.assertFalse(self.window.property("securityChecked"))
         self.assertEqual(self.item("security-overview").property("title"), "Checking this PC…")
@@ -420,7 +422,7 @@ class LookFeedback(unittest.TestCase):
     def test_security_does_not_turn_a_failed_firewall_action_into_success(self):
         self.helper.replies["security"] = '{"secureBoot":"on","firewall":"off"}'
         self.helper.held_commands.add("firewall-on")
-        self.window.setProperty("page", "security")
+        select_settings_page(self.window, "security")
         self.wait_for(lambda: self.window.property("securityChecked"))
         action = self.window.findChild(QObject, "security-overview-action")
         action.forceActiveFocus()
@@ -437,7 +439,7 @@ class LookFeedback(unittest.TestCase):
                        appPorts=dict.fromkeys(("games", "localsend", "syncthing", "sunshine", "deskflow"), []))
         state = dict(secureBoot="on", firewall="on", networkActions=True, network=network)
         self.helper.replies.update(security=json.dumps(state), **{"firewall-sharing": '{"ok":true}'})
-        self.window.setProperty("page", "security")
+        select_settings_page(self.window, "security")
         self.wait_for(lambda: self.window.property("securityChecked"))
         games = self.item("security-sharing-app-games")
         self.assertFalse(games.property("checked"))
@@ -473,7 +475,7 @@ class LookFeedback(unittest.TestCase):
                        appPorts=dict.fromkeys(("games", "localsend", "syncthing", "sunshine", "deskflow"), []))
         state = dict(secureBoot="on", firewall="on", firewallStrict=True, networkActions=True, network=network)
         self.helper.replies["security"] = json.dumps(state)
-        self.window.setProperty("page", "security")
+        select_settings_page(self.window, "security")
         self.wait_for(lambda: self.window.property("securityChecked"))
         self.item("search-security-network").forceActiveFocus(Qt.TabFocusReason)
         view = self.item("settingsScroller")
@@ -507,7 +509,7 @@ class LookFeedback(unittest.TestCase):
         ))
         self.helper.replies["firewall-clear-legacy"] = '{"ok":false}'
         self.helper.replies["firmware-setup"] = '{"ok":false}'
-        self.window.setProperty("page", "security")
+        select_settings_page(self.window, "security")
         self.wait_for(lambda: self.window.property("securityChecked"))
 
         for name, command in (("firmware", "firmware-setup"), ("legacy", "firewall-clear-legacy")):
@@ -545,7 +547,7 @@ class LookFeedback(unittest.TestCase):
     def test_security_hides_firmware_restart_without_the_session_method(self):
         state = dict(secureBoot="off", keyTrusted=True, firmwareRestartAvailable=False)
         self.helper.replies["security"] = json.dumps(state)
-        self.window.setProperty("page", "security")
+        select_settings_page(self.window, "security")
         self.wait_for(lambda: self.window.property("securityChecked"))
         review = self.item("security-firmware-review")
         self.assertFalse(review.isVisible())
@@ -567,7 +569,7 @@ class LookFeedback(unittest.TestCase):
     def test_security_key_enrollment_waits_for_a_separate_restart(self):
         self.helper.replies["security"] = '{"secureBoot":"off","keyTrusted":false}'
         self.helper.replies["trust-key"] = '{"ok":true}'
-        self.window.setProperty("page", "security")
+        select_settings_page(self.window, "security")
         self.wait_for(lambda: self.window.property("securityChecked"))
         action = self.item("security-firmware-review")
         self.assertEqual(action.property("text"), "Trust Monet…")
@@ -587,7 +589,7 @@ class LookFeedback(unittest.TestCase):
         state = dict(secureBoot="on", encrypted=False, firewall="on", autoUpdates="off", updateWaiting=True)
         self.helper.replies["security"] = json.dumps(state)
         self.helper.replies["restart"] = '{"ok":false}'
-        self.window.setProperty("page", "security")
+        select_settings_page(self.window, "security")
         self.wait_for(lambda: self.window.property("securityChecked"))
         self.assertEqual(self.item("security-overview").property("title"), "Device security needs a look.")
         self.assertIn("An update is ready", self.item("search-security-updates").property("detail"))
@@ -622,7 +624,7 @@ class LookFeedback(unittest.TestCase):
                      network=network)
         available = '{"ok":true,"updates":[]}'
         self.helper.replies.update(security=json.dumps(state), **{"firmware-check": available})
-        self.window.setProperty("page", "security")
+        select_settings_page(self.window, "security")
         self.wait_for(lambda: self.window.property("securityChecked") and self.window.property("firmwareState") == "none")
         overview = self.item("security-overview")
         self.assertEqual(overview.property("title"), "The main checks look good.")
@@ -660,7 +662,7 @@ class LookFeedback(unittest.TestCase):
                        appPorts=dict.fromkeys(("games", "localsend", "syncthing", "sunshine", "deskflow"), []))
         state = dict(secureBoot="on", firewall="on", networkActions=True, network=network)
         self.helper.replies["security"] = json.dumps(state)
-        self.window.setProperty("page", "security")
+        select_settings_page(self.window, "security")
         self.wait_for(lambda: self.window.property("securityChecked"))
 
         self.assertFalse(self.item("security-sharing-profile-eth0").property("enabledPill"))
@@ -682,7 +684,7 @@ class LookFeedback(unittest.TestCase):
             "firmware-check": '{"ok":true,"updates":[{"device":"Dock","version":"2","restart":true}]}'
         })
         self.helper.held_commands.add("firmware-update")
-        self.window.setProperty("page", "security")
+        select_settings_page(self.window, "security")
         self.wait_for(lambda: self.window.property("securityChecked")
                       and self.window.property("firmwareState") == "available")
         overview = self.item("security-overview")
@@ -701,7 +703,7 @@ class LookFeedback(unittest.TestCase):
 
     def test_retained_install_review_consent_busy_and_failed_cleanup(self):
         item = dict(id='previous-install-'+'a'*16, token='b'*64, time=1793782800000, homes=1, bytes=None)
-        self.window.setProperty('page', 'storage'); QTest.qWait(80)
+        select_settings_page(self.window, 'storage'); QTest.qWait(80)
         self.assertFalse(any(c[1] == 'storage-recovery' for c in self.helper.commands))
         self.helper.replies['storage-recovery'] = json.dumps(dict(ok=True, items=[item]))
         QMetaObject.invokeMethod(self.item('scanRetained'), 'clicked'); QTest.qWait(60)
@@ -724,7 +726,7 @@ class LookFeedback(unittest.TestCase):
         self.assertIn('changed or is in use', self.window.property('retainedMessage'))
 
     def test_recovery_diagnostics_are_explicit_coalesced_and_previewed(self):
-        self.window.setProperty('page', 'recovery'); QTest.qWait(80)
+        select_settings_page(self.window, 'recovery'); QTest.qWait(80)
         self.assertFalse(any(c[1] == 'troubleshooting' for c in self.helper.commands))
         self.helper.held_commands.add('troubleshooting')
         for _ in range(3): QMetaObject.invokeMethod(self.item('checkRecoveryHealth'), 'clicked')
@@ -760,7 +762,7 @@ class LookFeedback(unittest.TestCase):
         item = dict(id='1'*32, fingerprint='a'*64, time=1793782800000, status='done',
                     settings=4, shortcuts=1, remaining=5, areas=['appearance', 'shortcuts'])
         self.helper.replies['profile-recovery'] = json.dumps(dict(ok=True, state='ready', items=[item]))
-        self.window.setProperty('page', 'recovery'); QTest.qWait(80)
+        select_settings_page(self.window, 'recovery'); QTest.qWait(80)
         return item
 
     def test_profile_undo_requires_review_and_protects_against_double_submission(self):
@@ -809,7 +811,7 @@ class LookFeedback(unittest.TestCase):
 
     def test_profile_history_failure_is_distinct_from_empty_and_does_not_poll(self):
         self.helper.replies['profile-recovery'] = '{"ok":false,"state":"unavailable"}'
-        self.window.setProperty('page', 'recovery'); QTest.qWait(80)
+        select_settings_page(self.window, 'recovery'); QTest.qWait(80)
         self.assertEqual(self.window.property('profileState'), 'unavailable')
         status = self.window.findChild(QObject, 'profileHistoryStatus')
         self.assertIn('could not be read', status.property('text'))
@@ -890,6 +892,7 @@ class LookFeedback(unittest.TestCase):
     def test_keep_awake_preserves_policy_coalesces_clicks_and_ignores_old_reads(self):
         self.helper.held_commands |= {'keep-awake-status', 'keep-awake'}
         QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'power'))
+        select_settings_page(self.window, self.window.property("page"))
         self.wait_for(lambda: bool(self.helper.pending_commands))
         old_read = self.helper.pending_commands[-1]
         for _ in range(2):
@@ -911,6 +914,7 @@ class LookFeedback(unittest.TestCase):
                      indefinite=False, pending=True, error='backend-unavailable')
         self.helper.replies['keep-awake'] = json.dumps(dict(ok=False,state=state))
         QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'power'))
+        select_settings_page(self.window, self.window.property("page"))
         QTest.qWait(60)
         QMetaObject.invokeMethod(self.window, 'changeKeepAwake', Q_ARG('QVariant', 1800))
         self.wait_for(lambda: 'unavailable' in self.item('search-keep-awake').property('detail'))
@@ -925,6 +929,7 @@ class LookFeedback(unittest.TestCase):
                      indefinite=False, pending=False, error='')
         self.helper.replies['keep-awake-status'] = json.dumps(state)
         QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'power#keep-awake'))
+        select_settings_page(self.window, self.window.property("page"))
         self.wait_for(lambda: 'remaining' in self.item('search-keep-awake').property('detail'))
         before = self.window.property('keepAwakeLeft')
         self.assertTrue(self.window.property('pollingActive'))
@@ -942,6 +947,7 @@ class LookFeedback(unittest.TestCase):
         from PySide6.QtCore import QPointF
         self.window.resize(760, 520)
         QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'power#keep-awake'))
+        select_settings_page(self.window, self.window.property("page"))
         self.wait_for(lambda: self.window.property('pendingAnchor') == '')
         segments = self.item('keepAwakeDuration')
         choices = {}
@@ -972,6 +978,7 @@ class LookFeedback(unittest.TestCase):
     def test_open_loads_each_page_snapshot_once(self):
         self.helper.commands.clear()
         QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'power'))
+        select_settings_page(self.window, self.window.property("page"))
         QTest.qWait(80)
         self.assertEqual(self.helper.commands.count(['helper', 'power']), 1)
         self.assertEqual(self.helper.commands.count(['helper', 'battery-care']), 1)
@@ -986,6 +993,7 @@ class LookFeedback(unittest.TestCase):
                               ('power#battery-limit', 'search-battery-limit')]:
             with self.subTest(route=route):
                 QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', route))
+                select_settings_page(self.window, self.window.property("page"))
                 self.wait_for(lambda: self.window.property('pendingAnchor') == '')
                 item = self.item(target)
                 self.assertTrue(item.property('activeFocus'))
@@ -1005,6 +1013,7 @@ class LookFeedback(unittest.TestCase):
     def test_battery_limit_search_explains_unsupported_hardware(self):
         self.helper.replies['battery-care'] = '{"supported":false,"limit":100}'
         QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'power#battery-limit'))
+        select_settings_page(self.window, self.window.property("page"))
         self.wait_for(lambda: self.window.property('pendingAnchor') == '')
         item = self.item('search-battery-limit')
         self.wait_for(lambda: 'support' in item.property('detail'))
@@ -1015,6 +1024,7 @@ class LookFeedback(unittest.TestCase):
     def test_battery_limit_search_survives_slow_hardware_reply(self):
         self.helper.held_commands.add('battery-care')
         QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'power#battery-limit'))
+        select_settings_page(self.window, self.window.property("page"))
         self.wait_for(lambda: self.window.property('pendingAnchor') == '')
         item = self.item('search-battery-limit')
         self.assertIn('Checking', item.property('detail'))
@@ -1033,13 +1043,17 @@ class LookFeedback(unittest.TestCase):
                                 ({'battery':70,'charging':True,'plugged':True}, 'Charging')]:
             self.helper.replies['status'] = json.dumps(state)
             QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'power'))
+            select_settings_page(self.window, self.window.property("page"))
+            select_settings_page(self.window, 'power')
             self.wait_for(lambda: expected in self.item('batteryStatusRow').property('detail'))
         self.helper.replies['battery-care'] = '{"supported":true,"limit":100}'
         self.helper.replies['status'] = '{"battery":100,"charging":false,"plugged":true}'
         QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'power'))
+        select_settings_page(self.window, self.window.property("page"))
         self.wait_for(lambda: 'fully charged' in self.item('batteryStatusRow').property('detail'))
 
     def item(self, name):
+        select_settings_page(self.window, self.window.property("page"))
         pending = [self.window.contentItem()]
         while pending:
             item = pending.pop()
@@ -1097,7 +1111,7 @@ class LookFeedback(unittest.TestCase):
         phones = dict(id=73, name="Headphones", default=False, none=False, key="686470")
         self.helper.replies["outputs"] = json.dumps([speakers, phones])
         self.helper.held_commands.add("output")
-        self.window.setProperty("page", "sound")
+        select_settings_page(self.window, "sound")
         self.wait_for(lambda: self.sound_row("Headphones") is not None)
         row = self.sound_row("Headphones")
         QMetaObject.invokeMethod(row, "tapped")
@@ -1130,7 +1144,7 @@ class LookFeedback(unittest.TestCase):
         scarlett = dict(id=74, name="Focusrite Scarlett 2i2 USB · Input 1", default=False, key="736331")
         self.helper.replies.update(microphones=json.dumps([built_in, scarlett]), outputs="[]")
         self.helper.held_commands.add("input")
-        self.window.setProperty("page", "sound")
+        select_settings_page(self.window, "sound")
         self.wait_for(lambda: self.sound_row(scarlett["name"]) is not None)
         QMetaObject.invokeMethod(self.sound_row(scarlett["name"]), "tapped")
         self.wait_for(lambda: bool(self.helper.pending_commands))
@@ -1157,14 +1171,14 @@ class LookFeedback(unittest.TestCase):
         self.assertEqual(self.window.property("microphoneProblem"), "")
 
     def test_polling_is_scoped_coalesced_and_stops_when_minimized(self):
-        self.window.setProperty("page", "about"); QTest.qWait(20)
+        select_settings_page(self.window, "about"); QTest.qWait(20)
         self.helper.commands.clear()
         QMetaObject.invokeMethod(self.window, "refresh")
         self.assertEqual(self.helper.commands, [])
         self.helper.hold_status = True
-        self.window.setProperty("page", "sound"); QTest.qWait(20)
+        select_settings_page(self.window, "sound"); QTest.qWait(20)
         for _ in range(8): QMetaObject.invokeMethod(self.window, "refresh")
-        self.window.setProperty("page", "power"); QTest.qWait(20)
+        select_settings_page(self.window, "power"); QTest.qWait(20)
         status = [cmd for cmd in self.helper.commands if cmd[1] == "status"]
         self.assertEqual(status, [["helper", "status", "sound"]])
         self.helper.hold_status = False
@@ -1181,7 +1195,7 @@ class LookFeedback(unittest.TestCase):
 
     def test_storage_capacity_loads_without_starting_a_folder_scan(self):
         self.helper.commands.clear()
-        self.window.setProperty("page", "storage"); QTest.qWait(30)
+        select_settings_page(self.window, "storage"); QTest.qWait(30)
         self.assertIn(["helper", "storage-capacity"], self.helper.commands)
         self.assertNotIn(["helper", "storage"], self.helper.commands)
         QMetaObject.invokeMethod(self.window, "measureStorage")
@@ -1195,7 +1209,7 @@ class LookFeedback(unittest.TestCase):
                      table="gpt", format="", mounts=[], partitions=[], gaps=[],
                      system=False, locked=False, removable=True)
         self.helper.replies["storage-disks"] = json.dumps(dict(ok=True, disks=[drive]))
-        self.window.setProperty("page", "storage")
+        select_settings_page(self.window, "storage")
         self.wait_for(lambda: self.window.property("disksLoaded"))
         details = self.item("diskDetails-/dev/fixture")
         QMetaObject.invokeMethod(details, "clicked")
@@ -1219,6 +1233,7 @@ class LookFeedback(unittest.TestCase):
             dict(device="enp2s0", profile="", state="unplugged")]))
         self.helper.replies["wifi-list"] = "[]"
         QMetaObject.invokeMethod(self.window, "open", Q_ARG("QVariant", "wifi#lan"))
+        select_settings_page(self.window, self.window.property("page"))
 
         def texts(item):
             return [item.property("text")] + [text for child in item.childItems() for text in texts(child)]
@@ -1246,8 +1261,9 @@ class LookFeedback(unittest.TestCase):
     def test_wallet_policy_waits_for_confirmation_and_does_not_poll(self):
         state = dict(enabled=True, policy="session", unlocked=True, manager=True, automaticLogin=True)
         self.helper.replies['wallet-status'] = json.dumps(state)
-        self.window.setProperty('page', 'privacy'); QTest.qWait(40)
+        select_settings_page(self.window, 'privacy'); QTest.qWait(40)
         QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'privacy#passwords'))
+        select_settings_page(self.window, self.window.property("page"))
         QTest.qWait(200)
         self.assertEqual(self.window.property('page'), 'passwords')
         self.assertEqual(self.window.property('pendingAnchor'), '')
@@ -1275,7 +1291,7 @@ class LookFeedback(unittest.TestCase):
     def test_app_login_switch_waits_for_service_result(self):
         state = dict(enabled=True, appOffers=False, appOffersAvailable=True, appOffersRunning=False)
         self.helper.replies['wallet-status'] = json.dumps(state)
-        self.window.setProperty('page', 'passwords'); QTest.qWait(120)
+        select_settings_page(self.window, 'passwords'); QTest.qWait(120)
         row = self.item('appLoginOffersRow')
         self.assertTrue(row.property('tappable'))
         self.helper.held_commands.add('wallet-app-offers')
@@ -1298,6 +1314,7 @@ class LookFeedback(unittest.TestCase):
         state = dict(enabled=True, policy='session', unlocked=False, manager=True, preferences=True, browser=True)
         self.helper.replies['wallet-status'] = json.dumps(state)
         QMetaObject.invokeMethod(self.window, 'open', Q_ARG('QVariant', 'passwords'))
+        select_settings_page(self.window, self.window.property("page"))
         self.wait_for(lambda: self.window.property('walletInfo').toVariant().get('manager') is True
                       and not self.window.property('walletBusy'))
         pending = [self.window.contentItem()]; buttons = {}
@@ -1321,7 +1338,7 @@ class LookFeedback(unittest.TestCase):
 
     def test_update_history_loads_on_demand_coalesces_and_recovers(self):
         self.helper.hold_history = True
-        self.window.setProperty("page", "updates"); QTest.qWait(30)
+        select_settings_page(self.window, "updates"); QTest.qWait(30)
         for _ in range(6):
             QMetaObject.invokeMethod(self.window, "loadUpdateHistory")
             QMetaObject.invokeMethod(self.window, "refresh")
@@ -1348,7 +1365,7 @@ class LookFeedback(unittest.TestCase):
             self.assertEqual(self.window.property("updateHistory").toVariant()["ok"], expected)
 
     def test_detail_reads_coalesce_until_the_previous_reply_finishes(self):
-        self.window.setProperty("page", "about"); QTest.qWait(20)
+        select_settings_page(self.window, "about"); QTest.qWait(20)
         for method, command, response in (("loadAppsSound", "apps-sound", "[]"),
                                            ("loadBackup", "backup", "{}"),
                                            ("loadPhotoState", "paint-state", '{"state":"ready"}')):
@@ -1370,7 +1387,7 @@ class LookFeedback(unittest.TestCase):
         for page, command in (("sound", "apps-sound"), ("phone", "phones"),
                                ("windows", "return-status"), ("light", "paint-state"), ("backups", "backup")):
             with self.subTest(page=page):
-                self.window.setProperty("page", page); QTest.qWait(100)
+                select_settings_page(self.window, page); QTest.qWait(100)
                 self.assertIn(["helper", command], self.helper.commands)
                 self.window.setVisibility(QWindow.Minimized); QTest.qWait(20)
                 self.helper.commands.clear()
@@ -1380,6 +1397,6 @@ class LookFeedback(unittest.TestCase):
                 self.assertIn(["helper", command], self.helper.commands)
         # A painting can continue in the background without polling its progress
         # from unrelated Settings pages.
-        self.window.setProperty("page", "about"); QTest.qWait(50)
+        select_settings_page(self.window, "about"); QTest.qWait(50)
         self.helper.commands.clear(); QTest.qWait(1600)
         self.assertEqual(self.helper.commands, [])

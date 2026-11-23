@@ -1,0 +1,74 @@
+#!/usr/bin/python3
+"""Generate Qt-validated bytecode in a disposable image, after all QML patches.
+
+The source stays installed. Qt rejects incompatible or damaged bytecode and
+compiles normally. Atomic checkouts give /usr files an Epoch timestamp; generate
+source and bytecode together at that timestamp after every installed-source patch.
+Adjacent build-time bytecode must be regenerated whenever its source changes.
+Development tools are mounted from the matching native builder, never shipped.
+"""
+import argparse
+import os
+from pathlib import Path
+import re
+import subprocess
+
+
+def sources(share):
+    roots = [share / 'monet']
+    for kind in ('plasmoids', 'wallpapers', 'look-and-feel'):
+        roots.extend(sorted((share / 'plasma' / kind).glob('org.monet.*')))
+    roots.extend(sorted((share / 'kwin/scripts').glob('monet-*')))
+    roots.extend(sorted((share / 'ksysguard/sensorfaces').glob('org.monet.*')))
+    files = {path for root in roots for path in root.rglob('*.qml')
+             if path.is_file() and not path.is_symlink()}
+    # Only JavaScript imported by QML belongs to the Qt cache. Monet also ships
+    # Node/browser code and dependencies, whose JavaScript uses other runtimes.
+    pending = list(files)
+    while pending:
+        source = pending.pop()
+        for name in re.findall(r'(?m)^\s*\.?import\s+"([^"\n]+\.(?:js|mjs))"', source.read_text()):
+            imported = (source.parent / name).resolve()
+            if (imported.is_relative_to(share.resolve()) and imported.is_file()
+                    and imported not in files):
+                files.add(imported)
+                pending.append(imported)
+    return sorted(files)
+
+
+def compile_sources(share, compiler):
+    from PySide6.QtCore import qVersion
+    version = subprocess.run([str(compiler), '--version'], check=True,
+                             capture_output=True, text=True).stdout.strip()
+    if version != 'qmlcachegen ' + qVersion():
+        raise RuntimeError(f'QML compiler/runtime mismatch: {version}, Qt {qVersion()}')
+    files = sources(share)
+    if not files:
+        raise RuntimeError(f'No installed Monet QML sources in {share}')
+    # Normalize every source before compiling: imports may consult each other.
+    for path in files:
+        os.utime(path, ns=(0, 0))
+    for path in files:
+        target = Path(str(path) + 'c')
+        temporary = target.with_name(target.stem + '.tmp' + target.suffix)
+        try:
+            subprocess.run([str(compiler), '--only-bytecode', '-o', str(temporary), str(path)], check=True)
+            temporary.chmod(0o644)
+            temporary.replace(target)
+            os.utime(target, ns=(0, 0))
+        finally:
+            temporary.unlink(missing_ok=True)
+            Path(str(temporary) + ".aotstats").unlink(missing_ok=True)
+    return len(files)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--share', type=Path, default=Path('/usr/share'))
+    parser.add_argument('--compiler', type=Path, required=True)
+    args = parser.parse_args()
+    print(f'Precompiled {compile_sources(args.share, args.compiler)} Monet QML/JavaScript files')
+
+
+if __name__ == '__main__':
+    main()

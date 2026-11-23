@@ -2,6 +2,8 @@
 numbered it since the list was drawn, and is said done only once it's seen to be."""
 import json
 from pathlib import Path
+from tests.settings_support import settings_source
+from tests.settings_support import qml_source
 import unittest
 from unittest.mock import patch
 
@@ -230,7 +232,7 @@ class SoundChoicesInThePanels(unittest.TestCase):
 
     def test_only_hex_keys_go_on_a_command_line(self):
         for path in (self.QUICK, self.SOUND, self.SETTINGS):
-            qml = path.read_text(encoding="utf-8")
+            qml = qml_source(path)
             with self.subTest(path.parent.name):
                 self.assertIn('return /^(?:[0-9a-f]{2})+$/.test(device.key || "") ? " " + device.key : ""', qml)
                 self.assertIn("return !!a && !!b && (a.key && b.key ? a.key === b.key : a.id === b.id)", qml)
@@ -262,7 +264,7 @@ class SoundChoicesInThePanels(unittest.TestCase):
             self.assertIn(line, qml)
 
     def test_settings_waits_for_each_change_and_offers_try_again(self):
-        qml = self.SETTINGS.read_text(encoding="utf-8")
+        qml = settings_source()
         for line in ('ask("output " + output.id + deviceKey(output), (out, code) => {',
                      'ask("input " + input.id + deviceKey(input), (out, code) => {',
                      'onClicked: sheet.pickOutput(sheet.outputWanted)', 'onClicked: sheet.pickMicrophone(sheet.microphoneWanted)',

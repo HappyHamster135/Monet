@@ -8,6 +8,7 @@ import stat
 import subprocess
 import tempfile
 from types import SimpleNamespace
+from tests.settings_support import settings_source
 import unittest
 from unittest.mock import patch
 
@@ -314,7 +315,7 @@ class StorageScan(unittest.TestCase):
         self.assertEqual(sum(result[key] for key in ('games', 'apps', 'files', 'system')), 50)
 
     def test_settings_splits_the_bar_only_when_the_measurement_fits(self):
-        qml = (ROOT / 'linux/share/monet/settings-app/MonetSettings.qml').read_text(encoding='utf-8')
+        qml = settings_source()
         self.assertIn('readonly property var parts: sheet.storageInfo.breakdown ? [', qml)
         self.assertIn('] : [["occupied", i18n("Used"), "#357F72"]]', qml)
         self.assertIn(': sheet.storageInfo.overcounted ? i18n("Some files are shared between folders', qml)

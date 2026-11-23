@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 import tempfile
 import time
+from tests.settings_support import settings_source
+from tests.settings_support import select_settings_page
 import unittest
 from unittest.mock import Mock, patch
 
@@ -901,7 +903,7 @@ class Packaging(unittest.TestCase):
         self.assertLess(session.index(restore), session.index('"$LIBEXECDIR/monet-quick" steam-share'))
 
     def test_settings_offers_one_switch_on_power_and_windows_and_a_restart_summary(self):
-        qml = (ROOT / "linux/share/monet/settings-app/MonetSettings.qml").read_text()
+        qml = settings_source()
         self.assertEqual(qml.count('title: i18n("Reopen your work")'), 2)
         self.assertEqual(qml.count("onTapped: sheet.setReopenWork(sheet.ready.apps === false)"), 2)
         self.assertIn('objectName: "search-reopen"', qml)
@@ -935,6 +937,7 @@ class PowerAndSleep(summary_tests.ReturnUI):
         self.engine.load(QUrl.fromLocalFile(str(ROOT / "linux/share/monet/settings-app/MonetSettings.qml")))
         self.assertTrue(self.engine.rootObjects(), self.errors)
         self.window = self.engine.rootObjects()[0]
+        select_settings_page(self.window, self.window.property("page"))
         self.wait_for(lambda: not self.window.property("pendingAnchor") and not self.window.property("returnLoading")
                       and self.window.property("returnInfo").toVariant()["available"])
 

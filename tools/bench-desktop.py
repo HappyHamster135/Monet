@@ -31,6 +31,7 @@ def sample(app, env, helpers, timeout, verify_store_start=False):
                                start_new_session=True)
     events, messages = [], []
     first_frame_ms = None
+    initial_page_ms = None
     pending = ''
     deadline = started + timeout
     try:
@@ -50,15 +51,21 @@ def sample(app, env, helpers, timeout, verify_store_start=False):
                     events.append(event)
                     if event.get('phase') == 'first-frame':
                         first_frame_ms = round((time.monotonic()-started)*1000, 3)
-                        if app != 'store' or not verify_store_start:
+                        if app != 'settings' and (app != 'store' or not verify_store_start):
                             return dict(external_first_frame_ms=first_frame_ms, events=events)
+                    if app == 'settings' and event.get('phase') == 'initial-page-ready':
+                        initial_page_ms = round((time.monotonic()-started)*1000, 3)
+                    if app == 'settings' and event.get('phase') == 'initial-data-start':
+                        if first_frame_ms is None or initial_page_ms is None:
+                            return dict(error='initial helpers started before the window and page were ready', events=events)
+                        return dict(external_first_frame_ms=first_frame_ms, external_initial_page_ms=initial_page_ms, events=events)
                     if app == 'store' and verify_store_start and event.get('phase') == 'catalog-load-start':
                         if first_frame_ms is None:
                             return dict(error='catalog started before the first frame', events=events)
                         return dict(external_first_frame_ms=first_frame_ms, events=events)
                 else:
                     messages.append(line.rstrip()); messages = messages[-12:]
-        return dict(error='first-frame not observed', events=events, diagnostic=messages)
+        return dict(error='first frame or initial Settings page not observed', events=events, diagnostic=messages)
     finally:
         stop(process); process.stderr.close()
 
@@ -77,7 +84,7 @@ def main():
     report = dict(schema=1, python=platform.python_version(), rendering='Qt offscreen/software',
                   cache_state=('Uncontrolled OS page cache; shared temporary app cache after the first sample' if args.reuse_cache
                                else 'Uncontrolled OS page cache; clean profile and empty app cache per sample'),
-                  scope='First rendered frame only; initial data readiness and Files UI timing remain separate', apps={})
+                  scope='First rendered frame and initial Settings page construction; initial data readiness and Files UI timing remain separate', apps={})
     if args.collect_host:
         report['host_startup'] = {}
         for name, command in [('system', ['systemd-analyze', 'time']),
@@ -104,6 +111,8 @@ def main():
             values = [item['external_first_frame_ms'] for item in readings if 'external_first_frame_ms' in item]
             report['apps'][app] = dict(samples=readings, median_ms=round(statistics.median(values), 3) if values else None,
                                        min_ms=min(values) if values else None, max_ms=max(values) if values else None)
+            pages = [item['external_initial_page_ms'] for item in readings if 'external_initial_page_ms' in item]
+            if pages: report['apps'][app]['median_initial_page_ms'] = round(statistics.median(pages), 3)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps({app: {key: value for key, value in result.items() if key != 'samples'} for app, result in report['apps'].items()}, indent=2))

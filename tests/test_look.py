@@ -15,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from tests.settings_support import settings_source
 import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -414,7 +415,7 @@ class Paintings(unittest.TestCase):
         self.assertIn("--group General --key Series \"$set\"", light)  # the lock screen
         self.assertIn("d.writeConfig('Series', '$set');", light)        # each desktop
         self.assertIn("w.writeConfig('Series', '$set');", light)        # each placard
-        qml = (SETTINGS_QML).read_text(encoding="utf-8")
+        qml = settings_source()
         self.assertIn('["lilies", i18n("Water Lilies"), i18n("The pond at Giverny")]', qml)
         self.assertIn('ask("series " + name)', qml)
 
@@ -836,7 +837,7 @@ class GlobalThemes(unittest.TestCase):
     def test_monets_look_can_be_put_back(self):
         # Light & Wallpaper's Put back: Monet's look again for this account, what changed since
         # included, and its painting on the wall even where KDE's dialog put another one.
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('sheet.ask("look-reset"', settings)
         self.assertIn('i18nc("Monet\'s look, as it was", "Put back")', settings)
         quick = (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8")
@@ -897,7 +898,7 @@ class Updates(unittest.TestCase):
         quick = (ROOT / "linux/libexec/monet-quick").read_text()
         self.assertIn('"autoUpdates": not Path("/var/lib/monet/auto-updates-off").exists()', quick)
         self.assertIn('ok(f"{BINDIR}/monet", "auto-updates", args[0], timeout=120)', quick)
-        qml = (SETTINGS_QML).read_text(encoding="utf-8")
+        qml = settings_source()
         self.assertIn('title: i18n("Update automatically")', qml)
         self.assertIn('ask("auto-updates " + (on ? "on" : "off")', qml)
 
@@ -947,7 +948,7 @@ class Updates(unittest.TestCase):
         rust = (ROOT / "crates/monet/src/main.rs").read_text()
         self.assertIn('["rollback"] => elevate(&["helper", "rollback"])', rust)
         self.assertIn('Command::new("bootc").arg("rollback")', rust)
-        qml = (SETTINGS_QML).read_text(encoding="utf-8")
+        qml = settings_source()
         self.assertIn('ask("rollback"', qml)
         self.assertIn('i18n("Go back at restart")', qml)  # asked once more before it's chosen
         # Updating also clears what no app uses anymore, which Storage says.
@@ -986,7 +987,7 @@ class Updates(unittest.TestCase):
         self.assertIn("/var/lib/monet/apps-done", (ROOT / "linux/libexec/monet-session").read_text())
 
     def test_settings_checks_before_installing(self):
-        qml = (SETTINGS_QML).read_text()
+        qml = settings_source()
         self.assertIn('ask("update-check"', qml)
         self.assertIn('ask("update"', qml)
         quick = (ROOT / "linux/libexec/monet-quick").read_text()
@@ -1429,7 +1430,7 @@ class MonetsOwn(unittest.TestCase):
                     patch.object(quick.os, "execvpe"):
                 quick.open_settings(route)
                 kde.assert_called_once_with(target)
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         body = re.search(r"function kdePage\(\) \{\n(.*?)\n    \}\n", settings, re.S).group(1)
         pages = re.findall(r'(\w+): "(\w+)"', body)
         self.assertIn(("light", "fonts"), pages)
@@ -1534,7 +1535,7 @@ class MonetsOwn(unittest.TestCase):
             self.assertTrue(q.get_flatpak(q.TOOLS_APP))
         self.assertEqual(ran[1], ("flatpak", "install", "--system", "--noninteractive", "-y", "flathub", "io.github.dvlv.boxbuddyrs"))
         self.assertEqual(started, [["flatpak", "run", "io.github.dvlv.boxbuddyrs"]])
-        settings = SETTINGS_QML.read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('title: i18n("Command-line tools")', settings)
         self.assertIn('sheet.ask("get-tools", () => sheet.gettingTools = false)', settings)
         self.assertIn("          - io.github.dvlv.boxbuddyrs\n", (SHARE / "monet/store/content.yaml").read_text())
@@ -1555,7 +1556,7 @@ class MonetsOwn(unittest.TestCase):
         self.assertIn("/usr/share/ublue-os/bazaar/content.yaml", self.INSTALL)
 
     def test_monet_settings_doesnt_say_kde(self):
-        qml = (SETTINGS_QML).read_text(encoding="utf-8")
+        qml = settings_source()
         said = re.findall(r'i18n\("([^"]*)"', qml)
         self.assertIn("More settings ›", said)
         self.assertEqual([s for s in said if re.search(r"\b(KDE|Plasma|Linux|Bazzite)\b", s)], [])
@@ -1915,7 +1916,7 @@ class GlassSlider(unittest.TestCase):
         self.assertIn("MonetSmokeMatte", install)
 
     def test_settings_has_the_slider(self):
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertNotIn('["glass", i18n("Glass")', settings)  # no longer a switch
         for line in ('readonly property var levels: ["solid", "matte", "frosted", "clear"]', 'tell("glass " + level)',
                      "snapMode: T.Slider.SnapAlways", "onPressedChanged: if (!pressed) sheet.chooseGlass("):
@@ -2091,7 +2092,7 @@ class SnapLikeWindows(unittest.TestCase):
         # The user: Settings resized from inside its glass, then only from two sides, and closed
         # with the bar. Now an app of its own (as Games): Monet's frame resizes, fills the screen
         # and snaps it, and its size is kept as a window's.
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn("\nShared.MonetWindow {\n    id: sheet\n", settings)
         for gone in ("PlasmaCore", "PlasmaComponents", "P5Support", "Plasmoid", "mainItem", "startSystemResize",
                      "toggleBig", "chosenWidth", "@DATADIR@", "@BINDIR@"):
@@ -2157,7 +2158,7 @@ class SnapLikeWindows(unittest.TestCase):
                       "w.normalWindow && root.snapping"):
             self.assertIn(guard, main)
         self.assertNotIn("snapping", main[main.index("function lineUp()"):main.index("Component.onCompleted")])
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('["snap", i18n("Snap layouts"), i18n("Drag a window to the top of the screen', settings)
         self.assertIn('...(sheet.prefs.snap !== false ? [[i18n("Snap layouts"), ["Meta", "Z"]]] : []),', settings)
 
@@ -2731,7 +2732,7 @@ class EverydayScreens(unittest.TestCase):
         reset = look.split("--resetLayout >/dev/null 2>&1", 1)[1].split("\nfi\n", 1)[0]
         self.assertIn('rm -f "$CONFIG/monet/menu-add-widgets" "$CONFIG/monet/menu-monet"', reset)
         # Monet Settings' Light & Wallpaper opens the gallery too.
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('sheet.ask("widgets")', settings)
         quick = (ROOT / "linux/libexec/monet-quick").read_text()
         self.assertIn('elif cmd == "widgets":', quick)
@@ -2888,7 +2889,7 @@ class MonetSettings(unittest.TestCase):
         session = (ROOT / "linux/libexec/monet-session").read_text()
         self.assertIn('--action=open="$(say "See what\'s new")" --wait', session)
         self.assertIn('[ "$answer" = open ] && "$LIBEXECDIR/monet-quick" open updates', session)
-        qml = (SETTINGS_QML).read_text(encoding="utf-8")
+        qml = settings_source()
         self.assertIn('ask("whats-new", out => sheet.whatsNew = sheet.json(out, {}))', qml)
 
     def test_printers_come_from_cups(self):
@@ -2910,12 +2911,12 @@ class MonetSettings(unittest.TestCase):
         self.assertIn('"DeleteRecentStats", "sis", "", "0", "everything"', source)
         self.assertIn('kwrite("kscreenlockerrc", "Daemon", "LockOnResume"', source)
         self.assertEqual(quick.LOCK_TIMES, (1, 5, 15, 30, 0))
-        qml = (SETTINGS_QML).read_text(encoding="utf-8")
+        qml = settings_source()
         self.assertIn("options: [[1, i18n(\"1 min\")], [5, i18n(\"5 min\")], [15, i18n(\"15 min\")], [30, i18n(\"30 min\")]", qml)
         self.assertIn('onClicked: sheet.ask("kde keys")', qml)
 
     def test_every_page_has_its_picture(self):
-        qml = (SETTINGS_QML).read_text()
+        qml = settings_source()
         entries = re.findall(r'\{ id: "(\w+)", name: [^,]+,( kde: "(\w+)", swatch: "(\w+)",)?', qml)
         pages = [e[0] for e in entries if not e[2]]
         self.assertEqual(tuple(pages), quick_helper().PAGES)
@@ -2929,12 +2930,12 @@ class MonetSettings(unittest.TestCase):
             override = re.search(r'swatch: "(\w+)"', entry)
             swatch = override.group(1) if override else page
             self.assertTrue((art / f"swatch-{swatch}.png").is_file(), page)
-            self.assertIn(f"{page}: {page}Page", qml)
+            self.assertIn(f'{page}: "Settings{page.capitalize()}.qml"', qml)
         for picture in ("light-hours.png", "light-mist.png", "light-smoke.png", "about.jpg"):
             self.assertTrue((art / picture).is_file(), picture)
 
     def test_date_time_and_accounts_are_monets(self):
-        qml = (SETTINGS_QML).read_text(encoding="utf-8")
+        qml = settings_source()
         for page in ("datetime", "users"):
             entry = re.search(r'\{ id: "%s",[^}]*\}' % page, qml).group(0)
             self.assertNotIn("kde:", entry)
@@ -2952,7 +2953,7 @@ class MonetSettings(unittest.TestCase):
             self.assertIn("clockFormat.time(", clock.read_text(encoding="utf-8"))
 
     def test_power_input_notifications_and_apps_are_monets(self):
-        qml = (SETTINGS_QML).read_text(encoding="utf-8")
+        qml = settings_source()
         for page in ("input", "power", "notifications", "apps"):
             entry = re.search(r'\{ id: "%s",[^}]*\}' % page, qml).group(0)
             self.assertNotIn("kde:", entry)
@@ -2998,9 +2999,9 @@ class MonetSettings(unittest.TestCase):
 
     def test_settings_search_speaks_every_language(self):
         # Every page's search words are translated, and a search ignores accents ("ecran" finds "écran").
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertEqual(settings.count('words: i18nc("Settings search words, space-separated",'), len(quick_helper().PAGES))
-        self.assertNotIn('words: "', settings)
+        self.assertNotRegex(settings, r'\bwords:\s*"')
         self.assertIn('const all = fold(entry.name + " " + entry.words)', settings)
         self.assertIn('words.every(word => all.indexOf(word) !== -1)', settings)
         german = (ROOT / "po/de.po").read_text(encoding="utf-8")
@@ -3234,7 +3235,7 @@ class Scripts(unittest.TestCase):
     def test_text_from_people_reaches_nmcli_as_is(self):
         # Monet Settings sends network names and passwords as hex of their UTF-8.
         self.assertEqual(quick_helper().unhex("436166c3a92024287266292027e2988027"), "Café $(rf) '☀'")
-        qml = (SETTINGS_QML).read_text()
+        qml = settings_source()
         self.assertIn('"wifi-join " + hex(name)', qml)
         self.assertNotIn("Qt.btoa", qml)
 
@@ -3267,7 +3268,7 @@ Audio
                    ("wpctl", "inspect", "53"): 'id 53, type PipeWire:Interface:Node\n  * node.name = "auto_null"\n'}
         with mock.patch.object(quick, "run", lambda *args, **kw: answers.get(args)):
             self.assertEqual(quick.outputs(), [{"id": 53, "name": "Dummy Output", "default": True, "none": True}])
-        qml = (SETTINGS_QML).read_text(encoding="utf-8")
+        qml = settings_source()
         self.assertIn('i18n("No speakers or headphones")', qml)
         self.assertIn("model: soundColumn.visibleSpeakers", qml)
 
@@ -3452,7 +3453,7 @@ GENERAL.STATE:100 (connected)
 
     def test_play_on_windows_without_windows(self):
         # Found by the test bench: a Monet-only PC was told "Windows isn't ready" and "Not found".
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('readonly property bool noWindows: sheet.pc.windows === "Not found" && setupState === ""', settings)
         self.assertIn('windowsColumn.setupState === "no-space" ? i18n("Windows needs more disk space")', settings)
         self.assertIn('raise Stop("no-space"', (ROOT / "linux/libexec/monet-prepare-windows").read_text(encoding="utf-8"))
@@ -3465,7 +3466,7 @@ GENERAL.STATE:100 (connected)
 
     def test_search_enter_opens_the_page_called_that(self):
         # Found by the test bench: "Games" and Enter opened Storage, which mentions games.
-        qml = (SETTINGS_QML).read_text(encoding="utf-8")
+        qml = settings_source()
         self.assertIn("shown.find(p => side.fold(p.name) === typed)", qml)
 
     def test_quick_reads_the_clock(self):
@@ -3531,7 +3532,7 @@ GENERAL.STATE:100 (connected)
         sealed = bytes(a ^ b for a, b in zip(secret.encode(), pad)).hex()
         self.assertEqual(quick.unseal(sealed, pad), secret)
         self.assertIsNone(quick.unseal("00" * 129, pad))
-        qml = (SETTINGS_QML).read_text(encoding="utf-8")
+        qml = settings_source()
         self.assertNotRegex(qml, r'"password " \+ (sheet\.)?hex\(')
 
     @unittest.skipUnless(sys.platform.startswith("linux"), "passwd answers in a Linux terminal")
@@ -3599,7 +3600,7 @@ class WhatOtherSystemsHave(unittest.TestCase):
         # Apps that play, not ones that only record, nor video.
         self.assertEqual(quick.app_streams(status), [(81, "Firefox")])
         self.assertEqual(quick.sinks(status)[0]["id"], 52)
-        settings = self.SETTINGS.read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('onMoved: value => sheet.queue("app-volume " + (modelData.ids || [modelData.id]).join(","), value)', settings)
         panel = (PLASMA / "plasmoids/org.monet.quick/contents/ui/main.qml").read_text(encoding="utf-8")
         self.assertIn("onTapped: root.playThrough(place.modelData)", panel)
@@ -3653,7 +3654,7 @@ class WhatOtherSystemsHave(unittest.TestCase):
     def test_hotspot_shares_the_internet(self):
         quick = (ROOT / "linux/libexec/monet-quick").read_text()
         self.assertIn('["nmcli", "device", "wifi", "hotspot"]', quick)
-        settings = self.SETTINGS.read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('sheet.ask(on ? "hotspot-on" : "hotspot-off"', settings)
 
     def test_batteries_list_this_laptop_first(self):
@@ -3725,7 +3726,7 @@ class WhatOtherSystemsHave(unittest.TestCase):
         self.assertIn("ExecStop=@LIBEXECDIR@/monet-ready arm", (ROOT / "linux/systemd/monet-ready-leave.service").read_text())
         install = (ROOT / "linux/install.sh").read_text()
         self.assertIn("systemctl --global enable monet-ready-lock.service", install)
-        settings = self.SETTINGS.read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('sheet.ask(on ? "ready-on" : "ready-off"', settings)
 
     def test_last_start_shows_where_the_time_went(self):
@@ -3734,7 +3735,7 @@ class WhatOtherSystemsHave(unittest.TestCase):
                               " + 1min 2.302s (userspace) = 1min 16.297s", 10_000_000, 16_500_000)
         self.assertEqual(found, {"pc": 7.2, "monet": 69.1, "desktop": 6.5, "total": 82.8})
         self.assertEqual(quick.startup("Bootup is not yet finished"), {})
-        self.assertIn('ask("startup", out => sheet.startup = sheet.json(out, {}))', self.SETTINGS.read_text(encoding="utf-8"))
+        self.assertIn('ask("startup", out => sheet.startup = sheet.json(out, {}))', settings_source())
 
     def test_a_new_account_is_welcomed_once(self):
         session = (ROOT / "linux/libexec/monet-session").read_text()
@@ -3745,8 +3746,8 @@ class WhatOtherSystemsHave(unittest.TestCase):
         with patch.object(quick, "open_settings") as opened:
             self.assertEqual(quick.main(["open", "welcome"]), 0)
             opened.assert_called_once_with("welcome")
-        settings = self.SETTINGS.read_text(encoding="utf-8")
-        self.assertIn("welcome: welcomePage", settings)
+        settings = settings_source()
+        self.assertIn('welcome: "SettingsWelcome.qml"', settings)
         self.assertIn('destination[0] === "welcome" || pages.some(p => p.id === destination[0])', settings)
 
 
@@ -3923,8 +3924,8 @@ class Backups(unittest.TestCase):
         self.assertIn("rsync", (ROOT / "image/Containerfile").read_text())
 
     def test_settings_and_files_have_it(self):
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
-        self.assertIn("backups: backupsPage", settings)
+        settings = settings_source()
+        self.assertIn('backups: "SettingsBackups.qml"', settings)
         self.assertIn('sheet.ask("keep " + (on ? "on" : "off")', settings)
         self.assertIn('onClicked: sheet.useEarlier("put-back", modelData)', settings)
         self.assertTrue((SHARE / "monet/settings/swatch-backups.png").is_file())
@@ -3966,7 +3967,7 @@ class ScreensForGames(unittest.TestCase):
             quick.set_screen_feature("x; rm -rf ~", "hdr", True)
         self.assertEqual(said, [("kscreen-doctor", "output.DP-1.hdr.enable"), ("kscreen-doctor", "output.DP-1.vrrpolicy.automatic"),
                                 ("kscreen-doctor", "output.HDMI-A-1.vrrpolicy.never")])
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('ask("screen-" + what + " " + name + (on ? " on" : " off")', settings)
 
 
@@ -4015,7 +4016,7 @@ class TheHoursFollowTheSun(unittest.TestCase):
         qml = self.HOURS.read_text(encoding="utf-8")
         self.assertIn('"https://api.open-meteo.com/v1/forecast?latitude="', qml)
         self.assertIn("if (root.configuration.Weather === false || !place) {", qml)
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('["weather", i18n("Weather"),', settings)
 
 class WhichSideAGamePlaysOn(unittest.TestCase):
@@ -4043,7 +4044,7 @@ class WhichSideAGamePlaysOn(unittest.TestCase):
         self.assertEqual(found["blocked"], [{"id": "1172470", "name": "Apex Legends", "onWindows": True, "shared": False},
                                             {"id": "359550", "name": "Rainbow Six Siege", "onWindows": False, "shared": False}])
         self.assertEqual(found["marks"]["646570"], "here")
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('text: i18n("Which games need Windows comes from AreWeAntiCheatYet and ProtonDB.")', settings)
         # Epic's games by namespace, as Heroic's library knows them.
         fortnite = {"name": "Fortnite", "status": "Denied", "storeIds": {"epic": {"namespace": "fn", "slug": "fortnite"}}}
@@ -4233,7 +4234,7 @@ class SmallFixesFor090(unittest.TestCase):
         self.assertIn('LABEL org.opencontainers.image.version="${VERSION}" version="${VERSION}"', containerfile)
         workflow = (ROOT / ".github/workflows/image.yml").read_text()
         self.assertEqual(workflow.count('--build-arg VERSION="$VERSION"'), 2)
-        settings = self.SETTINGS.read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('i18n("Fixes for Monet %1 are ready", found.version)', settings)
         version_pattern = re.search(r"/([^/\n]+)/\.test\(found\.version", settings)
         self.assertIsNotNone(version_pattern)
@@ -4243,9 +4244,9 @@ class SmallFixesFor090(unittest.TestCase):
                 self.assertEqual(re.fullmatch(version_pattern[1], version) is not None, accepted)
 
     def test_settings_list_keeps_clear_of_the_scrollbar(self):
-        settings = self.SETTINGS.read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn("width: navList.width - (navList.interactive ? navScroll.width + 4 : 0)", settings)
-        self.assertIn("T.ScrollBar.vertical: Rail { id: navScroll; tone: look }", settings)
+        self.assertIn("T.ScrollBar.vertical: SettingsControls.Rail { id: navScroll; tone: look }", settings)
         # Quick Settings no longer keeps Settings' size: the window does (QtCore's Settings).
         self.assertFalse((PLASMA / "plasmoids/org.monet.quick/contents/config/main.xml").exists())
 
@@ -4294,7 +4295,7 @@ class For090(unittest.TestCase):
             out = subprocess.run(["bash", "-c", script], capture_output=True, text=True, timeout=30)
             self.assertEqual(out.stdout.strip(), series, (month, place))
         self.assertIn("seasons", quick_helper().SERIES)
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('["seasons", i18n("Through the year"), i18n("Each season its painting")]', settings)
 
     def test_plein_air_focus(self):
@@ -4362,7 +4363,7 @@ class TheBarStepsAside(unittest.TestCase):
             quick.PREFS = Path(tmp) / "prefs.json"
             quick.drawn_by_processor = lambda: False
             self.assertTrue(quick.prefs()["dodge"])
-        self.assertIn("dodge: true })", (SETTINGS_QML).read_text(encoding="utf-8"))
+        self.assertIn("dodge: true })", settings_source())
         self.assertIn("--group Effect-slidingpopups --key SlideOutTime 240", look)
         self.assertIn("--group Plugins --key slidingpopupsEnabled true", look)
         quick = quick_helper()
@@ -4377,7 +4378,7 @@ class TheBarStepsAside(unittest.TestCase):
         self.assertIn("p.hiding = 'dodgewindows'", said[1])
         self.assertNotIn("'none'", said[0] + said[1])
         self.assertNotIn('"none"', look[look.index('aside="$CONFIG/monet/bar-steps-aside"'):])
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertNotIn('["dodge", i18n("Bar steps aside")', settings)
 
 
@@ -4905,7 +4906,7 @@ class GoingBackByItself(unittest.TestCase):
             self.assertEqual(quick.went_back(note), {})
             note.write_text(json.dumps({"version": "0.9.2", "digest": "x", "to": "0.9.1", "when": 1}))
             self.assertEqual(quick.went_back(note), {"version": "0.9.2", "to": "0.9.1"})
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('ask("went-back", out => sheet.wentBack = sheet.json(out, {}))', settings)
         self.assertIn("&& !(sheet.wentBack.version && sheet.wentBack.version === sheet.previous.version)", settings)
         session = (ROOT / "linux/libexec/monet-session").read_text()
@@ -5006,7 +5007,7 @@ class ResetThisPC(unittest.TestCase):
                       quick)
         # Not among the helpers Monet's polkit rule lets run without a password.
         self.assertNotIn("monet-reset", (ROOT / "linux/polkit/49-monet.rules").read_text())
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('sheet.ask("reset on", out => sheet.resetState = sheet.json(out, sheet.resetState))', settings)
         self.assertIn('"updates update version upgrade new reset restore rollback"', settings)
 
@@ -5297,7 +5298,7 @@ class SaveAReport(unittest.TestCase):
             path = quick.save_report(Path(tmp) / "Dokument", now=(2026, 10, 24, 9, 30, 0, 5, 297, 0))
             self.assertEqual(path.name, "Monet report 2026-10-24 09.30.txt")
             self.assertEqual(path.read_text(encoding="utf-8"), "Monet report\n")
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('title: i18n("Save a report")', settings)
         self.assertIn('sheet.ask("report", out => {', settings)
         self.assertIn("report logs problem", settings)   # search finds it
@@ -5320,7 +5321,7 @@ class Magnifier(unittest.TestCase):
         self.assertIn(("call", "org.kde.KWin", "/Effects", "org.kde.kwin.Effects", "unloadEffect", "s", "zoom"), calls)
         with mock.patch.object(quick, "busctl", lambda *a: None):
             self.assertIsNone(quick.zoom_on())       # no KWin to ask: Settings hides the switch
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('title: i18n("Magnifier")', settings)
         self.assertIn('visible: typeof sheet.accessInfo.zoom === "boolean"', settings)
         self.assertIn('reader: "reader", zoom: "zoom" })[what]', settings)
@@ -5756,7 +5757,7 @@ class SecurityAtAGlance(unittest.TestCase):
         self.assertIn("/var/lib/monet/firewall-allowed-ports.json", uninstall)
         source = (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8")
         self.assertIn('"--urgency=critical"', source)
-        settings = SETTINGS_QML.read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('sheet.fixSecurity("firewall-remove-port " + modelData.port)', settings)
 
 
@@ -5795,15 +5796,15 @@ class SecurityAtAGlance(unittest.TestCase):
         for said, strict in (("monet\n", True), ("FedoraWorkstation\n", False), (None, None)):
             with mock.patch.object(quick, "run", return_value=said):
                 self.assertEqual(quick.firewall_strict(), strict)
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('sheet.fixSecurity("firewall-strict " + (checked ? "off" : "on"))', settings)
         self.assertIn('ok("pkexec", f"{LIBEXECDIR}/monet-secure", cmd, args[0], timeout=120)',
                       (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8"))
 
     def test_the_page(self):
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('{ id: "security", name: i18n("Security")', settings)
-        self.assertIn("security: securityPage,", settings)
+        self.assertIn('security: "SettingsSecurity.qml",', settings)
         self.assertIn('ask("security", (out, code) =>', settings)
         for fix in ('sheet.fixSecurity("trust-key")', 'sheet.fixSecurity("firmware-setup")', 'command: "firewall-on"',
                     'sheet.fixSecurity("auto-updates on")', "sheet.installFirmware()", 'sheet.fixSecurity("keep on")'):
@@ -5952,7 +5953,7 @@ class YourPhone(unittest.TestCase):
             self.assertEqual(json.loads(stdout.getvalue()), {"state": state})
 
     def test_phone_page_callbacks_clear_stale_actions_and_report_dispatch_honestly(self):
-        settings = SETTINGS_QML.read_text(encoding="utf-8")
+        settings = settings_source()
         functions = "\n".join(re.search(r"\n    (function " + name + r"\(.*?\n    })\n", settings, re.S).group(1)
                               for name in ("loadPhones", "sendPhoneFile"))
         source = '''
@@ -6007,9 +6008,9 @@ check(sheet.phoneFileState === "failed", "null file result was accepted");
             self.assertFalse(result.isError(), result.toString())
 
     def test_the_page(self):
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('{ id: "phone", name: i18n("Phone")', settings)
-        self.assertIn("phone: phonePage", settings)
+        self.assertIn('phone: "SettingsPhone.qml"', settings)
         self.assertIn('source: sheet.art + "phone-qr.png"', settings)
         self.assertTrue((SHARE / "monet/settings/phone-qr.png").is_file())
         self.assertTrue((SHARE / "monet/settings/swatch-phone.png").is_file())
@@ -6037,7 +6038,7 @@ class Fingerprint(unittest.TestCase):
         image = (ROOT / "image/Containerfile").read_text()
         self.assertIn("authselect enable-feature with-fingerprint ||", image)   # never stops the build
         self.assertIn("dnf5 -y install fprintd-pam", image)
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn("visible: !!sheet.privacyInfo.fingerprint", settings)
 
 
@@ -6136,7 +6137,7 @@ class ASmootherTripToWindows(unittest.TestCase):
         self.assertIn("StuckRects3", painted)
 
     def test_settings_ask_bridge_for_a_task(self):
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('(asking.task === "launchers" || asking.task === "update") ? asking.task : ""', settings)
         self.assertIn('task ? ["monet", "windows", "--" + task]', settings)
         self.assertIn('call(["monet", "games", "--updated"]', settings)
@@ -6407,7 +6408,7 @@ class OneGamesFolderForBoth(unittest.TestCase):
             self.assertFalse(q.heroic_here())
             (Path(tmp) / "flatpak/app/com.heroicgameslauncher.hgl").mkdir(parents=True)
             self.assertTrue(q.heroic_here())
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('visible: sharedCard.s.state === "open" && sharedCard.s.heroic === false', settings)
         self.assertIn('sheet.ask("get-heroic", out => {', settings)
 
@@ -6610,7 +6611,7 @@ class OneGamesFolderForBoth(unittest.TestCase):
             self.assertFalse(q.shared_info(libraries[:1])["steam"])
             q.SHARED_STATE.write_text('{"state": "asleep"}')
             self.assertEqual(q.shared_info(libraries), {"state": "asleep", "unlocked": False, "handover": False})
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('sheet.ask("steam-share now", out => {', settings)
         self.assertIn('i18n("Windows didn\'t shut down fully, so its drive isn\'t open to Monet this time.', settings)
 
@@ -6751,7 +6752,7 @@ class YourAppsAgainAfterWindows(unittest.TestCase):
         self.assertNotIn("elevate(&args)", switch)
         session = (ROOT / "linux/libexec/monet-session").read_text()
         self.assertIn('"$LIBEXECDIR/monet-quick" trip-apps-again', session)
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('sheet.ask("trip-apps " + (on ? "on" : "off")', settings)
 
 
@@ -6906,7 +6907,7 @@ class BitLockerWindows(unittest.TestCase):
         self.assertIn('"handover": bool(shared_state().get("handover"))',
                       (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8"))
         self.assertIn('sharedCard.s.state === "bitlocker" && sharedCard.s.handover === true',
-                      SETTINGS_QML.read_text(encoding="utf-8"))
+                      settings_source())
 
     def test_a_recovery_key_however_it_was_typed(self):
         d = self.drive
@@ -6975,7 +6976,7 @@ class BitLockerWindows(unittest.TestCase):
         with mock.patch.object(q, "take_pad", lambda: pad), mock.patch.object(q.subprocess, "run", fake):
             self.assertEqual(q.unlock_windows(sealed), {"result": "open", "state": "no-bridge"})
         self.assertEqual(ran, [(["pkexec", f"{q.LIBEXECDIR}/monet-windows-drive", "unlock"], self.KEY)])
-        settings = SETTINGS_QML.read_text(encoding="utf-8")
+        settings = settings_source()
         for piece in ('const sealed = sheet.seal(key.trim(), pad.trim())', 'sheet.ask("bitlocker " + sealed, out => {',
                       'onClicked: Qt.openUrlExternally("https://aka.ms/myrecoverykey")',
                       '|| (s.state === "no-bridge" && s.unlocked === true)', 'visible: sharedCard.s.state === "bitlocker"'):
@@ -7084,7 +7085,7 @@ class BookmarksFromWindows(unittest.TestCase):
         self.assertIn("PathChanged=%h/.local/share/monet/windows-bookmarks.html", path)
 
     def test_settings_says_what_came_and_how_passwords_follow(self):
-        settings = SETTINGS_QML.read_text(encoding="utf-8")
+        settings = settings_source()
         for piece in ('ask("windows-browsers", out => sheet.browserInfo = sheet.json(out, sheet.browserInfo))',
                       'title: i18n("Destination profile")', 'bookmarkImport.act("prepare")',
                       'title: i18n("Passwords")', 'bookmarkImport.act("verify")',
@@ -7236,7 +7237,7 @@ class DownloadedOnce(unittest.TestCase):
             self.assertEqual(started[0], ["lutris", "lutris:ubisoft-connect"])          # installed by Lutris
             self.assertEqual(started[2], ["lutris", "lutris:rungame/battlenet"])        # here already: opened
             self.assertEqual(started[1][1:], ["wine-watch"])                            # W: as soon as there's a prefix
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('sheet.ask("get-launcher " + modelData[0], out => {', settings)
         quick = (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8")
         self.assertIn("'\"$0\" epic-share; \"$0\" wine-share; \"$0\" launchers', quick", quick)   # when the gallery opens too
@@ -7382,10 +7383,10 @@ class GamesTheApp(unittest.TestCase):
         app = (ROOT / "linux/libexec/monet-settings").read_text(encoding="utf-8")
         for piece in ('_loader = SourceFileLoader("monet_games", f"{LIBEXECDIR}/monet-games")', "_loader.exec_module(games)",
                       'app.setDesktopFileName("monet-settings")', "if games.already_open(name, page):\n        return 0",
-                      "helper = games.Helper()", "games.answer(server, helper)",
+                      "helper = games.Helper(defer_start=True)", "games.answer(server, helper)",
                       'f"{DATADIR}/monet/settings-app/MonetSettings.qml"'):
             self.assertIn(piece, app)
-        settings = SETTINGS_QML.read_text(encoding="utf-8")
+        settings = settings_source()
         for name in ("pictures", "brush", "firstPage", "helper"):  # what monet-settings hands the window
             self.assertIn(f'setContextProperty("{name}"', app)
             self.assertRegex(settings, rf"\b{name}\b")
@@ -7735,7 +7736,7 @@ class WindowsKeys(unittest.TestCase):
         self.assertIn('[ -e "$looks/widget-keys" ] || "$LIBEXECDIR/monet-look" --widget-keys',
                       (ROOT / "linux/libexec/monet-session").read_text(encoding="utf-8"))
         self.assertIn("X-KDE-Shortcuts=Meta+I", (ROOT / "linux/share/applications/monet-settings.desktop").read_text(encoding="utf-8"))
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         for pair in ('[i18n("Settings"), ["Meta", "I"]]', '[i18n("What\'s running"), ["Ctrl", "Shift", "Esc"]]',
                      '[i18n("A window on the whole screen"), ["Meta", "\\u2191"]]',
                      '[i18n("Snap layouts"), ["Meta", "Z"]]', '[i18n("Next keyboard layout"), ["Meta", "Space"]]'):
@@ -8053,7 +8054,7 @@ class AGuest(unittest.TestCase):
         # Called Guest in the language Settings speaks, on the sign-in screen too.
         self.assertIn('name = [tr("Guest").encode().hex()] if cmd == "guest-on" else []', (ROOT / "linux/libexec/monet-quick").read_text())
         self.assertIn('if not 0 < len(name) <= 32 or any(c in name for c in ":,\\\\")', script)
-        settings = (SETTINGS_QML).read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn("sheet.people.filter(p => !p.you && !p.guest)", settings)
         # Nothing of Windows for a guest: not its games, not its notes.
         with tempfile_dir() as tmp:
@@ -8137,7 +8138,7 @@ class OneDrive(unittest.TestCase):
         self.assertTrue(q.onedrive_cancel())
         self.assertEqual(ran[0][:4], ("pkill", "-u", q.getpass.getuser(), "-f"))
         self.assertEqual(ran[0][4], "^rclone config (create|update) OneDrive ")
-        settings = SETTINGS_QML.read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('sheet.ask("onedrive-cancel", () => {})', settings)
 
     def test_disconnecting_stops_the_mount_and_takes_the_place_away(self):
@@ -8185,7 +8186,7 @@ class OneDrive(unittest.TestCase):
         self.assertIn("monet-onedrive.service >/dev/null", uninstall)
         self.assertIn("/etc/systemd/user/monet-onedrive.service", uninstall)
         self.assertRegex((ROOT / "image/Containerfile").read_text(encoding="utf-8"), r"tpm2-tss rclone")
-        settings = SETTINGS_QML.read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('ask("onedrive", out => sheet.oneDrive = sheet.json(out, sheet.oneDrive))', settings)
         self.assertIn('sheet.ask("onedrive-" + what, out => {', settings)
         quick = (ROOT / "linux/libexec/monet-quick").read_text(encoding="utf-8")
@@ -8776,7 +8777,7 @@ class MonetsAppsAreGlass(unittest.TestCase):
         shared = (SHARE / "monet/games/MonetWindow.qml").read_text(encoding="utf-8")
         self.assertEqual(shared.count("WindowGlass {"), 1)
         self.assertIn("blurred: blurBehind\n", shared)
-        settings = (SHARE / "monet/settings-app/MonetSettings.qml").read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('import "../games" as Shared', settings)
         # Its page stays all paper over the glass.
         self.assertIn("color: Qt.rgba(look.paper.r, look.paper.g, look.paper.b, 1)", settings)
@@ -8817,7 +8818,7 @@ class MonetsAppsAreGlass(unittest.TestCase):
         self.assertEqual(told, [])
 
     def test_put_back_says_it_did(self):
-        settings = (SHARE / "monet/settings-app/MonetSettings.qml").read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn(': sheet.restored ? i18n("Put back again")', settings)
         self.assertIn("sheet.restored = code === 0 && sheet.json(out, {}).done === true", settings)
         self.assertIn('kind: sheet.restored ? "lily" : "plain"', settings)

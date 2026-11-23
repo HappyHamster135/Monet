@@ -39,7 +39,7 @@ class ClickTargets(unittest.TestCase):
             'property color wash:"#eeeeee"; property color wash2:"#dddddd"; property color press:"#cccccc"; property color dim:"#555555" }\n'
             'Games.Pill { objectName:"pill"; x:20; y:40; width:200; height:44; text:"Choose"; tone:ink }\n'
             'Games.SunButton { objectName:"sun"; x:280; y:40; width:200; height:44; text:"Play" }\n'
-            'Settings.MonetSettings.Pill { objectName:"settings"; x:20; y:140; width:200; height:44; text:"Save"; tone:ink }\n'
+            'Settings.SettingsControls.Pill { objectName:"settings"; x:20; y:140; width:200; height:44; text:"Save"; tone:ink }\n'
             'Store.Tile { objectName:"store"; x:280; y:140; width:200; height:140; app:({name:"Fixture"}); tone:ink }\n}')
         self.engine.load(QUrl.fromLocalFile(str(path)))
         self.assertTrue(self.engine.rootObjects(), self.errors)

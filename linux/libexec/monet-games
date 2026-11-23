@@ -222,9 +222,10 @@ class Helper(QObject):
     # Opened again: this window comes forward instead, with what that start was asked (Settings: a page).
     wanted = Signal(str)
 
-    def __init__(self):
+    def __init__(self, *, defer_start=False):
         super().__init__()
         self._next = 0
+        self._pending = [] if defer_start else None
 
     @Slot("QVariantList", result=int)
     def run(self, command):
@@ -246,7 +247,16 @@ class Helper(QObject):
         self.start(ticket, program, [str(a) for a in command[1:]], text)
         return ticket
 
+    def resume(self):
+        """Release queued initial requests, preserving every ticket and stdin payload."""
+        pending, self._pending = self._pending, None
+        for request in pending or ():
+            self.start(*request)
+
     def start(self, ticket, program, args, text=None):
+        if self._pending is not None:
+            self._pending.append((ticket, program, args, text))
+            return
         process = QProcess(self)
         settled = False
 

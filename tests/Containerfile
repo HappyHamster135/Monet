@@ -115,4 +115,6 @@ COPY --from=task-manager /out /tmp/monet-task-manager
 RUN python3 /tmp/monet-task-manager/bundle.py install /tmp/monet-task-manager \
  && rm -rf /tmp/monet-task-manager
 ENV MONET_TASK_MANAGER_NATIVE=1
+# Match the bytecode compiler to the native Qt runtime, without shipping headers.
+COPY --from=dock /usr/lib64/qt6/libexec/qmlcachegen /usr/local/bin/monet-test-qmlcachegen
 CMD ["python3", "tools/test.py", "--require-desktop"]

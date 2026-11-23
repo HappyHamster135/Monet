@@ -16,7 +16,7 @@ from importlib.machinery import SourceFileLoader
 
 STARTUP_STARTED = time.monotonic()
 
-from PySide6.QtCore import QUrl
+from PySide6.QtCore import QUrl, Qt
 from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtNetwork import QLocalServer
 from PySide6.QtQml import QQmlApplicationEngine
@@ -46,7 +46,7 @@ def main():
     server = QLocalServer()
     server.setSocketOptions(QLocalServer.UserAccessOption)
     server.listen(name)
-    helper = games.Helper()
+    helper = games.Helper(defer_start=True)
     activity = games.WindowActivity()
     area = games.WindowArea()
     clock = games.BootClock()
@@ -65,7 +65,36 @@ def main():
     engine.load(QUrl.fromLocalFile(f"{DATADIR}/monet/settings-app/MonetSettings.qml"))
     if not engine.rootObjects():
         return 1
-    startup = games.StartupTiming("settings", engine.rootObjects()[0], STARTUP_STARTED)
+    window = engine.rootObjects()[0]
+    startup = games.StartupTiming("settings", window, STARTUP_STARTED)
+    if os.environ.get("MONET_STARTUP_TIMING") == "1":
+        def page_ready():
+            if window.property("pageReady"):
+                window.pageReadyChanged.disconnect(page_ready)
+                games.startup_event("settings", "initial-page-ready", STARTUP_STARTED)
+        window.pageReadyChanged.connect(page_ready)
+        page_ready()
+    # Construct the initial page and draw a frame before hardware/data helpers
+    # compete for CPU. Keep each ticket and stdin payload, including second-instance requests.
+    painted = False
+    released = False
+
+    def start_requests():
+        nonlocal released
+        if not released and painted and window.property("pageReady"):
+            released = True
+            window.pageReadyChanged.disconnect(start_requests)
+            games.startup_event("settings", "initial-data-start", STARTUP_STARTED)
+            helper.resume()
+
+    def first_frame():
+        nonlocal painted
+        window.frameSwapped.disconnect(first_frame)
+        painted = True
+        start_requests()
+
+    window.pageReadyChanged.connect(start_requests)
+    window.frameSwapped.connect(first_frame, Qt.QueuedConnection)
     activity.watch(engine.rootObjects()[0])
     area.watch(engine.rootObjects()[0])
     games.glaze(engine.rootObjects()[0], engine.rootContext())

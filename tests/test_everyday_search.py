@@ -7,6 +7,7 @@ import os
 import re
 from pathlib import Path
 import tempfile
+from tests.settings_support import select_settings_page
 import unittest
 from unittest.mock import patch
 
@@ -226,6 +227,7 @@ class SettingsSearchUI(unittest.TestCase):
         self.engine.load(QUrl.fromLocalFile(str(ROOT / "linux/share/monet/settings-app/MonetSettings.qml")))
         self.assertTrue(self.engine.rootObjects(), self.errors)
         self.window = self.engine.rootObjects()[0]; QTest.qWait(80)
+        select_settings_page(self.window, self.window.property("page"))
         self.search = self.item("settingsSearch")
 
     def tearDown(self):

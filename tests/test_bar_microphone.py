@@ -1,5 +1,6 @@
 """Capture controls never claim a mute/unmute succeeded without reading it back."""
 from pathlib import Path
+from tests.settings_support import settings_source
 import unittest
 from unittest.mock import patch
 from tests.test_look import quick_helper
@@ -118,7 +119,7 @@ Settings
         self.assertEqual([m["name"] for m in found], ["DualSense", "Scarlett 2i2 USB Mic1 · Input 1", "Scarlett 2i2 USB Input 2"])
 
     def test_the_settings_page_chooses_the_microphone(self):
-        settings = (ROOT / "linux/share/monet/settings-app/MonetSettings.qml").read_text(encoding="utf-8")
+        settings = settings_source()
         self.assertIn('ask("input " + input.id + deviceKey(input), (out, code) => {', settings)
         self.assertIn('onTapped: sheet.pickMicrophone(modelData)', settings)
         self.assertIn('ask("microphones", out =>', settings)

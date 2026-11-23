@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import time
+from tests.settings_support import select_settings_page
 import unittest
 from unittest.mock import patch
 
@@ -81,6 +82,7 @@ class SettingsNavigation(unittest.TestCase):
         self.engine.load(QUrl.fromLocalFile(str(ROOT / "linux/share/monet/settings-app/MonetSettings.qml")))
         self.assertTrue(self.engine.rootObjects(), self.errors)
         self.window = self.engine.rootObjects()[0]; self.area.watch(self.window)
+        select_settings_page(self.window, self.window.property("page"))
         if not getattr(self, "keep_window_size", False): self.window.resize(760, 520)
         QTest.qWait(350)
         if os.environ.get("QT_SCALE_FACTOR"):
@@ -98,6 +100,7 @@ class SettingsNavigation(unittest.TestCase):
         self.assertFalse(self.errors, "\n".join(self.errors))
 
     def item(self, name):
+        select_settings_page(self.window, self.window.property("page"))
         pending = [self.window.contentItem()]
         while pending:
             item = pending.pop()
@@ -118,6 +121,23 @@ class SettingsNavigation(unittest.TestCase):
         if os.environ.get("MONET_NAV_CAPTURE"):
             path = Path(os.environ["MONET_NAV_CAPTURE"]); path.mkdir(parents=True, exist_ok=True)
             self.assertTrue(self.window.grabWindow().save(str(path / (name + ".png"))))
+
+    def test_every_page_loads_on_demand_with_its_window_context(self):
+        pages = self.window.property("pages").toVariant()
+        for page in [entry["id"] for entry in pages] + ["welcome"]:
+            with self.subTest(page=page):
+                select_settings_page(self.window, page)
+                self.assertIsNotNone(self.window.findChild(QObject, "settingsPageLoader").property("item"))
+                self.assertFalse(self.errors, "\n".join(self.errors))
+
+    def test_rapid_page_changes_finish_on_the_last_selection(self):
+        for page in ("security", "apps", "wifi", "storage", "light"):
+            self.window.setProperty("page", page)
+        select_settings_page(self.window, "power")
+        loader = self.window.findChild(QObject, "settingsPageLoader")
+        self.assertTrue(loader.property("source").toString().endswith("SettingsPower.qml"))
+        self.assertEqual(self.window.property("page"), "power")
+        self.assertFalse(self.errors, "\n".join(self.errors))
 
     def test_display_colors_are_searchable_with_an_in_place_test(self):
         self.helper.replies["display-state"] = json.dumps({

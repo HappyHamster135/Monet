@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 import tempfile
 import time
+from tests.settings_support import select_settings_page
 import unittest
 from unittest.mock import patch
 
@@ -321,12 +322,14 @@ class NotificationUI(unittest.TestCase):
         self.engine.load(QUrl.fromLocalFile(str(ROOT / "linux/share/monet/settings-app/MonetSettings.qml")))
         self.assertTrue(self.engine.rootObjects())
         self.window = self.engine.rootObjects()[0]; QTest.qWait(100)
+        select_settings_page(self.window, self.window.property("page"))
 
     def tearDown(self):
         self.window.close(); self.engine.deleteLater(); QTest.qWait(1)
         self.assertFalse(self.errors, "\n".join(self.errors))
 
     def item(self, name):
+        select_settings_page(self.window, self.window.property("page"))
         pending = [self.window.contentItem()]
         while pending:
             item = pending.pop()

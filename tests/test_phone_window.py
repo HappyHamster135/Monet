@@ -4,6 +4,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+from tests.settings_support import select_settings_page
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -79,6 +80,7 @@ class PhoneWindow(unittest.TestCase):
         self.engine.load(QUrl.fromLocalFile(str(ROOT / "linux/share/monet/settings-app/MonetSettings.qml")))
         self.assertTrue(self.engine.rootObjects(), self.errors)
         self.window = self.engine.rootObjects()[0]
+        select_settings_page(self.window, self.window.property("page"))
         self.assertIsInstance(self.window, QQuickWindow)
         self.window.setWidth(760)
         self.window.setHeight(600)

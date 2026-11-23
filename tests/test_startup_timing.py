@@ -168,6 +168,11 @@ class NativeStartup(unittest.TestCase):
                 self.assertGreater(sample['external_first_frame_ms'], 0)
                 phases = [event['phase'] for event in sample['events']]
                 self.assertLess(phases.index('qml-load-start'), phases.index('first-frame'))
+                if app == 'settings':
+                    self.assertEqual(phases.count('initial-data-start'), 1)
+                    self.assertLess(phases.index('first-frame'), phases.index('initial-data-start'))
+                    self.assertLess(phases.index('initial-page-ready'), phases.index('initial-data-start'))
+                    self.assertGreater(sample['external_initial_page_ms'], 0)
                 if app == 'store':
                     self.assertEqual(phases.count('catalog-load-start'), 1)
                     self.assertLess(phases.index('first-frame'), phases.index('catalog-load-start'))
