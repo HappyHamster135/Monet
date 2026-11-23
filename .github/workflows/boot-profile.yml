@@ -23,7 +23,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   measure:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 180
     env:
       BASE: ghcr.io/happyhamster135/monet-amd@sha256:15a82fc9df8aab6b90177e87a686b3ff89a68393c5ecea9c4acb42ae80dd4363
@@ -42,15 +42,16 @@ jobs:
           sudo test -r /dev/kvm
           sudo test -w /dev/kvm
           mkdir -p target/boot-profile
-          # Noble's older crun fails before the bcvk installer can start
-          # (setns mnt: Bad file descriptor). Pin the runner-only runtime;
-          # neither the Monet image nor the developer's host is changed.
+          # Use current Podman image mounts and pin the runner-only runtime.
+          # Neither the Monet image nor the developer's host is changed.
           curl --fail --location --retry 3 https://github.com/containers/crun/releases/download/1.31/crun-1.31-linux-amd64 -o target/boot-profile/crun
           echo '8cacae171bb0e5f9e275adac2eeb2c6ec8c69fdedff7b008eadd8cdd25b0d349  target/boot-profile/crun' | sha256sum -c
           sudo install -m 755 target/boot-profile/crun /usr/local/bin/monet-bench-crun
           sudo mkdir -p /etc/containers/containers.conf.d
           printf '[engine]\nruntime="crun"\n[engine.runtimes]\ncrun=["/usr/local/bin/monet-bench-crun"]\n' | sudo tee /etc/containers/containers.conf.d/99-monet-bench.conf
           /usr/local/bin/monet-bench-crun --version | tee target/boot-profile/toolchain.txt
+          podman --version | tee -a target/boot-profile/toolchain.txt
+          qemu-system-x86_64 --version | tee -a target/boot-profile/toolchain.txt
           curl --fail --location --retry 3 https://github.com/bootc-dev/bcvk/releases/download/v0.22.0/bcvk-x86_64-unknown-linux-gnu.tar.gz -o target/boot-profile/bcvk.tar.gz
           echo 'eb72198c0d36fab75bfcadbb6794a87afa6f496a4da6b1b34d27728243fa6474  target/boot-profile/bcvk.tar.gz' | sha256sum -c
           tar -xzf target/boot-profile/bcvk.tar.gz -C target/boot-profile
@@ -59,9 +60,21 @@ jobs:
         run: |
           sudo taskset -c "$PROFILE_CPU" nice -n 10 podman pull "$BASE"
           sudo taskset -c "$PROFILE_CPU" nice -n 10 podman run --rm --group-add=keep-groups --cap-add=all --security-opt=seccomp=unconfined --entrypoint /bin/true "$BASE"
-          sudo taskset -c "$PROFILE_CPU" nice -n 10 target/boot-profile/bcvk-x86_64-unknown-linux-gnu to-disk --format qcow2 --filesystem btrfs --disk-size 64G --vcpus 1 --memory 8G --target-transport containers-storage "$BASE" target/boot-profile/baseline.qcow2
+          mkdir -p target/boot-profile/baseline-install
+          sudo env RUST_LOG=bcvk=debug taskset -c "$PROFILE_CPU" nice -n 10 target/boot-profile/bcvk-x86_64-unknown-linux-gnu to-disk --log-dir "console=$PWD/target/boot-profile/baseline-install" --format qcow2 --filesystem btrfs --disk-size 64G --vcpus 1 --memory 8G --target-transport containers-storage "$BASE" target/boot-profile/baseline.qcow2
           sudo taskset -c "$PROFILE_CPU" nice -n 10 python3 tools/bench-boot.py target/boot-profile/baseline.qcow2 target/boot-profile/baseline
           sudo rm target/boot-profile/baseline/working.qcow2 target/boot-profile/baseline.qcow2
+      - name: Preserve the baseline before building the candidate
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: boot-baseline-timing
+          path: |
+            target/boot-profile/baseline/summary.json
+            target/boot-profile/baseline/boot-*/*.json
+            target/boot-profile/baseline/boot-*/*.txt
+            target/boot-profile/baseline/boot-*/*.log
+            target/boot-profile/baseline/boot-*/*.png
+          retention-days: 14
       - name: Fetch the exact source-matched Linux package
         run: python3 tools/boot-profile-package.py
       - name: Build the development preview without publishing
@@ -70,7 +83,8 @@ jobs:
           sudo podman image prune -f
       - name: Candidate installed-disk cold boots
         run: |
-          sudo taskset -c "$PROFILE_CPU" nice -n 10 target/boot-profile/bcvk-x86_64-unknown-linux-gnu to-disk --format qcow2 --filesystem btrfs --disk-size 64G --vcpus 1 --memory 8G --target-transport containers-storage localhost/monet-boot-profile:candidate target/boot-profile/candidate.qcow2
+          mkdir -p target/boot-profile/candidate-install
+          sudo env RUST_LOG=bcvk=debug taskset -c "$PROFILE_CPU" nice -n 10 target/boot-profile/bcvk-x86_64-unknown-linux-gnu to-disk --log-dir "console=$PWD/target/boot-profile/candidate-install" --format qcow2 --filesystem btrfs --disk-size 64G --vcpus 1 --memory 8G --target-transport containers-storage localhost/monet-boot-profile:candidate target/boot-profile/candidate.qcow2
           sudo taskset -c "$PROFILE_CPU" nice -n 10 python3 tools/bench-boot.py target/boot-profile/candidate.qcow2 target/boot-profile/candidate
           sudo rm target/boot-profile/candidate/working.qcow2 target/boot-profile/candidate.qcow2
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
@@ -85,4 +99,5 @@ jobs:
             target/boot-profile/*/boot-*/*.png
             target/boot-profile/package-source.json
             target/boot-profile/toolchain.txt
+            target/boot-profile/*-install/*.txt
           retention-days: 14

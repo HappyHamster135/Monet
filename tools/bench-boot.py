@@ -93,7 +93,8 @@ def credentials(public_key):
              'chmod 0600 /root/.ssh/authorized_keys; restorecon -RF /root/.ssh; '
              'if ! id monet-bench >/dev/null 2>&1; then useradd -m monet-bench; '
              'echo monet-bench:MonetBenchmarkOnly42 | chpasswd; fi')
-    unit = ('[Unit]\nDefaultDependencies=no\nAfter=local-fs.target systemd-tmpfiles-setup.service systemd-sysusers.service\n'
+    unit = ('[Unit]\nDefaultDependencies=no\nConditionPathExists=!/etc/initrd-release\n'
+            'After=local-fs.target systemd-tmpfiles-setup.service systemd-sysusers.service\n'
             'Before=systemd-user-sessions.service plasmalogin.service sshd.service\n'
             '[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/bin/sh -ec \''+setup+'\'\n')
     return {'systemd.extra-unit.monet-boot-bench-setup.service':unit,

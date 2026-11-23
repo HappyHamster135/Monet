@@ -6,8 +6,8 @@ if [[ ${GITHUB_ACTIONS:-} != true ]]; then
     exit 2
 fi
 . /etc/os-release
-if [[ ${ID:-} != ubuntu || ${VERSION_ID:-} != 24.04 || $(uname -m) != x86_64 ]]; then
-    echo 'This helper requires the Ubuntu 24.04 x86_64 CI runner.' >&2
+if [[ ${ID:-} != ubuntu || ! ${VERSION_ID:-} =~ ^(24\.04|26\.04)$ || $(uname -m) != x86_64 ]]; then
+    echo 'This helper requires an Ubuntu 24.04 or 26.04 x86_64 CI runner.' >&2
     exit 2
 fi
 

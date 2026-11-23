@@ -34,6 +34,15 @@ is not a measured 0.9.8-9 improvement. The new tests must finish before recordin
 a new end-to-end result. Six focused checks validate phase accounting, real
 release qualification frames and provisioning-input validation.
 
+Initramfs compression was also checked against the exact published AMD/Intel
+payload, on one pinned CPU at low priority. Levels 3, 6, 9, 12, 15 and 19 all
+decoded to the same SHA-256. Level 19 saved 10,735,678 bytes in the main compressed
+stream (4.3%), but paired median userspace decoding increased from 1,728.251 to
+2,088.894 ms. Lower levels did not establish a decoding improvement. Level 15 is
+retained; no drivers, firmware or unlock support were removed. These are decoding
+checks, not kernel or boot timings. The [measurements and payload identity](benchmarks/0.9.8-9-initrd-compression.json)
+are retained so a smaller archive is not mistaken for a faster boot.
+
 ## 0.9.8-9 startup and Settings development — 23 November 2026
 
 Settings now loads its 25 pages from separate QML files, compiling only the page
@@ -71,8 +80,10 @@ initial helper processes start afterward. It cannot report a blank first frame
 as completion of initial page construction. This does not claim that every data
 request has completed by that time.
 
-Regression verification covers 2,399 Python checks with 19 expected skips and
-no remaining failures, using the full suite followed by corrected-fixture reruns.
+The [full desktop CI run](https://github.com/HappyHamster135/Monet/actions/runs/45272770900)
+passes 2,405 Python checks with 19 expected skips and no failures. An additional
+local rerun passes all 91 Store, panel, transfer and window checks that share the
+Settings item finder. The asynchronous page wait applies only to Settings.
 Settings fixtures now wait for asynchronous pages and source audits include the
 extracted files. The older local test image required both dock libraries and the
 dock/Quick Settings fixture executables to be rebuilt against matching native
@@ -85,9 +96,9 @@ Three additional native checks run against substituted source with generated
 bytecode: all 25 pages, rapid page changes and keyboard activation. All pass with
 no QML warnings or skips. This source fixture generates 174 adjacent caches,
 4,485,736 bytes in total, with no compiler scratch files left behind. The full OS
-image also includes generated sources installed by its native bundles. Rust and
-package builds remain CI checks; installed-image boot qualification is still
-required before a release.
+image also includes generated sources installed by its native bundles. Rust,
+lint and Linux/Windows package builds pass in the same CI run; installed-image
+boot qualification is still required before a release.
 
 The installed 0.9.8-8 boot baseline remains 14.380 s firmware, 9.073 s bootloader,
 1.836 s kernel, 4.783 s initrd and 8.304 s userspace to graphical.target (38.378 s

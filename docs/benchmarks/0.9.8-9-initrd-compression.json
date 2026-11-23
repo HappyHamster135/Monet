@@ -1,0 +1,101 @@
+{
+  "scope": "Identical published AMD initrd payload; paired userspace zstd decode on one pinned CPU, not a boot timing",
+  "tool": "Zstandard CLI v1.5.7",
+  "cpus": 1,
+  "cpu_affinity": "18",
+  "priority": "nice 10",
+  "page_cache": "uncontrolled",
+  "source": {
+    "image": "sha256:15a82fc9df8aab6b90177e87a686b3ff89a68393c5ecea9c4acb42ae80dd4363",
+    "layer": "sha256:ddf89fec74ef3456671408c3809e093b0252fda9e20e82347e134b6c9fa9b76c",
+    "member": "usr/lib/modules/7.3.4-ogc8.1.fc45.x86_64/initramfs.img",
+    "size": 266645098
+  },
+  "payload_bytes": 528485888,
+  "payload_sha256": "c7b836ecb5b2e11fc8edf889bbe25317702d78068fd6d125dc6374de58437361",
+  "results": [
+    {
+      "level": 3,
+      "compressed_bytes": 261425526,
+      "median_decode_ms": 1787.555,
+      "decode_samples_ms": [
+        1762.763,
+        1792.39,
+        1787.555,
+        1845.526,
+        1742.621
+      ],
+      "payload_verified": true
+    },
+    {
+      "level": 6,
+      "compressed_bytes": 253857269,
+      "median_decode_ms": 1751.122,
+      "decode_samples_ms": [
+        1720.152,
+        1785.689,
+        1762.083,
+        1751.122,
+        1747.609
+      ],
+      "payload_verified": true
+    },
+    {
+      "level": 9,
+      "compressed_bytes": 250560531,
+      "median_decode_ms": 1745.754,
+      "decode_samples_ms": [
+        1745.754,
+        1758.885,
+        1703.554,
+        1742.876,
+        1746.609
+      ],
+      "payload_verified": true
+    },
+    {
+      "level": 12,
+      "compressed_bytes": 249788459,
+      "median_decode_ms": 1740.658,
+      "decode_samples_ms": [
+        1734.842,
+        1781.144,
+        1740.658,
+        1772.693,
+        1736.852
+      ],
+      "payload_verified": true
+    },
+    {
+      "level": 15,
+      "compressed_bytes": 249234030,
+      "median_decode_ms": 1728.251,
+      "decode_samples_ms": [
+        1701.803,
+        1707.328,
+        1802.083,
+        1738.964,
+        1740.993,
+        1716.622,
+        1728.251
+      ],
+      "payload_verified": true
+    },
+    {
+      "level": 19,
+      "compressed_bytes": 238498352,
+      "median_decode_ms": 2088.894,
+      "decode_samples_ms": [
+        2078.439,
+        2115.907,
+        2091.238,
+        2099.255,
+        2081.852,
+        2067.246,
+        2088.894
+      ],
+      "payload_verified": true
+    }
+  ],
+  "decision": "Retain level 15: lower levels did not establish a decoding improvement; level 19 reduced the main compressed payload 4.3% but increased paired median decoding time 20.9%. These are userspace decode checks, not kernel or boot timings."
+}
