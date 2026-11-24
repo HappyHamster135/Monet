@@ -166,7 +166,7 @@ fn main() -> ExitCode {
         ["helper", "check-switch"] => helper_check_switch(),
         ["helper", "sync"] => helper_sync(),
         ["helper", "make-default"] => helper_make_default(),
-        ["helper", "stage-windows"] => helper_stage_windows().map(|_| ()),
+        ["helper", "stage-windows"] => helper_stage_windows(args.iter().any(|a| a == "--unlock-saved")).map(|_| ()),
         ["helper", "start-windows-setup", guid, zone] => helper_start_windows_setup(guid, zone),
         ["helper", "prepare-windows"] => helper_prepare_windows(option_value(&args, "--iso")),
         ["setup-notice"] => {
@@ -606,7 +606,7 @@ fn helper_switch(game: Option<String>, task: Option<String>, checkpoint: Option<
     let boot = boot_id()?;
     // Windows is shut down right now, the safest moment to prepare it.
     if !windows_setup_status().is_some_and(Outcome::is_done) {
-        let _ = helper_stage_windows();
+        let _ = helper_stage_windows(false);
     }
     let paths = trip_paths();
     let mut efi = efi()?;
@@ -780,15 +780,16 @@ fn helper_sync() -> Res<()> {
     Ok(())
 }
 
-fn helper_stage_windows() -> Res<Outcome> {
+fn helper_stage_windows(unlock_saved: bool) -> Res<Outcome> {
     require_root()?;
+    let inventory = if unlock_saved { windows_setup::boot_inventory() } else { None };
     if let Some(done) = windows_setup_status().filter(|o| o.is_done()) {
         if done == Outcome::Installed {
-            refresh_bridge_updater();
+            refresh_bridge_updater(inventory);
         }
         return Ok(done);
     }
-    let outcome = windows_setup::stage(windows_setup::payload_dir().as_deref())?;
+    let outcome = windows_setup::stage(windows_setup::payload_dir().as_deref(), inventory)?;
     // Before Monet's own Windows install has run, its partition is empty.
     let fresh = windows_setup_status().is_some_and(Outcome::is_fresh_install);
     if !(fresh && outcome == Outcome::NotFound) {
@@ -810,12 +811,12 @@ fn helper_stage_windows() -> Res<Outcome> {
 
 /// An installed Bridge from 0.9.8 or earlier can't see numbered updates: give it
 /// Monet's updater once, so Windows can update the rest of Bridge itself.
-fn refresh_bridge_updater() {
+fn refresh_bridge_updater(inventory: Option<Vec<windows_setup::Volume>>) {
     let marker = state_dir().join("windows-updater-current");
     if marker.exists() {
         return;
     }
-    match windows_setup::refresh_updater(windows_setup::payload_dir().as_deref()) {
+    match windows_setup::refresh_updater(windows_setup::payload_dir().as_deref(), inventory) {
         Ok(windows_setup::Updater::NotFound) => {}
         Ok(found) => {
             if found == windows_setup::Updater::Refreshed {

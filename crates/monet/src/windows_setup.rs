@@ -278,9 +278,9 @@ pub enum Updater {
 }
 
 /// Finds Windows with Monet Bridge and refreshes an outdated updater. Needs root.
-pub fn refresh_updater(payload: Option<&Path>) -> Result<Updater, String> {
+pub fn refresh_updater(payload: Option<&Path>, inventory: Option<Vec<Volume>>) -> Result<Updater, String> {
     let Some(payload) = payload else { return Ok(Updater::NotFound) };
-    for vol in volumes().iter().filter(|v| v.fstype == "ntfs") {
+    for vol in inventory.unwrap_or_else(volumes).iter().filter(|v| v.fstype == "ntfs") {
         if !mount(&vol.device, false) {
             continue;
         }
@@ -310,22 +310,52 @@ pub fn refresh_updater(payload: Option<&Path>) -> Result<Updater, String> {
 
 // ------------------------------------------------------------- finding Windows
 
-struct Volume {
+pub(super) struct Volume {
     device: String,
     fstype: String,
 }
 
+fn parse_inventory(list: &str) -> Option<Vec<Volume>> {
+    let mut volumes = Vec::new();
+    for line in list.lines() {
+        let (device, fstype) = line.split_once(' ')?;
+        if !device.starts_with("/dev/") || fstype.split_whitespace().count() > 1 {
+            return None;
+        }
+        volumes.push(Volume { device: device.to_owned(), fstype: fstype.trim().to_ascii_lowercase() });
+    }
+    (!volumes.is_empty()).then_some(volumes)
+}
+
+fn inventory() -> Option<Vec<Volume>> {
+    let out = Command::new("lsblk").args(["-nrp", "-o", "PATH,FSTYPE"]).output().ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    parse_inventory(std::str::from_utf8(&out.stdout).ok()?)
+}
+
 fn volumes() -> Vec<Volume> {
-    let Ok(out) = Command::new("lsblk").args(["-nrp", "-o", "PATH,FSTYPE"]).output() else {
-        return Vec::new();
-    };
-    String::from_utf8_lossy(&out.stdout)
-        .lines()
-        .filter_map(|line| {
-            let (device, fstype) = line.split_once(' ')?;
-            Some(Volume { device: device.to_string(), fstype: fstype.trim().to_lowercase() })
-        })
-        .collect()
+    inventory().unwrap_or_default()
+}
+
+/// Reuse a successful plain-disk scan. An unlock can create a new NTFS mapper,
+/// so discard the snapshot and let staging enumerate again afterwards.
+pub(super) fn boot_inventory() -> Option<Vec<Volume>> {
+    let snapshot = inventory();
+    if snapshot.as_ref().is_some_and(|volumes| volumes.iter().all(|v| v.fstype != "bitlocker")) {
+        return snapshot;
+    }
+    if let Some(dir) = libexec_dir() {
+        match Command::new(dir.join("monet-windows-drive")).arg("unlock-saved").status() {
+            Ok(status) if status.success() => {}
+            Ok(status) => eprintln!("Windows drive unlock exited with {status}"),
+            Err(e) => eprintln!("Couldn't start Windows drive unlock: {e}"),
+        }
+    } else {
+        eprintln!("Couldn't find the Windows drive unlock helper");
+    }
+    None
 }
 
 const MOUNT_POINT: &str = "/run/monet/windows";
@@ -349,9 +379,9 @@ fn unmount() {
 }
 
 /// Finds Windows and prepares it. Needs root.
-pub fn stage(payload: Option<&Path>) -> Result<Outcome, String> {
+pub fn stage(payload: Option<&Path>, inventory: Option<Vec<Volume>>) -> Result<Outcome, String> {
     let Some(payload) = payload else { return Ok(Outcome::NoPayload) };
-    let vols = volumes();
+    let vols = inventory.unwrap_or_else(volumes);
     let mut saw_bitlocker = false;
     let mut result = Ok(Outcome::NotFound);
 

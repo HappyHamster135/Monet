@@ -6956,7 +6956,7 @@ class BitLockerWindows(unittest.TestCase):
         self.assertIn('["systemd-creds", "encrypt", f"--name={CRED_NAME}", "-", keys / f"{uuid}.cred"]', script)
         self.assertIn('BITLOCKER_KEYS = Path("/var/lib/monet/bitlocker")', script)
         setup = (ROOT / "linux/systemd/monet-windows-setup.service").read_text(encoding="utf-8")
-        self.assertIn("ExecStartPre=-@LIBEXECDIR@/monet-windows-drive unlock-saved\nExecStart=@BINDIR@/monet helper stage-windows", setup)
+        self.assertIn("ExecStart=@BINDIR@/monet helper stage-windows --unlock-saved", setup)
         install = (ROOT / "linux/install.sh").read_text(encoding="utf-8")
 
     def test_settings_asks_for_the_key_and_sends_it_sealed(self):

@@ -180,7 +180,13 @@ def kernel_origin_bounds(readings):
     return dict(earliest_ms=round(earliest, 3), latest_ms=round(latest, 3))
 
 
-def boot(args, disk, variables, key, index, runtime):
+def windows_probe_order(pairs):
+    # Alternate which member of each pair boots first on the same disk.
+    for pair in range(pairs):
+        yield from (('control', 'candidate') if pair % 2 == 0 else ('candidate', 'control'))
+
+
+def boot(args, disk, variables, key, index, runtime, windows_probe=None):
     from PIL import Image
     work = args.output / f'boot-{index:02d}'; work.mkdir()
     with socket.socket() as sock:
@@ -198,7 +204,12 @@ def boot(args, disk, variables, key, index, runtime):
         '-device','qemu-xhci','-device','usb-tablet','-device','usb-kbd',
         '-nic',f'user,model=virtio-net-pci,hostfwd=tcp:127.0.0.1:{port}-:22',
         '-qmp',f'unix:{monitor},server,nowait','-serial',f'file:{work / "serial.log"}']
-    for name, value in credentials(key.with_suffix('.pub').read_text().strip(), provision=index == 0).items():
+    units = credentials(key.with_suffix('.pub').read_text().strip(), provision=index == 0)
+    if windows_probe == 'control':
+        units['systemd.unit-dropin.monet-windows-setup.service'] = (
+            '[Service]\nExecStartPre=\nExecStartPre=-/usr/libexec/monet-windows-drive unlock-saved\n'
+            'ExecStart=\nExecStart=/usr/bin/monet helper stage-windows\n')
+    for name, value in units.items():
         payload = base64.b64encode(value.encode()).decode()
         command += ['-smbios', f'type=11,value=io.systemd.credential.binary:{name}={payload}']
     process = None; probe = None; active = False
@@ -284,6 +295,26 @@ def boot(args, disk, variables, key, index, runtime):
                       '-p InactiveExitTimestampMonotonic -p ActiveEnterTimestampMonotonic')
         if manager.returncode:
             raise RuntimeError('Cannot collect login manager activation timing')
+        login_manager = properties(manager.stdout)
+        service_start = int(values['UserspaceTimestampMonotonic'])
+        manager_start = int(login_manager['InactiveExitTimestampMonotonic'])
+        if not 0 < service_start < manager_start:
+            raise RuntimeError('Missing userspace or login manager startup timestamp')
+        if windows_probe:
+            unit = ssh(port, key, 'systemctl show monet-windows-setup.service -p Result '
+                       '-p ExecStart -p ExecStartPre -p InactiveExitTimestampMonotonic -p InactiveEnterTimestampMonotonic')
+            (work/'windows-setup.txt').write_text(unit.stdout + unit.stderr)
+            setup = properties(unit.stdout)
+            previous = windows_probe == 'control'
+            pre = 'monet-windows-drive unlock-saved' in setup.get('ExecStartPre', '')
+            new = 'stage-windows --unlock-saved' in setup.get('ExecStart', '')
+            if (unit.returncode or setup.get('Result') != 'success' or (pre, new) != (previous, not previous)
+                    or 'stage-windows' not in setup.get('ExecStart', '')):
+                raise RuntimeError('Unexpected Windows setup command or result for ' + windows_probe)
+            start = int(setup['InactiveExitTimestampMonotonic'])
+            end = int(setup['InactiveEnterTimestampMonotonic'])
+            if not service_start <= start < end <= manager_start:
+                raise RuntimeError('Missing or out-of-order Windows setup timestamps')
         evidence = ssh(port,key,'monet --version; uname -r; bootc status --json; systemd-analyze time; systemd-analyze critical-chain plasmalogin.service; '
             'systemd-analyze blame | head -n 20; printf "\\nBOOT_MENU\\n"; '
             'grep -E "^[[:space:]]*set timeout(_style)?=" /boot/grub2/grub.cfg; '
@@ -333,8 +364,11 @@ def boot(args, disk, variables, key, index, runtime):
                       power_on_to_controls_ms=round(first*1000,3),
                       keyboard_verified_ms=round(input_verified*1000,3),udev_cpu_after_keypress_ns=int(udev_ns),
                       sampling_interval_ms=250,guest_properties=values,guest_phases=timing_phases(values),
-                      kernel_origin=kernel_origin_bounds(readings), login_manager=properties(manager.stdout),
+                      kernel_origin=kernel_origin_bounds(readings), login_manager=login_manager,
+                      userspace_to_login_manager_ms=(manager_start-service_start)/1000,
                       trust_refresh=trust,wifi_migration=migration)
+        if windows_probe:
+            result.update(windows_probe=windows_probe, windows_setup_ms=(end-start)/1000)
         (work/'timing.json').write_text(json.dumps(result,indent=2)+'\n')
         # Seed the next *normal* boot exactly as the stock successful-login helper
         # would. No trial counters are changed. This is only the disposable VM.
@@ -372,6 +406,8 @@ def main():
     parser.add_argument('--memory',type=int,default=8192); parser.add_argument('--timeout',type=int,default=240)
     parser.add_argument('--setup-timeout', type=int, default=600,
         help='Time limit for the excluded setup sequence including any deployment reboot')
+    parser.add_argument('--compare-windows-probe', action='store_true',
+        help='Measure paired control and candidate boots on one provisioned disk, alternating order')
     parser.add_argument('--reference-udev-rule', type=Path,
         help='Install a control rule in the disposable VM after its excluded first boot')
     parser.add_argument('--check-trust-refresh',action='store_true',
@@ -402,14 +438,21 @@ def main():
         runtime=Path(tmp);key=runtime/'key'
         subprocess.run(['ssh-keygen','-q','-t','ed25519','-N','','-C','monet-boot-benchmark','-f',str(key)],check=True)
         samples=[]
-        for index in range(args.samples+1):
-            result=boot(args,disk,variables,key,index,runtime);samples.append(result)
+        schedule = [None] + (list(windows_probe_order(args.samples)) if args.compare_windows_probe else [None]*args.samples)
+        for index, variant in enumerate(schedule):
+            result=boot(args,disk,variables,key,index,runtime,variant);samples.append(result)
             print(json.dumps(result),flush=True)
-    times=[r['power_on_to_visible_login_ms'] for r in samples if not r['warmup']]
+    times=[r['power_on_to_visible_login_ms'] for r in samples if not r['warmup'] and r.get('windows_probe') != 'control']
     report=dict(schema=1,scope='Installed disk cold boots under KVM; not physical laptop timings',
         secure_boot=False,host_page_cache='uncontrolled',cpus=args.cpus,memory_mib=args.memory,first_boot_excluded=True,
         boot_state='Successful normal boot seeded between samples; trial counters untouched',
         median_ms=statistics.median(times),min_ms=min(times),max_ms=max(times),samples=samples)
+    if args.compare_windows_probe:
+        report['windows_probe_medians_ms'] = {
+            variant: {metric: statistics.median(r[metric] for r in samples if r.get('windows_probe') == variant)
+                      for metric in ('windows_setup_ms', 'userspace_to_login_manager_ms',
+                                     'power_on_to_visible_login_ms', 'keyboard_verified_ms')}
+            for variant in ('control', 'candidate')}
     if args.reference_udev_rule:
         report['reference_udev_rule'] = args.reference_udev_rule.name
     (args.output/'summary.json').write_text(json.dumps(report,indent=2)+'\n')

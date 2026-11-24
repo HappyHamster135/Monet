@@ -31,6 +31,8 @@ jobs:
           sudo apt-get install -y -q cryptsetup-bin fdisk ntfs-3g dosfstools wimtools
       - name: Tests
         run: cargo test --workspace
+      - name: Windows discovery and encrypted-drive retry at boot
+        run: sudo unshare --mount --propagation private --fork sh -ec 'mount -t tmpfs tmpfs /run; python3 tests/fixtures/windows-boot-probe.py target/debug/monet'
       - name: Read-only boot cleanup in a private mount namespace
         run: sudo unshare --mount --propagation private --fork python3 tests/fixtures/seal-boot-mount.py
       - name: Lint
