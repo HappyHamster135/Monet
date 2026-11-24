@@ -463,6 +463,10 @@ rm -f "$DATADIR/monet/store/main.yaml"
 cp -r "$SRC/share/monet/gtk" "$DATADIR/monet/gtk"
 # Zen's look, which monet-quick zen puts into each Zen profile.
 cp -r "$SRC/share/monet/zen" "$DATADIR/monet/zen"
+put 644 "$SRC/tmpfiles/monet-zen.conf" "$TMPFILESDIR/monet-zen.conf"
+if [ "$IMAGE" != 1 ]; then
+    systemd-tmpfiles --create "$TMPFILESDIR/monet-zen.conf"
+fi
 # Windows games Monet always lists, even before Windows has found them.
 install -m 644 "$SRC/share/monet/windows-games.json" "$DATADIR/monet/windows-games.json"
 # Apps' menu names in each language, which monet-look gives the apps it renames.

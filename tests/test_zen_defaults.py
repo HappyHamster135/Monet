@@ -1,6 +1,7 @@
 """Browser-default preparation preserves personal preferences and reports failed writes."""
 from pathlib import Path
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -14,6 +15,31 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @unittest.skipUnless(sys.platform == 'linux', 'Linux installation revisions')
 class BuildRevision(unittest.TestCase):
+    @unittest.skipUnless(shutil.which('systemd-tmpfiles'), 'requires systemd-tmpfiles')
+    def test_flatpak_default_is_scoped_to_zen_and_keeps_local_overrides(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            rules = root/'usr/lib/tmpfiles.d'
+            rules.mkdir(parents=True)
+            source = ROOT/'linux/tmpfiles/monet-zen.conf'
+            (rules/source.name).write_text(source.read_text().replace('@DATADIR@', '/usr/share'))
+            factory = Path('/usr/share/monet/zen/flatpak-defaults')
+            installed = root/factory.relative_to('/')
+            installed.parent.mkdir(parents=True)
+            shutil.copy(ROOT/'linux/share/monet/zen/flatpak-defaults', installed)
+            cmd = ['systemd-tmpfiles', '--root', str(root), '--create', source.name]
+            subprocess.run(cmd, check=True, timeout=5)
+            overrides = root/'var/lib/flatpak/overrides'
+            override, = overrides.iterdir()
+            self.assertEqual(override.name, 'app.zen_browser.zen')
+            self.assertEqual(override.readlink(), factory)
+            self.assertEqual(installed.read_text().splitlines(), [
+                '[Environment]', 'MOZ_DEFAULT_PREFS=pref("zen.glance.open-essential-external-links", false);'])
+            override.unlink()
+            override.write_text('[Environment]\nLOCAL_DEFAULT=1\n')
+            subprocess.run(cmd, check=True, timeout=5)
+            self.assertEqual(override.read_text(), '[Environment]\nLOCAL_DEFAULT=1\n')
+
     def test_same_version_helper_or_browser_asset_changes_refresh_session_without_clearing_qml(self):
         source = (ROOT / 'linux/install.sh').read_text()
         revisions = source[source.index('# QML files in OS images'):]

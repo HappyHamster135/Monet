@@ -1,0 +1,2 @@
+[Environment]
+MOZ_DEFAULT_PREFS=pref("zen.glance.open-essential-external-links", false);

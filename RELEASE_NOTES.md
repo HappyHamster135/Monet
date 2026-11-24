@@ -11,6 +11,9 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   loads it asynchronously, keeping the window responsive during navigation.
 - **Full-height windows stay stretched.** Move a stretched window sideways or
   reopen it after signing in and it keeps its width and fills the available height.
+- **Pinned tabs in Zen.** An ordinary click on an external link from a pinned
+  tab now opens a regular tab by default. Returning to the pinned tab shows
+  the original page. The Glance shortcut still opens previews on request.
 - **Less work before the window appears.** Initial hardware and data requests
   wait until the window has drawn and the selected page has been constructed.
 - **Preserved preferences.** Existing app, bar and Task Manager customization is

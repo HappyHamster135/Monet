@@ -77,7 +77,11 @@ systemctl --global disable monet-backup.timer monet-rest.timer >/dev/null 2>&1 |
 rm -f /etc/systemd/system/monet-keep-prepare.service /etc/systemd/system/monet-keep.service \
     /etc/systemd/system/monet-keep.timer /etc/systemd/user/monet-backup.service /etc/systemd/user/monet-backup.timer \
     /etc/systemd/user/monet-rest.service /etc/systemd/user/monet-rest.timer /etc/tmpfiles.d/monet-memory.conf \
-    /etc/tmpfiles.d/monet-steam.conf
+    /etc/tmpfiles.d/monet-steam.conf /etc/tmpfiles.d/monet-zen.conf
+zen_override=/var/lib/flatpak/overrides/app.zen_browser.zen
+if [ "$(readlink "$zen_override" || :)" = "$PREFIX/share/monet/zen/flatpak-defaults" ]; then
+    rm -f "$zen_override"
+fi
 # Games no longer first, and Steam's shader processing at Steam's own priority (from the next sign-in).
 systemctl --global disable monet-priority.service >/dev/null 2>&1 || true
 rm -f /etc/systemd/user/monet-priority.service
