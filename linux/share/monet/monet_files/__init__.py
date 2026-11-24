@@ -4,6 +4,22 @@ import sys
 
 
 def main(args):
+    if args == ['this-pc']:
+        from .computer import refresh
+        refresh()
+        return 0
+    if args == ['remove-this-pc']:
+        from .computer import location, refresh
+        folder = location()
+        if folder.is_dir() and not folder.is_symlink():
+            refresh(folder, items=())
+            if not any(folder.iterdir()):
+                folder.rmdir()
+        return 0
+    if args == ['watch-this-pc']:
+        from .computer import watch
+        watch()
+        return 0
     if not args:
         return 2
     if args[0] == 'preview' and len(args) == 2:

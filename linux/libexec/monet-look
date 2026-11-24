@@ -737,6 +737,10 @@ esac
 
 # Files: big painted folders with previews, on paper; a calm sidebar.
 kw --file kcminputrc --group Libinput --group Defaults --key NaturalScroll true
+# Dolphin keeps its native tab/session restoration and any chosen start folder.
+if "@BINDIR@/monet-files" this-pc; then
+    kw_default dolphinrc General HomeUrl "$DATA/monet/This PC"
+fi
 kw_default dolphinrc IconsMode IconSize 80
 kw_default dolphinrc IconsMode PreviewSize 96
 kw_default dolphinrc PlacesPanel IconSize 22

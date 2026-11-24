@@ -38,6 +38,7 @@ def run(output):
             start(['Xvfb',':92','-screen','0','1280x900x24'], 'display.log')
             start(['/usr/libexec/at-spi-bus-launcher','--launch-immediately'], 'accessibility.log')
             # The private bus has no systemd user manager to activate the registry.
+            subprocess.run(['gdbus','wait','--session','--timeout=8','org.a11y.Bus'], env=env, check=True)
             start(['/usr/libexec/at-spi2-registryd'], 'registry.log')
             app = start([str(helpers/'plasma-systemmonitor')], 'app.log')
             code = r'''
@@ -84,6 +85,9 @@ assert not find('Graphics','list item'), 'Unexpected duplicate sidebar entry'
 for page in ('Applications', 'Processes'):
     press(page,'list item')
     wait(has_graphics_header, page+' is missing Graphics beside Memory in the table header')
+    for heading in ('Graphics', 'Memory', 'Memory'):
+        press(heading,'label')
+        assert has_graphics_header(), page+' headers shifted after sorting by '+heading
 press('Performance','list item')
 if not find('Edit Page','button'): press('More Actions','push button menu')
 press('Edit Page')

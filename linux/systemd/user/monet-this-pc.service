@@ -1,0 +1,15 @@
+[Unit]
+Description=Keep the drives shown in Monet Files up to date
+ConditionUser=!@system
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=exec
+ExecStart=@BINDIR@/monet-files watch-this-pc
+Restart=on-failure
+RestartSec=5s
+Slice=background.slice
+
+[Install]
+WantedBy=graphical-session.target

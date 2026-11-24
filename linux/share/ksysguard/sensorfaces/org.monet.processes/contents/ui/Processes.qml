@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls as Controls
 import Qt.labs.qmlmodels
 import org.kde.ksysguard.process as Process
 import "../../../org.monet.performance/contents/ui" as Performance
@@ -17,6 +18,8 @@ Item {
     // {pid: {id, name}} of the apps' processes.
     property var apps: ({})
 
+    Component { id: headingDelegate; Performance.TableHeading {} }
+
     function find(item, depth) {
         if (!item || depth > 6) return null
         if (item.hasOwnProperty("processModel") && item.hasOwnProperty("flatList") && item.hasOwnProperty("view"))
@@ -32,6 +35,9 @@ Item {
         const found = find(content, 0)
         if (!found || !found.delegate || !found.processModel) return false
         table = found
+        // Keep KDE's hit testing, sorting and column resize handles.
+        const header = Array.from(found.children).find(child => child instanceof Controls.HorizontalHeaderView)
+        if (header) header.delegate = headingDelegate
         chooser = chooserComponent.createObject(processes, {kde: found.delegate})
         found.delegate = chooser
         return true

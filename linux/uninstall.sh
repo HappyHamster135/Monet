@@ -29,7 +29,15 @@ if [ "$(id -u)" -ne 0 ]; then
             -e '/^\[KDE Action Restrictions\]$/,/^\[/{/^\[KDE Action Restrictions\]$/d;/^\[/!d}' "$kdeglobals"
     fi
     systemctl --user stop monet-keep-awake.service monet-brightness.service monet-priority.service >/dev/null 2>&1 || true
-    systemctl --user disable --now monet-screenshot-ready.timer monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path monet-onedrive.service >/dev/null 2>&1 || true
+    systemctl --user disable --now monet-screenshot-ready.timer monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-this-pc.service monet-files-place.path monet-onedrive.service >/dev/null 2>&1 || true
+    computer="${XDG_DATA_HOME:-$HOME/.local/share}/monet/This PC"
+    "$PREFIX/libexec/monet-quick" remove-this-pc-place >/dev/null 2>&1 || true
+    if [ "$(kreadconfig6 --file dolphinrc --group General --key HomeUrl 2>/dev/null)" = "$computer" ]; then
+        kwriteconfig6 --file dolphinrc --group General --key HomeUrl --delete
+    fi
+    if [ -d "$computer" ] && [ ! -L "$computer" ]; then
+        "$PREFIX/bin/monet-files" remove-this-pc >/dev/null 2>&1 || true
+    fi
     systemctl --user disable --now monet-game-names.path >/dev/null 2>&1 || true
     # The canvases Monet put under other apps' icons (monet-quick frames), and only those.
     grep -rl --include='*.svg' 'Monet frame:' "${XDG_DATA_HOME:-$HOME/.local/share}/icons/Monet" 2>/dev/null | xargs -r rm -f || true
@@ -112,13 +120,13 @@ rm -f /etc/systemd/system/monet-windows-drive.service /etc/systemd/system/monet-
     /var/lib/monet/windows-files.json /var/lib/monet/windows-steam-shots.json
 systemctl daemon-reload
 
-systemctl --global disable monet-screenshot-ready.timer monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path >/dev/null 2>&1 || true
+systemctl --global disable monet-screenshot-ready.timer monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-this-pc.service monet-files-place.path >/dev/null 2>&1 || true
 rm -f /etc/systemd/user/monet-screenshot-ready.timer /etc/systemd/user/app-org.kde.spectacle.service.d/monet.conf
 rm -f /etc/systemd/user/monet-light.service /etc/systemd/user/monet-light.timer \
     /etc/systemd/user/monet-password-offers.service \
     /etc/systemd/user/monet-light-sync.service /etc/systemd/user/monet-light-sync.path /etc/systemd/user/monet-fresh.service /etc/systemd/user/monet-keys.service \
     /etc/systemd/user/monet-names.path /etc/systemd/user/monet-names.service \
-    /etc/systemd/user/monet-files-place.path /etc/systemd/user/monet-files-place.service \
+    /etc/systemd/user/monet-files-place.path /etc/systemd/user/monet-files-place.service /etc/systemd/user/monet-this-pc.service \
     /etc/systemd/user/monet-frames.path /etc/systemd/user/monet-frames.service \
     /etc/systemd/user/monet-zen.path /etc/systemd/user/monet-zen.service /etc/systemd/user/monet-onedrive.service
 systemctl --global disable monet-game-names.path >/dev/null 2>&1 || true

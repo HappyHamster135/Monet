@@ -14202,3 +14202,11 @@ msgstr ""
 msgid ""
 "A previous version left this app closed because the password vault was locked."
 msgstr ""
+
+#: linux/libexec/monet-quick:11148
+msgid "This PC"
+msgstr ""
+
+#: linux/share/monet/monet_files/computer.py:85
+msgid "Drive"
+msgstr ""

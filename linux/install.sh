@@ -345,6 +345,7 @@ put 644 "$SRC/systemd/user/plasma-plasmashell.service.d/monet-style.conf" \
     "$USERUNITDIR/plasma-plasmashell.service.d/monet-style.conf"
 put 644 "$SRC/systemd/user/monet-names.path" "$USERUNITDIR/monet-names.path"
 put 644 "$SRC/systemd/user/monet-names.service" "$USERUNITDIR/monet-names.service"
+put 644 "$SRC/systemd/user/monet-this-pc.service" "$USERUNITDIR/monet-this-pc.service"
 put 644 "$SRC/systemd/user/monet-files-place.path" "$USERUNITDIR/monet-files-place.path"
 put 644 "$SRC/systemd/user/monet-files-place.service" "$USERUNITDIR/monet-files-place.service"
 put 644 "$SRC/systemd/user/monet-frames.path" "$USERUNITDIR/monet-frames.path"
@@ -517,7 +518,7 @@ mv -f /etc/polkit-1/rules.d/49-monet.rules{.tmp,}
 if [ "$IMAGE" = 1 ]; then
     systemctl enable monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer monet-charge.service
     systemctl enable monet-login-brightness.service
-    systemctl --global enable monet-screenshot-ready.timer monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path
+    systemctl --global enable monet-screenshot-ready.timer monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path monet-this-pc.service
     systemctl enable monet-ready-leave.service monet-ready-boot.service
     systemctl --global enable monet-ready-lock.service monet-listening.service
     systemctl --global enable monet-work.service
@@ -727,7 +728,7 @@ else
     for unit in monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer monet-charge.service; do
         systemctl enable --now "$unit" >/dev/null 2>&1 || systemctl enable "$unit"
     done
-    systemctl --global enable monet-screenshot-ready.timer monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path >/dev/null 2>&1 || true
+    systemctl --global enable monet-screenshot-ready.timer monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-files-place.path monet-this-pc.service >/dev/null 2>&1 || true
     systemctl enable --now monet-ready-leave.service >/dev/null 2>&1 || true
     systemctl enable monet-ready-boot.service >/dev/null 2>&1 || true
     systemctl --global enable monet-ready-lock.service monet-listening.service >/dev/null 2>&1 || true

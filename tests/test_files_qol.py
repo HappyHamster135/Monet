@@ -274,3 +274,44 @@ class NativeWidgets(unittest.TestCase):
 
     def test_transfers_render_with_native_jobs_model(self):
         subprocess.run([sys.executable, str(ROOT / 'tests/fixtures/files-qol-native.py'), 'transfers'], check=True, timeout=20)
+
+
+@unittest.skipUnless(sys.platform.startswith('linux'), 'Linux Files')
+class ThisPC(unittest.TestCase):
+    def test_drive_removal_preserves_user_files_and_other_shortcuts(self):
+        from monet_files.computer import refresh
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            landing = root / 'This PC'
+            landing.mkdir()
+            (landing / 'Music').mkdir()
+            saved = landing / 'Document'
+            saved.write_text('keep my notes')
+            link = landing / 'Other'
+            link.symlink_to(saved)
+            targets = [('Music', root / 'My music', 'folder-music'),
+                       ('Extra drive', root / 'Disk #2', 'drive-harddisk')]
+            refresh(landing, targets)
+            music = landing / 'Music (2)'
+            disk = landing / 'Extra drive'
+            self.assertIn((root / 'Disk #2').as_uri(), disk.read_text())
+            self.assertFalse(os.access(disk, os.X_OK))
+            modified = music.stat().st_mtime_ns
+            refresh(landing, targets[:1])
+            self.assertEqual(modified, music.stat().st_mtime_ns)
+            self.assertFalse(disk.exists())
+            self.assertTrue((landing / 'Music').is_dir())
+            self.assertTrue(link.is_symlink())
+            self.assertEqual(saved.read_text(), 'keep my notes')
+
+    def test_drive_and_folder_with_same_label_stay_distinct(self):
+        from monet_files.computer import refresh
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            landing = root / 'This PC'
+            refresh(landing, [('Photos', root / 'home' / 'Photos', 'folder-pictures'),
+                              ('Photos', root / 'mnt' / 'Photos', 'drive-removable-media')])
+            self.assertIn((root / 'home' / 'Photos').as_uri(), (landing / 'Photos').read_text())
+            self.assertIn((root / 'mnt' / 'Photos').as_uri(), (landing / 'Photos (2)').read_text())

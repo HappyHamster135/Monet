@@ -7142,7 +7142,7 @@ PLACES = DATA_HOME / "user-places.xbel"
 PLACE_ID = "monet-shared-with-windows"
 
 
-def files_place(here, places=PLACES, files=FILES, place_id=PLACE_ID, title=None, icon="folder-publicshare"):
+def files_place(here, places=PLACES, files=FILES, place_id=PLACE_ID, title=None, icon="folder-publicshare", first=False):
     """Adds the place (here) or takes it away: the folder shared with Windows, or another of
     Monet's (OneDrive). Only to a list KDE made already: one that's missing gets KDE's own
     places first."""
@@ -7166,7 +7166,9 @@ def files_place(here, places=PLACES, files=FILES, place_id=PLACE_ID, title=None,
                  '   </metadata>\n'
                  '  </info>\n'
                  ' </bookmark>\n')
-        text = text.replace("</xbel>", entry + "</xbel>", 1)
+        position = re.search(r"(?m)^[ \t]*<bookmark\s", text) if first else None
+        offset = position.start() if position else text.index("</xbel>")
+        text = text[:offset] + entry + text[offset:]
     elif not here and has:
         text = re.sub(rf"[ \t]*<bookmark [^>]*>(?:(?!</bookmark>).)*<ID>{place_id}</ID>.*?</bookmark>\n?", "", text, flags=re.S)
     else:
@@ -11138,6 +11140,16 @@ def main(argv):
     elif cmd == "files-place":
         files_place(shared_here() and os.path.ismount(FILES))
         hide_system_root()
+        receipt = CONFIG / "monet/this-pc-place-v1"
+        if not receipt.exists() and PLACES.is_file():
+            computer = DATA_HOME / "monet/This PC"
+            text = PLACES.read_text(encoding="utf-8")
+            if f'href="{computer.as_uri()}"' in text or files_place(
+                    True, files=computer, place_id="monet-this-pc", title=tr("This PC"), icon="computer", first=True):
+                receipt.parent.mkdir(parents=True, exist_ok=True)
+                receipt.touch()
+    elif cmd == "remove-this-pc-place":
+        files_place(False, place_id="monet-this-pc")
     elif cmd == "native-shortcut" and len(args) == 1:
         return 0 if native_shortcut_dialog(args[0]) else 1
     elif cmd == "native-run" and len(args) in (1, 2) and re.fullmatch(r"(?:[0-9a-f]{2})+", args[0]):
