@@ -12,6 +12,8 @@ import tempfile
 
 PLUGIN = "monet_window_identity.so"
 PASTE_PLUGIN = "monet_plain_paste.so"
+QUIT_PLUGIN = "monet_quit_guard.so"
+PLUGINS = {1: (PLUGIN,), 2: (PLUGIN, PASTE_PLUGIN), 3: (PLUGIN, PASTE_PLUGIN, QUIT_PLUGIN)}
 EXECUTABLE = "/usr/bin/kwin_wayland"
 
 
@@ -44,13 +46,13 @@ def capture():
     names = {"kwin-common"}
     for path in {EXECUTABLE, str(library), *re.findall(r"(?:=>\s+|^\s*)(/\S+)", linked, re.M)}:
         names.update(run("rpm", "-qf", "--qf", "%{NAME}.%{ARCH}\n", str(Path(path).resolve())).splitlines())
-    return {"schema": 2, "path": str(plugin_directory() / PLUGIN), "library": str(library),
+    return {"schema": 3, "path": str(plugin_directory() / PLUGIN), "library": str(library),
             "library_sha256": digest(library), "executable_sha256": digest(EXECUTABLE),
             "package_names": sorted(names), "packages": packages(sorted(names))}
 
 
 def verify(manifest):
-    if manifest.get("schema") not in (1, 2) or not re.fullmatch(
+    if manifest.get("schema") not in PLUGINS or not re.fullmatch(
             r"/usr/lib(?:64)?/qt6/plugins/kwin/plugins/" + re.escape(PLUGIN), manifest.get("path", "")):
         raise ValueError("Invalid window identity plugin destination")
     if not re.fullmatch(r"/usr/lib(?:64)?/libkwin\.so\.\d+(?:\.\d+)*", manifest.get("library", "")):
@@ -84,7 +86,7 @@ def atomic_copy(source, target, mode):
 def seal(bundle):
     manifest = json.loads((bundle / "runtime.json").read_text())
     verify(manifest)
-    plugins = (PLUGIN, PASTE_PLUGIN) if manifest["schema"] == 2 else (PLUGIN,)
+    plugins = PLUGINS[manifest["schema"]]
     for plugin in plugins:
         dynamic = run("readelf", "-d", str(bundle / plugin))
         if "(RPATH)" in dynamic or "(RUNPATH)" in dynamic:
@@ -96,7 +98,7 @@ def seal(bundle):
 def install(bundle):
     manifest = json.loads((bundle / "runtime.json").read_text())
     verify(manifest)
-    plugins = (PLUGIN, PASTE_PLUGIN) if manifest["schema"] == 2 else (PLUGIN,)
+    plugins = PLUGINS[manifest["schema"]]
     for name in (*plugins, "source.tar.xz"):
         if digest(bundle / name) != manifest["files"][name]:
             raise ValueError("Damaged window identity bundle: " + name)

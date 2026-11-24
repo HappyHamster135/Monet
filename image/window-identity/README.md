@@ -52,3 +52,10 @@ no D-Bus input method.
 On an image with the plugin installed, run `python3 tests/fixtures/plain-paste-wayland.py`
 from the checkout. It changes fields during clipboard transfer, pastes twice in quick
 succession, and checks that the original HTML remains available, all in a private session.
+
+The bundle also includes `monet_quit_guard.so`. Its input filter is installed
+only while quit or close protection is enabled, or while draining a key release.
+The settings are in Monet Utilities. Confirmed shortcuts go to the focused
+application so it can show its usual unsaved-document prompt. Run
+`python3 tests/fixtures/quit-protection-wayland.py` and repeat with
+`--platform xcb` to check both window systems in an isolated session.

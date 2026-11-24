@@ -16100,3 +16100,120 @@ msgstr ""
 #: linux/share/monet/utilities/plain_paste.py:192 linux/share/monet/utilities/plain_paste.py:196 linux/share/monet/utilities/plain_paste.py:198
 msgid "The field changed during paste. Check its contents."
 msgstr ""
+
+#: image/window-identity/quitguard.cpp:201
+msgid "Hold %1 to confirm"
+msgstr ""
+
+#: image/window-identity/quitguard.cpp:203
+msgid "Press %1 again to confirm"
+msgstr ""
+
+#: image/window-identity/quitguard.cpp:205
+msgid "Press %1 to confirm"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:35
+msgid "Quit and close protection"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:26
+msgid "Choose applications"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:30
+msgid "Find an application…"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:78
+msgid "Protect Ctrl+Q"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:78
+msgid "Protect Ctrl+W"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:86
+msgid "Hold the shortcut"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:86
+msgid "Press it twice"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:87
+msgid "Add a modifier key"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:88
+msgid "Confirm by"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:90
+msgid "Hold for"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:92
+msgid "Second press within"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:93
+msgid "Super"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:95
+msgid "Extra key"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:96
+msgid "This combination takes over the app’s usual action for those keys."
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:99
+msgid "All applications"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:99
+msgid "Only selected applications"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:100
+msgid "All except selected applications"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:101
+msgid "Apply to"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:106
+msgid "Show a reminder when a shortcut is caught"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:138
+msgid "Choose applications…"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:138
+msgid "Choose applications… (%1)"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:140
+msgid "Choose an application to start protecting this shortcut."
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:159
+msgid "Could not save shortcut protection settings."
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:171
+msgid ""
+"Choose how to confirm keyboard shortcuts that quit an app or close its current tab or window."
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:175
+msgid "Quit application"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_protection.py:176
+msgid "Close tab or window"
+msgstr ""

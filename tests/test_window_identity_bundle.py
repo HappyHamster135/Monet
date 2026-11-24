@@ -74,7 +74,7 @@ class WindowIdentityBundle(unittest.TestCase):
                     bundle.capture()
 
     def make_bundle(self, folder, schema=1):
-        names = (bundle.PLUGIN, "source.tar.xz") if schema == 1 else (bundle.PLUGIN, bundle.PASTE_PLUGIN, "source.tar.xz")
+        names = (*bundle.PLUGINS[schema], "source.tar.xz")
         for name in names:
             (folder/name).write_bytes(b"original")
         manifest = dict(self.manifest, schema=schema, files={name:"original" for name in names})
@@ -116,6 +116,17 @@ class WindowIdentityBundle(unittest.TestCase):
                         self.assertRaisesRegex(ValueError, "unresolved"):
                     bundle.install(folder)
                 copy.assert_not_called()
+
+    def test_schema_three_checks_quit_guard_before_installing_any_plugin(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            self.make_bundle(folder, schema=3)
+            (folder / bundle.QUIT_PLUGIN).write_text("damaged")
+            with patch.object(bundle, "verify"), patch.object(bundle, "atomic_copy") as copy, \
+                    patch.object(bundle, "digest", side_effect=lambda path: Path(path).read_text()), \
+                    self.assertRaisesRegex(ValueError, bundle.QUIT_PLUGIN):
+                bundle.install(folder)
+            copy.assert_not_called()
 
     def test_sealing_rejects_build_time_library_paths(self):
         with tempfile.TemporaryDirectory() as temporary:

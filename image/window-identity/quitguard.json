@@ -1,0 +1,8 @@
+{
+  "KPlugin": {
+    "Name": "Monet quit and close protection",
+    "Description": "Confirm quit and close shortcuts in the applications you choose",
+    "License": "GPL-3.0-or-later",
+    "EnabledByDefault": true
+  }
+}

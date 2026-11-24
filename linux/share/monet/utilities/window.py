@@ -440,6 +440,9 @@ class Window(QMainWindow):
             self.page(key, lambda: Downloads(self.settings))
         elif key == "wheel":
             self.wheel()
+        elif key == "quit-protection":
+            from quit_protection import QuitProtection
+            self.page(key, QuitProtection)
         elif key == "link-settings":
             self.page(key, self.link_settings).refresh()
         elif key in ("clean", "plain"):
