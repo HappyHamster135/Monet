@@ -1120,19 +1120,21 @@ for (const p of places) {
     if (typeof s.below === "boolean") w.keepBelow = s.below;
     w.fullScreen = false;
     const mode = p.mode;
-    const current = w.frameGeometry;
     if ((mode === 1 || mode === 2) && Number(w.maximizeMode) === mode) {
         // App placement already restored this mode and its normal size.
         w.frameGeometry = p.rect;
     } else {
-        const area = workspace.clientArea(KWin.MaximizeArea, w);
         const bounds = Object.assign({}, p.rect);
-        if (mode === 1) {
-            bounds.height = Math.min(current.height, p.rect.height);
-            bounds.y += Math.max(0, Math.min(current.y - area.y, p.rect.height - bounds.height));
-        } else if (mode === 2) {
-            bounds.width = Math.min(current.width, p.rect.width);
-            bounds.x += Math.max(0, Math.min(current.x - area.x, p.rect.width - bounds.width));
+        if (mode === 1 || mode === 2) {
+            const area = workspace.clientArea(KWin.MaximizeArea, w);
+            const current = w.frameGeometry;
+            if (mode === 1) {
+                bounds.height = Math.min(current.height, p.rect.height);
+                bounds.y += Math.max(0, Math.min(current.y - area.y, p.rect.height - bounds.height));
+            } else {
+                bounds.width = Math.min(current.width, p.rect.width);
+                bounds.x += Math.max(0, Math.min(current.x - area.x, p.rect.width - bounds.width));
+            }
         }
         w.setMaximize(false, false);
         w.frameGeometry = bounds;
