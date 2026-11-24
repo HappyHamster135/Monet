@@ -5411,9 +5411,9 @@ def task_manager_reset():
     pages = DATA_HOME / 'plasma-systemmonitor'
     if config.is_symlink() or pages.is_symlink():
         return {'ok': False, 'problem': 'linked-profile'}
-    order = ['monet-applications.page', 'monet-performance.page', 'monet-graphics.page',
+    order = ['monet-applications.page', 'monet-performance.page',
              'monet-processes.page', 'monet-startup.page', 'monet-system.page']
-    hidden = 'applications.page,processes.page,overview.page,history.page,old-overview.page,old-history.page'
+    hidden = 'applications.page,processes.page,overview.page,history.page,old-overview.page,old-history.page,monet-graphics.page'
     try:
         backup.mkdir(mode=0o700, parents=True, exist_ok=True)
         # Do not replace the pre-update backup if an interrupted reset is retried.
@@ -5439,36 +5439,44 @@ def task_manager_reset():
 def task_manager_graphics(folder=None):
     """Monet's Graphics column, after Memory, in the Task Manager pages someone has their own
     copy of. Their other columns, widths and order stay as they are. Returns the pages changed."""
-    folder = Path(folder or Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share") / "plasma-systemmonitor")
+    folder = Path(folder or DATA_HOME / "plasma-systemmonitor")
     changed = []
     for name in TASK_MANAGER_PAGES:
         page = folder / name
         try:
             lines = page.read_text(encoding="utf-8").split("\n")
-        except (OSError, UnicodeDecodeError):
+        except (FileNotFoundError, UnicodeDecodeError):
             continue
         group_starts = [i for i, line in enumerate(lines) if line.startswith("[")] + [len(lines)]
         edited = False
         for start, end in zip(group_starts, group_starts[1:]):
+            if not re.fullmatch(r"\[Face-[^]]+\]\[org\.monet\.(?:applications|processes)\]\[General\]", lines[start]):
+                continue
             keys = {line.split("=", 1)[0]: i for i, line in enumerate(lines[start:end], start) if "=" in line}
-            if "sortedColumns" not in keys:
-                continue
-            columns = lines[keys["sortedColumns"]].split("=", 1)[1].split(",")
-            if "monetGraphics" in columns or "vmPSS" not in columns:
-                continue
-            at = columns.index("vmPSS") + 1
-            columns.insert(at, "monetGraphics")
-            lines[keys["sortedColumns"]] = "sortedColumns=" + ",".join(columns)
+            if "sortedColumns" in keys:
+                columns = lines[keys["sortedColumns"]].split("=", 1)[1].split(",")
+                if not all(columns) or "monetGraphics" in columns:
+                    continue
+                previous_count = len(columns)
+                anchors = ("memory", "vmPSS", "usage", "appName", "name")
+                at = next((columns.index(key) + 1 for key in anchors if key in columns), previous_count)
+                columns.insert(at, "monetGraphics")
+                lines[keys["sortedColumns"]] = "sortedColumns=" + ",".join(columns)
+                edited = True
+            else:
+                # A resize alone saves widths, but leaves the seven old columns implicit.
+                previous_count, at = 7, 3
             if "columnWidths" in keys:
                 try:
                     widths = [float(w) for w in lines[keys["columnWidths"]].split("=", 1)[1].split(",")]
                 except ValueError:
                     widths = []
-                if len(widths) == len(columns) - 1:
+                if len(widths) == previous_count and all(0 < w <= 1 for w in widths):
                     # Room for it the size of Memory's, taken evenly from every column.
                     added = widths[at - 1]
                     total = sum(widths)
                     widths.insert(at, added)
+                    edited = True
                     widths = [round(w * total / (total + added), 3) for w in widths]
                     lines[keys["columnWidths"]] = "columnWidths=" + ",".join(f"{w:g}" for w in widths)
             if "columnDisplay" in keys:
@@ -5476,16 +5484,50 @@ def task_manager_graphics(folder=None):
                     display = json.loads(lines[keys["columnDisplay"]].split("=", 1)[1])
                 except ValueError:
                     display = None
-                if isinstance(display, dict):
+                if isinstance(display, dict) and "monetGraphics" not in display:
+                    edited = True
                     display["monetGraphics"] = "text"
                     lines[keys["columnDisplay"]] = "columnDisplay=" + json.dumps(display, separators=(",", ":"))
-            edited = True
         if edited:
-            temporary = page.with_name(page.name + ".monet-new")
-            temporary.write_text("\n".join(lines), encoding="utf-8")
-            os.replace(temporary, page)
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=folder, delete=False) as stream:
+                stream.write("\n".join(lines))
+            Path(stream.name).replace(page)
             changed.append(name)
     return changed
+
+
+def prepare_task_manager():
+    """Finish profile changes before the first table reads its saved columns."""
+    import fcntl
+    marker = CONFIG / "monet/task-manager-graphics-v2"
+    try:
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        with (marker.parent / "task-manager-layout.lock").open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            result = task_manager_reset()
+            if not result["ok"] or marker.is_file():
+                return result
+            pages = DATA_HOME / "plasma-systemmonitor"
+            result["columns"] = task_manager_graphics(pages)
+            # Keep an explicitly edited graphics dashboard. The standard
+            # hardware charts are still available inside Performance.
+            graphics = "monet-graphics.page"
+            if not (pages / graphics).exists():
+                hidden = list(filter(None, kread("systemmonitorrc", "General", "hiddenPages").split(",")))
+                if graphics not in hidden:
+                    hidden.append(graphics)
+                    if not kwrite("systemmonitorrc", "General", "hiddenPages", ",".join(hidden)):
+                        return {"ok": False, "problem": "write"}
+                for key in ("startPage", "lastVisitedPage"):
+                    if kread("systemmonitorrc", "General", key) == graphics:
+                        order = kread("systemmonitorrc", "General", "pageOrder").split(",")
+                        target = next((p for p in order if p and p not in hidden), "monet-applications.page")
+                        if not kwrite("systemmonitorrc", "General", key, target):
+                            return {"ok": False, "problem": "write"}
+            marker.touch()
+            return result
+    except OSError:
+        return {"ok": False, "problem": "write"}
 
 
 # Task Manager's names: each app by its own name and picture. KDE names a row by the menu
@@ -11004,7 +11046,7 @@ def main(argv):
     elif cmd == "steam-share":
         emit({"done": steam_share(now=args[:1] == ["now"]), **shared_info()})
     elif cmd == "task-manager-reset":
-        result = task_manager_reset(); emit(result)
+        result = prepare_task_manager(); emit(result)
         return 0 if result['ok'] else 1
     elif cmd == "task-manager-graphics":
         emit({"changed": task_manager_graphics()})

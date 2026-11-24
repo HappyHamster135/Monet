@@ -755,7 +755,7 @@ kw_default kiorc PreviewSettings MaximumRemoteSize 0
 # KDE adds our page to customized layouts itself; only order an untouched profile.
 kw_default systemmonitorrc General pageOrder monet-applications.page,monet-performance.page,monet-processes.page,monet-startup.page,monet-system.page,applications.page,processes.page,overview.page,history.page
 kw_default systemmonitorrc General startPage monet-applications.page
-kw_default systemmonitorrc General hiddenPages applications.page,processes.page,overview.page,history.page
+kw_default systemmonitorrc General hiddenPages applications.page,processes.page,overview.page,history.page,monet-graphics.page
 # The paired image build fixes Atomic mount lookup. Never enable the full space
 # display on an older/unpatched Dolphin, where home incorrectly reads 0 B free.
 if [ -e "$DATADIR/monet/files-free-space-v1" ]; then
@@ -790,18 +790,9 @@ if [ ! -e "$sound_repair" ] && [ -r "$DATADIR/monet/repair-sound.js" ]; then
     fi
 fi
 
-# Task Manager's Graphics column (0.9.8-6) in the pages someone already had their own copy
-# of, which Task Manager reads instead of Monet's. Once, on --keep upgrades too.
-graphics_column="$CONFIG/monet/task-manager-graphics-v1"
+# Use the same one-time layout migration as Task Manager's first launch.
 if [ -x "$LIBEXECDIR/monet-quick" ]; then
     "$LIBEXECDIR/monet-quick" task-manager-reset >/dev/null 2>&1 || failed=1
-fi
-if [ ! -e "$graphics_column" ] && [ -x "$LIBEXECDIR/monet-quick" ]; then
-    if "$LIBEXECDIR/monet-quick" task-manager-graphics >/dev/null 2>&1; then
-        mkdir -p "$CONFIG/monet" && touch "$graphics_column"
-    else
-        failed=1
-    fi
 fi
 
 # KDE's sound, Bluetooth and brightness items duplicate Monet's own controls: out of the

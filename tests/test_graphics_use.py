@@ -268,11 +268,12 @@ class GraphicsColumn(unittest.TestCase):
         for page, face, first in (('monet-applications.page', '94920553440704', 'appName'),
                                   ('monet-processes.page', '94051759765872', 'name')):
             text = (pages / page).read_text()
-            # KDE's table reads a face's columns from [Face-ID][FaceConfig][General].
-            group = text.split(f'[Face-{face}][FaceConfig][General]\n', 1)[1].split('\n[', 1)[0]
+            # KDE's face controller uses its plugin ID as the configuration group.
+            plugin = 'org.monet.' + page.removeprefix('monet-').removesuffix('.page')
+            group = text.split(f'[Face-{face}][{plugin}][General]\n', 1)[1].split('\n[', 1)[0]
             settings = dict(line.split('=', 1) for line in group.splitlines() if '=' in line)
             columns = settings['sortedColumns'].split(',')
-            self.assertEqual(columns[:4], [first, 'usage', 'vmPSS', 'monetGraphics'], page)
+            self.assertEqual(columns[:4], [first, 'usage', 'memory', 'monetGraphics'], page)
             widths = [float(w) for w in settings['columnWidths'].split(',')]
             self.assertEqual(len(widths), len(columns), page)
             self.assertAlmostEqual(sum(widths), 1.0, places=6)

@@ -116,7 +116,9 @@ def patch(source):
     code = code.replace(anchor, '''    // Reset before PageManager can read or cache an older customized layout.
     const QString receipt = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
         + QStringLiteral("/monet/task-manager-backups/0.9.8-8/complete.json");
-    if (!QFileInfo::exists(receipt)) {
+    const QString columns = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation)
+        + QStringLiteral("/monet/task-manager-graphics-v2");
+    if (!QFileInfo::exists(receipt) || !QFileInfo::exists(columns)) {
         const QStringList helpers{QCoreApplication::applicationDirPath() + QStringLiteral("/monet-quick"),
                                   QStringLiteral("/usr/libexec/monet-quick"), QStringLiteral("/usr/local/libexec/monet-quick")};
         for (const auto &helper : helpers) {

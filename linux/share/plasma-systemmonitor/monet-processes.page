@@ -52,7 +52,7 @@ face=Face-monet-totals
 isSeparator=false
 
 # Graphics beside CPU and Memory: Monet's plugin (image/graphics), for each process.
-[Face-94051759765872][FaceConfig][General]
-sortedColumns=name,usage,vmPSS,monetGraphics,netInbound,netOutbound,ioCharactersActuallyReadRate,ioCharactersActuallyWrittenRate
+[Face-94051759765872][org.monet.processes][General]
+sortedColumns=name,usage,memory,monetGraphics,netInbound,netOutbound,ioCharactersActuallyReadRate,ioCharactersActuallyWrittenRate
 columnWidths=0.23,0.11,0.11,0.11,0.11,0.11,0.11,0.11
-columnDisplay={"name":"text","usage":"lineScaled","vmPSS":"text","monetGraphics":"text","netInbound":"text","netOutbound":"text","ioCharactersActuallyReadRate":"text","ioCharactersActuallyWrittenRate":"text"}
+columnDisplay={"name":"text","usage":"lineScaled","memory":"text","monetGraphics":"text","netInbound":"text","netOutbound":"text","ioCharactersActuallyReadRate":"text","ioCharactersActuallyWrittenRate":"text"}

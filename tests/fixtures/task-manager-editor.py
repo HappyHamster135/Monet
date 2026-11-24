@@ -37,6 +37,8 @@ def run(output):
                 children.append(child); return child
             start(['Xvfb',':92','-screen','0','1280x900x24'], 'display.log')
             start(['/usr/libexec/at-spi-bus-launcher','--launch-immediately'], 'accessibility.log')
+            # The private bus has no systemd user manager to activate the registry.
+            start(['/usr/libexec/at-spi2-registryd'], 'registry.log')
             app = start([str(helpers/'plasma-systemmonitor')], 'app.log')
             code = r'''
 import json,time,pyatspi,subprocess
@@ -68,8 +70,21 @@ def press(name,role=None):
         bounds=node.queryComponent().getExtents(pyatspi.DESKTOP_COORDS)
         subprocess.run(['xdotool','mousemove',str(bounds.x+bounds.width//2),str(bounds.y+bounds.height//2),'click','1'],check=True)
     time.sleep(.3)
-press('Graphics','list item')
-wait(lambda:find('Loading graphics hardware…') or find('Hardware statistics are unavailable.'),'Graphics face did not load')
+def has_graphics_header():
+    expected = ['CPU', 'Memory', 'Graphics', 'Download']
+    rows = {}
+    for node in nodes(root):
+        if node.name in expected and node.getRoleName() == 'label' and node.getState().contains(pyatspi.STATE_SHOWING):
+            bounds = node.queryComponent().getExtents(pyatspi.DESKTOP_COORDS)
+            rows.setdefault(bounds.y, []).append((bounds.x, node.name))
+    return any([name for _, name in sorted(row)] == expected for row in rows.values())
+
+wait(lambda:find('Applications','list item'),'Applications page missing')
+assert not find('Graphics','list item'), 'Unexpected duplicate sidebar entry'
+for page in ('Applications', 'Processes'):
+    press(page,'list item')
+    wait(has_graphics_header, page+' is missing Graphics beside Memory in the table header')
+press('Performance','list item')
 if not find('Edit Page','button'): press('More Actions','push button menu')
 press('Edit Page')
 wait(lambda:find('Add row','button'),'Editor help actions are missing')
@@ -85,7 +100,7 @@ print('NATIVE_EDITOR_OK',flush=True)
             backup = data/'monet/task-manager-backups/0.9.8-8'
             assert (backup/'complete.json').exists(), 'Native first launch did not run the reset'
             assert (backup/'pages/my-old.page').read_text()=='old customized page'
-            page = profile/'monet-graphics.page'
+            page = profile/'monet-performance.page'
             assert 'cpu/all/usage' in page.read_text(), page.read_text()
             before = page.read_bytes()
             stop(app); children.remove(app)
@@ -97,7 +112,7 @@ print('NATIVE_EDITOR_OK',flush=True)
                 text=(output/name).read_text()
                 assert not any(message in text for message in ('TypeError:','ReferenceError:','Error creating component:','Unable to assign')),text
             (output/'result.json').write_text(json.dumps(dict(passed=True, nativeEditor=True, nativeFirstLaunchReset=True,
-                graphicsFaceLoaded=True, presetSaved=True, restartPreservedCustomization=True, hostProfileChanged=False),indent=2)+'\n')
+                graphicsColumnsLoaded=True, presetSaved=True, restartPreservedCustomization=True, hostProfileChanged=False),indent=2)+'\n')
         finally:
             for process in reversed(children): stop(process)
 

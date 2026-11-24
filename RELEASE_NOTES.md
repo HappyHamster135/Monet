@@ -4,6 +4,8 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 ### New in 0.9.8-9: Startup and Settings polish (in development)
 
+- **Graphics in Task Manager.** Applications and Processes show a sortable Graphics
+  column beside CPU and Memory. Per-GPU charts remain available in Performance.
 - **Wallet prompts at sign-in.** Settings → Passwords controls whether apps that Monet
   restores can ask to unlock saved passwords. Restores are quiet by default. Apps you
   launch yourself can still ask.
