@@ -286,6 +286,14 @@ Item {
         screen = out.geometry
         const g = w.frameGeometry
         travelled = travelled || Math.abs(g.x - start.x) + Math.abs(g.y - start.y) > 16
+        // A full-height window's header already passes over the layout picker.
+        // Keep a sideways drag there horizontal until the pointer reaches an actual edge.
+        if (Number(w.maximizeMode) === 1 && p.y > area.y + edge
+                && p.x > area.x + edge && p.x < area.x + area.width - 1 - edge) {
+            barNear = false
+            target = null
+            return
+        }
         target = travelled ? aim(p) : null
     }
 
@@ -355,8 +363,14 @@ Item {
         const bottomMoved = Math.abs(g.y + g.height - start.y - start.height) > 1
         if ((bottomMoved && !topMoved && g.y + g.height >= a.y + a.height - edge)
                 || (topMoved && !bottomMoved && g.y <= a.y + edge)) {
-            sizes[key(w)] = sizes[key(w)] || { width: start.width, height: start.height }
-            w.frameGeometry = Qt.rect(g.x, a.y, g.width, a.height)
+            delete sizes[key(w)]
+            delete together[key(w)]
+            if (w.maximizable) {
+                // KWin keeps vertical maximization across horizontal moves and work-area changes.
+                w.setMaximize(true, (Number(w.maximizeMode) & 2) !== 0, start)
+            } else {
+                w.frameGeometry = Qt.rect(g.x, a.y, g.width, a.height)
+            }
         }
     }
 
@@ -367,6 +381,7 @@ Item {
             sizes[key(w)] = { width: before.width, height: before.height }
         }
         placing = true
+        if (Number(w.maximizeMode) !== 0) w.setMaximize(false, false)
         w.frameGeometry = part
         placing = false
         together[key(w)] = true

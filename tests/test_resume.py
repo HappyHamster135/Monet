@@ -95,6 +95,20 @@ URL=file:///home/j/already-closed.txt
             r.place_windows([old], current, {"already-open"})
             script.assert_not_called()
 
+    def test_checkpoint_follows_the_new_work_area_on_each_maximized_axis(self):
+        old = {"x": 1920, "y": 30, "width": 1000, "height": 700}
+        area = {"x": 0, "y": 16, "width": 1400, "height": 900}
+        frame = {"x": 2020, "y": 110, "width": 580, "height": 450}
+        for state, expected in [
+            ({"maximizeMode": 1}, (100, 16, 580, 900)),
+            ({"maximizeMode": 2}, (0, 96, 1400, 450)),
+            ({"maximized": True}, (0, 16, 1400, 900)),
+            ({"maximized": False}, (100, 96, 580, 450)),
+        ]:
+            with self.subTest(state=state):
+                result = r.placed_rect(dict(state, area=old, rect=frame), area)
+                self.assertEqual(result, dict(zip(("x", "y", "width", "height"), expected)))
+
     def test_documents_are_arguments_not_a_shell_and_missing_files_are_not_created(self):
         with tempfile.TemporaryDirectory() as tmp:
             doc = Path(tmp) / "some notes; do not execute.txt"

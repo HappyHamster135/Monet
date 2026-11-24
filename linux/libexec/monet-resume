@@ -170,7 +170,7 @@ function capture(w) {
             rect:rect(g), area:rect(area), screen:w.output ? w.output.name : "", display:display(w.output),
             outputs:workspace.screens.map(o => ({name:o.name, display:display(o),
                 area:rect(workspace.clientArea(KWin.MaximizeArea, o, workspace.currentDesktop))})),
-            maximized:Number(w.maximizeMode) === 3,
+            maximizeMode:Number(w.maximizeMode), maximized:Number(w.maximizeMode) === 3,
             minimized:w.minimized, fullscreen:w.fullScreen,
             desktops:w.desktops.map(d => ({id:d.id, name:d.name})), allDesktops:w.onAllDesktops,
             above:w.keepAbove, below:w.keepBelow, active:w.active, stack:w.stackingOrder};
@@ -1022,6 +1022,13 @@ def usable(saved, now, boot, freshness):
     return saved.get("version") == 2 and 0 <= now - stamp <= freshness
 
 
+def maximize_mode(saved):
+    mode = saved.get("maximizeMode")
+    if type(mode) is int and 0 <= mode <= 3:
+        return mode
+    return 3 if saved.get("maximized") is True else 0
+
+
 def placed_rect(saved, area):
     """Logical pixels; preserve offsets on the same screen, clamp after unplug/scaling."""
     old = saved.get("area", area)
@@ -1034,6 +1041,11 @@ def placed_rect(saved, area):
             return None
         width = min(max(200, rect["width"]), area["width"])
         height = min(max(120, rect["height"]), area["height"])
+        mode = maximize_mode(saved)
+        if mode & 1:
+            height = area["height"]
+        if mode & 2:
+            width = area["width"]
         return {"x": round(max(area["x"], min(area["x"] + rect["x"] - old["x"], area["x"] + area["width"] - width))),
                 "y": round(max(area["y"], min(area["y"] + rect["y"] - old["y"], area["y"] + area["height"] - height))),
                 "width": round(width), "height": round(height)}
@@ -1085,7 +1097,7 @@ def place_windows(saved, current, initial_ids, identities=None):
         output = matching_output(previous, window.get("outputs", []))
         target = placed_rect(previous, output.get("area", window.get("area", {})))
         if target:
-            placements.append({"id": window["id"], "saved": previous, "rect": target})
+            placements.append({"id": window["id"], "saved": previous, "rect": target, "mode": maximize_mode(previous)})
     if not placements:
         return []
     # Screens can disappear or change ports during a trip or a restart. Find the old
@@ -1107,9 +1119,25 @@ for (const p of places) {
     if (typeof s.above === "boolean") w.keepAbove = s.above;
     if (typeof s.below === "boolean") w.keepBelow = s.below;
     w.fullScreen = false;
-    w.setMaximize(false, false);
-    w.frameGeometry = p.rect;
-    if (s.maximized) w.setMaximize(true, true);
+    const mode = p.mode;
+    const current = w.frameGeometry;
+    if ((mode === 1 || mode === 2) && Number(w.maximizeMode) === mode) {
+        // App placement already restored this mode and its normal size.
+        w.frameGeometry = p.rect;
+    } else {
+        const area = workspace.clientArea(KWin.MaximizeArea, w);
+        const bounds = Object.assign({}, p.rect);
+        if (mode === 1) {
+            bounds.height = Math.min(current.height, p.rect.height);
+            bounds.y += Math.max(0, Math.min(current.y - area.y, p.rect.height - bounds.height));
+        } else if (mode === 2) {
+            bounds.width = Math.min(current.width, p.rect.width);
+            bounds.x += Math.max(0, Math.min(current.x - area.x, p.rect.width - bounds.width));
+        }
+        w.setMaximize(false, false);
+        w.frameGeometry = bounds;
+        if (mode) w.setMaximize(!!(mode & 1), !!(mode & 2), bounds);
+    }
     if (s.fullscreen) w.fullScreen = true;
     w.minimized = !!s.minimized;
     changed.push(p.id);
@@ -1266,7 +1294,7 @@ def restore_browser(path, saved, off, checkpoint=None):
             # Private + normal or multiple normal windows remain native-browser-owned.
             if (saved["browser_tabs_restored"] and state.get("windows") == 1 and len(frames) == len(fresh) == 1
                     and frames[0].get("rect")):
-                shape = (fresh[0].get("id"), fresh[0].get("rect"), fresh[0].get("maximized"), fresh[0].get("fullscreen"))
+                shape = (fresh[0].get("id"), fresh[0].get("rect"), fresh[0].get("maximizeMode"), fresh[0].get("fullscreen"))
                 if shape != previous_shape:
                     previous_shape = shape
                     continue

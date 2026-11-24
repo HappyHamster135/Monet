@@ -12,8 +12,10 @@ Item {
         location: StandardPaths.writableLocation(StandardPaths.ConfigLocation) + "/monet/window-placements.conf"
     }
     property var entries: Object.create(null)
-    // KWin's MaximizeMode flags: both directions set.
-    readonly property int maximized: 3
+    function savedMode(record) {
+        const mode = record.maximizeMode
+        return Number.isInteger(mode) && mode >= 0 && mode <= 3 ? mode : (record.maximized === true ? 3 : 0)
+    }
 
     function key(w) {
         if (!w || !w.normalWindow || w.skipTaskbar || w.transient || w.dialog || !w.managed)
@@ -27,7 +29,7 @@ Item {
     function saved(app) {
         try {
             const record = JSON.parse(history.value(app, "null"))
-            if (record && record.screen && (hasBounds(record) || record.fullscreen === true || record.maximized === true))
+            if (record && record.screen && (hasBounds(record) || record.fullscreen === true || savedMode(record)))
                 return record
         } catch (error) {
             // A damaged preference is treated as a first launch.
@@ -104,7 +106,8 @@ Item {
         entry.applying = true
         try {
             w.frameGeometry = target
-            if (record.maximized && w.maximizable) w.setMaximize(true, true, target)
+            const mode = savedMode(record)
+            if (mode && w.maximizable) w.setMaximize(!!(mode & 1), !!(mode & 2), target)
             if (record.fullscreen && w.fullScreenable) w.fullScreen = true
         } finally {
             entry.applying = false
@@ -125,12 +128,26 @@ Item {
         // A disappearing monitor can move the app without the user moving it.
         if (previous && !matchingScreen(previous.screen) && !entry.moved) return
         const full = w.fullScreen
-        const max = Number(w.maximizeMode) === maximized
+        const mode = Number(w.maximizeMode)
         const floating = snapshot(w)
         if (floating) entry.normal = floating
-        if (!floating && !full && !max) return
+        if (!floating && !full && !mode) return
         const normal = floating || entry.normal || previous
-        const record = Object.assign({}, normal, {screen: screenOf(w.output), maximized: max, fullscreen: full})
+        const record = Object.assign({}, normal, {screen: screenOf(w.output), maximizeMode: mode,
+                                                  maximized: mode === 3, fullscreen: full})
+        if (!full && (mode === 1 || mode === 2)) {
+            // A vertically maximized window can still move or resize horizontally, and vice versa.
+            const g = w.frameGeometry
+            const area = Workspace.clientArea(KWin.MaximizeArea, w)
+            if (mode === 1 || !hasBounds(normal)) {
+                record.x = g.x - area.x
+                record.width = g.width
+            }
+            if (mode === 2 || !hasBounds(normal)) {
+                record.y = g.y - area.y
+                record.height = g.height
+            }
+        }
         const value = JSON.stringify(record)
         if (value !== history.value(app, "")) {
             history.setValue(app, value)
@@ -156,6 +173,11 @@ Item {
             property bool moved: false
             property bool applying: false
             property var normal: null
+            property var resizeStart: null
+
+            function finishResize() {
+                if (!window || !window.resize) resizeStart = null
+            }
 
             function applyOnce(deadline = false) {
                 if (!pending || (!deadline && !placement.key(window))) return
@@ -185,15 +207,20 @@ Item {
                 function onDesktopFileNameChanged() { entry.geometryChanged() }
                 function onFullScreenChanged() { entry.geometryChanged() }
                 function onMaximizedChanged() { entry.geometryChanged() }
-                function onInteractiveMoveResizeFinished() { entry.geometryChanged() }
+                function onInteractiveMoveResizeFinished() {
+                    // Snap may maximize from another listener on this same signal.
+                    Qt.callLater(entry.finishResize)
+                    entry.geometryChanged()
+                }
                 function onInteractiveMoveResizeStarted() {
                     entry.pending = false
                     entry.moved = true
+                    entry.resizeStart = entry.window.resize ? placement.snapshot(entry.window) : null
                 }
                 function onMaximizedAboutToChange() {
                     entry.pending = false
                     if (entry.applying) return
-                    const frame = placement.snapshot(entry.window)
+                    const frame = entry.resizeStart || placement.snapshot(entry.window)
                     if (frame) entry.normal = frame
                 }
             }

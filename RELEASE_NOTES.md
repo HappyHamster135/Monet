@@ -9,6 +9,8 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   installed, and Qt can fall back if bytecode is damaged or incompatible.
 - **Faster, smoother Settings.** Settings compiles only the selected page and
   loads it asynchronously, keeping the window responsive during navigation.
+- **Full-height windows stay stretched.** Move a stretched window sideways or
+  reopen it after signing in and it keeps its width and fills the available height.
 - **Less work before the window appears.** Initial hardware and data requests
   wait until the window has drawn and the selected page has been constructed.
 - **Preserved preferences.** Existing app, bar and Task Manager customization is

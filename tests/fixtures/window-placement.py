@@ -12,10 +12,19 @@ sys.path.insert(0, str(ROOT))
 
 if len(sys.argv) > 1:
     from PySide6.QtWidgets import QApplication, QWidget
-    from PySide6.QtCore import QTimer
+    from PySide6.QtCore import Qt, QTimer
     app = QApplication([])
     app.setDesktopFileName(sys.argv[1])
-    w = QWidget()
+    class StretchClient(QWidget):
+        def mousePressEvent(self, event):
+            if event.position().y() >= self.height() - 16:
+                self.windowHandle().startSystemResize(Qt.Edge.BottomEdge)
+            else:
+                self.windowHandle().startSystemMove()
+
+    w = StretchClient() if sys.argv[2] == 'stretched' else QWidget()
+    if isinstance(w, StretchClient):
+        w.setWindowFlag(Qt.WindowType.FramelessWindowHint)
     w.setWindowTitle(sys.argv[2])
     w.setMinimumSize(230, 150)
     w.resize(470, 330)
@@ -32,9 +41,10 @@ with private_session() as env:
     os.environ.update(env)
     app = QCoreApplication([])
     config = Path(env['XDG_CONFIG_HOME'])
-    config.joinpath('kwinrc').write_text('[Plugins]\nmonet-workEnabled=true\n')
-    shutil.copytree(ROOT/'linux/share/kwin/scripts/monet-work',
-                    Path(env['XDG_DATA_HOME'])/'kwin/scripts/monet-work')
+    config.joinpath('kwinrc').write_text('[Plugins]\nmonet-workEnabled=true\nmonet-snapEnabled=true\n'
+                                         '[Windows]\nElectricBorderMaximize=false\nElectricBorderTiling=false\n')
+    for plugin in ('monet-work', 'monet-snap'):
+        shutil.copytree(ROOT/'linux/share/kwin/scripts'/plugin, Path(env['XDG_DATA_HOME'])/'kwin/scripts'/plugin)
     kwin = Path(env['HOME'])/'kwin_wayland'
     shutil.copyfile(shutil.which('kwin_wayland'), kwin)
     kwin.chmod(0o700)
@@ -147,6 +157,54 @@ with private_session() as env:
         action('fullscreen after restart', 'w.fullScreen = false;')
         expect('fullscreen after restart', 207, 121, 676, 467)
         close_client(resumed, 'fullscreen after restart')
+        stretched = open_client('stretched', 'org.example.Stretched')
+        time.sleep(.4)
+        action('stretched', 'w.frameGeometry = {x:130, y:80, width:610, height:420};')
+        expect('stretched', 130, 80, 610, 420)
+        from wayland_pointer import Pointer
+        pointer = Pointer(Path(env['XDG_RUNTIME_DIR'])/env['WAYLAND_DISPLAY'])
+        pointer.point(400, 495)
+        until(lambda: r.kwin_script('reply(workspace.cursorPos.y)') == 495, 'Point at bottom grip')
+        time.sleep(.08)
+        pointer.button(True)
+        time.sleep(.08)
+        pointer.point(400, 610)
+        until(lambda: window('stretched')['rect']['height'] > 520, 'Move the bottom edge')
+        pointer.point(400, 799)
+        until(lambda: window('stretched')['rect']['height'] > 700, 'Stretch to bottom')
+        pointer.button(False)
+        expect('stretched', 130, 0, 610, 800)
+        pointer.point(410, 50)
+        until(lambda: r.kwin_script('reply(workspace.cursorPos.y)') == 50, 'Point at window header')
+        time.sleep(.08)
+        pointer.button(True)
+        time.sleep(.08)
+        pointer.point(430, 50)
+        until(lambda: window('stretched')['rect']['x'] > 140, 'Move the stretched window')
+        pointer.point(557, 51)
+        expect('stretched', 277, 0, 610, 800)
+        pointer.button(False)
+        pointer.sock.close()
+        until(lambda: not r.kwin_script("reply(windows().some(w => w.move))"), 'Release stretched window')
+        checkpoint = next(w for w in r.window_snapshot() if w['app'] == 'org.example.Stretched.desktop')
+        assert checkpoint['maximizeMode'] == 1, checkpoint
+        close_client(stretched, 'stretched')
+        stop(compositor)
+        compositor = server(height=900)
+        stretched = open_client('stretched again', 'org.example.Stretched')
+        expect('stretched again', 277, 0, 610, 900)
+        assert window('stretched again')['mode'] == 1
+        assert r.place_windows([checkpoint], r.window_snapshot(), set())
+        expect('stretched again', 277, 0, 610, 900)
+        action('stretched again', 'w.setMaximize(false, false);')
+        expect('stretched again', 277, 80, 610, 420)
+        # Replay the earlier checkpoint on a floating window, as during sign-in.
+        assert r.place_windows([checkpoint], r.window_snapshot(), set())
+        until(lambda: window('stretched again')['mode'] == 1, 'Restore vertical checkpoint')
+        expect('stretched again', 277, 0, 610, 900)
+        action('stretched again', 'w.setMaximize(false, false);')
+        expect('stretched again', 277, 80, 610, 420)
+        close_client(stretched, 'stretched again')
         stop(compositor)
         compositor = server(outputs=2)
         second = open_client('on external display')
