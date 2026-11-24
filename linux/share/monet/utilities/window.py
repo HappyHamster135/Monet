@@ -456,6 +456,11 @@ class Window(QMainWindow):
             preview.show()
         elif key == "ocr":
             self.capture_text()
+        elif key in ("record", "recordings"):
+            from recordings import Recordings
+            editor = self.page("recordings", lambda: Recordings(self))
+            if key == "record":
+                editor.capture("r")
         elif key == "compress":
             self.compress()
 
@@ -485,6 +490,21 @@ class Window(QMainWindow):
             self.run_tool(key)
 
     def closeEvent(self, event):
+        editor = self.pages.get("recordings")
+        if editor and editor.recorder:
+            # Spectacle still owns the active recording. Keep its process alive
+            # until the user finishes it with the normal recording indicator.
+            editor.close_after_capture = True
+            self.hide()
+            event.ignore()
+            return
+        if editor and editor.exporter:
+            if QMessageBox.question(self, tr("Cancel export?"), tr("Cancel the recording export and close Utilities?")) != QMessageBox.Yes:
+                event.ignore()
+                return
+            job = editor.exporter
+            editor.cancel_export()
+            job.waitForFinished(2000)
         if self.converting and QMessageBox.question(self, "Cancel conversion?", "A conversion is running. Cancel it and close Utilities?") != QMessageBox.Yes:
             event.ignore()
             return

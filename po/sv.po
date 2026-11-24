@@ -14717,3 +14717,179 @@ msgstr "Rensa kopierade länkar automatiskt"
 msgid ""
 "Remove common tracking parameters when you copy a plain web address. Formatted text, files and recognized signed links keep their original contents."
 msgstr "Ta bort vanliga spårningsparametrar när du kopierar en webbadress som ren text. Formaterad text, filer och identifierade signerade länkar behåller sitt innehåll."
+
+#: linux/share/monet/utilities/actions.py:30
+msgid "Screen recorder and editor"
+msgstr "Spela in och redigera skärmen"
+
+#: linux/share/monet/utilities/window.py:502
+msgid "Cancel export?"
+msgstr "Avbryt exporten?"
+
+#: linux/share/monet/utilities/window.py:502
+msgid "Cancel the recording export and close Utilities?"
+msgstr "Vill du avbryta exporten av inspelningen och stänga Verktyg?"
+
+#: linux/share/monet/utilities/recordings.py:126
+msgid "Record…"
+msgstr "Spela in…"
+
+#: linux/share/monet/utilities/recordings.py:131
+msgid "Screen region"
+msgstr "Ett område på skärmen"
+
+#: linux/share/monet/utilities/recordings.py:131
+msgid "One window"
+msgstr "Ett fönster"
+
+#: linux/share/monet/utilities/recordings.py:131
+msgid "One screen"
+msgstr "En skärm"
+
+#: linux/share/monet/utilities/recordings.py:135
+msgid "Record system sound"
+msgstr "Spela in systemljud"
+
+#: linux/share/monet/utilities/recordings.py:136
+msgid "Record microphone"
+msgstr "Spela in mikrofonljud"
+
+#: linux/share/monet/utilities/recordings.py:143
+msgid "Open editor after recording"
+msgstr "Öppna redigeraren efter inspelningen"
+
+#: linux/share/monet/utilities/recordings.py:149
+msgid "Open recording…"
+msgstr "Öppna inspelning…"
+
+#: linux/share/monet/utilities/recordings.py:174 linux/share/monet/utilities/recordings.py:175 linux/share/monet/utilities/recordings.py:324
+msgid "Play selection"
+msgstr "Spela upp markeringen"
+
+#: linux/share/monet/utilities/recordings.py:180
+msgid "Recording position"
+msgstr "Position i inspelningen"
+
+#: linux/share/monet/utilities/recordings.py:187
+msgid "Set start at playhead"
+msgstr "Sätt startpunkten vid uppspelningspositionen"
+
+#: linux/share/monet/utilities/recordings.py:187
+msgid "Set end at playhead"
+msgstr "Sätt slutpunkten vid uppspelningspositionen"
+
+#: linux/share/monet/utilities/recordings.py:191
+msgid " s"
+msgstr " s"
+
+#: linux/share/monet/utilities/recordings.py:208
+msgid "Playback and export speed"
+msgstr "Hastighet för uppspelning och export"
+
+#: linux/share/monet/utilities/recordings.py:219
+msgid "Crop…"
+msgstr "Beskär…"
+
+#: linux/share/monet/utilities/recordings.py:221
+msgid "Reset crop"
+msgstr "Återställ beskärning"
+
+#: linux/share/monet/utilities/recordings.py:223
+msgid "Mute audio"
+msgstr "Stäng av ljudet"
+
+#: linux/share/monet/utilities/recordings.py:227
+msgid "Export copy…"
+msgstr "Exportera en kopia…"
+
+#: linux/share/monet/utilities/recordings.py:232
+msgid "Record your screen or open a recording to edit."
+msgstr "Spela in skärmen eller öppna en inspelning som du vill redigera."
+
+#: linux/share/monet/utilities/recordings.py:240
+msgid "Cancel export"
+msgstr "Avbryt exporten"
+
+#: linux/share/monet/utilities/recordings.py:255
+msgid "Open recording"
+msgstr "Öppna inspelning"
+
+#: linux/share/monet/utilities/recordings.py:256
+msgid "Recordings (*.mp4 *.webm *.mkv *.mov *.m4v)"
+msgstr "Inspelningar (*.mp4 *.webm *.mkv *.mov *.m4v)"
+
+#: linux/share/monet/utilities/recordings.py:264
+msgid "Choose a local video recording."
+msgstr "Välj en videoinspelning på datorn."
+
+#: linux/share/monet/utilities/recordings.py:275
+msgid "Opening recording…"
+msgstr "Öppnar inspelningen…"
+
+#: linux/share/monet/utilities/recordings.py:296
+msgid "This file has no video track."
+msgstr "Filen saknar videospår."
+
+#: linux/share/monet/utilities/recordings.py:344
+msgid "Drag over the part of the picture to keep."
+msgstr "Dra över den del av bilden som du vill behålla."
+
+#: linux/share/monet/utilities/recordings.py:356
+msgid "MP4 video (*.mp4)"
+msgstr "MP4-video (*.mp4)"
+
+#: linux/share/monet/utilities/recordings.py:356
+msgid "GIF animation (*.gif)"
+msgstr "GIF-animering (*.gif)"
+
+#: linux/share/monet/utilities/recordings.py:357
+msgid "Export a new copy"
+msgstr "Exportera en ny kopia"
+
+#: linux/share/monet/utilities/recordings.py:372
+msgid "Choose a new filename for the edited copy."
+msgstr "Välj ett nytt filnamn för den redigerade kopian."
+
+#: linux/share/monet/utilities/recordings.py:401
+msgid "Export cancelled."
+msgstr "Exporten avbröts."
+
+#: linux/share/monet/utilities/recordings.py:404 linux/share/monet/utilities/recordings.py:492
+msgid "Saved %1"
+msgstr "Sparade %1"
+
+#: linux/share/monet/utilities/recordings.py:407
+msgid "Could not export the recording."
+msgstr "Det gick inte att exportera inspelningen."
+
+#: linux/share/monet/utilities/recordings.py:409
+msgid "Another file now has that name. Choose a new filename."
+msgstr "En annan fil har nu det namnet. Välj ett nytt filnamn."
+
+#: linux/share/monet/utilities/recordings.py:425
+msgid "Exporting copy…"
+msgstr "Exporterar kopian…"
+
+#: linux/share/monet/utilities/recordings.py:451
+msgid "Could not change the recording sound setting."
+msgstr "Det gick inte att ändra ljudinställningen för inspelningen."
+
+#: linux/share/monet/utilities/recordings.py:458
+msgid "Screencasts"
+msgstr "Skärminspelningar"
+
+#: linux/share/monet/utilities/recordings.py:467
+msgid "Recording"
+msgstr "Inspelning"
+
+#: linux/share/monet/utilities/recordings.py:470
+msgid "Click the recording indicator in the system tray to finish."
+msgstr "Klicka på inspelningssymbolen i systembrickan när du är klar."
+
+#: linux/share/monet/utilities/recordings.py:493
+msgid "Recording cancelled."
+msgstr "Inspelningen avbröts."
+
+#: linux/share/monet/utilities/recordings.py:493
+msgid "Could not record the screen."
+msgstr "Det gick inte att spela in skärmen."

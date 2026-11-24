@@ -14447,3 +14447,179 @@ msgstr ""
 msgid ""
 "Remove common tracking parameters when you copy a plain web address. Formatted text, files and recognized signed links keep their original contents."
 msgstr ""
+
+#: linux/share/monet/utilities/actions.py:30
+msgid "Screen recorder and editor"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:502
+msgid "Cancel export?"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:502
+msgid "Cancel the recording export and close Utilities?"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:126
+msgid "Record…"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:131
+msgid "Screen region"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:131
+msgid "One window"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:131
+msgid "One screen"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:135
+msgid "Record system sound"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:136
+msgid "Record microphone"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:143
+msgid "Open editor after recording"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:149
+msgid "Open recording…"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:174 linux/share/monet/utilities/recordings.py:175 linux/share/monet/utilities/recordings.py:324
+msgid "Play selection"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:180
+msgid "Recording position"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:187
+msgid "Set start at playhead"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:187
+msgid "Set end at playhead"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:191
+msgid " s"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:208
+msgid "Playback and export speed"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:219
+msgid "Crop…"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:221
+msgid "Reset crop"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:223
+msgid "Mute audio"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:227
+msgid "Export copy…"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:232
+msgid "Record your screen or open a recording to edit."
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:240
+msgid "Cancel export"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:255
+msgid "Open recording"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:256
+msgid "Recordings (*.mp4 *.webm *.mkv *.mov *.m4v)"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:264
+msgid "Choose a local video recording."
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:275
+msgid "Opening recording…"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:296
+msgid "This file has no video track."
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:344
+msgid "Drag over the part of the picture to keep."
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:356
+msgid "MP4 video (*.mp4)"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:356
+msgid "GIF animation (*.gif)"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:357
+msgid "Export a new copy"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:372
+msgid "Choose a new filename for the edited copy."
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:401
+msgid "Export cancelled."
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:404 linux/share/monet/utilities/recordings.py:492
+msgid "Saved %1"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:407
+msgid "Could not export the recording."
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:409
+msgid "Another file now has that name. Choose a new filename."
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:425
+msgid "Exporting copy…"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:451
+msgid "Could not change the recording sound setting."
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:458
+msgid "Screencasts"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:467
+msgid "Recording"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:470
+msgid "Click the recording indicator in the system tray to finish."
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:493
+msgid "Recording cancelled."
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:493
+msgid "Could not record the screen."
+msgstr ""
