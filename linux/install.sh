@@ -227,6 +227,12 @@ for applet in org.monet.menu org.monet.games org.monet.quick org.monet.placard o
     org.monet.timer org.monet.worldclock org.monet.network org.monet.storage org.monet.batteries org.monet.sound org.monet.stacks org.monet.transfers org.monet.notch; do
     tree "$SRC/share/plasma/plasmoids/$applet" "$DATADIR/plasma/plasmoids/$applet"
 done
+# Sound settings, the panel and the notch share one on-demand volume mixer.
+for applet in org.monet.notch org.monet.sound; do
+    for part in MixerModel VolumeMixer; do
+        install -m 644 "$SRC/share/monet/settings-app/$part.qml" "$DATADIR/plasma/plasmoids/$applet/contents/ui/$part.qml"
+    done
+done
 # The desktop widgets share one glass.
 put 644 "$SRC/share/monet/bar-defaults.js" "$DATADIR/monet/bar-defaults.js"
 put 644 "$SRC/share/monet/panel-notch.js" "$DATADIR/monet/panel-notch.js"
@@ -461,6 +467,7 @@ cp -r "$SRC/share/monet/settings" "$DATADIR/monet/settings"
 cp -r "$SRC/share/monet/games" "$DATADIR/monet/games"
 tree "$SRC/share/monet/window-buttons" "$DATADIR/monet/window-buttons"
 cp -r "$SRC/share/monet/settings-app" "$DATADIR/monet/settings-app"
+fill "$DATADIR/monet/settings-app/MixerModel.qml"
 install -d "$DATADIR/monet/passwords"
 install -m 644 "$SRC/share/monet/passwords/"*.py "$DATADIR/monet/passwords/"
 install -m 644 "$SRC/share/monet/passwords/connector.xpi" "$DATADIR/monet/passwords/connector.xpi"

@@ -33,6 +33,7 @@ PlasmoidItem {
         }
     }
     property int musicView: 0
+    property var outputNames: []
     property bool viewingAgenda: false
     property date agendaDay: new Date()
     property bool viewingWatch: false
@@ -133,6 +134,9 @@ PlasmoidItem {
         connectedSources: []
         onNewData: (source, data) => {
             disconnectSource(source)
+            if (source === root.helper + " outputs") {
+                try { root.outputNames = JSON.parse(data.stdout) } catch (_) {}
+            }
             if (source.endsWith(" notch-activity")) {
                 try {
                     const state = JSON.parse(data.stdout)
@@ -226,6 +230,7 @@ PlasmoidItem {
             active: root.expanded
             sourceComponent: root.tab === 1 && root.viewingWatch && watch.registered ? watchPage
                 : root.tab === 3 && root.viewingAgenda ? agendaPage
+                : root.tab === 0 && root.musicView === 3 ? mixerPage
                 : root.tab === 4 ? (padController.item ? padPage : null) : [musicPage, activityPage, timerPage, calendarPage][root.tab]
         }
         RowLayout {
@@ -233,6 +238,34 @@ PlasmoidItem {
             C.Button { text: i18n("File shelf"); icon.name: "folder-open"; onClicked: root.openTool("shelf") }
             Item { Layout.fillWidth: true }
             C.Button { text: i18n("Utilities"); icon.name: "applications-utilities"; onClicked: root.openTool("tools") }
+        }
+    }
+    Component {
+        id: mixerPage
+        ColumnLayout {
+            RowLayout {
+                C.ToolButton { icon.name: "go-previous"; Accessible.name: i18n("Now playing"); onClicked: root.musicView = 0 }
+                C.Label { text: i18n("Volume mixer"); font.bold: true }
+            }
+            Loader {
+                id: mixerLoader
+                Layout.fillWidth: true; Layout.fillHeight: true
+                source: "VolumeMixer.qml"
+                onLoaded: {
+                    item.outputNames = Qt.binding(() => root.outputNames)
+                    namesDelay.restart()
+                }
+                Connections {
+                    target: mixerLoader.item
+                    function onOutputsChangedWhileOpen() { namesDelay.restart() }
+                }
+                Timer {
+                    id: namesDelay
+                    interval: 80
+                    onTriggered: runner.connectSource(root.helper + " outputs")
+                }
+            }
+            C.Label { visible: mixerLoader.status === Loader.Error; Layout.fillWidth: true; wrapMode: Text.Wrap; text: i18n("The volume mixer could not open.") }
         }
     }
     Component { id: padPage; Scratchpad { pads: padController.item } }

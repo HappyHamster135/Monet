@@ -217,6 +217,8 @@ def widget():
     shutil.copytree(UI.parent.parent, folder)
     for part in (ROOT / 'linux/share/monet/widgets').iterdir():
         if part.is_file(): shutil.copy2(part, folder / 'contents/ui' / part.name)
+    for name in ("VolumeMixer.qml", "MixerModel.qml"):
+        shutil.copy2(ROOT / "linux/share/monet/settings-app" / name, folder / "contents/ui" / name)
     quick = TEMP / 'monet-quick'
     quick.write_text('#!/bin/sh\necho \'{"outputs":[{"id":1,"name":"First","default":true}],"apps":[],"inputs":[],"microphone":null}\'\n')
     quick.chmod(0o700)
@@ -861,9 +863,171 @@ def output_priority():
         expect("monet_two")
 
 
+def app_mixer():
+    """Group separate live streams, move them together, and remember pins after they go away."""
+    from contextlib import ExitStack
+    from importlib.machinery import SourceFileLoader
+    from importlib.util import module_from_spec, spec_from_loader
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtQuick import QQuickWindow  # Register the QML window type with PySide.
+    start_server()
+    loader = SourceFileLoader("mixer_words", str(ROOT / "linux/libexec/monet-games"))
+    module = module_from_spec(spec_from_loader(loader.name,loader))
+    loader.exec_module(module)
+    words = module.Words()
+    engine.rootContext().setContextObject(words)
+    ui = Path(os.environ.get("MONET_MIXER_UI") or ROOT / "linux/share/monet/settings-app")
+    qml = TEMP / "MixerCheck.qml"
+    qml.write_text('import QtQuick\nimport QtQuick.Controls as C\nimport QtQuick.Templates as T\nimport "' + ui.as_uri() + '''" as Monet
+C.ApplicationWindow {
+    id: window
+    visible: true; width: 400; height: 340
+    Monet.VolumeMixer {
+        anchors.fill: parent
+        outputNames: [{ key: "6d6f6e65745f74776f", name: "Desk speakers" }]
+    }
+    function locate(text, label) {
+        function find(item) {
+            if (!item || !item.visible || !item.enabled) return null
+            if (item instanceof T.Slider && item.Accessible.name === text) {
+                const handle = item.handle.width
+                const x = item.leftPadding + handle / 2 + (item.availableWidth - handle) * 0.37
+                const p = item.mapToItem(window.contentItem, x, item.height / 2)
+                return [Math.round(p.x), Math.round(p.y)]
+            }
+            if ((label ? item instanceof T.Label : item instanceof T.AbstractButton) && item.text === text) {
+                const p = item.mapToItem(window.contentItem, item.width / 2, item.height / 2)
+                return [Math.round(p.x), Math.round(p.y)]
+            }
+            for (const child of item.children) {
+                const point = find(child)
+                if (point) return point
+            }
+            return null
+        }
+        return find(window.C.Overlay.overlay) || find(window.contentItem)
+    }
+}''')
+    warnings = []
+    engine.warnings.connect(lambda errors: warnings.extend(e.toString() for e in errors))
+    component = QQmlComponent(engine, QUrl.fromLocalFile(str(qml)))
+    assert component.isReady(), [e.toString() for e in component.errors()]
+    win = component.create()
+    assert isinstance(win, QQuickWindow), warnings
+    model = win.findChild(QObject, "appMixerModel")
+    helper_path = "/usr/libexec/monet-quick" if os.environ.get("MONET_MIXER_UI") else str(ROOT / "linux/libexec/monet-quick")
+    model.setProperty("helper", helper_path)
+    def js(code):
+        from PySide6.QtQml import QQmlExpression, qmlContext
+        expr = QQmlExpression(qmlContext(model), model, code)
+        val, _ = expr.evaluate()
+        assert not expr.hasError(), expr.error().toString()
+        return val.toVariant() if hasattr(val, "toVariant") else val
+
+    def point(text, label=False):
+        result = win.locate(text, label)
+        return result.toVariant() if hasattr(result, "toVariant") else result
+
+    def choose(text):
+        wait_for(lambda: point(text), text)
+        QTest.mouseClick(win, Qt.LeftButton, Qt.NoModifier, QPoint(*point(text)))
+        QTest.qWait(80)
+
+    def state():
+        return js("Array.from({length:rows.count},(_,i)=>[rows.get(i).appKey,rows.get(i).pinned,matching(rows.get(i).appKey).length])")
+
+    def inputs(name):
+        return [s for s in json.loads(pactl("-f", "json", "list", "sink-inputs"))
+                if s["properties"].get("application.id") == name]
+
+    def play(name, label, event=False):
+        args = ["pacat", "--playback", "--raw", "--channels=1", "--rate=8000", "--client-name", label,
+                "--stream-name", "Playback", "--property=application.id="+name, "--device=monet_one"]
+        if event:
+            args.append("--property=media.role=event")
+        proc = subprocess.Popen([*args, "/dev/zero"], stdout=log, stderr=log)
+        stack.callback(stop, proc)
+        return proc
+
+    def stop(proc):
+        if proc.poll() is None:
+            proc.terminate()
+            proc.wait(timeout=5)
+
+    with ExitStack() as stack:
+        policy = subprocess.Popen(["wireplumber", "--profile=policy"], stdout=log, stderr=log)
+        stack.callback(stop, policy)
+        wait_for(lambda: "route-settings" in subprocess.check_output(["pw-metadata", "-l"], text=True), "audio graph")
+        first = play("test.music", "Music")
+        second = play("test.music", "Music")
+        play("test.browser", "Browser")
+        play("test.event", "Alerts", True)
+        wait_for(lambda: state() == [["id:test.browser", False, 1], ["id:test.music", False, 2]], "grouped apps without notification")
+        wait_for(lambda: js("devices.filter(d=>d.available).length") == 2, "both outputs")
+        choose("Volume for Music")
+        wait_for(lambda: all(next(iter(s["volume"].values()))["value_percent"] == "37%" for s in inputs("test.music")), "both sliders")
+        assert next(iter(inputs("test.browser")[0]["volume"].values()))["value_percent"] == "100%"
+        choose("Mute Music")
+        wait_for(lambda: all(s["mute"] for s in inputs("test.music")), "both muted")
+        assert not inputs("test.browser")[0]["mute"]
+        choose("Unmute Music")
+        choose("Options for Music")
+        choose("Play through")
+        choose("Desk speakers")
+        sinks = {s["name"]:s["index"] for s in json.loads(pactl("-f", "json", "list", "sinks"))}
+        wait_for(lambda: all(s["sink"] == sinks["monet_two"] for s in inputs("test.music")), "group routed")
+        assert inputs("test.browser")[0]["sink"] == sinks["monet_one"]
+        assert pactl("get-default-sink") == "monet_one"
+        # Reorder by dragging the label across the neighboring row.
+        source = QPoint(*point("Music", label=True))
+        target = QPoint(*point("Browser", label=True))
+        QTest.mousePress(win, Qt.LeftButton, Qt.NoModifier, source)
+        for part in range(1, 9):
+            QTest.mouseMove(win, source + (target - source) * (part / 8), 18)
+        QTest.mouseRelease(win, Qt.LeftButton, Qt.NoModifier, target)
+        wait_for(lambda: state()[0][0] == "id:test.music", "drop moved the row")
+        QTest.qWait(200)
+        choose("Options for Music")
+        choose("Move down")
+        wait_for(lambda: state()[1][0] == "id:test.music", "menu moved the row down")
+        QTest.qWait(200)
+        choose("Options for Music")
+        choose("Move up")
+        wait_for(lambda: state()[0][0] == "id:test.music", "menu moved the row up")
+        choose("Options for Music")
+        choose("Pin app")
+        stop(first)
+        stop(second)
+        wait_for(lambda: state()[0] == ["id:test.music", True, 0], "offline pinned row")
+        win.close()
+        win.deleteLater()
+        QTest.qWait(50)
+        win = component.create()
+        model = win.findChild(QObject, "appMixerModel")
+        model.setProperty("helper", helper_path)
+        wait_for(lambda: state() == [["id:test.music", True, 0], ["id:test.browser", False, 1]], "reopened mixer")
+        play("test.music", "Music")
+        wait_for(lambda: state()[0] == ["id:test.music", True, 1], "new stream inherited pin")
+        assert next(iter(inputs("test.music")[0]["volume"].values()))["value_percent"] == "37%", inputs("test.music")[0]["volume"]
+        choose("Options for Music")
+        choose("Unpin app")
+        wait_for(lambda: state()[0] == ["id:test.music", False, 1], "unpin preserves order")
+        edits = [{"key": "id:test." + name, "pin": True, "name": name} for name in ("Mail", "Recorder")]
+        jobs = [subprocess.Popen([helper_path, "mixer-arrange", json.dumps(edit).encode().hex()],
+                                 stdout=subprocess.PIPE, text=True) for edit in edits]
+        for job in jobs:
+            stdout, _ = job.communicate(timeout=10)
+            assert job.returncode == 0 and json.loads(stdout)["ok"]
+        wait_for(lambda: {s[0] for s in state() if s[1]} == {e["key"] for e in edits}, "concurrent edits from other mixers")
+        win.close()
+        win.deleteLater()
+        QTest.qWait(50)
+    assert not warnings, warnings
+
+
 try:
     {'native': native_updates, 'fallback': fallback, 'recovery': recovery,
-     'widget': widget, 'output-order': output_priority, 'notifications': notifications, 'dock-volume': dock_volume,
+     'widget': widget, 'mixer': app_mixer, 'output-order': output_priority, 'notifications': notifications, 'dock-volume': dock_volume,
      'dock-volume-memory': dock_volume_memory}[sys.argv[1]]()
 finally:
     for component, obj in objects: obj.deleteLater()

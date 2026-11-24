@@ -40,6 +40,13 @@ Settings
         with patch.object(self.quick, "run", return_value=None):
             self.assertIsNone(self.quick.bar_sound()["microphone"])
 
+    def test_native_mixer_device_request_skips_app_queries(self):
+        with patch.object(self.quick, "outputs", return_value=[]), \
+             patch.object(self.quick, "available_microphones", return_value=[]), \
+             patch.object(self.quick, "apps_sound") as apps:
+            self.assertEqual(self.quick.bar_sound(include_apps=False)["apps"], [])
+            apps.assert_not_called()
+
     def test_success_failure_and_default_change_do_not_report_false_mute(self):
         old = {"microphone": {"id": 57, "muted": False}}
         muted = {"microphone": {"id": 57, "muted": True}}

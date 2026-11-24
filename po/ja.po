@@ -15000,3 +15000,92 @@ msgstr ""
 #: linux/share/monet/utilities/pad_editor.py:207
 msgid "Delete “%1” and its text?"
 msgstr ""
+
+#: linux/share/monet/settings-app/MixerModel.qml:118
+msgid "Audio stream"
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsSound.qml:203 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:248 linux/libexec/monet-quick:9013
+#: linux/share/monet/utilities/actions.py:51
+msgid "Volume mixer"
+msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:47
+msgid "Unmute output"
+msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:47
+msgid "Mute output"
+msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:54 linux/share/monet/settings-app/VolumeMixer.qml:59
+msgid "Output volume"
+msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:70
+msgid "Apps appear here when they play sound."
+msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:70
+msgid "Waiting for the audio service…"
+msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:103
+msgid "Unmute %1"
+msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:103
+msgid "Mute %1"
+msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:133
+msgid "Not playing"
+msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:136
+msgid "Options for %1"
+msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:141
+msgid "Unpin app"
+msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:141
+msgid "Pin app"
+msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:145
+msgid "Move up"
+msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:146
+msgid "Move down"
+msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:149
+msgid "Play through"
+msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:177
+msgid "Volume for %1"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:183
+msgid "Mixer"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:268
+msgid "The volume mixer could not open."
+msgstr ""
+
+#: linux/libexec/monet-quick:9013
+msgid "Sound · App volume and output"
+msgstr ""
+
+#: linux/libexec/monet-quick:9014
+msgid "volume mixer; mute an app; route app audio; per-app sound"
+msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:76
+msgid "Could not save the mixer layout. Try again."
+msgstr ""

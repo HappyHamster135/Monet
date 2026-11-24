@@ -23,7 +23,7 @@ class EverydaySearch(unittest.TestCase):
 
     def test_everyday_phrases_reach_the_intended_destinations(self):
         for query, target in (("make text bigger", "accessibility#size"),
-                              ("headphones", "sound#output"),
+                              ("headphones", "sound#output"), ("volume mixer", "sound#mixer"),
                               ("birthday", "calendar"),
                               ("Windows files", "storage#shared-files"),
                               ("how can I make bigger text?", "accessibility#size"),
@@ -369,6 +369,11 @@ class SettingsSearchUI(unittest.TestCase):
         for name in ("settingRowText", "settingRowControls"):
             child = parts[name]
             self.assertAlmostEqual(child.y() + child.height()/2, row.height()/2, delta=1)
+
+    def test_volume_mixer_search_opens_the_sound_controls(self):
+        self.type_query("volume mixer")
+        self.activate_result("search-mixer")
+        self.assertEqual(self.window.property("page"), "sound")
 
     def test_absent_audio_hardware_still_has_a_visible_search_destination(self):
         self.type_query("headphones")

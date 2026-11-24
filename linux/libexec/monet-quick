@@ -896,7 +896,55 @@ def apps_sound():
     return list(grouped.values())
 
 
-def bar_sound():
+def arrange_mixer(edit):
+    """Apply one pin or move against the latest layout, including edits from other panels."""
+    import fcntl
+    from PySide6.QtCore import QSettings
+
+    def stable(key):
+        return isinstance(key, str) and len(key) <= 2048 and key.startswith(("id:", "name:", "binary:"))
+
+    if not isinstance(edit, dict) or not stable(edit.get("key")):
+        return False
+    key = edit["key"]
+    path = CONFIG / "monet/mixer.ini"
+    try:
+        path.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
+        with path.with_suffix(".edit-lock").open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            prefs = QSettings(str(path), QSettings.IniFormat)
+            prefs.sync()
+            layout = json.loads(prefs.value("arrangement", '{"pins":[],"order":[]}'))
+            pins, order = layout["pins"], layout["order"]
+            pinned = {entry["key"]: entry for entry in pins}
+            if type(edit.get("pin")) is bool and isinstance(edit.get("name"), str):
+                if edit["pin"]:
+                    pinned[key] = {"key": key, "name": edit["name"][:2048]}
+                else:
+                    pinned.pop(key, None)
+                layout["pins"] = list(pinned.values())
+            else:
+                target, visible = edit.get("target"), edit.get("visible")
+                if (not stable(target) or target == key or not isinstance(visible, list)
+                        or len(visible) > 2048 or not all(stable(k) for k in visible)
+                        or key not in visible or target not in visible or type(edit.get("after")) is not bool
+                        or (key in pinned) != edit.get("pinned") or (target in pinned) != (key in pinned)):
+                    return False
+                group = list(pinned) if key in pinned else list(dict.fromkeys(order + visible))
+                group.remove(key)
+                group.insert(group.index(target) + int(edit["after"]), key)
+                if key in pinned:
+                    layout["pins"] = [pinned[k] for k in group]
+                else:
+                    layout["order"] = group
+            prefs.setValue("arrangement", json.dumps(layout, ensure_ascii=False))
+            prefs.sync()
+            return prefs.status() == QSettings.NoError
+    except (OSError, ValueError, TypeError, KeyError):
+        return False
+
+
+def bar_sound(include_apps=True):
     """The bar's Sound (org.monet.sound): where the sound can play, PipeWire's stand-in left
     out, and the apps playing. How loud it reads from wpctl itself, often."""
     inputs = available_microphones()
@@ -905,7 +953,7 @@ def bar_sound():
         level = run("wpctl", "get-volume", str(microphone["id"])) or ""
         match = re.search(r"Volume:\s*([0-9.]+)", level)
         microphone = dict(microphone, volume=round(float(match[1]) * 100), muted="[MUTED]" in level) if match else None
-    return {"outputs": [o for o in outputs() if not o["none"]], "apps": apps_sound(),
+    return {"outputs": [o for o in outputs() if not o["none"]], "apps": apps_sound() if include_apps else [],
             "inputs": inputs, "microphone": microphone}
 
 
@@ -9010,6 +9058,8 @@ def search_catalog():
          N_("reduce motion; stop animations; less movement; disable animation"), "accessibility#motion", "preferences-desktop-accessibility"),
         ("headphones", tr("Headphones and speakers"), tr("Sound · Choose where sound plays"),
          N_("headphones; earphones; earbuds; speakers; no sound; change audio output; play sound through"), "sound#output", "audio-headphones"),
+        ("volume-mixer", tr("Volume mixer"), tr("Sound · App volume and output"),
+         N_("volume mixer; mute an app; route app audio; per-app sound"), "sound#mixer", "audio-volume-high"),
         ("output-order", tr("Preferred output order"), tr("Sound · Automatic output switching"),
          N_("preferred output order; audio device priority; automatically switch sound outputs"), "sound#output-order", "audio-card"),
         ("microphone", tr("Microphone"), tr("Sound · Microphone volume"),
@@ -10683,8 +10733,14 @@ def main(argv):
         emit(notification_audio(level, defaults=args == ["defaults"]))
     elif cmd == "notification-audio-test":
         emit({"ok": test_notification_audio()})
+    elif cmd == "mixer-arrange" and len(args) == 1:
+        try:
+            saved = arrange_mixer(json.loads(unhex(args[0])))
+        except ValueError:
+            saved = False
+        emit({"ok": saved})
     elif cmd == "sound":
-        emit(bar_sound())
+        emit(bar_sound(include_apps=args != ["devices"]))
     # A device's KEY, when the panel knew it, finds it however PipeWire numbers it now.
     elif cmd == "mic-mute" and len(args) in (2, 3) and args[0].isdigit() and args[1] in ("on", "off") \
             and all(AUDIO_KEY.fullmatch(key) for key in args[2:]):

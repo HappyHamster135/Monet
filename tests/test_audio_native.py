@@ -50,6 +50,9 @@ class NativeAudio(unittest.TestCase):
                     proc.wait(timeout=5)
             self.assertEqual(code, 0, output.read_text())
 
+    @unittest.skipUnless(shutil.which('pacat') and shutil.which('wireplumber'), 'Pulse playback and routing policy')
+    def test_per_app_mixer_groups_routes_and_remembers_its_order(self):
+        self.fixture("mixer")
 
     def test_ranked_outputs_follow_physical_changes_and_respect_manual_choice(self):
         self.fixture("output-order")

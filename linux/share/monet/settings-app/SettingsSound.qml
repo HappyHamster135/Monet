@@ -197,15 +197,32 @@ ColumnLayout {
         }
     }
     Component.onCompleted: sheet.loadNotificationAudio()
-    // Each app's own volume, as Windows' mixer has it (apps come and go as they play).
     SettingsControls.Caption {
-        tone: look
-        visible: sheet.appsSound.length > 0
-        text: i18n("Apps playing sound")
+        tone: look; objectName: "search-mixer"
+        text: i18n("Volume mixer")
+    }
+    SettingsControls.Card {
+        tone: look; visible: appMixer.status === Loader.Ready
+        Loader {
+            id: appMixer; active: sheet.pollingActive
+            Layout.fillWidth: true; Layout.margins: 12
+            Layout.preferredHeight: item ? Math.min(420, Math.max(38, item.contentHeight)) : 0
+            source: "VolumeMixer.qml"
+            onLoaded: {
+                item.showOutput = false
+                item.outputNames = Qt.binding(() => sheet.outputs)
+            }
+        }
+    }
+    QQC2.Label {
+        visible: appMixer.status === Loader.Error && !sheet.appsSound.length
+        text: i18n("Apps appear here when they play sound.")
+        wrapMode: Text.Wrap
+        Layout.fillWidth: true
     }
     SettingsControls.Card {
         tone: look
-        visible: sheet.appsSound.length > 0
+        visible: !(appMixer.active && appMixer.status === Loader.Ready) && sheet.appsSound.length > 0
         Repeater {
             model: sheet.appsSound
             SettingsControls.SliderRow {
@@ -226,7 +243,7 @@ ColumnLayout {
         triggeredOnStart: true
         running: sheet.page === "sound" && sheet.pollingActive
         onTriggered: {
-            sheet.loadAppsSound()
+            if (!appMixer.active || appMixer.status === Loader.Error) sheet.loadAppsSound()
             sheet.loadMicrophones()
         }
     }

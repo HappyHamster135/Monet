@@ -90,7 +90,7 @@ PlasmoidItem {
             disconnectSource(source)
             const command = source.replace(/ # monet-sound-\d+$/, "")
             const out = data["stdout"] || ""
-            if (command === root.helper + " sound") {
+            if (command === root.helper + " sound" || command === root.helper + " sound devices") {
                 if (source !== root.soundRequest) return
                 root.soundRequest = ""
                 // Read before a change finished; the change answers with the sound after it.
@@ -157,7 +157,7 @@ PlasmoidItem {
         if (!activity.active || soundRequest || outputBusy || microphoneBusy) return
         // Keep the identity before connecting: a cached source may reply during
         // connectSource, and activity can change while the widget is created.
-        soundRequest = helper + " sound # monet-sound-" + (++requestSerial)
+        soundRequest = helper + (root.fullRepresentationItem?.nativeMixer ? " sound devices" : " sound") + " # monet-sound-" + (++requestSerial)
         runner.connectSource(soundRequest)
     }
     // Arguments are fixed words or numbers, never anyone's text.
@@ -325,6 +325,7 @@ PlasmoidItem {
     }
 
     fullRepresentation: PlasmaExtras.Representation {
+        readonly property bool nativeMixer: mixerLoader.status === Loader.Ready
         LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
         LayoutMirroring.childrenInherit: true
         Layout.minimumWidth: Math.min(Kirigami.Units.gridUnit * 19, Screen.width - 48)
@@ -577,16 +578,28 @@ PlasmoidItem {
                 }
             }
 
-            // Each app playing, at its own volume.
+            Loader {
+                id: mixerLoader
+                active: root.expanded
+                visible: !!item && item.appCount > 0 && !root.silent
+                Layout.fillWidth: true
+                Layout.preferredHeight: item && visible ? Math.min(275, item.contentHeight) : 0
+                source: "VolumeMixer.qml"
+                onLoaded: {
+                    item.showOutput = false
+                    item.outputNames = Qt.binding(() => root.sound.outputs)
+                }
+            }
+            // The wpctl mixer remains available on hosts without the native audio controls.
             PlasmaComponents.Label {
                 Layout.leftMargin: 2
-                visible: root.sound.apps.length > 0 && !root.silent
+                visible: mixerLoader.status !== Loader.Ready && root.sound.apps.length > 0 && !root.silent
                 opacity: 0.66
                 font: Kirigami.Theme.smallFont
                 text: i18n("Apps playing sound")
             }
             Pane {
-                visible: root.sound.apps.length > 0 && !root.silent
+                visible: mixerLoader.status !== Loader.Ready && root.sound.apps.length > 0 && !root.silent
                 Repeater {
                     model: root.sound.apps
                     RowLayout {

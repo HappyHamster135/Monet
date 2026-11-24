@@ -176,11 +176,11 @@ ColumnLayout {
         C.ToolButton { icon.name: "media-skip-forward"; Accessible.name: i18n("Next track"); enabled: !!page.player?.canGoNext; onClicked: page.player.Next() }
     }
     RowLayout {
-        visible: !!page.media || page.view !== 0
         Layout.alignment: Qt.AlignHCenter
         C.ToolButton { visible: page.view !== 0; icon.name: "go-previous"; Accessible.name: i18n("Now playing"); onClicked: page.viewRequested(0) }
-        C.Button { text: i18n("Lyrics"); checked: page.view === 1; onClicked: page.viewRequested(1) }
-        C.Button { text: i18n("Up next"); checked: page.view === 2; onClicked: page.viewRequested(2) }
+        C.Button { visible: !!page.media || page.view !== 0; text: i18n("Lyrics"); checked: page.view === 1; onClicked: page.viewRequested(1) }
+        C.Button { visible: !!page.media || page.view !== 0; text: i18n("Up next"); checked: page.view === 2; onClicked: page.viewRequested(2) }
+        C.Button { visible: page.view === 0; text: i18n("Mixer"); icon.name: "audio-volume-high"; onClicked: page.viewRequested(3) }
         C.ToolButton {
             visible: page.view === 1 && page.lines.length > 0 && !page.follow
             icon.name: "view-restore"; Accessible.name: i18n("Follow lyrics")
