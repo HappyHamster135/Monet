@@ -1,10 +1,9 @@
 #!/usr/bin/python3
-"""Give trusted Bluetooth mice and keyboards one early connection attempt at boot.
+"""Reconnect trusted Bluetooth mice and keyboards while the desktop starts.
 
 Run with Bluetooth, before a desktop agent is available. Observe BlueZ events
-for at most twenty seconds, without discovery, pairing, changing trust or powering
-radios on. Each eligible device is attempted once; devices observed connected
-are not reconnected after a disconnect. --inspect makes no connection.
+for up to a minute without polling, discovery, pairing or powering radios on.
+Allow one retry when a low-energy input misses its first advertising window. --inspect makes no connection.
 """
 import argparse
 import json
@@ -40,9 +39,11 @@ class Reconnect:
         self.inspect = inspect
         self.manager = None
         self.handled = set()
+        self.retried = set()
+        self.seen_connected = set()
         self.scheduled = False
         self.pending = 0
-        GLib.timeout_add_seconds(20, self.finish)
+        GLib.timeout_add_seconds(60, self.finish)
         Gio.DBusObjectManagerClient.new_for_bus(Gio.BusType.SYSTEM,
             Gio.DBusObjectManagerClientFlags.DO_NOT_AUTO_START,
             'org.bluez', '/', None, None, None, self.ready, None)
@@ -76,7 +77,10 @@ class Reconnect:
         if name not in (ADAPTER, DEVICE):
             return
         relevant = {'Powered'} if name == ADAPTER else INPUT_PROPERTIES
-        if relevant.intersection(changed.unpack()) or relevant.intersection(invalidated):
+        values = changed.unpack()
+        if name == DEVICE and values.get('Connected') is True:
+            self.seen_connected.add(obj.get_object_path())
+        if relevant.intersection(values) or relevant.intersection(invalidated):
             self.changed()
 
     def snapshot(self):
@@ -117,28 +121,46 @@ class Reconnect:
             return False
         # Remember already connected devices too: a later user disconnect during
         # this short boot window must not cause us to connect it again.
-        self.handled.update(path for path, obj in objects.items()
+        self.seen_connected.update(path for path, obj in objects.items()
             if obj.get(DEVICE, {}).get('Connected') is True)
         for path in eligible(objects):
-            if path in self.handled:
+            if path in self.handled or path in self.seen_connected:
                 continue
             self.handled.add(path)
             proxy = self.manager.get_object(path).get_interface(DEVICE)
             self.pending += 1
+            print('Retrying Bluetooth input connection' if path in self.retried else
+                  'Requesting early Bluetooth input connection', flush=True)
             proxy.call('Connect', None, Gio.DBusCallFlags.NO_AUTO_START,
-                       10000, None, self.connected, None)
+                       45000, None, self.connected, None)
         return False
 
     def connected(self, proxy, result, data):
-        from gi.repository import GLib
+        from gi.repository import Gio, GLib
         try:
             proxy.call_finish(result)
-        except GLib.Error:
-            # InProgress belongs to BlueZ's existing attempt. An asleep or
-            # absent peripheral is ordinary; leave subsequent reconnects to it.
-            pass
+        except GLib.Error as error:
+            path = proxy.get_object_path()
+            remote = Gio.DBusError.get_remote_error(error)
+            transient = remote == 'org.bluez.Error.Failed' and any(reason in error.message
+                for reason in ('le-connection-abort-by-local', 'le-connection-timeout',
+                               'le-connection-failed-to-be-established'))
+            if transient and path not in self.retried and path not in self.seen_connected:
+                self.retried.add(path)
+                GLib.timeout_add(750, self.retry, proxy)
+            elif remote != 'org.bluez.Error.InProgress':
+                print('Bluetooth input connect:', remote or 'request timed out or ended', flush=True)
         self.pending -= 1
         self.changed()
+
+    def retry(self, proxy):
+        path = proxy.get_object_path()
+        obj = self.manager.get_object(path)
+        if (path not in self.seen_connected and obj and obj.get_interface(DEVICE) == proxy
+                and path in eligible(self.snapshot())):
+            self.handled.discard(path)
+            self.changed()
+        return False
 
 
 def main():

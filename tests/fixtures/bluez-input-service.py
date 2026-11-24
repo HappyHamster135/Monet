@@ -26,6 +26,7 @@ bus.call_sync('org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.
     GLib.VariantType.new('(u)'), Gio.DBusCallFlags.NONE, 3000, None)
 loop = GLib.MainLoop()
 started = False
+attempts = 0
 
 
 def record(event):
@@ -61,7 +62,7 @@ def traffic():
 
 
 def method(connection, sender, path, interface, name, parameters, invocation):
-    global started
+    global started, attempts
     record(name)
     if name == 'GetManagedObjects':
         invocation.return_value(GLib.Variant('(a{oa{sa{sv}}})', (objects,)))
@@ -72,7 +73,13 @@ def method(connection, sender, path, interface, name, parameters, invocation):
                 GLib.timeout_add(10, traffic)
             GLib.timeout_add(1400, lambda: loop.quit() or False)
     elif name == 'Connect':
-        if scenario in ('in-progress', 'traffic'):
+        attempts += 1
+        if scenario in ('late-mouse', 'absent', 'blocked-retry', 'no-retry') and (attempts == 1 or scenario == 'absent'):
+            reason = 'AuthenticationFailed' if scenario == 'no-retry' else 'Failed'
+            invocation.return_dbus_error('org.bluez.Error.'+reason, 'le-connection-abort-by-local')
+            if scenario == 'blocked-retry':
+                changed(DP, DEVICE, {'Blocked': GLib.Variant('b', True)})
+        elif scenario in ('in-progress', 'traffic'):
             invocation.return_dbus_error('org.bluez.Error.InProgress', 'Another client is connecting')
         elif scenario == 'deferred-reply':
             # An ACL link can be reported before HID/GATT setup has completed.

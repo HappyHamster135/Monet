@@ -2298,28 +2298,30 @@ def native_shortcut(path, name, apps=None, arguments=""):
     import hashlib
     identity = str(path) + ("\0" + encoded if argv else "")
     entry = apps / ("monet-local-" + hashlib.sha256(identity.encode()).hexdigest()[:24] + ".desktop")
-    icon = native_icon(path, apps.parent, entry.stem)
+    icon, wm_class = native_shortcut_metadata(path, apps.parent, entry.stem)
     # The path is data, not a shell command or a Desktop Entry field code.
     options = " " + encoded.encode("utf-8").hex() if argv else ""
     text = ("[Desktop Entry]\nType=Application\nName=" + name.replace("\\", "\\\\") + "\n"
             f'Exec="{LIBEXECDIR}/monet-quick" native-run {token}{options}\n'
             f"Icon={icon}\nTerminal=false\nStartupNotify=false\nCategories=Utility;\nX-Monet=true\n")
+    class_line = f"StartupWMClass={wm_class}\n" if wm_class and not argv else ""
     if entry.exists():
-        if entry.read_text(encoding="utf-8") != text:
+        if entry.read_text(encoding="utf-8") not in (text, text + class_line):
             raise FileExistsError(tr("A shortcut for this application already exists. Edit it in the application menu."))
         return entry
     # Exclusive creation preserves any existing personal menu entry.
     with entry.open("x", encoding="utf-8") as stream:
-        stream.write(text)
+        stream.write(text + class_line)
     return entry
 
 
-def native_icon(path, data_home, identity):
-    """Keep a selected app's packaged icon, without importing its desktop command.
+def native_shortcut_metadata(path, data_home, identity):
+    """Keep the selected app's packaged icon and window class without importing its command.
 
     Only inspect nearby standard package locations. Copy to a named theme icon so
     the menu, dock and Monet's frame service can all use it. No recursive scan.
     """
+    wm_class = ""
     roots = list(path.parents)[:4]
     for root in roots:
         if root in (Path.home(), Path("/")):
@@ -2335,6 +2337,11 @@ def native_icon(path, data_home, identity):
                 command = shlex.split(fields.get("Exec", ""))
                 if fields.get("Type") != "Application" or not command or Path(command[0]).name.casefold() != path.name.casefold():
                     continue
+                # Alternate profile launchers can use the same binary with a different class.
+                if all(arg in ("%u", "%U", "%f", "%F") for arg in command[1:]):
+                    packaged_class = fields.get("StartupWMClass") or (desktop.stem if desktop.stem.casefold() == path.name.casefold() else "")
+                    if re.fullmatch(r"[\w.+-]{1,255}", packaged_class):
+                        wm_class = packaged_class
                 name = fields.get("Icon", "")
                 if Path(name).is_absolute():
                     candidates.append(("", Path(name)))
@@ -2342,7 +2349,7 @@ def native_icon(path, data_home, identity):
                     # Existing hand-painted icons take precedence over generated frames.
                     if any((base / "icons/Monet/apps/scalable" / (name + ".svg")).is_file()
                            for base in data_dirs() + [Path(DATADIR)]):
-                        return name
+                        return name, wm_class
                     for ext in (".png", ".svg", ".svgz"):
                         candidates.append((name, root / "share/pixmaps" / (name + ext)))
                         candidates.extend((name, item) for item in sorted(
@@ -2363,10 +2370,10 @@ def native_icon(path, data_home, identity):
                 if not target.exists():
                     with target.open("xb") as stream:
                         stream.write(data)
-                return identity
+                return identity, wm_class
             except (OSError, ValueError):
                 continue
-    return "application-x-executable"
+    return "application-x-executable", wm_class
 
 
 def native_shortcut_dialog(path):

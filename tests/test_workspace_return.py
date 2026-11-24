@@ -4,9 +4,45 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from tests.test_resume import r
+
+
+class WindowIdentity(unittest.TestCase):
+    def test_class_only_window_uses_only_known_unique_launcher(self):
+        frames = [{"app": "", "windowClass": "Chatgpt", "id": "portable"},
+                  {"app": "", "windowClass": "unknown", "id": "other"},
+                  {"app": "browser.desktop", "windowClass": "", "id": "browser"}]
+        with patch.object(r, "kwin_script", return_value=frames), patch.object(r, "window_class_launchers",
+                return_value={"chatgpt": "chatgpt.desktop"}):
+            snapshot = r.window_snapshot()
+        self.assertEqual([w["app"] for w in snapshot], ["chatgpt.desktop", "browser.desktop"])
+        self.assertEqual(snapshot[0]["windowClass"], "Chatgpt")
+        self.assertNotIn("windowClass", snapshot[1])
+
+    def test_shared_window_classes_do_not_pick_an_arbitrary_app(self):
+        try:
+            from gi.repository import Gio
+        except ImportError:
+            self.skipTest("needs the desktop app catalogue")
+        def app(ident, wm_class):
+            return Mock(get_id=lambda: ident, get_startup_wm_class=lambda: wm_class,
+                        get_is_hidden=lambda: False, get_nodisplay=lambda: False)
+        entries = [app("one.desktop", "Electron"), app("two.desktop", "electron"),
+                   app("portable.desktop", "Chatgpt"), app("Demo.desktop", None)]
+        r.window_class_launchers.cache_clear()
+        self.addCleanup(r.window_class_launchers.cache_clear)
+        with patch.object(Gio.AppInfo, "get_all", return_value=entries):
+            index = r.window_class_launchers(0)
+        self.assertNotIn("electron", index)
+        self.assertEqual(index["chatgpt"], "portable.desktop")
+        self.assertEqual(index["demo"], "Demo.desktop")
+
+    def test_explicit_desktop_ids_do_not_read_the_catalogue(self):
+        frames = [{"app": "editor.desktop", "id": "one"}]
+        with patch.object(r, "window_class_launchers", side_effect=AssertionError):
+            self.assertEqual(r.resolve_window_classes(frames), frames)
 
 
 @unittest.skipIf(os.name == "nt", "Linux restore lock")

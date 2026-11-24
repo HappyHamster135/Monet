@@ -95,6 +95,15 @@ class LocalApps(unittest.TestCase):
             self.assertIn("Monet frame:", frame.read_text())
             self.assertEqual(frame.read_text().count("data:image/png;base64,"), 2)
 
+    def test_packaged_class_is_preserved_only_for_the_default_launch(self):
+        program, _ = self.package_icon()
+        desktop = program.parent.parent / "share/applications/demo.desktop"
+        desktop.write_text(desktop.read_text() + "StartupWMClass=DemoWindow\n")
+        standard = self.q.native_shortcut(program, "Demo", self.apps)
+        self.assertEqual(self.q.desktop_entry(standard.read_text())["StartupWMClass"], "DemoWindow")
+        alternate = self.q.native_shortcut(program, "Demo profile", self.apps, arguments="--profile alt")
+        self.assertNotIn("StartupWMClass", self.q.desktop_entry(alternate.read_text()))
+
     def test_packaged_absolute_icon_and_compressed_svg(self):
         import gzip
         program, image = self.package_icon()

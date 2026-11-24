@@ -18,7 +18,7 @@ Item {
 
     // The windows Monet reopens: an app's own, in the taskbar, with a menu entry.
     function tracked(w) {
-        return w && w.normalWindow && !w.skipTaskbar && !w.transient && String(w.desktopFileName || "") !== ""
+        return w && w.normalWindow && !w.skipTaskbar && !w.transient && (w.desktopFileName || /^[\w.+-]{1,255}$/.test(String(w.resourceClass || "")))
     }
     // Moves and resizes arrive in a stream while a window is dragged: one word a second at most.
     function changed() {

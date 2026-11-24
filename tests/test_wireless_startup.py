@@ -198,6 +198,12 @@ class NativeInputReconnect(unittest.TestCase):
                 if scenario=='disconnect':
                     self.assertIn('user-disconnect',[r['event'] for r in records])
 
+    def test_late_le_input_retries_once_only_after_transient_advertising_failure(self):
+        for scenario, attempts in (('late-mouse', 2), ('absent', 2), ('blocked-retry', 1), ('no-retry', 1)):
+            with self.subTest(scenario=scenario):
+                events, _ = self.run_case(scenario)
+                self.assertEqual([e['event'] for e in events], ['GetManagedObjects'] + ['Connect'] * attempts)
+
     def test_existing_bluez_attempt_is_not_retried(self):
         records,_=self.run_case('in-progress')
         self.assertEqual(sum(r['event']=='Connect' for r in records),1)

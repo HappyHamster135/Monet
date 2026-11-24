@@ -7,7 +7,7 @@ ConditionPathIsDirectory=/sys/class/bluetooth
 [Service]
 Type=exec
 ExecStart=@LIBEXECDIR@/monet-input-connect
-RuntimeMaxSec=25
+RuntimeMaxSec=65
 Nice=5
 CPUWeight=20
 NoNewPrivileges=yes

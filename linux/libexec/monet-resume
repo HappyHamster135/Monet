@@ -154,6 +154,10 @@ function appId(w) {
     let id = String(w.desktopFileName || "");
     return /^[\w.+-]+$/.test(id) ? (id.endsWith(".desktop") ? id : id + ".desktop") : "";
 }
+function windowClass(w) {
+    const value = String(w.resourceClass || "");
+    return /^[\w.+-]{1,255}$/.test(value) ? value : "";
+}
 function rect(r) { return {x:r.x, y:r.y, width:r.width, height:r.height}; }
 // A screen by the monitor's own name (its EDID), so a window finds it again on another port.
 function display(o) {
@@ -161,12 +165,12 @@ function display(o) {
                 serial:String(o.serialNumber || "")} : {};
 }
 function windows() {
-    return workspace.windowList().filter(w => w.normalWindow && !w.skipTaskbar && !w.transient && appId(w));
+    return workspace.windowList().filter(w => w.normalWindow && !w.skipTaskbar && !w.transient && (appId(w) || windowClass(w)));
 }
 function capture(w) {
     let area = workspace.clientArea(KWin.MaximizeArea, w);
     let g = w.frameGeometry;
-    return {app:appId(w), id:String(w.internalId), pid:w.pid, role:String(w.windowRole || ""),
+    return {app:appId(w), windowClass:appId(w) ? "" : windowClass(w), id:String(w.internalId), pid:w.pid, role:String(w.windowRole || ""),
             rect:rect(g), area:rect(area), screen:w.output ? w.output.name : "", display:display(w.output),
             outputs:workspace.screens.map(o => ({name:o.name, display:display(o),
                 area:rect(workspace.clientArea(KWin.MaximizeArea, o, workspace.currentDesktop))})),
@@ -237,6 +241,38 @@ def kwin_script(body):
         bus.unregisterService(name)
 
 
+@lru_cache(maxsize=1)
+def window_class_launchers(interval):
+    """Reuse the launcher index during restore polling, and notice later menu changes."""
+    from gi.repository import Gio
+    by_class, by_name = {}, {}
+    for entry in Gio.AppInfo.get_all():
+        ident = entry.get_id()
+        if not ident or not APP_ID.fullmatch(ident) or not hasattr(entry, "get_startup_wm_class"):
+            continue
+        if entry.get_nodisplay() or entry.get_is_hidden():
+            continue
+        by_name.setdefault(ident[:-8].casefold(), set()).add(ident)
+        wm_class = entry.get_startup_wm_class()
+        if wm_class:
+            by_class.setdefault(wm_class.casefold(), set()).add(ident)
+    candidates = {**by_name, **by_class}
+    return {key: next(iter(ids)) for key, ids in candidates.items() if len(ids) == 1}
+
+
+def resolve_window_classes(frames):
+    """Only class-only windows need a menu lookup. Never infer an app from the window title."""
+    resolved = {}
+    if any(w.get("windowClass") and not w.get("app") for w in frames):
+        resolved = window_class_launchers(int(time.monotonic() // 10))
+    for frame in frames:
+        if not frame.get("windowClass"):
+            frame.pop("windowClass", None)
+        elif not frame.get("app"):
+            frame["app"] = resolved.get(frame["windowClass"].casefold(), "")
+    return frames
+
+
 def window_snapshot():
     try:
         result = kwin_script("reply(windows().map(capture).slice(0, 64));")
@@ -244,7 +280,7 @@ def window_snapshot():
         raise OSError("Could not check the open windows; try again.") from error
     if not isinstance(result, list):
         raise OSError("The open-window response was incomplete; try again.")
-    return result
+    return [w for w in resolve_window_classes(result) if w.get("app")]
 
 
 def desktop_snapshot():
@@ -254,6 +290,7 @@ def desktop_snapshot():
         raise OSError("Could not check the desktop; try again.") from error
     if not isinstance(result, dict) or not isinstance(result.get("windows"), list):
         raise OSError("The desktop response was incomplete; try again.")
+    result["windows"] = [w for w in resolve_window_classes(result["windows"]) if w.get("app")]
     return result
 
 
@@ -265,12 +302,12 @@ const pending = workspace.windowList().filter(w => !w.deleted && (w.normalWindow
         "org.kde.polkit-kde-authentication-agent-1"].includes(String(w.desktopFileName).replace(/\\.desktop$/, "")));
 const target = pending.find(w => String(w.internalId) === %s);
 if (target && target.closeable) target.closeWindow();
-reply(pending.map(w => ({id:String(w.internalId), app:appId(w), pid:w.pid, closeable:w.closeable, normal:w.normalWindow && !w.transient})));
+reply(pending.map(w => ({id:String(w.internalId), app:appId(w), windowClass:appId(w) ? "" : windowClass(w), pid:w.pid, closeable:w.closeable, normal:w.normalWindow && !w.transient})));
 """ % (os.getpid(), json.dumps(close)))
     if (not isinstance(result, list) or any(not isinstance(w, dict) or not isinstance(w.get("id"), str)
             or type(w.get("closeable")) is not bool for w in result)):
         raise RuntimeError("Could not check open windows")
-    return result
+    return resolve_window_classes(result)
 
 
 def cancel_departure(path, ident):
@@ -1146,9 +1183,11 @@ for (const p of places) {
 }
 reply(changed);
 """
+    classes = {w["id"]: w["windowClass"] for w in current if w.get("windowClass")}
     try:
         changed = kwin_script(body)
-        return [{"old": p["saved"].get("id"), "new": p["id"], "app": p["saved"].get("app")}
+        return [{"old": p["saved"].get("id"), "new": p["id"], "app": p["saved"].get("app"),
+                 **({"windowClass": classes[p["id"]]} if p["id"] in classes else {})}
                 for p in placements if isinstance(changed, list) and p["id"] in changed]
     except (ImportError, OSError, RuntimeError):
         return []
@@ -1174,7 +1213,8 @@ def finish_desktop(saved, before, initial_scene):
 const initial = saved.initial;
 const current = scene();
 const mapped = saved.map.map(m => ({old:saved.windows.find(w => w.id === m.old),
-    now:windows().find(w => String(w.internalId) === m.new && appId(w) === m.app)}))
+    now:windows().find(w => String(w.internalId) === m.new && (appId(w) === m.app
+        || (!appId(w) && m.windowClass && windowClass(w) === m.windowClass)))}))
     .filter(m => m.old && m.now);
 // A person who has already started using the desktop owns its focus/order.
 const untouched = initial.cursor && current.cursor.x === initial.cursor.x && current.cursor.y === initial.cursor.y

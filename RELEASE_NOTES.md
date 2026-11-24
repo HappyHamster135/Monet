@@ -4,6 +4,12 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 ### New in 0.9.8-9: Startup and Settings polish (in development)
 
+- **Reopen portable apps.** Session restore can match a window to its installed launcher
+  by window class when the app omits its desktop ID. New portable app shortcuts keep
+  the window class supplied by the package.
+- **Bluetooth input at sign-in.** Previously paired and trusted mice and keyboards
+  have longer to wake during startup. Monet retries once if a Bluetooth Low Energy
+  connection misses its advertising window.
 - **Faster Store search.** The Store prepares searchable text when it loads the catalog
   and reuses result cards as you type or scroll. Localized names, suggestions,
   result order and keyboard navigation are preserved.
