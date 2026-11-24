@@ -1,6 +1,9 @@
 """Real greeter/boot frames and systemd phase accounting for boot benchmarks."""
 import importlib.util
 from pathlib import Path
+import shlex
+import subprocess
+import tempfile
 import unittest
 
 try:
@@ -61,3 +64,21 @@ class BootTiming(unittest.TestCase):
     def test_multiline_or_non_ed25519_keys_cannot_enter_a_guest_unit(self):
         for key in ('ssh-ed25519 abc monet-boot-benchmark\nExecStart=oops', 'ssh-rsa abc monet-boot-benchmark'):
             with self.assertRaises(ValueError):bench.credentials(key)
+
+    def test_guest_unit_writes_the_exact_key_and_privilege_rule(self):
+        key='ssh-ed25519 YWJjZA== monet-boot-benchmark'
+        unit=bench.credentials(key)['systemd.extra-unit.monet-boot-bench-setup.service']
+        command=next(line for line in unit.splitlines() if line.startswith('ExecStart='))
+        # Quoting does not suppress systemd specifiers such as %s. The unit must
+        # preserve these exact contents before SSH authentication can work.
+        self.assertNotIn('%',command)
+        shell=shlex.split(command.removeprefix('ExecStart='))[-1]
+        writes=[part.strip() for part in shell.split(';') if part.strip().startswith('echo "')]
+        with tempfile.TemporaryDirectory() as folder:
+            expected=[(key,'/etc/ssh/monet-bench-authorized_keys'),
+                      ('monet-bench ALL=(root) NOPASSWD: ALL','/etc/sudoers.d/90-monet-bench')]
+            self.assertEqual(len(writes),len(expected))
+            for write,(content,destination) in zip(writes,expected):
+                output=Path(folder)/Path(destination).name
+                subprocess.run(['/bin/sh','-ec',write.replace(destination,shlex.quote(str(output)))],check=True)
+                self.assertEqual(output.read_text(),content+'\n')

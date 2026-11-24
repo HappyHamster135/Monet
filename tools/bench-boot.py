@@ -90,11 +90,13 @@ def credentials(public_key):
     if not re.fullmatch(r'ssh-ed25519 [A-Za-z0-9+/=]+ monet-boot-benchmark', public_key):
         raise ValueError('Unexpected benchmark public key')
     setup = ('install -d -m 0755 /etc/ssh /etc/sudoers.d /run/sshd; ssh-keygen -A; '
-             f'printf "%s\\n" "{public_key}" > /etc/ssh/monet-bench-authorized_keys; '
+             # ExecStart expands systemd's %s specifier even inside shell quotes.
+             # The validated key contains no echo options or backslash escapes.
+             f'echo "{public_key}" > /etc/ssh/monet-bench-authorized_keys; '
              'chmod 0644 /etc/ssh/monet-bench-authorized_keys; '
              'if ! id monet-bench >/dev/null 2>&1; then useradd -m monet-bench; '
              'echo monet-bench:MonetBenchmarkOnly42 | chpasswd; fi; '
-             'printf "%s\\n" "monet-bench ALL=(root) NOPASSWD: ALL" > /etc/sudoers.d/90-monet-bench; '
+             'echo "monet-bench ALL=(root) NOPASSWD: ALL" > /etc/sudoers.d/90-monet-bench; '
              'chmod 0440 /etc/sudoers.d/90-monet-bench; '
              'restorecon -RF /etc/ssh /etc/sudoers.d/90-monet-bench /run/sshd')
     unit = ('[Unit]\nDefaultDependencies=no\nConditionPathExists=!/etc/initrd-release\n'
