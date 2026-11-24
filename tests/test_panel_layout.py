@@ -75,6 +75,31 @@ class PanelLayouts(unittest.TestCase):
         with patch.object(self.quick, 'DATADIR', str(ROOT/'linux/share')), patch.object(self.quick, 'busjson', side_effect=bus):
             return self.quick.panel_layout(str(self.js(panel+'.id').toInt()), layout)
 
+    def test_notch_is_independent_of_home_bar_layout_and_other_screens(self):
+        self.js("knownWidgetTypes.push('org.monet.notch')")
+        def notch(panel, mode=None):
+            def bus(*args):
+                self.js(args[-1])
+                return [self.js('printed').toString()]
+            with patch.object(self.quick, 'DATADIR', str(ROOT/'linux/share')), patch.object(self.quick, 'busjson', side_effect=bus):
+                return self.quick.panel_notch(str(self.js(panel+'.id').toInt()), mode)
+        self.assertEqual(notch('right')['mode'], 'off')
+        self.assertEqual(notch('right', 'compact')['mode'], 'compact')
+        self.js("var notchPanel=all.find(p=>p.widgets('org.monet.notch').length)")
+        self.assertEqual(self.state('[notchPanel.screen,notchPanel.location,notchPanel.alignment,notchPanel.lengthMode]'),
+                         [0, 'top', 'center', 'fit'])
+        self.assertFalse(self.choose('notchPanel')['available'])
+        self.assertTrue(notch('right', 'levels-on')['options']['levels'])
+        self.assertEqual(notch('left', 'wide')['mode'], 'wide')
+        self.assertEqual(notch('other')['mode'], 'off')
+        self.assertEqual(notch('other', 'compact')['mode'], 'compact')
+        self.assertTrue(self.choose('right','one')['ok'])
+        self.assertEqual(notch('right')['mode'], 'wide')
+        self.assertTrue(self.choose('right','three')['ok'])
+        self.assertTrue(notch('right', 'off')['ok'])
+        self.assertEqual(notch('other')['mode'], 'compact')
+        self.assertTrue(self.js('!panelById(notchPanel.id)').toBool())
+
     def test_switch_from_side_bar_round_trip_keeps_id_pins_widgets_and_other_screens(self):
         self.assertEqual(self.choose('right')['layout'], 'three')
         ids=self.state('[task.id,custom.id,tray.id]')

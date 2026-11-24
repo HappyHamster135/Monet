@@ -51,6 +51,7 @@ Item {
     property var pending: null
     property var newWindow: null
     property var preview: null
+    property var lastClient: null
     property QtObject mouseMove: null
     Component.onCompleted: {
         // The image supplies a bridge built against its exact KWin runtime.
@@ -82,7 +83,7 @@ Item {
     }
 
     function coveredNow(w) {
-        return Hover.covered(w, Hover.barRect(w.clientGeometry, w.output.geometry), Workspace.stackingOrder,
+        return Hover.covered(w, Hover.barRect(w.clientGeometry, w.output.geometry, Workspace.stackingOrder), Workspace.stackingOrder,
                              Workspace.currentDesktop, ours)
     }
 
@@ -106,7 +107,7 @@ Item {
     // As the pointer moves (once a frame at most): the bar stays while the pointer's on it or
     // holds it, comes a moment after the pointer reaches a window's top (passing by isn't enough),
     // and goes a moment after the pointer leaves it.
-    function evaluate() {
+    function evaluate(retry = true) {
         if (!hovering) {
             return
         }
@@ -122,6 +123,13 @@ Item {
             return
         }
         const aimed = aimedAt(p)
+        if (!aimed && retry && !bar.held && !root.busy()) {
+            // Window geometry or a disappearing popup can lag the pointer event
+            // on a focus switch. Retry a stationary, eligible edge once.
+            const candidate = root.topWindow(p)
+            if (Hover.titleless(candidate) && candidate.output
+                    && Hover.atTop(candidate.clientGeometry, candidate.output.geometry, p)) settleEdge.restart()
+        }
         if (bar.open && aimed === w) {
             away.stop()
             return
@@ -144,12 +152,18 @@ Item {
         interval: 16
         onTriggered: root.evaluate()
     }
+    Timer {
+        id: settleEdge
+        interval: Math.max(200, Math.round(300 * root.speed))
+        onTriggered: root.evaluate(false)
+    }
     function queueEvaluation() {
         if (root.hovering && !look.running) look.start()
     }
     Connections {
         target: Workspace
         function onCursorPosChanged() {
+            settleEdge.stop()
             root.queueEvaluation()
         }
         function onWindowAdded(w) {
@@ -160,7 +174,18 @@ Item {
         }
         function onWindowActivated(w) {
             if (root.asked && root.asked.window === w) root.act()
-            if (root.preview && root.preview !== w && !bar.held) bar.close()
+            // KWin may announce the same client again as an internal popup maps.
+            // A deliberate hover on an inactive window must survive that announcement.
+            if (!w || !(w.normalWindow || w.dialog || w.utility) || w.popupWindow || w === root.lastClient) return
+            const previous = root.lastClient
+            root.lastClient = w
+            if (bar.visible && bar.window && bar.window !== w && !bar.held
+                    && (bar.window === previous || root.preview === bar.window || root.coveredNow(bar.window))) {
+                root.pending = null
+                reveal.stop()
+                bar.close(true)
+            }
+            root.queueEvaluation()
         }
     }
 
@@ -293,6 +318,7 @@ Item {
 
     TitleBar {
         id: bar
+        panelStack: Workspace.stackingOrder
         speed: root.speed
         smoke: root.smoke
         onOpenChanged: {

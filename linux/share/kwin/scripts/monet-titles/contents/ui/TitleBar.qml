@@ -20,7 +20,8 @@ Window {
     property bool smoke: false
     // The frames' own buttons (tools/make-decoration.py; install.sh fills in where Monet's files are).
     property string art: "file://@DATADIR@/monet/window-buttons/"
-    readonly property var area: window && window.output ? Hover.barRect(window.clientGeometry, window.output.geometry)
+    property var panelStack: null
+    readonly property var area: window && window.output ? Hover.barRect(window.clientGeometry, window.output.geometry, panelStack)
                                                         : Hover.rect(0, 0, 1, 1)
     readonly property bool dragHeld: grip.holding
     readonly property point dragOrigin: grip.origin

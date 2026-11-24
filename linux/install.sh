@@ -115,7 +115,7 @@ put 644 "$SRC/systemd/user/app-org.kde.spectacle.service.d/monet.conf" "$USERUNI
 put 644 "$SRC/libexec/monet-quick" "$LIBEXECDIR/monet_quick.py"
 python3 -I -m compileall -q -f --invalidation-mode checked-hash "$LIBEXECDIR/monet_quick.py"
 put 755 "$SRC/launchers/monet-quick" "$LIBEXECDIR/monet-quick"
-for tool in monet-session monet-look monet-profile monet-light monet-daylight monet-weather monet-resume monet-work monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-priority monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
+for tool in monet-utilities monet-session monet-look monet-profile monet-light monet-daylight monet-weather monet-resume monet-work monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-priority monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
     put 755 "$SRC/libexec/$tool" "$LIBEXECDIR/$tool"
 done
 if [ "$IMAGE" = 0 ] && [ -d "$SRC/libexec/pulsectl" ]; then
@@ -190,6 +190,7 @@ put 644 "$SRC/share/applications/monet-passwords.desktop" "$DATADIR/applications
 # Games, the app with every game (the panel's Games button and Windows+G open it).
 put 644 "$SRC/share/applications/monet-games.desktop" "$DATADIR/applications/monet-games.desktop"
 # Apps, Games' sibling: every app in the menu, by where it came from and what it does.
+put 644 "$SRC/share/applications/monet-utilities.desktop" "$DATADIR/applications/monet-utilities.desktop"
 put 644 "$SRC/share/applications/monet-apps.desktop" "$DATADIR/applications/monet-apps.desktop"
 put 644 "$SRC/share/applications/org.kde.plasma-systemmonitor.desktop" "$DATADIR/applications/org.kde.plasma-systemmonitor.desktop"
 # The Store, Monet's own: Flathub's apps, and the Windows apps on the PC.
@@ -223,11 +224,12 @@ done
 tree "$SRC/share/plasma/avatars/Monet" "$DATADIR/plasma/avatars/Monet"
 for applet in org.monet.menu org.monet.games org.monet.quick org.monet.placard org.monet.clock org.monet.weather \
     org.monet.calendar org.monet.nowplaying org.monet.notes org.monet.frame org.monet.system org.monet.played \
-    org.monet.timer org.monet.worldclock org.monet.network org.monet.storage org.monet.batteries org.monet.sound org.monet.stacks org.monet.transfers; do
+    org.monet.timer org.monet.worldclock org.monet.network org.monet.storage org.monet.batteries org.monet.sound org.monet.stacks org.monet.transfers org.monet.notch; do
     tree "$SRC/share/plasma/plasmoids/$applet" "$DATADIR/plasma/plasmoids/$applet"
 done
 # The desktop widgets share one glass.
 put 644 "$SRC/share/monet/bar-defaults.js" "$DATADIR/monet/bar-defaults.js"
+put 644 "$SRC/share/monet/panel-notch.js" "$DATADIR/monet/panel-notch.js"
 put 644 "$SRC/share/monet/panel-layout.js" "$DATADIR/monet/panel-layout.js"
 put 644 "$SRC/share/monet/repair-sound.js" "$DATADIR/monet/repair-sound.js"
 put 644 "$SRC/share/monet/tray-duplicates.js" "$DATADIR/monet/tray-duplicates.js"
@@ -236,7 +238,7 @@ for applet in org.monet.weather org.monet.calendar org.monet.nowplaying org.mone
     install -m 644 "$SRC/share/monet/widgets/Glass.qml" "$DATADIR/plasma/plasmoids/$applet/contents/ui/Glass.qml"
 done
 # The Calendar and the bar's clock share the month, the day's note and the notes themselves.
-for applet in org.monet.calendar org.monet.clock; do
+for applet in org.monet.calendar org.monet.clock org.monet.notch; do
     for part in Month DayNotes NoteStore NotesPopup; do
         install -m 644 "$SRC/share/monet/widgets/$part.qml" "$DATADIR/plasma/plasmoids/$applet/contents/ui/$part.qml"
     done
@@ -429,6 +431,8 @@ rm -rf "$DATADIR/monet/windows" "$DATADIR/monet/winpe" "$DATADIR/monet/textures"
     "$DATADIR/monet/gtk" "$DATADIR/monet/zen" "$DATADIR/monet/games" "$DATADIR/monet/settings-app" "$DATADIR/monet/passwords" "$DATADIR/monet/store-app"
 install -d "$DATADIR/monet"
 put 644 "$SRC/share/monet/widgets/ScrollInput.qml" "$DATADIR/monet/widgets/ScrollInput.qml"
+install -d "$DATADIR/monet/utilities"
+install -m 644 "$SRC"/share/monet/utilities/*.py "$DATADIR/monet/utilities/"
 tree "$SRC/share/monet/monet_files" "$DATADIR/monet/monet_files"
 tree "$SRC/share/monet/monet_runtime" "$DATADIR/monet/monet_runtime"
 put 644 "$SRC/share/monet/stacks.js" "$DATADIR/monet/stacks.js"

@@ -28,6 +28,9 @@ function monetTray(tray) {
     var selected = panelById(MONET_PANEL_ID), choice = MONET_PANEL_CHOICE, plan = MONET_PANEL_PLAN;
     function reply(value) { print(JSON.stringify(value)); }
     if (!selected || selected.screen < 0) { reply({ok:false}); return; }
+    if (selected.widgets("org.monet.notch").length && selected.widgets().length === 1) {
+        reply({ok:true, available:false, layout:""}); return;
+    }
     var roles = ["left", "middle", "right"];
     function read(object, key, fallback) {
         object.currentConfigGroup = ["MonetBar"];

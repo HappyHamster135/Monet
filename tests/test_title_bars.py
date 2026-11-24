@@ -68,6 +68,16 @@ class Arithmetic(unittest.TestCase):
         w.update(kw)
         return json.dumps(w)
 
+    def test_top_center_panel_leaves_room_for_the_title_buttons(self):
+        result = self.js.evaluate("""
+            var screen={x:100,y:50,width:1000,height:700};
+            var dock={dock:true,frameGeometry:{x:550,y:50,width:100,height:32}};
+            var bar=barRect(screen,screen,[dock]);
+            bar.y===83 && bar.height===40 && !touches(dock.frameGeometry,bar)
+                && barRect({x:100,y:130,width:500,height:400},screen,[dock]).y===130
+        """)
+        self.assertTrue(result.toBool(), result.toString())
+
     def test_the_bar_lies_over_the_windows_top_at_every_scale(self):
         screen = "rect(0, 0, 1920, 1080)"
         self.assertEqual(self.run_js(f"barRect(rect(100, 100, 800, 600), {screen})"),

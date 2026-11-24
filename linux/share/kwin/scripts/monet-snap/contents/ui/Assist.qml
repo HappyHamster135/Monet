@@ -26,7 +26,8 @@ Window {
     // The picture the keys are on: none until one is pressed (the pointer's ring is enough before).
     property int keyed: -1
 
-    flags: Qt.BypassWindowManagerHint | Qt.FramelessWindowHint
+    // Release input as soon as the popup is dismissed, including during its fade.
+    flags: Qt.BypassWindowManagerHint | Qt.FramelessWindowHint | (shown ? 0 : Qt.WindowTransparentForInput)
     color: "transparent"
     visible: false
 
@@ -49,8 +50,8 @@ Window {
         free = parts
         keyed = -1
         hide.stop()
-        show()
         shown = true
+        show()
     }
 
     function close() {

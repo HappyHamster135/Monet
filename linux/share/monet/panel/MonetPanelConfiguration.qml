@@ -38,6 +38,9 @@ Item {
     property bool iconsAvailable: false
     property string barLayout: ""
     property bool layoutAvailable: false
+    property string notchMode: ""
+    property bool notchBusy: false
+    property var notchOptions: ({})
     property bool layoutBusy: false
     property bool busy: false
     property string problem: ""
@@ -161,7 +164,27 @@ Item {
         layoutBusy = true
         layoutRunner.connectSource("@LIBEXECDIR@/monet-quick panel-layout " + plasmoid.id + (layout ? " " + layout : ""))
     }
-    Component.onCompleted: { requestIcons(""); requestLayout("") }
+    function requestNotch(mode) {
+        notchBusy = true
+        notchRunner.connectSource("@LIBEXECDIR@/monet-quick panel-notch " + plasmoid.id + (mode ? " " + mode : ""))
+    }
+    Component.onCompleted: { requestIcons(""); requestLayout(""); requestNotch("") }
+    P5Support.DataSource {
+        id: notchRunner
+        engine: "executable"
+        onNewData: (source, data) => {
+            disconnectSource(source)
+            editor.notchBusy = false
+            try {
+                const result = JSON.parse(data.stdout)
+                if (!result.ok) throw new Error()
+                editor.notchMode = result.mode
+                editor.notchOptions = result.options || ({})
+            } catch (error) {
+                editor.problem = i18nd("monet", "Could not read or change the notch on this screen.")
+            }
+        }
+    }
     P5Support.DataSource {
         id: layoutRunner
         engine: "executable"
@@ -325,6 +348,32 @@ Item {
                         }
                     }
                     Hint { text: i18nd("monet", "Includes the menu, apps, quick settings, sound and clock. Your pins and widgets stay with you.") }
+                    Heading { text: i18nd("monet", "Top-center notch") }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Repeater {
+                            model: [{id:"off", title:i18nd("monet", "Off")}, {id:"compact", title:i18nd("monet", "Compact")}, {id:"wide", title:i18nd("monet", "Wide")}]
+                            Choice {
+                                required property var modelData
+                                text: modelData.title
+                                checked: editor.notchMode === modelData.id
+                                enabled: !editor.notchBusy && editor.notchMode !== ""
+                                onClicked: editor.requestNotch(modelData.id)
+                            }
+                        }
+                    }
+                    Repeater {
+                        model: [{key:"levels", label:i18nd("monet", "Show music level")},
+                                {key:"alerts", label:i18nd("monet", "Low accessory battery alerts")},
+                                {key:"companion", label:i18nd("monet", "Show notch companion")}]
+                        C.CheckBox {
+                            required property var modelData
+                            visible: editor.notchMode === "compact" || editor.notchMode === "wide"
+                            text: modelData.label; enabled: !editor.notchBusy
+                            checked: !!editor.notchOptions[modelData.key]
+                            onClicked: editor.requestNotch(modelData.key + (checked ? "-on" : "-off"))
+                        }
+                    }
                     Heading { text: i18nd("monet", "Bar shape") }
                     RowLayout {
                         Layout.fillWidth: true

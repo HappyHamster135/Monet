@@ -741,6 +741,9 @@ kw --file kcminputrc --group Libinput --group Defaults --key NaturalScroll true
 if "@BINDIR@/monet-files" this-pc; then
     kw_default dolphinrc General HomeUrl "$DATA/monet/This PC"
 fi
+# Apply focus and stacking on the press so the receiving window owns the
+# complete click, even when another window used to cover part of it.
+kw_default kwinrc MouseBindings CommandWindow1 "Activate, raise and pass click"
 kw_default dolphinrc IconsMode IconSize 80
 kw_default dolphinrc IconsMode PreviewSize 96
 kw_default dolphinrc PlacesPanel IconSize 22

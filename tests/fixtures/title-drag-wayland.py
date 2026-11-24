@@ -186,7 +186,8 @@ def parent(output):
     with private_session() as env:
         data = Path(env['XDG_DATA_HOME'])
         config = Path(env['XDG_CONFIG_HOME'])
-        config.joinpath('kwinrc').write_text('[Plugins]\nmonet-titlesEnabled=true\n'
+        config.joinpath('kwinrc').write_text('[MouseBindings]\nCommandWindow1=Activate, raise and pass click\n'
+            '[Plugins]\nmonet-titlesEnabled=true\n'
             '[org.kde.kdecoration2]\nlibrary=org.kde.kwin.aurorae\ntheme=__aurorae__svg__MonetBare\n')
         shutil.copytree(ROOT/'linux/share/aurorae/themes/MonetBare',data/'aurorae/themes/MonetBare')
         path = data/'kwin/scripts/monet-titles'

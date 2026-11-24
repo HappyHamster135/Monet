@@ -1,0 +1,41 @@
+[Desktop Entry]
+Type=Application
+Name=Monet Utilities
+Comment=Keep files close, capture your screen and find desktop tools
+Icon=applications-utilities
+Exec=@LIBEXECDIR@/monet-utilities
+Categories=Utility;
+Keywords=notch;shelf;scratchpad;clipboard;audio;timer;capture;tools;
+StartupNotify=true
+SingleMainWindow=true
+Actions=Shelf;Scratchpad;Wheel;Microphone;Output;Color;
+
+[Desktop Action Shelf]
+Name=File shelf
+Icon=folder-favorites
+Exec=@LIBEXECDIR@/monet-utilities shelf
+
+[Desktop Action Scratchpad]
+Name=Scratchpad
+Icon=accessories-text-editor
+Exec=@LIBEXECDIR@/monet-utilities notes
+
+[Desktop Action Wheel]
+Name=Favorite actions wheel
+Icon=view-more
+Exec=@LIBEXECDIR@/monet-utilities wheel
+
+[Desktop Action Microphone]
+Name=Mute or unmute microphone
+Icon=audio-input-microphone
+Exec=@LIBEXECDIR@/monet-utilities mic
+
+[Desktop Action Output]
+Name=Cycle sound output
+Icon=audio-card
+Exec=@LIBEXECDIR@/monet-utilities output
+
+[Desktop Action Color]
+Name=Pick a screen color
+Icon=color-picker
+Exec=@LIBEXECDIR@/monet-utilities color

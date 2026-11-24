@@ -26,7 +26,8 @@ Window {
     // Windows' numbers: each layout's (-1), then, once one is picked, its parts'.
     property int numbered: -1
 
-    flags: Qt.BypassWindowManagerHint | Qt.FramelessWindowHint
+    // Release input as soon as the popup is dismissed, including during its fade.
+    flags: Qt.BypassWindowManagerHint | Qt.FramelessWindowHint | (shown ? 0 : Qt.WindowTransparentForInput)
     color: "transparent"
     visible: false
 
@@ -42,8 +43,8 @@ Window {
         height = screen.height
         numbered = -1
         hide.stop()
-        show()
         shown = true
+        show()
     }
 
     function close() {

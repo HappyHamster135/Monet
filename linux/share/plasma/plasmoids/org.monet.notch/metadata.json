@@ -1,0 +1,11 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Id": "org.monet.notch", "Name": "Monet Notch",
+        "Description": "Music, activities and tools at the top of your screen",
+        "Icon": "applications-utilities", "Category": "Utilities",
+        "License": "GPL-3.0-or-later", "Version": "0.9.8-9",
+        "Authors": [{"Name": "Monet"}]
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

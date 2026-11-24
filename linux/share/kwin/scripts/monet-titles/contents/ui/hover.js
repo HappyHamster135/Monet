@@ -32,8 +32,22 @@ function visibleTop(client, screen) {
 }
 
 // The bar: across the window's top, as wide as the window and never taller than it.
-function barRect(client, screen) {
+function barRect(client, screen, stack) {
     var top = visibleTop(client, screen)
+    // Leave room for a short, top-center panel over a maximized client.
+    // Its own input and the app's title buttons must both remain reachable.
+    if (stack && top === screen.y) {
+        for (var i = 0; i < stack.length; i++) {
+            var dock = stack[i]
+            if (!dock || !dock.dock || dock.hidden || dock.minimized) continue
+            var d = dock.frameGeometry
+            if (d.y !== screen.y || d.height > 64 || d.width > 260
+                    || Math.abs(d.x + d.width / 2 - screen.x - screen.width / 2) > 2
+                    || d.x >= client.x + client.width || d.x + d.width <= client.x
+                    || d.y + d.height + BAR >= client.y + client.height) continue
+            top = Math.max(top, d.y + d.height + 1)
+        }
+    }
     var x = Math.round(client.x)
     var y = Math.round(top)
     var width = Math.max(1, Math.round(client.x + client.width) - x)

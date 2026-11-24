@@ -14205,3 +14205,184 @@ msgstr ""
 #: linux/share/monet/monet_files/computer.py:85
 msgid "Drive"
 msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:184
+msgid "Could not read or change the notch on this screen."
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:351
+msgid "Top-center notch"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:355
+msgid "Compact"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:355
+msgid "Wide"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:366
+msgid "Show music level"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:367
+msgid "Low accessory battery alerts"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:368
+msgid "Show notch companion"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:27 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:80
+msgid "Monet Notch"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:28
+msgid "Music, activity and tools"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:81
+msgid "Focus session finished"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:81
+msgid "Timer finished"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:110
+msgid "Quiet mode was unavailable. Your timer is running."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:154
+msgid "Notch companion"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:158
+msgid "Shelf"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:184
+msgid "Activity"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:184
+msgid "Time"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:195
+msgid "File shelf"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:215
+msgid "Start a song or video in a media player."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:230
+msgid "Queue and lyrics"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:244
+msgid "%1 · %2%"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:260
+msgid "No recent notifications"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:277
+msgid "Latest download · %1"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:281
+msgid "Agent usage"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:282
+msgid "Watch"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:296
+msgid "Minutes"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:298
+msgid "Focus"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:305
+msgid "Stopwatch"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:314
+msgid "Reset stopwatch"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:337
+msgid "Day note"
+msgstr ""
+
+#: linux/libexec/monet-quick:10884
+msgid "Low accessory battery"
+msgstr ""
+
+#: linux/libexec/monet-quick:10885
+msgid "%1 has %2% battery remaining."
+msgstr ""
+
+#: linux/share/applications/monet-utilities.desktop:3
+msgctxt "an app's name in the menu"
+msgid "Monet Utilities"
+msgstr ""
+
+#: linux/share/applications/monet-utilities.desktop:4
+msgctxt "an app's description in the menu"
+msgid "Keep files close, capture your screen and find desktop tools"
+msgstr ""
+
+#: linux/share/applications/monet-utilities.desktop:8
+msgctxt ""
+"words the menu's search finds an app by; keep the semicolons between them"
+msgid "notch;shelf;scratchpad;clipboard;audio;timer;capture;tools;"
+msgstr ""
+
+#: linux/share/applications/monet-utilities.desktop:14
+msgctxt "an app's name in the menu"
+msgid "File shelf"
+msgstr ""
+
+#: linux/share/applications/monet-utilities.desktop:19
+msgctxt "an app's name in the menu"
+msgid "Scratchpad"
+msgstr ""
+
+#: linux/share/applications/monet-utilities.desktop:24
+msgctxt "an app's name in the menu"
+msgid "Favorite actions wheel"
+msgstr ""
+
+#: linux/share/applications/monet-utilities.desktop:29
+msgctxt "an app's name in the menu"
+msgid "Mute or unmute microphone"
+msgstr ""
+
+#: linux/share/applications/monet-utilities.desktop:34
+msgctxt "an app's name in the menu"
+msgid "Cycle sound output"
+msgstr ""
+
+#: linux/share/applications/monet-utilities.desktop:39
+msgctxt "an app's name in the menu"
+msgid "Pick a screen color"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Monet Notch"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "Music, activities and tools at the top of your screen"
+msgstr ""

@@ -170,7 +170,7 @@ done
 for icon in monet monet-windows monet-quick-symbolic; do
     rm -f "$PREFIX/share/icons/hicolor/scalable/apps/$icon.svg"
 done
-rm -f "$PREFIX/share/applications/monet-windows.desktop" "$PREFIX/share/applications/monet-settings.desktop" "$PREFIX/share/applications/monet-passwords.desktop" \
+rm -f "$PREFIX/libexec/monet-utilities" "$PREFIX/share/applications/monet-utilities.desktop" "$PREFIX/share/applications/monet-windows.desktop" "$PREFIX/share/applications/monet-settings.desktop" "$PREFIX/share/applications/monet-passwords.desktop" \
     "$PREFIX/share/applications/monet-archive.desktop" \
     "$PREFIX/share/kio/servicemenus/monet-local-app.desktop" \
     "$PREFIX/share/kio/servicemenus/monet-folder-tools.desktop" \
@@ -204,7 +204,7 @@ rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/pl
     "$PREFIX/share/plasma/plasmoids/org.monet.nowplaying" "$PREFIX/share/plasma/plasmoids/org.monet.notes" \
     "$PREFIX/share/plasma/plasmoids/org.monet.frame" "$PREFIX/share/plasma/avatars/Monet" \
     "$PREFIX/share/plasma/plasmoids/org.monet.system" "$PREFIX/share/plasma/plasmoids/org.monet.played" \
-    "$PREFIX/share/plasma/plasmoids/org.monet.timer" "$PREFIX/share/plasma/plasmoids/org.monet.worldclock" "$PREFIX/share/plasma/plasmoids/org.monet.network" "$PREFIX/share/plasma/plasmoids/org.monet.storage"     "$PREFIX/share/plasma/plasmoids/org.monet.batteries" \
+    "$PREFIX/share/plasma/plasmoids/org.monet.notch" "$PREFIX/share/plasma/plasmoids/org.monet.timer" "$PREFIX/share/plasma/plasmoids/org.monet.worldclock" "$PREFIX/share/plasma/plasmoids/org.monet.network" "$PREFIX/share/plasma/plasmoids/org.monet.storage"     "$PREFIX/share/plasma/plasmoids/org.monet.batteries" \
     "$PREFIX/share/plasma/plasmoids/org.monet.sound" \
     "$PREFIX/share/plasma/plasmoids/org.monet.stacks" "$PREFIX/share/plasma/plasmoids/org.monet.transfers" \
     "$PREFIX/share/plasma/desktoptheme/monet" "$PREFIX/share/plasma/desktoptheme/monet-solid" \
