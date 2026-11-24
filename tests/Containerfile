@@ -75,6 +75,9 @@ RUN cmake -S /src/quick-options-test -B /tmp/quick-options-test -DCMAKE_BUILD_TY
  && cp /tmp/quick-options-test/quick-options-test /out/quick-options-test
 
 FROM desktop-runtime
+COPY tools/agenda-requirements.txt /tmp/agenda-requirements.txt
+RUN dnf -y install python3-pip && dnf clean all \
+ && python3 -m pip install --no-deps --require-hashes --only-binary=:all: --prefix=/usr/local -r /tmp/agenda-requirements.txt
 RUN dnf -y install binutils kf6-bluez-qt bluedevil spectacle filelight flatpak-libs python3-pyatspi at-spi2-core && dnf clean all
 COPY --from=archive-recovery /out /tmp/monet-archive-recovery
 RUN python3 /tmp/monet-archive-recovery/bundle.py install /tmp/monet-archive-recovery \

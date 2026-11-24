@@ -14430,3 +14430,146 @@ msgstr ""
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:181
 msgid "Watching"
 msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:54
+msgid "Month"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:57
+msgid "Calendars…"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:60
+msgid "Refresh appointments"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:68
+msgid "Previous two weeks"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:72
+msgid "Return to today"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:75
+msgid "Next two weeks"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:91
+msgid "Untitled appointment"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:99
+msgid "All day"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:116
+msgid "Loading appointments…"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:117
+msgid "Could not read your calendars."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:118
+msgid "Add a calendar to see your appointments here."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:119
+msgid "No appointments available."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:120
+msgid "No appointments in these two weeks."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:125
+msgid "Unavailable · %1"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:126
+msgid "Showing saved copy · %1"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:127
+msgid "Showing the first 200 appointments."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:359
+msgid "Upcoming appointments"
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:19
+msgid ""
+"Choose the appointments shown in the notch. Linked files follow changes on disk. Subscriptions refresh when you open the agenda."
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:23
+msgid "Calendars in the notch"
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:30
+msgid "Link file…"
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:31
+msgid "Subscribe…"
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:33
+msgid ""
+"Remove this source and its saved copy from the agenda. Your original calendar is kept."
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:45
+msgid "Could not read your calendar list."
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:48
+msgid "No calendars added yet."
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:59
+msgid "Link calendar file"
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:59
+msgid "iCalendar (*.ics *.ICS);;All files (*)"
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:64
+msgid ""
+"Could not link this file. Choose a readable iCalendar file up to 5 MiB."
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:68
+msgid "Subscribe to a calendar"
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:72
+msgid "Optional"
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:73
+msgid "&Calendar link"
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:74
+msgid "&Name"
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:79
+msgid "Subscribe"
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:85
+msgid "Enter an HTTPS or webcal calendar subscription link."
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:89
+msgid "Could not save this calendar."
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:106
+msgid "Could not remove this calendar."
+msgstr ""

@@ -372,6 +372,9 @@ class Window(QMainWindow):
             self.page(key, lambda: Shelf(self.settings))
         elif key in ("notes", "snippets"):
             self.page(key, lambda: Writing(self.settings, key == "snippets"))
+        elif key == "calendars":
+            from calendars import Calendars
+            self.page(key, Calendars).reload()
         elif key == "downloads":
             self.page(key, lambda: Downloads(self.settings))
         elif key == "wheel":

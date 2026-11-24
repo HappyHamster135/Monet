@@ -245,6 +245,8 @@ def gather():
         scan(p.read_text(encoding="utf-8"), SETUP_QML_CALLS, js_string, rel(p), add)
     for p in sorted((ROOT / "setup" / "monet_setup").glob("*.py")) + [ROOT / "linux/libexec/monet-quick", ROOT / "linux/libexec/monet-leave", ROOT / "linux/libexec/monet-files-tools", ROOT / "linux/libexec/monet-file-jobs", ROOT / "linux/libexec/monet-rest"]:
         scan(p.read_text(encoding="utf-8"), PYTHON_CALLS, python_string, rel(p), add)
+    calendars = ROOT / "linux/share/monet/utilities/calendars.py"
+    scan(calendars.read_text(encoding="utf-8"), PYTHON_CALLS, python_string, rel(calendars), add)
     computer = ROOT / "linux/share/monet/monet_files/computer.py"
     scan(computer.read_text(encoding="utf-8"), PYTHON_CALLS, python_string, rel(computer), add)
     for p in sorted((ROOT / "linux/share/monet/passwords").glob("*.py")):

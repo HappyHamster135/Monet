@@ -14464,3 +14464,146 @@ msgstr "Bevakar ett fönster"
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:181
 msgid "Watching"
 msgstr "Bevakar"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:54
+msgid "Month"
+msgstr "Månad"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:57
+msgid "Calendars…"
+msgstr "Kalendrar…"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:60
+msgid "Refresh appointments"
+msgstr "Uppdatera händelser"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:68
+msgid "Previous two weeks"
+msgstr "Föregående två veckor"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:72
+msgid "Return to today"
+msgstr "Tillbaka till idag"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:75
+msgid "Next two weeks"
+msgstr "Nästa två veckor"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:91
+msgid "Untitled appointment"
+msgstr "Namnlös händelse"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:99
+msgid "All day"
+msgstr "Hela dagen"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:116
+msgid "Loading appointments…"
+msgstr "Läser in händelser…"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:117
+msgid "Could not read your calendars."
+msgstr "Det gick inte att läsa dina kalendrar."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:118
+msgid "Add a calendar to see your appointments here."
+msgstr "Lägg till en kalender för att se dina händelser här."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:119
+msgid "No appointments available."
+msgstr "Inga händelser tillgängliga."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:120
+msgid "No appointments in these two weeks."
+msgstr "Inga händelser under de här två veckorna."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:125
+msgid "Unavailable · %1"
+msgstr "Ej tillgänglig · %1"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:126
+msgid "Showing saved copy · %1"
+msgstr "Visar sparad kopia · %1"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:127
+msgid "Showing the first 200 appointments."
+msgstr "Visar de första 200 händelserna."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:359
+msgid "Upcoming appointments"
+msgstr "Kommande händelser"
+
+#: linux/share/monet/utilities/calendars.py:19
+msgid ""
+"Choose the appointments shown in the notch. Linked files follow changes on disk. Subscriptions refresh when you open the agenda."
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:23
+msgid "Calendars in the notch"
+msgstr "Kalendrar i skärmens överkant"
+
+#: linux/share/monet/utilities/calendars.py:30
+msgid "Link file…"
+msgstr "Länka fil…"
+
+#: linux/share/monet/utilities/calendars.py:31
+msgid "Subscribe…"
+msgstr "Prenumerera…"
+
+#: linux/share/monet/utilities/calendars.py:33
+msgid ""
+"Remove this source and its saved copy from the agenda. Your original calendar is kept."
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:45
+msgid "Could not read your calendar list."
+msgstr "Det gick inte att läsa din kalenderlista."
+
+#: linux/share/monet/utilities/calendars.py:48
+msgid "No calendars added yet."
+msgstr "Inga kalendrar har lagts till än."
+
+#: linux/share/monet/utilities/calendars.py:59
+msgid "Link calendar file"
+msgstr "Länka kalenderfil"
+
+#: linux/share/monet/utilities/calendars.py:59
+msgid "iCalendar (*.ics *.ICS);;All files (*)"
+msgstr "iCalendar (*.ics *.ICS);;Alla filer (*)"
+
+#: linux/share/monet/utilities/calendars.py:64
+msgid ""
+"Could not link this file. Choose a readable iCalendar file up to 5 MiB."
+msgstr ""
+
+#: linux/share/monet/utilities/calendars.py:68
+msgid "Subscribe to a calendar"
+msgstr "Prenumerera på en kalender"
+
+#: linux/share/monet/utilities/calendars.py:72
+msgid "Optional"
+msgstr "Valfritt"
+
+#: linux/share/monet/utilities/calendars.py:73
+msgid "&Calendar link"
+msgstr "&Kalenderlänk"
+
+#: linux/share/monet/utilities/calendars.py:74
+msgid "&Name"
+msgstr "&Namn"
+
+#: linux/share/monet/utilities/calendars.py:79
+msgid "Subscribe"
+msgstr "Prenumerera"
+
+#: linux/share/monet/utilities/calendars.py:85
+msgid "Enter an HTTPS or webcal calendar subscription link."
+msgstr "Ange en prenumerationslänk som börjar med https eller webcal."
+
+#: linux/share/monet/utilities/calendars.py:89
+msgid "Could not save this calendar."
+msgstr "Det gick inte att spara kalendern."
+
+#: linux/share/monet/utilities/calendars.py:106
+msgid "Could not remove this calendar."
+msgstr "Det gick inte att ta bort kalendern."

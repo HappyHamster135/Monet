@@ -10,6 +10,7 @@ class Action:
     command: tuple = ()
 
 ACTIONS = {
+    "calendars": Action("Notch calendars", "Calendar subscriptions and appointments", "view-calendar"),
     "shelf": Action("File shelf", "Files", "folder-favorites"),
     "downloads": Action("Watch downloads", "Files", "folder-download"),
     "notes": Action("Scratchpad", "Writing", "accessories-text-editor"),

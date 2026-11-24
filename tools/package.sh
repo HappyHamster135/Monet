@@ -28,6 +28,9 @@ cp "$ROOT/LICENSE" "$OUT/LICENSE.txt"
 case "$KIND" in
     linux)
         cp -r "$ROOT/linux/." "$OUT/"
+        # The same offline calendar reader ships in both the image and the portable package.
+        python3 -m pip download --disable-pip-version-check --no-deps --only-binary=:all: \
+            --require-hashes --dest "$OUT/share/monet/agenda-wheels" -r "$ROOT/tools/agenda-requirements.txt"
         cp "$ROOT/setup/monet_setup/region.py" "$OUT/libexec/monet_region.py"
         if [ "${MONET_PACKAGE_FOR_IMAGE:-0}" != 1 ]; then
             # The portable package runs on Bazzite without the Monet image's Python RPM.

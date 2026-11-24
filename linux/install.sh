@@ -433,6 +433,9 @@ install -d "$DATADIR/monet"
 put 644 "$SRC/share/monet/widgets/ScrollInput.qml" "$DATADIR/monet/widgets/ScrollInput.qml"
 install -d "$DATADIR/monet/utilities"
 install -m 644 "$SRC"/share/monet/utilities/*.py "$DATADIR/monet/utilities/"
+if [ -d "$SRC/share/monet/agenda-wheels" ]; then
+    tree "$SRC/share/monet/agenda-wheels" "$DATADIR/monet/agenda-wheels"
+fi
 tree "$SRC/share/monet/monet_files" "$DATADIR/monet/monet_files"
 tree "$SRC/share/monet/monet_runtime" "$DATADIR/monet/monet_runtime"
 put 644 "$SRC/share/monet/stacks.js" "$DATADIR/monet/stacks.js"

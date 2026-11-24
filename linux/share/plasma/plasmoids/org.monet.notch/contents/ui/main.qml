@@ -23,6 +23,8 @@ PlasmoidItem {
     property double now: Date.now()
     property int tab: 0
     property int musicView: 0
+    property bool viewingAgenda: false
+    property date agendaDay: new Date()
     property bool viewingWatch: false
     readonly property string watchPath: "/WindowWatch/n" + Plasmoid.id
     DBus.DBusServiceWatcher {
@@ -109,7 +111,8 @@ PlasmoidItem {
     }
     Component.onCompleted: refreshTime()
     onExpandedChanged: {
-        if (!expanded) return
+        if (!root.expanded) return
+        agendaDay = new Date()
         refreshTime()
         if (endTime) tab = 2
         else if (watch.registered) { viewingWatch = true; tab = 1 }
@@ -212,6 +215,7 @@ PlasmoidItem {
             Layout.fillWidth: true; Layout.fillHeight: true
             active: root.expanded
             sourceComponent: root.tab === 1 && root.viewingWatch && watch.registered ? watchPage
+                : root.tab === 3 && root.viewingAgenda ? agendaPage
                 : [musicPage, activityPage, timerPage, calendarPage][root.tab]
         }
         RowLayout {
@@ -330,6 +334,15 @@ PlasmoidItem {
         }
     }
     Component {
+        id: agendaPage
+        Agenda {
+            day: root.agendaDay
+            onChoose: date => root.agendaDay = date
+            onMonthRequested: root.viewingAgenda = false
+            onCalendarsRequested: root.openTool("calendars")
+        }
+    }
+    Component {
         id: calendarPage
         ColumnLayout {
             NoteStore { id: notes; helper: root.helper; Component.onCompleted: refresh() }
@@ -338,7 +351,14 @@ PlasmoidItem {
                 Layout.fillWidth: true; Layout.fillHeight: true
                 ink: Kirigami.Theme.textColor; dim: Kirigami.Theme.disabledTextColor; lily: Kirigami.Theme.highlightColor
                 notesButton: false; store: notes
+                Component.onCompleted: choose(root.agendaDay)
                 onOpened: day => { edit.day = day; entry.text = notes.noteFor(day); edit.open() }
+            }
+            C.Button {
+                Layout.alignment: Qt.AlignHCenter
+                text: i18n("Upcoming appointments")
+                icon.name: "view-calendar-agenda"
+                onClicked: { root.agendaDay = month.chosen; root.viewingAgenda = true }
             }
             C.Dialog {
                 id: edit
