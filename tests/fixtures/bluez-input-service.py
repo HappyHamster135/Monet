@@ -8,6 +8,8 @@ from gi.repository import Gio, GLib
 output, scenario = Path(sys.argv[1]), sys.argv[2]
 ADAPTER, DEVICE = 'org.bluez.Adapter1', 'org.bluez.Device1'
 AP, DP = '/org/bluez/hci0', '/org/bluez/hci0/dev_AA_BB_CC_DD_EE_FF'
+GATT = 'org.bluez.GattCharacteristic1'
+GP = DP+'/service0001/char0002'
 objects = {AP: {ADAPTER: {'Powered': GLib.Variant('b', scenario != 'power-on')}}}
 device = {'Adapter': GLib.Variant('o', AP), 'Paired': GLib.Variant('b', True),
     'Trusted': GLib.Variant('b', scenario != 'untrusted'), 'Blocked': GLib.Variant('b', False),
@@ -16,6 +18,8 @@ device = {'Adapter': GLib.Variant('o', AP), 'Paired': GLib.Variant('b', True),
     'UUIDs': GLib.Variant('as', ['00001812-0000-1000-8000-00805f9b34fb'])}
 if scenario != 'added':
     objects[DP] = {DEVICE: device}
+if scenario == 'traffic':
+    objects[GP] = {GATT: {'Value': GLib.Variant('ay', [0])}}
 bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
 bus.call_sync('org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus',
     'RequestName', GLib.Variant('(su)', ('org.bluez', 0)),
@@ -50,6 +54,12 @@ def transition():
     return False
 
 
+def traffic():
+    changed(GP, GATT, {'Value': GLib.Variant('ay', [1, 2, 3])})
+    changed(DP, DEVICE, {'RSSI': GLib.Variant('n', -50)})
+    return True
+
+
 def method(connection, sender, path, interface, name, parameters, invocation):
     global started
     record(name)
@@ -58,9 +68,11 @@ def method(connection, sender, path, interface, name, parameters, invocation):
         if not started:
             started = True
             GLib.timeout_add(150, transition)
+            if scenario == 'traffic':
+                GLib.timeout_add(10, traffic)
             GLib.timeout_add(1400, lambda: loop.quit() or False)
     elif name == 'Connect':
-        if scenario == 'in-progress':
+        if scenario in ('in-progress', 'traffic'):
             invocation.return_dbus_error('org.bluez.Error.InProgress', 'Another client is connecting')
         else:
             invocation.return_value(None)
@@ -94,6 +106,9 @@ register(DP, """<node><interface name="org.bluez.Device1"><method name="Connect"
 <property name="Icon" type="s" access="read"/>
 <property name="Connected" type="b" access="read"/>
 <property name="UUIDs" type="as" access="read"/>
+</interface></node>""")
+register(GP, """<node><interface name="org.bluez.GattCharacteristic1">
+<property name="Value" type="ay" access="read"/>
 </interface></node>""")
 print('READY', flush=True)
 loop.run()

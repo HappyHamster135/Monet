@@ -148,11 +148,27 @@ class NativeInputReconnect(unittest.TestCase):
             try:
                 self.assertTrue(select.select([server.stdout],[],[],5)[0], 'Private BlueZ did not start')
                 self.assertEqual(server.stdout.readline(),b'READY\n')
-                result=subprocess.run([sys.executable,str(HELPER),*(['--inspect'] if inspect else [])],
+                command=[sys.executable,str(HELPER),*(['--inspect'] if inspect else [])]
+                if scenario=='traffic':
+                    # Instrument the client in a separate process on the private
+                    # bus, without adding production logging or testing switches.
+                    calls=Path(env['HOME'])/'reconcile.txt'
+                    runner=("import runpy; from pathlib import Path; "
+                        f"m=runpy.run_path({str(HELPER)!r}); c=m['Reconnect']; f=c.reconcile; "
+                        f"p=Path({str(calls)!r}); "
+                        "exec('def traced(self):\\n with p.open(\"a\") as s: s.write(\"tick\\\\n\")\\n return f(self)'); "
+                        "c.reconcile=traced; m['main']()")
+                    command=[sys.executable,'-c',runner]
+                result=subprocess.run(command,
                     env=env,capture_output=True,text=True,timeout=8)
                 self.assertEqual(result.returncode,0,result.stdout+result.stderr)
                 # PyGObject prints callback errors without changing the exit code.
                 self.assertNotIn('Traceback',result.stderr)
+                if scenario=='disconnect':
+                    # The client can finish before the subsequent user action.
+                    server.wait(timeout=5)
+                if scenario=='traffic':
+                    self.assertLessEqual(len(calls.read_text().splitlines()),3)
                 records=[json.loads(line) for line in events.read_text().splitlines()]
                 self.assertEqual(sum(r['event']=='GetManagedObjects' for r in records),1)
                 return records,result.stdout
@@ -179,6 +195,8 @@ class NativeInputReconnect(unittest.TestCase):
             with self.subTest(scenario=scenario):
                 records,_=self.run_case(scenario)
                 self.assertNotIn('Connect',[r['event'] for r in records])
+                if scenario=='disconnect':
+                    self.assertIn('user-disconnect',[r['event'] for r in records])
 
     def test_existing_bluez_attempt_is_not_retried(self):
         records,_=self.run_case('in-progress')
@@ -188,3 +206,7 @@ class NativeInputReconnect(unittest.TestCase):
         records,output=self.run_case('ready',inspect=True)
         self.assertNotIn('Connect',[r['event'] for r in records])
         self.assertEqual(json.loads(output),dict(known_inputs=1,connected_inputs=0,eligible_inputs=1))
+
+    def test_hid_data_and_signal_strength_do_not_trigger_reconciliation(self):
+        records,_=self.run_case('traffic')
+        self.assertEqual(sum(r['event']=='Connect' for r in records),1)

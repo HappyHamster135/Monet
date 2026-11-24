@@ -13,6 +13,7 @@ ADAPTER = 'org.bluez.Adapter1'
 DEVICE = 'org.bluez.Device1'
 INPUT_UUIDS = {'00001124-0000-1000-8000-00805f9b34fb',
                '00001812-0000-1000-8000-00805f9b34fb'}
+INPUT_PROPERTIES = {'Paired', 'Trusted', 'Blocked', 'Connected', 'Adapter', 'UUIDs', 'Icon'}
 
 
 def known_input(properties):
@@ -59,11 +60,23 @@ class Reconnect:
         if not self.manager.get_name_owner():
             self.finish()
             return
-        for signal in ('object-added', 'object-removed', 'interface-added',
-                       'interface-removed', 'interface-proxy-properties-changed'):
-            self.manager.connect(signal, self.changed)
+        for signal in ('object-added', 'interface-added'):
+            self.manager.connect(signal, self.object_added)
+        self.manager.connect('interface-proxy-properties-changed', self.properties_changed)
         self.manager.connect('notify::name-owner', self.changed)
         self.changed()
+
+    def object_added(self, manager, obj, *args):
+        if obj.get_interface(ADAPTER) or obj.get_interface(DEVICE):
+            self.changed()
+
+    def properties_changed(self, manager, obj, proxy, changed, invalidated):
+        name = proxy.get_interface_name()
+        if name not in (ADAPTER, DEVICE):
+            return
+        relevant = {'Powered'} if name == ADAPTER else INPUT_PROPERTIES
+        if relevant.intersection(changed.unpack()) or relevant.intersection(invalidated):
+            self.changed()
 
     def snapshot(self):
         objects = {}
@@ -91,11 +104,14 @@ class Reconnect:
             self.finish()
             return False
         objects = self.snapshot()
+        devices = [o[DEVICE] for o in objects.values() if known_input(o.get(DEVICE, {}))]
         if self.inspect:
-            devices = [o[DEVICE] for o in objects.values() if known_input(o.get(DEVICE, {}))]
             print(json.dumps(dict(known_inputs=len(devices),
                 connected_inputs=sum(d.get('Connected') is True for d in devices),
                 eligible_inputs=len(list(eligible(objects))))))
+            self.finish()
+            return False
+        if devices and all(d.get('Connected') is True for d in devices):
             self.finish()
             return False
         # Remember already connected devices too: a later user disconnect during
