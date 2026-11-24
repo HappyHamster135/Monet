@@ -41,6 +41,13 @@ class BootTiming(unittest.TestCase):
             self.assertFalse(bench.login_controls(image))
 
     @unittest.skipUnless(HAVE_PIL,"requires Pillow for actual boot frames")
+    def test_real_installed_disk_controls_are_detected_at_1280_by_800(self):
+        # Unedited installed-disk KVM frame from development run 45293843303.
+        with Image.open(ROOT/'tests/fixtures/boot-login-controls.png') as image:
+            self.assertTrue(bench.login_clock(image))
+            self.assertTrue(bench.login_controls(image))
+
+    @unittest.skipUnless(HAVE_PIL,"requires Pillow for actual boot frames")
     def test_uniform_screens_and_a_small_brand_dot_are_not_ready(self):
         from PIL import ImageDraw
         for color in ('black','white','#F2552C'):

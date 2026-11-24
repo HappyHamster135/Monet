@@ -39,8 +39,10 @@ Recorded physical boot metadata is currently 23.454174 s before the kernel
 (firmware plus loader) and 11.718795 s from kernel start to login-manager process
 start: about 35.17 s combined. This is not a first-visible-login measurement, and
 is not a measured 0.9.8-9 improvement. The new tests must finish before recording
-a new end-to-end result. Six focused checks validate phase accounting, real
-release qualification frames and provisioning-input validation.
+a new end-to-end result. Seven focused checks validate phase accounting, real
+release qualification frames, a real installed-disk password form at 1280×800,
+and provisioning-input validation. Failed attempts retain observed frame times
+and SSH diagnostics separately from completed boot measurements.
 
 Initramfs compression was also checked against the exact published AMD/Intel
 payload, on one pinned CPU at low priority. Levels 3, 6, 9, 12, 15 and 19 all

@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import shutil
 import socket
 import statistics
@@ -88,32 +89,42 @@ def qmp(path, command, **arguments):
 def credentials(public_key):
     if not re.fullmatch(r'ssh-ed25519 [A-Za-z0-9+/=]+ monet-boot-benchmark', public_key):
         raise ValueError('Unexpected benchmark public key')
-    setup = ('install -d -m 0700 /root/.ssh; '
-             f'printf "%s\\n" "{public_key}" > /root/.ssh/authorized_keys; '
-             'chmod 0600 /root/.ssh/authorized_keys; restorecon -RF /root/.ssh; '
+    setup = ('install -d -m 0755 /etc/ssh /etc/sudoers.d /run/sshd; ssh-keygen -A; '
+             f'printf "%s\\n" "{public_key}" > /etc/ssh/monet-bench-authorized_keys; '
+             'chmod 0644 /etc/ssh/monet-bench-authorized_keys; '
              'if ! id monet-bench >/dev/null 2>&1; then useradd -m monet-bench; '
-             'echo monet-bench:MonetBenchmarkOnly42 | chpasswd; fi')
+             'echo monet-bench:MonetBenchmarkOnly42 | chpasswd; fi; '
+             'printf "%s\\n" "monet-bench ALL=(root) NOPASSWD: ALL" > /etc/sudoers.d/90-monet-bench; '
+             'chmod 0440 /etc/sudoers.d/90-monet-bench; '
+             'restorecon -RF /etc/ssh /etc/sudoers.d/90-monet-bench /run/sshd')
     unit = ('[Unit]\nDefaultDependencies=no\nConditionPathExists=!/etc/initrd-release\n'
             'After=local-fs.target systemd-tmpfiles-setup.service systemd-sysusers.service\n'
-            'Before=systemd-user-sessions.service plasmalogin.service sshd.service\n'
+            'Before=systemd-user-sessions.service plasmalogin.service monet-boot-bench-sshd.service\n'
             '[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/bin/sh -ec \''+setup+'\'\n')
     return {'systemd.extra-unit.monet-boot-bench-setup.service':unit,
             'systemd.unit-dropin.sysinit.target':'[Unit]\nWants=monet-boot-bench-setup.service monet-boot-bench-journal.service\n',
             'systemd.extra-unit.monet-boot-bench-journal.service':
-                '[Unit]\nDefaultDependencies=no\nAfter=systemd-journald.socket\n[Service]\n'
-                "ExecStart=/bin/sh -c 'exec journalctl -b -f -o short-monotonic >/dev/ttyS0'\n",
-            'systemd.unit-dropin.sshd.service':
-                '[Unit]\nAfter=monet-boot-bench-setup.service\n[Service]\nExecStart=\n'
-                'ExecStart=/usr/sbin/sshd -D -e -f /dev/null -oPermitRootLogin=prohibit-password '
-                '-oUsePAM=yes -oPasswordAuthentication=no -oKbdInteractiveAuthentication=no '
-                '-oAuthorizedKeysFile=/root/.ssh/authorized_keys\n',
-            'systemd.unit-dropin.multi-user.target':'[Unit]\nWants=sshd.service\n'}
+                '[Unit]\nDefaultDependencies=no\nConditionPathExists=!/etc/initrd-release\n'
+                'After=local-fs.target systemd-journal-flush.service\n[Service]\n'
+                "ExecStart=/bin/sh -c 'exec journalctl -b -f -n all -o short-monotonic >/dev/ttyS0'\n",
+            'systemd.extra-unit.monet-boot-bench-sshd.service':
+                '[Unit]\nAfter=network.target firewalld.service monet-boot-bench-setup.service\n'
+                '[Service]\nType=exec\n'
+                'ExecStartPre=-/usr/bin/firewall-cmd --add-service=ssh --timeout=900\n'
+                'ExecStart=/usr/sbin/sshd -D -e -f /dev/null -h /etc/ssh/ssh_host_ed25519_key '
+                '-oPermitRootLogin=no -oAllowUsers=monet-bench -oUsePAM=no '
+                '-oPasswordAuthentication=no -oKbdInteractiveAuthentication=no '
+                '-oAuthorizedKeysFile=/etc/ssh/monet-bench-authorized_keys\n',
+            'systemd.unit-dropin.sshd.service':'[Unit]\nConditionPathExists=/run/monet-bench-stock-sshd-disabled\n',
+            'systemd.unit-dropin.sshd.socket':'[Unit]\nConditionPathExists=/run/monet-bench-stock-sshd-disabled\n',
+            'systemd.unit-dropin.multi-user.target':'[Unit]\nWants=monet-boot-bench-sshd.service\n'}
 
 
 def ssh_command(port, key, command):
     return ['ssh','-i',str(key),'-p',str(port),'-o','IdentitiesOnly=yes',
         '-o','StrictHostKeyChecking=no','-o','UserKnownHostsFile=/dev/null',
-        '-o','ConnectTimeout=2','-o','BatchMode=yes','root@127.0.0.1',command]
+        '-o','ConnectTimeout=2','-o','BatchMode=yes','monet-bench@127.0.0.1',
+        'sudo -n /bin/sh -c '+shlex.quote(command)]
 
 
 def ssh(port, key, command, timeout=15):
@@ -141,7 +152,8 @@ def boot(args, disk, variables, key, index, runtime):
     for name, value in credentials(key.with_suffix('.pub').read_text().strip()).items():
         payload = base64.b64encode(value.encode()).decode()
         command += ['-smbios', f'type=11,value=io.systemd.credential.binary:{name}={payload}']
-    process = None; probe = None; started = time.monotonic(); first = None; stable = 0
+    process = None; probe = None; active = False
+    started = time.monotonic(); first = None; stable = 0
     clock_frame = None; input_sent = None; input_verified = None
     try:
         with (work/'qemu.log').open('w') as log:
@@ -154,12 +166,15 @@ def boot(args, disk, variables, key, index, runtime):
             # a refused connection or slow PAM handshake is not a display delay.
             if probe is not None and (probe.poll() is not None or time.monotonic()-probe_started > 5):
                 if probe.poll() is None: probe.kill()
-                output,_ = probe.communicate()
+                output,error = probe.communicate()
+                with (work/'ssh-readiness.log').open('a') as log:
+                    log.write(json.dumps(dict(elapsed_ms=round((time.monotonic()-started)*1000),
+                        returncode=probe.returncode,stdout=output[-200:],stderr=error[-600:]))+'\n')
                 active = probe.returncode == 0 and output.strip() == 'active'
                 probe = None; next_ssh = time.monotonic()+2
             if not active and probe is None and time.monotonic() >= next_ssh:
                 probe = subprocess.Popen(ssh_command(port,key,'systemctl is-active plasmalogin.service'),
-                    stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True)
+                    stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
                 probe_started = time.monotonic()
             if monitor.exists():
                 qmp(monitor,'screendump',filename=str(frame))
@@ -215,7 +230,6 @@ def boot(args, disk, variables, key, index, runtime):
                 "l=importlib.machinery.SourceFileLoader('bench_boot_flags','/usr/libexec/monet-boot'); "
                 "m=importlib.util.module_from_spec(importlib.util.spec_from_loader(l.name,l)); "
                 "l.exec_module(m); m.edit_grub('set','boot_success=1','boot_indeterminate=0')")
-            import shlex
             marked = ssh(port,key,'python3 -c '+shlex.quote(program))
         if marked.returncode: raise RuntimeError('Could not seed a successful normal boot: '+marked.stderr[-300:])
         ssh(port,key,'systemctl --no-block poweroff',timeout=10)
@@ -223,6 +237,12 @@ def boot(args, disk, variables, key, index, runtime):
         except subprocess.TimeoutExpired: raise RuntimeError('VM did not shut down cleanly; refusing another sample')
         return result
     finally:
+        (work/'observations.json').write_text(json.dumps(dict(
+            visible_login_ms=round(clock_frame*1000,3) if clock_frame is not None else None,
+            visible_controls_ms=round(first*1000,3) if first is not None else None,
+            input_sent_ms=round(input_sent*1000,3) if input_sent is not None else None,
+            keyboard_verified_ms=round(input_verified*1000,3) if input_verified is not None else None,
+            service_verified=active),indent=2)+'\n')
         if probe is not None:
             if probe.poll() is None: probe.kill()
             probe.wait()
