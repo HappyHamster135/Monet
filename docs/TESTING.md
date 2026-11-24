@@ -1,5 +1,33 @@
 # Testing Monet on real hardware
 
+## 0.9.8-9 input-device discovery during boot — 24 November 2026
+
+The login screen accepted a test key **7.13 seconds earlier** on the median
+normal boot with the new input rule. Two disposable overlays used the same
+installed 0.9.8-9 disk at `4938448`. The control restored the released udev rule
+after provisioning. Both ran on the same one-vCPU KVM runner with 8 GiB RAM
+and software graphics. The control ran first and host page cache was uncontrolled.
+The table excludes each overlay's provisioning boot. [Boot journals and login screenshots](https://github.com/HappyHamster135/Monet/actions/runs/45348630847)
+
+| Normal cold boots | Visible login, three samples (s) | Median visible (s) | Accepted key, three samples (s) | Median input (s) |
+| --- | --- | ---: | --- | ---: |
+| Released 0.9.8-8 | 45.60, 45.35, 45.25 | 45.35 | 46.58, 46.32, 46.22 | 46.32 |
+| 0.9.8-9 with original input rule | 42.91, 40.70, 39.80 | 40.70 | 43.90, 41.36, 40.45 | 41.36 |
+| 0.9.8-9 with new input rule | 33.11, 33.66, 33.55 | 33.55 | 33.77, 34.65, 34.23 | 34.23 |
+
+Each control boot recorded seven failed Input Remapper autoload calls. Each
+candidate boot recorded zero. The login manager's median activation time,
+including its graphics readiness check, fell from 7.04 s to 0.11 s. The largest
+remaining interval on this VM was 16.45 s from the switch to the installed
+system until the login manager began starting.
+
+The previous ThinkPad boot on 0.9.8-8 recorded 17 failed remapper calls before
+the system bus began listening. In isolated udev add-event tests using the
+ThinkPad's 18 currently attached input nodes, the new rule queued zero helpers
+with the bus absent and the original 18 commands with its socket present.
+Physical power-on timing with this build remains unmeasured. The development
+build passed with 2,442 desktop checks, 19 skips and zero failures. [Build results](https://github.com/HappyHamster135/Monet/actions/runs/45348630793)
+
 ## 0.9.8-9 installed-disk login recheck — 24 November 2026
 
 On the same single-vCPU KVM runner, normal power-on to a visible login took
