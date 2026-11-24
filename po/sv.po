@@ -15764,3 +15764,222 @@ msgstr "Återställs %1"
 #: linux/share/monet/utilities/codex_limits.py:209
 msgid "Checked %1"
 msgstr "Kontrollerades %1"
+
+#: linux/share/monet/utilities/actions.py:51
+msgid "Homebrew packages"
+msgstr "Homebrew-paket"
+
+#: linux/share/monet/utilities/brew_page.py:19
+msgid "Package"
+msgstr "Paket"
+
+#: linux/share/monet/utilities/brew_page.py:70
+msgid "Installed packages"
+msgstr "Installerade paket"
+
+#: linux/share/monet/utilities/brew_page.py:71
+msgid "Find packages"
+msgstr "Hitta paket"
+
+#: linux/share/monet/utilities/brew_page.py:78
+msgid "Options"
+msgstr "Alternativ"
+
+#: linux/share/monet/utilities/brew_page.py:81
+msgid "Choose Homebrew executable…"
+msgstr "Välj körbar Homebrew-fil…"
+
+#: linux/share/monet/utilities/brew_page.py:82
+msgid "Use detected Homebrew"
+msgstr "Använd automatiskt identifierad Homebrew"
+
+#: linux/share/monet/utilities/brew_page.py:84 linux/share/monet/utilities/brew_page.py:134
+msgid "Homebrew installation guide"
+msgstr "Installationsguide för Homebrew"
+
+#: linux/share/monet/utilities/brew_page.py:113
+msgid "Update"
+msgstr "Uppdatera"
+
+#: linux/share/monet/utilities/brew_page.py:114
+msgid "Remove…"
+msgstr "Ta bort…"
+
+#: linux/share/monet/utilities/brew_page.py:121
+msgid "Refresh list"
+msgstr "Uppdatera listan"
+
+#: linux/share/monet/utilities/brew_page.py:122
+msgid "Update Homebrew"
+msgstr "Uppdatera Homebrew"
+
+#: linux/share/monet/utilities/brew_page.py:123
+msgid ""
+"Update Homebrew and its package catalog, then check installed versions."
+msgstr ""
+"Uppdatera Homebrew och dess paketkatalog och kontrollera sedan installerade versioner."
+
+#: linux/share/monet/utilities/brew_page.py:124
+msgid "Update all…"
+msgstr "Uppdatera alla…"
+
+#: linux/share/monet/utilities/brew_page.py:135
+msgid "Operation log"
+msgstr "Åtgärdslogg"
+
+#: linux/share/monet/utilities/brew_page.py:137
+msgid "Copy command"
+msgstr "Kopiera kommando"
+
+#: linux/share/monet/utilities/brew_page.py:138
+msgid "Cancel operation"
+msgstr "Avbryt åtgärden"
+
+#: linux/share/monet/utilities/brew_page.py:162
+msgid "Choose Homebrew executable"
+msgstr "Välj körbar Homebrew-fil"
+
+#: linux/share/monet/utilities/brew_page.py:197
+msgid ""
+"This Homebrew installation is incomplete. Choose a working installation or open the setup guide."
+msgstr ""
+"Homebrew-installationen är ofullständig. Välj en fungerande installation eller öppna installationsguiden."
+
+#: linux/share/monet/utilities/brew_page.py:198
+msgid "Homebrew was not found. Choose its executable or open the setup guide."
+msgstr ""
+"Homebrew hittades inte. Välj dess körbara fil eller öppna installationsguiden."
+
+#: linux/share/monet/utilities/brew_page.py:211
+msgid "All packages"
+msgstr "Alla paket"
+
+#: linux/share/monet/utilities/brew_page.py:211
+msgid "Updates available"
+msgstr "Tillgängliga uppdateringar"
+
+#: linux/share/monet/utilities/brew_page.py:211 linux/share/monet/utilities/brew_page.py:454
+msgid "Dependencies"
+msgstr "Beroenden"
+
+#: linux/share/monet/utilities/brew_page.py:213
+msgid "Formulae"
+msgstr "Formler"
+
+#: linux/share/monet/utilities/brew_page.py:214
+msgid "Casks"
+msgstr "Casks"
+
+#: linux/share/monet/utilities/brew_page.py:218
+msgid "Search by package name"
+msgstr "Sök efter paketnamn"
+
+#: linux/share/monet/utilities/brew_page.py:218
+msgid "Filter installed packages"
+msgstr "Filtrera installerade paket"
+
+#: linux/share/monet/utilities/brew_page.py:266
+msgid "Formula"
+msgstr "Formel"
+
+#: linux/share/monet/utilities/brew_page.py:266
+msgid "Cask"
+msgstr "Cask"
+
+#: linux/share/monet/utilities/brew_page.py:270
+msgid "Installed as a dependency"
+msgstr "Installerat som beroende"
+
+#: linux/share/monet/utilities/brew_page.py:272
+msgid "Update available"
+msgstr "Uppdatering tillgänglig"
+
+#: linux/share/monet/utilities/brew_page.py:284
+msgid "Enter a package name to search."
+msgstr "Ange ett paketnamn för att söka."
+
+#: linux/share/monet/utilities/brew_page.py:301
+msgid "Update all Homebrew packages?"
+msgstr "Uppdatera alla Homebrew-paket?"
+
+#: linux/share/monet/utilities/brew_page.py:302
+msgid ""
+"Homebrew will upgrade outdated packages and any dependencies it needs. Pinned formulae stay pinned."
+msgstr ""
+"Homebrew uppdaterar föråldrade paket och de beroenden som behövs. Låsta formler förblir låsta."
+
+#: linux/share/monet/utilities/brew_page.py:312
+msgid "Remove Homebrew package?"
+msgstr "Ta bort Homebrew-paket?"
+
+#: linux/share/monet/utilities/brew_page.py:313
+msgid "Remove %1 using Homebrew?"
+msgstr "Vill du ta bort %1 med Homebrew?"
+
+#: linux/share/monet/utilities/brew_page.py:326
+msgid "Cancelling the Homebrew operation…"
+msgstr "Avbryter Homebrew-åtgärden…"
+
+#: linux/share/monet/utilities/brew_page.py:363
+msgid "Installing %1…"
+msgstr "Installerar %1…"
+
+#: linux/share/monet/utilities/brew_page.py:363
+msgid "Removing %1…"
+msgstr "Tar bort %1…"
+
+#: linux/share/monet/utilities/brew_page.py:364
+msgid "Updating %1…"
+msgstr "Uppdaterar %1…"
+
+#: linux/share/monet/utilities/brew_page.py:364
+msgid "Updating Homebrew…"
+msgstr "Uppdaterar Homebrew…"
+
+#: linux/share/monet/utilities/brew_page.py:365
+msgid "packages"
+msgstr "paket"
+
+#: linux/share/monet/utilities/brew_page.py:367
+msgid "Reading Homebrew packages…"
+msgstr "Läser Homebrew-paket…"
+
+#: linux/share/monet/utilities/brew_page.py:399
+msgid "Homebrew operation cancelled."
+msgstr "Homebrew-åtgärden avbröts."
+
+#: linux/share/monet/utilities/brew_page.py:400
+msgid "Homebrew operation completed."
+msgstr "Homebrew-åtgärden är klar."
+
+#: linux/share/monet/utilities/brew_page.py:400
+msgid "Homebrew could not finish. See the operation log."
+msgstr "Homebrew kunde inte slutföra åtgärden. Se åtgärdsloggen."
+
+#: linux/share/monet/utilities/brew_page.py:417 linux/share/monet/utilities/brew_page.py:444
+msgid "No matching packages."
+msgstr "Inga matchande paket."
+
+#: linux/share/monet/utilities/brew_page.py:419
+msgid "Homebrew returned too much data."
+msgstr "Homebrew returnerade för mycket data."
+
+#: linux/share/monet/utilities/brew_page.py:419
+msgid "Could not read Homebrew packages."
+msgstr "Det gick inte att läsa Homebrew-paketen."
+
+#: linux/share/monet/utilities/brew_page.py:427
+msgid "Homebrew returned unreadable package information."
+msgstr "Homebrew returnerade oläsbar paketinformation."
+
+#: linux/share/monet/utilities/brew_page.py:440
+msgid "%1 installed packages."
+msgstr "Antal installerade paket: %1."
+
+#: linux/share/monet/utilities/brew_page.py:444
+msgid "%1 matching packages."
+msgstr "Antal matchande paket: %1."
+
+#: linux/share/monet/utilities/brew_page.py:315
+msgid "Remove all installed versions of %1 using Homebrew?"
+msgstr "Vill du ta bort alla installerade versioner av %1 med Homebrew?"

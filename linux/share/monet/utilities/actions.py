@@ -48,6 +48,7 @@ ACTIONS = {
     "storage": Action(N_("Review storage and unused files"), "Files", "drive-harddisk", ("@monet-settings", "storage")),
     "apps": Action(N_("Manage and uninstall apps"), "Files", "applications-all", ("@monet-games", "--apps")),
     "updates": Action(N_("System updates"), "System", "system-software-update", ("@monet-settings", "updates")),
+    "homebrew": Action(N_("Homebrew packages"), "System brew formulae casks install uninstall upgrade updates package manager", "applications-other"),
     "store": Action(N_("App store and updates"), "System", "system-software-install", ("@monet-store",)),
     "wallpaper": Action(N_("Choose wallpaper"), "Display", "preferences-desktop-wallpaper"),
     "display": Action(N_("Brightness, displays and HDR"), "Display", "video-display", ("@monet-settings", "display")),

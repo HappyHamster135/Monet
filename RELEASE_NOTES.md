@@ -12,6 +12,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   In Calendar → Upcoming appointments, link calendar files or follow subscriptions. The agenda shows recurring meetings, schedule changes and all-day events, including a saved copy when offline.
   In Activity → Watch, pin a window region and get an alert when it changes, settles, or shows a phrase.
   Dropping files on it adds them to the shelf. Music levels and accessory alerts are optional.
+- **Homebrew packages.** Search for formulae and casks, install or remove individual packages, and review and apply updates from Monet Utilities.
 - **Cleaning mode.** In Monet Utilities, choose how long to pause input while wiping the keyboard, trackpad or screen. The normal unlock screen returns when time runs out or when you finish early.
 - **Find Utilities from anywhere.** Press Super+Alt+Space for the tool search and your favorites, or search from the Home Bar or Super+R. Select a result to open it directly.
 - **Codex account limits.** Enable them in Utilities → AI session usage to see your remaining allowance and reset times in the notch. The account check runs when you use the feature.

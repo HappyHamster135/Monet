@@ -15754,3 +15754,218 @@ msgstr ""
 #: linux/share/monet/utilities/codex_limits.py:209
 msgid "Checked %1"
 msgstr ""
+
+#: linux/share/monet/utilities/actions.py:51
+msgid "Homebrew packages"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:19
+msgid "Package"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:70
+msgid "Installed packages"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:71
+msgid "Find packages"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:78
+msgid "Options"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:81
+msgid "Choose Homebrew executable…"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:82
+msgid "Use detected Homebrew"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:84 linux/share/monet/utilities/brew_page.py:134
+msgid "Homebrew installation guide"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:113
+msgid "Update"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:114
+msgid "Remove…"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:121
+msgid "Refresh list"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:122
+msgid "Update Homebrew"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:123
+msgid ""
+"Update Homebrew and its package catalog, then check installed versions."
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:124
+msgid "Update all…"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:135
+msgid "Operation log"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:137
+msgid "Copy command"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:138
+msgid "Cancel operation"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:162
+msgid "Choose Homebrew executable"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:197
+msgid ""
+"This Homebrew installation is incomplete. Choose a working installation or open the setup guide."
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:198
+msgid "Homebrew was not found. Choose its executable or open the setup guide."
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:211
+msgid "All packages"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:211
+msgid "Updates available"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:211 linux/share/monet/utilities/brew_page.py:454
+msgid "Dependencies"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:213
+msgid "Formulae"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:214
+msgid "Casks"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:218
+msgid "Search by package name"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:218
+msgid "Filter installed packages"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:266
+msgid "Formula"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:266
+msgid "Cask"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:270
+msgid "Installed as a dependency"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:272
+msgid "Update available"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:284
+msgid "Enter a package name to search."
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:301
+msgid "Update all Homebrew packages?"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:302
+msgid ""
+"Homebrew will upgrade outdated packages and any dependencies it needs. Pinned formulae stay pinned."
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:312
+msgid "Remove Homebrew package?"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:313
+msgid "Remove %1 using Homebrew?"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:326
+msgid "Cancelling the Homebrew operation…"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:363
+msgid "Installing %1…"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:363
+msgid "Removing %1…"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:364
+msgid "Updating %1…"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:364
+msgid "Updating Homebrew…"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:365
+msgid "packages"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:367
+msgid "Reading Homebrew packages…"
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:399
+msgid "Homebrew operation cancelled."
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:400
+msgid "Homebrew operation completed."
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:400
+msgid "Homebrew could not finish. See the operation log."
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:417 linux/share/monet/utilities/brew_page.py:444
+msgid "No matching packages."
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:419
+msgid "Homebrew returned too much data."
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:419
+msgid "Could not read Homebrew packages."
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:427
+msgid "Homebrew returned unreadable package information."
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:440
+msgid "%1 installed packages."
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:444
+msgid "%1 matching packages."
+msgstr ""
+
+#: linux/share/monet/utilities/brew_page.py:315
+msgid "Remove all installed versions of %1 using Homebrew?"
+msgstr ""

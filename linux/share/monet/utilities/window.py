@@ -462,6 +462,9 @@ class Window(QMainWindow):
             else:
                 self.show_devices()
                 self.issue("Fan speeds are managed by this PC’s firmware. CoolerControl can manage supported fan controllers.")
+        elif key == "homebrew":
+            from brew_page import BrewPage
+            self.page(key, lambda: BrewPage(self)).open()
         elif key == "agents":
             from agent_page import AgentUsage
             self.page(key, lambda: AgentUsage(self)).refresh()
