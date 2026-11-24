@@ -80,6 +80,26 @@ class GraphicsAutoload(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
+class NfsReadAhead(unittest.TestCase):
+    def test_only_anonymous_devices_reach_the_original_helper(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            rule = root / 'usr/lib/udev/rules.d/99-nfs.rules'
+            rule.parent.mkdir(parents=True)
+            original = ('SUBSYSTEM=="bdi", ACTION=="add", PROGRAM="/usr/libexec/nfsrahead %k", '
+                        'ATTR{read_ahead_kb}="%c"\n')
+            rule.write_text(original)
+            boot.prepare(root)
+            expected = original.replace('PROGRAM=', 'KERNEL=="0:*", PROGRAM=')
+            self.assertEqual(rule.read_text(), expected)
+            boot.prepare(root)
+            self.assertEqual(rule.read_text(), expected)
+            newer = '# local or updated vendor rule\n' + original
+            rule.write_text(newer)
+            boot.prepare(root)
+            self.assertEqual(rule.read_text(), newer)
+
+
 class TrustRefreshLifecycle(unittest.TestCase):
     LEGACY = """[Unit]
 ConditionPathIsMountPoint=/sysroot

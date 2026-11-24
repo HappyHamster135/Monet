@@ -148,6 +148,17 @@ def ssh(port, key, command, timeout=15):
     return subprocess.run(ssh_command(port,key,command),capture_output=True,text=True,timeout=timeout)
 
 
+def kernel_origin_bounds(readings):
+    """Bound the guest kernel's monotonic zero on the host's power-on timeline."""
+    if not readings:
+        return None
+    earliest = max(before - guest for before, guest, after in readings)
+    latest = min(after - guest for before, guest, after in readings)
+    if earliest > latest:
+        return None
+    return dict(earliest_ms=round(earliest, 3), latest_ms=round(latest, 3))
+
+
 def boot(args, disk, variables, key, index, runtime):
     from PIL import Image
     work = args.output / f'boot-{index:02d}'; work.mkdir()
@@ -235,6 +246,19 @@ def boot(args, disk, variables, key, index, runtime):
         reply = ssh(port,key,'systemctl show '+ ' '.join('-p '+p for p in props.split()))
         if reply.returncode: raise RuntimeError('Cannot collect guest boot timing')
         values = properties(reply.stdout)
+        # Calibrate only after seeing the keypress, so the probes cannot delay
+        # login. GRUB under OVMF often does not export EFI loader timestamps.
+        readings = []
+        for _ in range(3):
+            before = (time.monotonic() - started) * 1000
+            sample = ssh(port, key, """python3 -c 'import time; print(time.monotonic_ns())'""")
+            after = (time.monotonic() - started) * 1000
+            if sample.returncode == 0 and sample.stdout.strip().isdecimal():
+                readings.append((before, int(sample.stdout.strip()) / 1_000_000, after))
+        manager = ssh(port, key, 'systemctl show plasmalogin.service '
+                      '-p InactiveExitTimestampMonotonic -p ActiveEnterTimestampMonotonic')
+        if manager.returncode:
+            raise RuntimeError('Cannot collect login manager activation timing')
         evidence = ssh(port,key,'monet --version; uname -r; bootc status --json; systemd-analyze time; systemd-analyze critical-chain plasmalogin.service; '
             'systemd-analyze blame | head -n 20; printf "\\nBOOT_MENU\\n"; '
             'grep -E "^[[:space:]]*set timeout(_style)?=" /boot/grub2/grub.cfg; '
@@ -282,6 +306,7 @@ def boot(args, disk, variables, key, index, runtime):
                       power_on_to_controls_ms=round(first*1000,3),
                       keyboard_verified_ms=round(input_verified*1000,3),
                       sampling_interval_ms=250,guest_properties=values,guest_phases=timing_phases(values),
+                      kernel_origin=kernel_origin_bounds(readings), login_manager=properties(manager.stdout),
                       trust_refresh=trust,wifi_migration=migration)
         (work/'timing.json').write_text(json.dumps(result,indent=2)+'\n')
         # Seed the next *normal* boot exactly as the stock successful-login helper

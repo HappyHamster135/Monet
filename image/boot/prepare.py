@@ -162,6 +162,13 @@ def autoload_config(text):
 
 def prepare(root):
     root = Path(root)
+    # The NFS client gives its backing devices anonymous major:minor names.
+    # Avoid launching nfsrahead for local disks and named Btrfs/EROFS devices.
+    # Only narrow the known vendor rule; keep any future upstream rule intact.
+    rule = root / 'usr/lib/udev/rules.d/99-nfs.rules'
+    original = 'SUBSYSTEM=="bdi", ACTION=="add", PROGRAM="/usr/libexec/nfsrahead %k", ATTR{read_ahead_kb}="%c"'
+    if not rule.is_symlink() and rule.is_file() and rule.read_text().strip() == original:
+        rule.write_text(original.replace('PROGRAM=', 'KERNEL=="0:*", PROGRAM=') + '\n')
     prepare_trust(root)
     prepare_wifi(root)
     prepare_hardware(root)

@@ -18,6 +18,12 @@ bench=importlib.util.module_from_spec(spec);spec.loader.exec_module(bench)
 
 
 class BootTiming(unittest.TestCase):
+    def test_kernel_clock_offset_is_bounded_by_all_round_trips(self):
+        self.assertEqual(bench.kernel_origin_bounds([(108, 100, 116), (211, 200, 214)]),
+                         {'earliest_ms': 11, 'latest_ms': 14})
+        self.assertIsNone(bench.kernel_origin_bounds([]))
+        self.assertIsNone(bench.kernel_origin_bounds([(101, 100, 102), (210, 200, 211)]))
+
     def test_recorded_hardware_phases_do_not_double_count_the_bootloader(self):
         phases=bench.timing_phases(dict(FirmwareTimestampMonotonic='23454174',LoaderTimestampMonotonic='9073885',
             InitRDTimestampMonotonic='1836162',UserspaceTimestampMonotonic='6620013'))
