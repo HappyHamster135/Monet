@@ -153,7 +153,7 @@ PlayerContainer *MediaKeyRules::target(PlayerContainer *active, const QString &a
         m_pending.clear();
         m_deadline.stop();
     }
-    if (active && !m_blocked.contains(appKey(active))) {
+    if (active && active->canControl() && !m_blocked.contains(appKey(active))) {
         m_last = active;
         return active;
     }

@@ -30,7 +30,7 @@ def player(name):
         with (Path.home() / "events").open("a") as f:
             f.write(f"{name} {action}\n")
     class Service(dbus.service.Object):
-        state = "Playing" if name == "Video" else "Paused"
+        state = "Playing" if name in ("Video", "Monitor") else "Paused"
 
         @dbus.service.method("org.freedesktop.DBus.Properties", in_signature="s", out_signature="a{sv}")
         def GetAll(self, interface):
@@ -38,7 +38,7 @@ def player(name):
                 return {"Identity": name, "DesktopEntry": "legacy.music" if name == "Fallback" else "fixture." + name, "CanRaise": False, "CanQuit": True,
                         "HasTrackList": False, "SupportedUriSchemes": dbus.Array([], signature="s"),
                         "SupportedMimeTypes": dbus.Array([], signature="s")}
-            return {"PlaybackStatus": self.state, "CanControl": True, "CanPlay": True, "CanPause": True,
+            return {"PlaybackStatus": self.state, "CanControl": name != "Monitor", "CanPlay": name != "Monitor", "CanPause": name != "Monitor",
                     "CanSeek": True, "CanGoNext": True, "CanGoPrevious": True, "Volume": .5, "Rate": 1.,
                     "MinimumRate": 1., "MaximumRate": 1., "Position": dbus.Int64(0),
                     "Metadata": dbus.Dictionary({"xesam:title": "Fixture", "mpris:trackid": dbus.ObjectPath("/sample")}, signature="sv")}
@@ -216,6 +216,15 @@ def worker():
         # Either eligible, playing app may now be Plasma's active player.
         dbus.Interface(bus.get_object(MPRIS + ".Fallback", OBJECT), PLAYER).Pause()
         key(163, "Video Next")
+        for name in ("Video", "Music", "Fallback"):
+            dbus.Interface(bus.get_object(MPRIS + "." + name, OBJECT), MPRIS).Quit()
+        wait(lambda: json.loads(rules.Players()) == {}, "Closed players still registered")
+        spawn(sys.executable, __file__, "--player", "Monitor")
+        wait(lambda: list(json.loads(rules.Players())) == ["app:fixture.Monitor"], "Read-only session")
+        n = len(records())
+        pointer.key(164, True)
+        pointer.key(164, False)
+        wait(lambda: records()[n:] == ["Fallback Started", "Fallback Play"], "Read-only player swallowed Play")
         if os.environ.get("MONET_TEST_INSTALLED_MEDIA_KEYS") == "1":
             from tests.test_resume import r
             subprocess.run(["/usr/libexec/monet-quick", "utilities", "media-keys"], check=True, timeout=8)
