@@ -6,22 +6,22 @@ The inherited IWD cleanup calls `systemctl unmask` before NetworkManager at ever
 boot. The recorded laptop spends 349 ms in that unit; the earlier one-CPU VM
 spends 1.762 s. Image preparation adds an ExecCondition that skips this cleanup
 after its receipt exists and both old backend files and persistent/runtime
-wpa_supplicant mask are absent. Missing receipts, reintroduced legacy files and
+wpa_supplicant masks are absent. Missing receipts, reintroduced legacy files and
 both null-symlink and empty-file masks still run the complete original migration
 before NetworkManager. Unknown vendor code or execution commands stop the build
 for review. Wi-Fi credentials, scanning privacy and power-saving settings retain
 their existing behavior.
 
 The new bounded Bluetooth startup helper issues an asynchronous Connect call for
-already paired, trusted, unblocked HID mice/keyboards on powered adapters. It starts with
-the Bluetooth service, independently of desktop login. BlueZ object and property
+already paired, trusted, unblocked HID mice/keyboards on powered adapters. It
+starts with the Bluetooth service, independently of desktop login. BlueZ object and property
 signals handle adapters/devices that appear during the twenty-second startup
 window. Each device is attempted once; connected devices are remembered so an
-explicit disconnect is respected. It does not start discovery, pair, change trust, power on
-a radio, restart Bluetooth or wait before allowing the login manager to start.
+explicit disconnect is respected. It does not start discovery, pair, change trust,
+power on a radio, restart Bluetooth or wait before allowing the login manager to start.
 The helper exits after its known inputs are connected and BlueZ's pending
-connection replies have completed. GATT report data,
-signal-strength changes and unrelated interfaces do not trigger reconciliation.
+connection replies have completed. GATT report data, signal-strength changes
+and unrelated interfaces do not trigger reconciliation.
 There is no continuing polling or reconnect loop after that startup window.
 
 Thirteen new checks include a native Gio client talking to a BlueZ provider on a
@@ -31,8 +31,17 @@ devices and read-only inspection are covered. Eligibility checks also cover
 blocked/unknown properties, audio/gamepad devices and powered-off/missing adapters.
 Native systemd verification passes. The native traffic fixture emits GATT data
 and signal-strength updates every ten milliseconds while the client keeps its
-state reconciliation count bounded. A separate case reports the link connected\n+before completing profile setup, verifying that the helper waits for the reply.\n+All 44 focused wireless, login prerequisite,
+state reconciliation count bounded. A separate case reports the link connected
+before completing profile setup, verifying that the helper waits for the reply.
+All 44 focused wireless, login prerequisite,
 graphics and boot timing checks pass locally on one pinned CPU at low priority.
+
+The [final helper CI run](https://github.com/HappyHamster135/Monet/actions/runs/45312063129)
+passes 2,423 checks with 19 expected skips and no failures at source commit
+060d34b39e5af0d47f07e86c9887aa6eee3b2862. Its first attempt missed the native
+encrypted-archive password dialog; all 15 archive-app checks passed in the
+isolated local runtime, followed by a clean complete CI rerun. The earlier
+failure and final successful counts are retained with the measurements.
 
 Read-only inspection finds this laptop's Bluetooth service ready at 10.351 s
 from kernel start, and its MX Anywhere 3S input at 30.329 s. The helper's
@@ -40,9 +49,37 @@ inspection mode recognizes the currently connected input without making a
 connection. These observations do not establish the cause or duration of the
 reported four-second delay. Actual Wi-Fi association and Bluetooth mouse
 reconnection gains require hardware boot testing; virtual Ethernet and fake
-BlueZ responses cannot establish them. The next installed-disk comparison also
-checks that routine Wi-Fi cleanup is skipped on all normal candidate boots and
-records network/adapter service timestamps.
+BlueZ responses cannot establish them.
+
+The [completed installed-disk comparison](https://github.com/HappyHamster135/Monet/actions/runs/45309721331)
+uses boot source ad1c1a18e3ac146ef4023ab40f996f8d011daab0. The Wi-Fi guard is
+unchanged in the final helper revision. Later helper-only event filtering and
+connection-lifetime changes are covered by native private-bus checks; the VM has
+no Bluetooth adapter and never executes that helper. The
+[complete paired results and service timestamps](benchmarks/0.9.8-9-wireless-boot-timing.json)
+are retained. Three normal boots per image give:
+
+| Measurement | Released 0.9.8-8 median | Wireless preview median |
+| --- | ---: | ---: |
+| Power-on to visible login | 36.783 s | 35.327 s |
+| Power-on to password controls | 37.094 s | 35.645 s |
+| Kernel start to NetworkManager active | 21.023 s | 18.780 s |
+
+This run observes a 1.449-second reduction to password controls (3.9%) and a
+2.243-second reduction to NetworkManager readiness. NetworkManager active is a
+daemon-readiness measurement, not a Wi-Fi association time. The cleanup skips
+its command on all three normal candidate boots with ExecCondition exit 1 and
+no command start timestamp. Certificate trust regeneration also skips all three.
+Login screenshots and keypress response are checked; shutdown finishes cleanly.
+
+Both images use this run's one-CPU, 8-GiB VM with the same released kernel and
+native runtime. This runner's baseline is slower than the earlier run, so
+absolute times across runs must not be treated as a code regression or gain.
+Host page cache is uncontrolled, sample ranges overlap, and three samples do
+not establish a general hardware improvement. The initial setup power-on
+sequences include hardware configuration and automatic reboot: 203.302 s and
+214.932 s to controls, respectively. They are retained and excluded as planned;
+no first-setup speed improvement is demonstrated.
 
 The sub-ten-second power-on goal remains unachieved. Recorded ThinkPad firmware
 alone takes 14.380 s, plus 9.074 s in the loader, before Linux starts.

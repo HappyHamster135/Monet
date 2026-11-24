@@ -1,0 +1,659 @@
+{
+  "schema": 1,
+  "measured_at": "2026-11-24",
+  "boot_workflow": "https://github.com/HappyHamster135/Monet/actions/runs/45309721331",
+  "boot_source": {
+    "sha": "ad1c1a18e3ac146ef4023ab40f996f8d011daab0",
+    "run": 45309517666,
+    "artifact": 14883120857,
+    "version": "0.9.8-9"
+  },
+  "helper_source_commit": "060d34b39e5af0d47f07e86c9887aa6eee3b2862",
+  "helper_checks_workflow": "https://github.com/HappyHamster135/Monet/actions/runs/45312063129",
+  "scope": "Installed-disk KVM power-ons on one runner; not physical laptop or wireless connection timings",
+  "limitation": "Virtual Ethernet and no Bluetooth adapter. Later helper-only event/lifetime changes are validated by native private-bus and desktop checks, not exercised by these VM boots.",
+  "environment": {
+    "cpus": 1,
+    "memory_mib": 8192,
+    "secure_boot": false,
+    "host_page_cache": "uncontrolled",
+    "order": [
+      "baseline",
+      "candidate"
+    ],
+    "kernel": "7.3.4-ogc8.1.fc45.x86_64",
+    "polling_sleep_ms": 250,
+    "capture_processing_add_overhead": true
+  },
+  "toolchain": [
+    "crun version 1.31",
+    "commit: a84965e1278d08d6c75d5b8a41a3e72a7a11fa5b",
+    "rundir: /run/user/1001/crun",
+    "spec: 1.0.0",
+    "+SYSTEMD +SELINUX +APPARMOR +CAP +SECCOMP +EBPF +CRIU +JSON_C",
+    "podman version 5.7.0",
+    "QEMU emulator version 10.2.1 (Debian 1:10.2.1+ds-1ubuntu3.3)",
+    "Copyright (c) 2003-2025 Fabrice Bellard and the QEMU Project developers"
+  ],
+  "initial_setup_excluded": true,
+  "initial_setup_note": "Fresh hardware configuration stages kernel arguments and reboots automatically during the first power-on sequence.",
+  "baseline": {
+    "image": {
+      "architecture": "amd64",
+      "image": {
+        "image": "localhost/monet-boot-profile:baseline",
+        "signature": "containerPolicy",
+        "transport": "containers-storage"
+      },
+      "imageDigest": "sha256:15a82fc9df8aab6b90177e87a686b3ff89a68393c5ecea9c4acb42ae80dd4363",
+      "timestamp": "2026-11-17T15:34:27Z",
+      "version": "0.9.8-8"
+    },
+    "timing": {
+      "schema": 1,
+      "scope": "Installed disk cold boots under KVM; not physical laptop timings",
+      "secure_boot": false,
+      "host_page_cache": "uncontrolled",
+      "cpus": 1,
+      "memory_mib": 8192,
+      "first_boot_excluded": true,
+      "boot_state": "Successful normal boot seeded between samples; trial counters untouched",
+      "median_ms": 36783.402,
+      "min_ms": 35499.771,
+      "max_ms": 37902.545,
+      "samples": [
+        {
+          "index": 0,
+          "warmup": true,
+          "power_on_to_visible_login_ms": 202704.666,
+          "power_on_to_controls_ms": 203301.585,
+          "keyboard_verified_ms": 203631.879,
+          "sampling_interval_ms": 250,
+          "guest_properties": {
+            "FirmwareTimestampMonotonic": "0",
+            "LoaderTimestampMonotonic": "0",
+            "InitRDTimestampMonotonic": "1238314",
+            "UserspaceTimestampMonotonic": "3810579",
+            "FinishTimestampMonotonic": "34517202"
+          },
+          "guest_phases": {
+            "firmware_ms": null,
+            "loader_ms": null,
+            "kernel_ms": 1238.314,
+            "initrd_ms": 2572.265,
+            "userspace_start_ms": 3810.579
+          },
+          "trust_refresh": {
+            "ConditionResult": "yes",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "9868834",
+            "ExecMainExitTimestampMonotonic": "18047443"
+          },
+          "wifi_migration": {
+            "ConditionResult": "yes",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "18267962",
+            "ExecMainExitTimestampMonotonic": "19767702"
+          }
+        },
+        {
+          "index": 1,
+          "warmup": false,
+          "power_on_to_visible_login_ms": 35499.771,
+          "power_on_to_controls_ms": 36094.702,
+          "keyboard_verified_ms": 36428.307,
+          "sampling_interval_ms": 250,
+          "guest_properties": {
+            "FirmwareTimestampMonotonic": "0",
+            "LoaderTimestampMonotonic": "0",
+            "InitRDTimestampMonotonic": "1236588",
+            "UserspaceTimestampMonotonic": "3729837",
+            "FinishTimestampMonotonic": "28035680"
+          },
+          "guest_phases": {
+            "firmware_ms": null,
+            "loader_ms": null,
+            "kernel_ms": 1236.588,
+            "initrd_ms": 2493.249,
+            "userspace_start_ms": 3729.837
+          },
+          "trust_refresh": {
+            "ConditionResult": "yes",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "6083252",
+            "ExecMainExitTimestampMonotonic": "15722261"
+          },
+          "wifi_migration": {
+            "ConditionResult": "yes",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "16326517",
+            "ExecMainExitTimestampMonotonic": "17855860"
+          }
+        },
+        {
+          "index": 2,
+          "warmup": false,
+          "power_on_to_visible_login_ms": 36783.402,
+          "power_on_to_controls_ms": 37094.378,
+          "keyboard_verified_ms": 37424.829,
+          "sampling_interval_ms": 250,
+          "guest_properties": {
+            "FirmwareTimestampMonotonic": "0",
+            "LoaderTimestampMonotonic": "0",
+            "InitRDTimestampMonotonic": "1262880",
+            "UserspaceTimestampMonotonic": "3821574",
+            "FinishTimestampMonotonic": "29646060"
+          },
+          "guest_phases": {
+            "firmware_ms": null,
+            "loader_ms": null,
+            "kernel_ms": 1262.88,
+            "initrd_ms": 2558.694,
+            "userspace_start_ms": 3821.574
+          },
+          "trust_refresh": {
+            "ConditionResult": "yes",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "6209826",
+            "ExecMainExitTimestampMonotonic": "16231243"
+          },
+          "wifi_migration": {
+            "ConditionResult": "yes",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "17202973",
+            "ExecMainExitTimestampMonotonic": "18796453"
+          }
+        },
+        {
+          "index": 3,
+          "warmup": false,
+          "power_on_to_visible_login_ms": 37902.545,
+          "power_on_to_controls_ms": 38503.584,
+          "keyboard_verified_ms": 38835.39,
+          "sampling_interval_ms": 250,
+          "guest_properties": {
+            "FirmwareTimestampMonotonic": "0",
+            "LoaderTimestampMonotonic": "0",
+            "InitRDTimestampMonotonic": "1268854",
+            "UserspaceTimestampMonotonic": "3796661",
+            "FinishTimestampMonotonic": "30610555"
+          },
+          "guest_phases": {
+            "firmware_ms": null,
+            "loader_ms": null,
+            "kernel_ms": 1268.854,
+            "initrd_ms": 2527.807,
+            "userspace_start_ms": 3796.661
+          },
+          "trust_refresh": {
+            "ConditionResult": "yes",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "6342185",
+            "ExecMainExitTimestampMonotonic": "16765468"
+          },
+          "wifi_migration": {
+            "ConditionResult": "yes",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "17434321",
+            "ExecMainExitTimestampMonotonic": "19155833"
+          }
+        }
+      ]
+    },
+    "network": [
+      {
+        "index": 0,
+        "warmup": true,
+        "services": {
+          "NetworkManager.service": {
+            "Id": "NetworkManager.service",
+            "LoadState": "loaded",
+            "ActiveState": "active",
+            "ActiveEnterTimestampMonotonic": "22009669",
+            "ConditionResult": "yes",
+            "ExecMainStartTimestampMonotonic": "19870612"
+          },
+          "bluetooth.service": {
+            "Id": "bluetooth.service",
+            "LoadState": "loaded",
+            "ActiveState": "inactive",
+            "ActiveEnterTimestampMonotonic": "0",
+            "ConditionResult": "no",
+            "ExecMainStartTimestampMonotonic": "0"
+          },
+          "monet-input-connect.service": {
+            "Id": "monet-input-connect.service",
+            "LoadState": "not-found",
+            "ActiveState": "inactive",
+            "ActiveEnterTimestampMonotonic": "0",
+            "ConditionResult": "no",
+            "ExecMainStartTimestampMonotonic": "0"
+          }
+        }
+      },
+      {
+        "index": 1,
+        "warmup": false,
+        "services": {
+          "NetworkManager.service": {
+            "Id": "NetworkManager.service",
+            "LoadState": "loaded",
+            "ActiveState": "active",
+            "ActiveEnterTimestampMonotonic": "20251933",
+            "ConditionResult": "yes",
+            "ExecMainStartTimestampMonotonic": "18062400"
+          },
+          "bluetooth.service": {
+            "Id": "bluetooth.service",
+            "LoadState": "loaded",
+            "ActiveState": "inactive",
+            "ActiveEnterTimestampMonotonic": "0",
+            "ConditionResult": "no",
+            "ExecMainStartTimestampMonotonic": "0"
+          },
+          "monet-input-connect.service": {
+            "Id": "monet-input-connect.service",
+            "LoadState": "not-found",
+            "ActiveState": "inactive",
+            "ActiveEnterTimestampMonotonic": "0",
+            "ConditionResult": "no",
+            "ExecMainStartTimestampMonotonic": "0"
+          }
+        }
+      },
+      {
+        "index": 2,
+        "warmup": false,
+        "services": {
+          "NetworkManager.service": {
+            "Id": "NetworkManager.service",
+            "LoadState": "loaded",
+            "ActiveState": "active",
+            "ActiveEnterTimestampMonotonic": "21023434",
+            "ConditionResult": "yes",
+            "ExecMainStartTimestampMonotonic": "19019969"
+          },
+          "bluetooth.service": {
+            "Id": "bluetooth.service",
+            "LoadState": "loaded",
+            "ActiveState": "inactive",
+            "ActiveEnterTimestampMonotonic": "0",
+            "ConditionResult": "no",
+            "ExecMainStartTimestampMonotonic": "0"
+          },
+          "monet-input-connect.service": {
+            "Id": "monet-input-connect.service",
+            "LoadState": "not-found",
+            "ActiveState": "inactive",
+            "ActiveEnterTimestampMonotonic": "0",
+            "ConditionResult": "no",
+            "ExecMainStartTimestampMonotonic": "0"
+          }
+        }
+      },
+      {
+        "index": 3,
+        "warmup": false,
+        "services": {
+          "NetworkManager.service": {
+            "Id": "NetworkManager.service",
+            "LoadState": "loaded",
+            "ActiveState": "active",
+            "ActiveEnterTimestampMonotonic": "21448522",
+            "ConditionResult": "yes",
+            "ExecMainStartTimestampMonotonic": "19377465"
+          },
+          "bluetooth.service": {
+            "Id": "bluetooth.service",
+            "LoadState": "loaded",
+            "ActiveState": "inactive",
+            "ActiveEnterTimestampMonotonic": "0",
+            "ConditionResult": "no",
+            "ExecMainStartTimestampMonotonic": "0"
+          },
+          "monet-input-connect.service": {
+            "Id": "monet-input-connect.service",
+            "LoadState": "not-found",
+            "ActiveState": "inactive",
+            "ActiveEnterTimestampMonotonic": "0",
+            "ConditionResult": "no",
+            "ExecMainStartTimestampMonotonic": "0"
+          }
+        }
+      }
+    ]
+  },
+  "candidate": {
+    "image": {
+      "architecture": "amd64",
+      "image": {
+        "image": "localhost/monet-boot-profile:candidate",
+        "signature": "containerPolicy",
+        "transport": "containers-storage"
+      },
+      "imageDigest": "sha256:77edd58549e29a88d7c0410a672a49399c8a8473bb5b945b8ff2b4c576b75129",
+      "timestamp": "2026-11-17T15:34:27Z",
+      "version": "0.9.8-9"
+    },
+    "timing": {
+      "schema": 1,
+      "scope": "Installed disk cold boots under KVM; not physical laptop timings",
+      "secure_boot": false,
+      "host_page_cache": "uncontrolled",
+      "cpus": 1,
+      "memory_mib": 8192,
+      "first_boot_excluded": true,
+      "boot_state": "Successful normal boot seeded between samples; trial counters untouched",
+      "median_ms": 35326.528,
+      "min_ms": 34965.51,
+      "max_ms": 36165.001,
+      "samples": [
+        {
+          "index": 0,
+          "warmup": true,
+          "power_on_to_visible_login_ms": 214337.691,
+          "power_on_to_controls_ms": 214931.654,
+          "keyboard_verified_ms": 215262.599,
+          "sampling_interval_ms": 250,
+          "guest_properties": {
+            "FirmwareTimestampMonotonic": "0",
+            "LoaderTimestampMonotonic": "0",
+            "InitRDTimestampMonotonic": "1284044",
+            "UserspaceTimestampMonotonic": "3867879",
+            "FinishTimestampMonotonic": "36564334"
+          },
+          "guest_phases": {
+            "firmware_ms": null,
+            "loader_ms": null,
+            "kernel_ms": 1284.044,
+            "initrd_ms": 2583.835,
+            "userspace_start_ms": 3867.879
+          },
+          "trust_refresh": {
+            "ConditionResult": "yes",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "10192800",
+            "ExecMainExitTimestampMonotonic": "18827724"
+          },
+          "wifi_migration": {
+            "ConditionResult": "no",
+            "Result": "exec-condition",
+            "ExecMainStartTimestampMonotonic": "0",
+            "ExecMainExitTimestampMonotonic": "0",
+            "ExecCondition": "{ path=/bin/sh ; argv[]=/bin/sh -c test ! -e /var/lib/bazzite-iwd-migration.done || test -e /etc/NetworkManager/conf.d/99-valve-wifi-backend.conf || test -e /etc/NetworkManager/conf.d/iwd.conf || { test -e /etc/systemd/system/wpa_supplicant.service && test ! -s /etc/systemd/system/wpa_supplicant.service; } || { test -e /run/systemd/system/wpa_supplicant.service && test ! -s /run/systemd/system/wpa_supplicant.service; } ; ignore_errors=no ; start_time=[Tue 2026-11-24 02:43:14 UTC] ; stop_time=[Tue 2026-11-24 02:43:14 UTC] ; pid=1743 ; code=exited ; status=1 }"
+          }
+        },
+        {
+          "index": 1,
+          "warmup": false,
+          "power_on_to_visible_login_ms": 35326.528,
+          "power_on_to_controls_ms": 35645.488,
+          "keyboard_verified_ms": 35978.615,
+          "sampling_interval_ms": 250,
+          "guest_properties": {
+            "FirmwareTimestampMonotonic": "0",
+            "LoaderTimestampMonotonic": "0",
+            "InitRDTimestampMonotonic": "1263066",
+            "UserspaceTimestampMonotonic": "3805904",
+            "FinishTimestampMonotonic": "27436765"
+          },
+          "guest_phases": {
+            "firmware_ms": null,
+            "loader_ms": null,
+            "kernel_ms": 1263.066,
+            "initrd_ms": 2542.838,
+            "userspace_start_ms": 3805.904
+          },
+          "trust_refresh": {
+            "ConditionResult": "no",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "0",
+            "ExecMainExitTimestampMonotonic": "0"
+          },
+          "wifi_migration": {
+            "ConditionResult": "no",
+            "Result": "exec-condition",
+            "ExecMainStartTimestampMonotonic": "0",
+            "ExecMainExitTimestampMonotonic": "0",
+            "ExecCondition": "{ path=/bin/sh ; argv[]=/bin/sh -c test ! -e /var/lib/bazzite-iwd-migration.done || test -e /etc/NetworkManager/conf.d/99-valve-wifi-backend.conf || test -e /etc/NetworkManager/conf.d/iwd.conf || { test -e /etc/systemd/system/wpa_supplicant.service && test ! -s /etc/systemd/system/wpa_supplicant.service; } || { test -e /run/systemd/system/wpa_supplicant.service && test ! -s /run/systemd/system/wpa_supplicant.service; } ; ignore_errors=no ; start_time=[Tue 2026-11-24 02:44:09 UTC] ; stop_time=[Tue 2026-11-24 02:44:10 UTC] ; pid=783 ; code=exited ; status=1 }"
+          }
+        },
+        {
+          "index": 2,
+          "warmup": false,
+          "power_on_to_visible_login_ms": 36165.001,
+          "power_on_to_controls_ms": 36488.01,
+          "keyboard_verified_ms": 36823.009,
+          "sampling_interval_ms": 250,
+          "guest_properties": {
+            "FirmwareTimestampMonotonic": "0",
+            "LoaderTimestampMonotonic": "0",
+            "InitRDTimestampMonotonic": "1287707",
+            "UserspaceTimestampMonotonic": "3828950",
+            "FinishTimestampMonotonic": "28381838"
+          },
+          "guest_phases": {
+            "firmware_ms": null,
+            "loader_ms": null,
+            "kernel_ms": 1287.707,
+            "initrd_ms": 2541.243,
+            "userspace_start_ms": 3828.95
+          },
+          "trust_refresh": {
+            "ConditionResult": "no",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "0",
+            "ExecMainExitTimestampMonotonic": "0"
+          },
+          "wifi_migration": {
+            "ConditionResult": "no",
+            "Result": "exec-condition",
+            "ExecMainStartTimestampMonotonic": "0",
+            "ExecMainExitTimestampMonotonic": "0",
+            "ExecCondition": "{ path=/bin/sh ; argv[]=/bin/sh -c test ! -e /var/lib/bazzite-iwd-migration.done || test -e /etc/NetworkManager/conf.d/99-valve-wifi-backend.conf || test -e /etc/NetworkManager/conf.d/iwd.conf || { test -e /etc/systemd/system/wpa_supplicant.service && test ! -s /etc/systemd/system/wpa_supplicant.service; } || { test -e /run/systemd/system/wpa_supplicant.service && test ! -s /run/systemd/system/wpa_supplicant.service; } ; ignore_errors=no ; start_time=[Tue 2026-11-24 02:44:58 UTC] ; stop_time=[Tue 2026-11-24 02:44:58 UTC] ; pid=780 ; code=exited ; status=1 }"
+          }
+        },
+        {
+          "index": 3,
+          "warmup": false,
+          "power_on_to_visible_login_ms": 34965.51,
+          "power_on_to_controls_ms": 35284.538,
+          "keyboard_verified_ms": 35616.853,
+          "sampling_interval_ms": 250,
+          "guest_properties": {
+            "FirmwareTimestampMonotonic": "0",
+            "LoaderTimestampMonotonic": "0",
+            "InitRDTimestampMonotonic": "1283815",
+            "UserspaceTimestampMonotonic": "3838584",
+            "FinishTimestampMonotonic": "27678710"
+          },
+          "guest_phases": {
+            "firmware_ms": null,
+            "loader_ms": null,
+            "kernel_ms": 1283.815,
+            "initrd_ms": 2554.769,
+            "userspace_start_ms": 3838.584
+          },
+          "trust_refresh": {
+            "ConditionResult": "no",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "0",
+            "ExecMainExitTimestampMonotonic": "0"
+          },
+          "wifi_migration": {
+            "ConditionResult": "no",
+            "Result": "exec-condition",
+            "ExecMainStartTimestampMonotonic": "0",
+            "ExecMainExitTimestampMonotonic": "0",
+            "ExecCondition": "{ path=/bin/sh ; argv[]=/bin/sh -c test ! -e /var/lib/bazzite-iwd-migration.done || test -e /etc/NetworkManager/conf.d/99-valve-wifi-backend.conf || test -e /etc/NetworkManager/conf.d/iwd.conf || { test -e /etc/systemd/system/wpa_supplicant.service && test ! -s /etc/systemd/system/wpa_supplicant.service; } || { test -e /run/systemd/system/wpa_supplicant.service && test ! -s /run/systemd/system/wpa_supplicant.service; } ; ignore_errors=no ; start_time=[Tue 2026-11-24 02:45:46 UTC] ; stop_time=[Tue 2026-11-24 02:45:46 UTC] ; pid=785 ; code=exited ; status=1 }"
+          }
+        }
+      ]
+    },
+    "network": [
+      {
+        "index": 0,
+        "warmup": true,
+        "services": {
+          "NetworkManager.service": {
+            "Id": "NetworkManager.service",
+            "LoadState": "loaded",
+            "ActiveState": "active",
+            "ActiveEnterTimestampMonotonic": "22744357",
+            "ConditionResult": "yes",
+            "ExecMainStartTimestampMonotonic": "19737897"
+          },
+          "bluetooth.service": {
+            "Id": "bluetooth.service",
+            "LoadState": "loaded",
+            "ActiveState": "inactive",
+            "ActiveEnterTimestampMonotonic": "0",
+            "ConditionResult": "no",
+            "ExecMainStartTimestampMonotonic": "0"
+          },
+          "monet-input-connect.service": {
+            "Id": "monet-input-connect.service",
+            "LoadState": "loaded",
+            "ActiveState": "inactive",
+            "ActiveEnterTimestampMonotonic": "0",
+            "ConditionResult": "no",
+            "ExecMainStartTimestampMonotonic": "0"
+          }
+        }
+      },
+      {
+        "index": 1,
+        "warmup": false,
+        "services": {
+          "NetworkManager.service": {
+            "Id": "NetworkManager.service",
+            "LoadState": "loaded",
+            "ActiveState": "active",
+            "ActiveEnterTimestampMonotonic": "18807473",
+            "ConditionResult": "yes",
+            "ExecMainStartTimestampMonotonic": "16344794"
+          },
+          "bluetooth.service": {
+            "Id": "bluetooth.service",
+            "LoadState": "loaded",
+            "ActiveState": "inactive",
+            "ActiveEnterTimestampMonotonic": "0",
+            "ConditionResult": "no",
+            "ExecMainStartTimestampMonotonic": "0"
+          },
+          "monet-input-connect.service": {
+            "Id": "monet-input-connect.service",
+            "LoadState": "loaded",
+            "ActiveState": "inactive",
+            "ActiveEnterTimestampMonotonic": "0",
+            "ConditionResult": "no",
+            "ExecMainStartTimestampMonotonic": "0"
+          }
+        }
+      },
+      {
+        "index": 2,
+        "warmup": false,
+        "services": {
+          "NetworkManager.service": {
+            "Id": "NetworkManager.service",
+            "LoadState": "loaded",
+            "ActiveState": "active",
+            "ActiveEnterTimestampMonotonic": "18780201",
+            "ConditionResult": "yes",
+            "ExecMainStartTimestampMonotonic": "16296643"
+          },
+          "bluetooth.service": {
+            "Id": "bluetooth.service",
+            "LoadState": "loaded",
+            "ActiveState": "inactive",
+            "ActiveEnterTimestampMonotonic": "0",
+            "ConditionResult": "no",
+            "ExecMainStartTimestampMonotonic": "0"
+          },
+          "monet-input-connect.service": {
+            "Id": "monet-input-connect.service",
+            "LoadState": "loaded",
+            "ActiveState": "inactive",
+            "ActiveEnterTimestampMonotonic": "0",
+            "ConditionResult": "no",
+            "ExecMainStartTimestampMonotonic": "0"
+          }
+        }
+      },
+      {
+        "index": 3,
+        "warmup": false,
+        "services": {
+          "NetworkManager.service": {
+            "Id": "NetworkManager.service",
+            "LoadState": "loaded",
+            "ActiveState": "active",
+            "ActiveEnterTimestampMonotonic": "18513223",
+            "ConditionResult": "yes",
+            "ExecMainStartTimestampMonotonic": "15954366"
+          },
+          "bluetooth.service": {
+            "Id": "bluetooth.service",
+            "LoadState": "loaded",
+            "ActiveState": "inactive",
+            "ActiveEnterTimestampMonotonic": "0",
+            "ConditionResult": "no",
+            "ExecMainStartTimestampMonotonic": "0"
+          },
+          "monet-input-connect.service": {
+            "Id": "monet-input-connect.service",
+            "LoadState": "loaded",
+            "ActiveState": "inactive",
+            "ActiveEnterTimestampMonotonic": "0",
+            "ConditionResult": "no",
+            "ExecMainStartTimestampMonotonic": "0"
+          }
+        }
+      }
+    ]
+  },
+  "comparison": {
+    "power_on_to_visible_login_ms": {
+      "baseline_median_ms": 36783.402,
+      "candidate_median_ms": 35326.528,
+      "reduction_ms": 1456.874,
+      "reduction_percent": 3.961
+    },
+    "power_on_to_controls_ms": {
+      "baseline_median_ms": 37094.378,
+      "candidate_median_ms": 35645.488,
+      "reduction_ms": 1448.89,
+      "reduction_percent": 3.906
+    },
+    "keyboard_verified_ms": {
+      "baseline_median_ms": 37424.829,
+      "candidate_median_ms": 35978.615,
+      "reduction_ms": 1446.214,
+      "reduction_percent": 3.864
+    },
+    "networkmanager_ready_from_kernel_ms": {
+      "baseline_median_ms": 21023.434,
+      "candidate_median_ms": 18780.201,
+      "reduction_ms": 2243.233,
+      "reduction_percent": 10.67
+    }
+  },
+  "application_checks": {
+    "source_commit": "060d34b39e5af0d47f07e86c9887aa6eee3b2862",
+    "workflow": "https://github.com/HappyHamster135/Monet/actions/runs/45312063129",
+    "run_attempt": 2,
+    "tests": 2423,
+    "skipped": 19,
+    "failed": []
+  },
+  "prior_validation": {
+    "run_attempt": 1,
+    "tests": 2423,
+    "skipped": 19,
+    "failed_modules": [
+      "tests.test_archive_apps"
+    ],
+    "note": "The native encrypted archive password-dialog check observed no dialog titles. All 15 archive-app tests passed in the isolated local runtime, followed by the complete CI rerun passing. No archive production code was changed."
+  }
+}
