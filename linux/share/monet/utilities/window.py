@@ -8,7 +8,7 @@ import tempfile
 from PySide6.QtCore import (QObject, QProcess, QSettings, QSize, Qt, QTimer, QUrl, Signal, Slot)
 from PySide6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusServiceWatcher, QDBusVirtualObject
 from PySide6.QtGui import QAction, QCursor, QIcon, QKeySequence, QShortcut
-from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QDialogButtonBox, QFileDialog, QHBoxLayout, QInputDialog,
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QHBoxLayout, QInputDialog,
     QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMenu, QMessageBox, QPlainTextEdit,
     QPushButton, QStackedWidget, QToolButton, QVBoxLayout, QWidget, QWidgetAction)
 from actions import ACTIONS, DEFAULT_FAVORITES, clean_url, tr
@@ -285,6 +285,32 @@ class Window(QMainWindow):
                 self.issue("The sound output could not be changed.")
         self.worker([self.helpers / "monet-quick", "cycle-output"], result)
 
+    def cleaning_dialog(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle(tr("Cleaning mode"))
+        layout = QVBoxLayout(dialog)
+        message = QLabel(tr("Lock the screen while you wipe the keyboard, trackpad or display. When cleaning ends, unlock as usual."))
+        message.setWordWrap(True)
+        layout.addWidget(message)
+        duration = QComboBox()
+        duration.setAccessibleName(tr("Cleaning time"))
+        for seconds, label in ((30, tr("30 seconds")), (60, tr("1 minute")), (120, tr("2 minutes"))):
+            duration.addItem(label, seconds)
+        saved = duration.findData(self.settings.value("cleaningSeconds", 60, type=int))
+        duration.setCurrentIndex(saved if saved >= 0 else 1)
+        layout.addWidget(duration)
+        buttons = QDialogButtonBox(QDialogButtonBox.Cancel)
+        start = buttons.addButton(tr("Start cleaning"), QDialogButtonBox.AcceptRole)
+        start.setDefault(True)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        dialog.resize(370, dialog.sizeHint().height())
+        if dialog.exec() == QDialog.Accepted:
+            seconds = duration.currentData()
+            self.settings.setValue("cleaningSeconds", seconds)
+            self.worker([sys.executable, MODULES / "cleaning.py", str(seconds)], lambda _: None)
+
     def capture_text(self):
         area = tempfile.TemporaryDirectory(prefix="monet-capture-")
         path = Path(area.name) / "selection.png"
@@ -423,10 +449,12 @@ class Window(QMainWindow):
         if action.command:
             program, *args = action.command
             program = str(self.helpers / program[1:]) if program.startswith("@") else program
-            if key in ("clipboard", "mic", "lock"):
+            if key in ("clipboard", "mic"):
                 self.worker([program, *args], lambda _: self.issue(action.name))
             elif not QProcess.startDetached(program, args)[0]:
                 self.issue("Could not open " + action.name)
+        elif key == "lock":
+            self.cleaning_dialog()
         elif key == "shelf":
             self.page(key, lambda: Shelf(self.settings))
         elif key == "notes":

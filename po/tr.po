@@ -15338,3 +15338,68 @@ msgstr ""
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NoticeInbox.qml:282
 msgid "Send reply"
 msgstr ""
+
+#: linux/share/monet/lockscreen/CleaningScreen.qml:58 linux/share/monet/utilities/actions.py:44 linux/share/monet/utilities/window.py:290
+msgid "Cleaning mode"
+msgstr ""
+
+#: linux/share/monet/lockscreen/CleaningScreen.qml:63
+msgid "Enter presses: %1 of 5"
+msgstr ""
+
+#: linux/share/monet/lockscreen/CleaningScreen.qml:64
+msgid "Keyboard paused. Press Enter five times to finish early."
+msgstr ""
+
+#: linux/share/monet/lockscreen/CleaningScreen.qml:69
+msgid "Cleaning ends in %1 s"
+msgstr ""
+
+#: linux/share/monet/lockscreen/CleaningScreen.qml:73
+msgid "Finish cleaning"
+msgstr ""
+
+#: linux/share/monet/utilities/cleaning.py:14
+msgid "Choose a cleaning time from the list."
+msgstr ""
+
+#: linux/share/monet/utilities/cleaning.py:16
+msgid "The screen is already locked."
+msgstr ""
+
+#: linux/share/monet/utilities/cleaning.py:21 linux/share/monet/utilities/cleaning.py:35
+msgid "Could not start the cleaning timer."
+msgstr ""
+
+#: linux/share/monet/utilities/cleaning.py:54
+msgid "The desktop could not lock the screen."
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:292
+msgid ""
+"Lock the screen while you wipe the keyboard, trackpad or display. When cleaning ends, unlock as usual."
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:296
+msgid "Cleaning time"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:297
+msgid "30 seconds"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:297
+msgid "1 minute"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:297
+msgid "2 minutes"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:303
+msgid "Start cleaning"
+msgstr ""
+
+#: linux/share/monet/utilities/cleaning.py:36
+msgid "Cleaning mode requires the Monet lock screen."
+msgstr ""

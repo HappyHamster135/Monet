@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT))
 from tools.test import stop
 
 
-def send_input(env, name=None, point=None):
+def send_input(env, name=None, point=None, click=False):
     x11 = ctypes.CDLL(ctypes.util.find_library('X11'))
     xtst = ctypes.CDLL(ctypes.util.find_library('Xtst'))
     x11.XOpenDisplay.argtypes = [ctypes.c_char_p]; x11.XOpenDisplay.restype = ctypes.c_void_p
@@ -26,10 +26,14 @@ def send_input(env, name=None, point=None):
     x11.XFlush.argtypes = [ctypes.c_void_p]; x11.XCloseDisplay.argtypes = [ctypes.c_void_p]
     xtst.XTestFakeKeyEvent.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_int, ctypes.c_ulong]
     xtst.XTestFakeMotionEvent.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_ulong]
+    xtst.XTestFakeButtonEvent.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_int, ctypes.c_ulong]
     display = x11.XOpenDisplay(env['DISPLAY'].encode()); assert display
     try:
         if point is not None:
             assert xtst.XTestFakeMotionEvent(display, -1, round(point[0]), round(point[1]), 0)
+            if click:
+                assert xtst.XTestFakeButtonEvent(display, 1, 1, 0)
+                assert xtst.XTestFakeButtonEvent(display, 1, 0, 0)
         else:
             code = x11.XKeysymToKeycode(display, x11.XStringToKeysym(name.encode())); assert code
             assert xtst.XTestFakeKeyEvent(display, code, 1, 0)
@@ -59,6 +63,7 @@ assert os.environ['HOME'].startswith('/tmp/monet-tests-')
 width, height = map(int, sys.argv[1:3])
 consent = sys.argv[3] == 'consent'
 prompt = sys.argv[3] != 'clock'
+cleaning = sys.argv[3].removeprefix('clean-') if sys.argv[3].startswith('clean-') else ''
 with tempfile.TemporaryDirectory(prefix='monet-lockscreen-') as temporary:
     folder = Path(temporary)
     shell_id = 'org.monet.lockscreen-test'
@@ -69,7 +74,7 @@ with tempfile.TemporaryDirectory(prefix='monet-lockscreen-') as temporary:
     (shell / 'metadata.json').write_text(json.dumps(metadata))
     shutil.copytree(ROOT / 'linux/share/fonts/monet', folder / 'data/fonts/monet')
     ui = shell / 'contents/lockscreen'
-    for name in ('LockScreen.qml', 'MonetLockScreen.qml'):
+    for name in ('LockScreen.qml', 'MonetLockScreen.qml', 'CleaningScreen.qml'):
         shutil.copy2(ROOT / 'linux/share/monet/lockscreen' / name, ui / name)
     shutil.copy2(ROOT / 'linux/share/monet/widgets/ClockFormat.qml', ui / 'ClockFormat.qml')
     main = ui / 'MonetLockScreen.qml'
@@ -113,6 +118,26 @@ with tempfile.TemporaryDirectory(prefix='monet-lockscreen-') as temporary:
     }
 '''.replace('WIDTH', str(width)).replace('HEIGHT', str(height)).replace('PROMPT', str(prompt).lower()).replace('CONSENT', str(consent).lower()).replace('SNAPSHOT', json.dumps(str(folder / 'screen.png')))
     main.write_text(source[:source.rfind('}')] + instrumentation + '}\n')
+    if cleaning:
+        from PySide6.QtCore import QSettings
+        settings = QSettings(str(Path(os.environ['XDG_RUNTIME_DIR']) / 'monet-cleaning.ini'), QSettings.IniFormat)
+        window_ms = {'expiry': 4000, 'expired': -1000, 'invalid': 3600000}.get(cleaning, 30000)
+        settings.setValue('Cleaning/deadline', time.time_ns() // 1_000_000 + window_ms)
+        settings.sync()
+        overlay = ui / 'CleaningScreen.qml'
+        raw = overlay.read_text()
+        overlay.write_text(raw[:raw.rfind('}')] + """
+    Timer {
+        running: true; interval: 100; repeat: true
+        onTriggered: {
+            const p = finish.mapToGlobal(finish.width/2, finish.height/2)
+            console.log("CLEAN_STATE", JSON.stringify({esc:cleaning.presses, seconds:cleaning.seconds,
+                        x:p.x * cleaning.Screen.devicePixelRatio,y:p.y * cleaning.Screen.devicePixelRatio}))
+        }
+    }
+}""")
+        if cleaning == "missing":
+            overlay.unlink()
     env = dict(os.environ, XDG_DATA_HOME=str(folder / 'data'), QT_FORCE_STDERR_LOGGING='1',
                QT_LOGGING_RULES='kscreenlocker_greet.debug=true;qml.debug=true')
     subprocess.run(['fc-cache', '-f', str(folder / 'data/fonts')], env=env, check=True,
@@ -122,6 +147,33 @@ with tempfile.TemporaryDirectory(prefix='monet-lockscreen-') as temporary:
         process = subprocess.Popen(['/usr/libexec/kscreenlocker_greet', '--testing', '--immediateLock', '--shell', shell_id],
                                    env=env, stdout=log, stderr=log, start_new_session=True)
         try:
+            if cleaning and cleaning != "missing" and 0 < window_ms <= 120000:
+                def cleaning_state(esc=0):
+                    end = time.monotonic() + 5
+                    while time.monotonic() < end:
+                        logtext = (folder / 'greeter.log').read_text()
+                        states = [json.loads(l.split('CLEAN_STATE ')[1]) for l in logtext.splitlines() if 'CLEAN_STATE {' in l]
+                        assert process.poll() is None and 'MONET_LOCK_REQUEST_KEY' not in logtext, logtext
+                        if states and states[-1]['esc'] == esc: return states[-1]
+                        time.sleep(.025)
+                    raise AssertionError(logtext)
+                visible = cleaning_state()
+                send_input(env, 'x')
+                send_input(env, 'Return')
+                send_input(env, point=(12, 12), click=True)
+                if cleaning == 'enter':
+                    send_input(env, 'x'); cleaning_state()
+                    for n in (1, 2):
+                        send_input(env, 'Return'); cleaning_state(n)
+                    send_input(env, 'x'); cleaning_state()
+                    for n in range(1, 5):
+                        send_input(env, 'Return'); cleaning_state(n)
+                    send_input(env, 'Return')
+                elif cleaning == 'button':
+                    send_input(env, point=(visible['x'], visible['y']), click=True)
+                elif cleaning == 'peer':
+                    settings.setValue('Cleaning/deadline', 0)
+                    settings.sync()
             deadline = time.monotonic() + 15
             state = None
             key_sent = False
@@ -134,6 +186,15 @@ with tempfile.TemporaryDirectory(prefix='monet-lockscreen-') as temporary:
                     state = json.loads(lines[-1]); break
                 assert process.poll() is None, text
                 time.sleep(.05)
+            if cleaning:
+                settings.sync()
+                if cleaning in ('invalid', 'expired', 'missing'):
+                    assert 'CLEAN_STATE {' not in text, text
+                    if cleaning == 'missing':
+                        assert int(settings.value('Cleaning/deadline', 0)) == 0
+                else:
+                    assert int(settings.value('Cleaning/deadline', 0)) == 0
+                    assert 'CLEAN_STATE {' in text
             assert state is not None, (folder / 'greeter.log').read_text()
             assert state['saved'] and state['width'] == width and state['height'] == height, state
             assert state['prompt'] == prompt, state
@@ -144,7 +205,7 @@ with tempfile.TemporaryDirectory(prefix='monet-lockscreen-') as temporary:
             else:
                 assert state['sheetY'] >= 0 and state['sheetY'] + state['sheetHeight'] <= height, state
                 assert key_sent, state
-                if consent:
+                if consent or os.environ.get('MONET_LOCK_TEST_PASSWORDLESS') == '1':
                     assert state['consentFocus'] and not state['passwordFocus'] and not state['passwordCursor'], state
                 else:
                     assert state['passwordFocus'] and state['passwordCursor'], state
@@ -175,3 +236,6 @@ with tempfile.TemporaryDirectory(prefix='monet-lockscreen-') as temporary:
             print(json.dumps(state))
         finally:
             stop(process)
+            if cleaning:
+                settings.remove("Cleaning/deadline")
+                settings.sync()

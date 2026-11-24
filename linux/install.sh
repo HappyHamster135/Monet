@@ -698,6 +698,7 @@ TMP
     if [ -f "$lock/LockScreenUi.qml" ] && [ -f "$lock/MediaControls.qml" ]; then
         install -m 644 "$SRC/share/monet/widgets/ClockFormat.qml" "$lock/ClockFormat.qml"
         install -m 644 "$SRC/share/monet/lockscreen/MonetLockScreen.qml" "$lock/MonetLockScreen.qml"
+        install -m 644 "$SRC/share/monet/lockscreen/CleaningScreen.qml" "$lock/CleaningScreen.qml"
         install -m 644 "$SRC/share/monet/lockscreen/LockScreen.qml" "$lock/LockScreen.qml"
     fi
     # Newer Plasma reads the power prompt from its shell, rather than the global

@@ -18,3 +18,9 @@ class LockScreen(unittest.TestCase):
                                     str(width), str(height), mode], check=True, timeout=20)
         subprocess.run([sys.executable, str(ROOT / 'tests/fixtures/lockscreen-native.py'),
                         '960', '540', 'consent'], check=True, timeout=20)
+
+    def test_cleaning_absorbs_input_then_returns_to_the_native_prompt(self):
+        for mode in ("enter", "button", "expiry", "peer", "expired", "invalid", "missing"):
+            with self.subTest(mode=mode):
+                subprocess.run([sys.executable, str(ROOT / "tests/fixtures/lockscreen-native.py"),
+                                "960", "540", "clean-" + mode], check=True, timeout=25)

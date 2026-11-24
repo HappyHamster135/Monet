@@ -41,7 +41,7 @@ ACTIONS = {
     "display": Action("Brightness, displays and HDR", "Display", "video-display", ("@monet-settings", "display")),
     "power": Action("Power and battery", "System", "battery", ("@monet-settings", "power")),
     "awake": Action("Keep awake", "Display", "preferences-system-power-management"),
-    "lock": Action("Lock the screen for cleaning", "Display", "system-lock-screen", ("loginctl", "lock-session")),
+    "lock": Action(tr("Cleaning mode"), "Display keyboard mouse lock screen cleaning", "input-keyboard"),
     "mouse": Action("Mouse buttons, scroll direction and acceleration", "Input", "input-mouse", ("kcmshell6", "kcm_mouse")),
     "touchpad": Action("Trackpad clicks and gestures", "Input", "input-touchpad", ("kcmshell6", "kcm_touchpad")),
     "windows": Action("Window focus and click behavior", "Input", "preferences-system-windows", ("kcmshell6", "kcm_kwinoptions")),
