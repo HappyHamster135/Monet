@@ -22,7 +22,7 @@ loader.exec_module(inputs)
 
 class InputEligibility(unittest.TestCase):
     def objects(self, **properties):
-        device = dict(Paired=True, Trusted=True, Blocked=False, Connected=False,
+        device = dict(Paired=True, Trusted=True, Blocked=False, Connected=False, Icon='input-mouse',
                       Adapter='/adapter', UUIDs=[next(iter(inputs.INPUT_UUIDS))])
         device.update(properties)
         return {'/adapter': {inputs.ADAPTER: dict(Powered=True)},
@@ -30,15 +30,16 @@ class InputEligibility(unittest.TestCase):
 
     def test_paired_trusted_classic_and_le_inputs_are_eligible(self):
         for uuid in inputs.INPUT_UUIDS:
-            self.assertEqual(list(inputs.eligible(self.objects(UUIDs=[uuid.upper()]))), ['/mouse'])
+            for icon in ('input-mouse','input-keyboard'):
+                self.assertEqual(list(inputs.eligible(self.objects(UUIDs=[uuid.upper()],Icon=icon))), ['/mouse'])
 
     def test_unknown_connected_blocked_and_audio_devices_are_not_attempted(self):
         for props in (dict(Paired=False), dict(Trusted=False), dict(Blocked=True),
-                      dict(Connected=True), dict(UUIDs=[]),
+                      dict(Connected=True), dict(UUIDs=[]), dict(Icon='input-gaming'),
                       dict(UUIDs=['0000110b-0000-1000-8000-00805f9b34fb'])):
             with self.subTest(props=props):
                 self.assertEqual(list(inputs.eligible(self.objects(**props))), [])
-        for key in ('Paired', 'Trusted', 'Blocked', 'Connected', 'Adapter', 'UUIDs'):
+        for key in ('Paired', 'Trusted', 'Blocked', 'Connected', 'Adapter', 'UUIDs', 'Icon'):
             objects = self.objects(); objects['/mouse'][inputs.DEVICE].pop(key)
             self.assertEqual(list(inputs.eligible(objects)), [], key)
 
@@ -123,6 +124,8 @@ ExecStartPost=/usr/bin/touch /var/lib/bazzite-iwd-migration.done
             service=root/'usr/lib/systemd/system/monet-input-connect.service'
             service.write_text((ROOT/'linux/systemd/monet-input-connect.service').read_text()
                                .replace('@LIBEXECDIR@/monet-input-connect','/bin/true'))
+            for name in ('bluetooth.service','NetworkManager.service'):
+                unit.with_name(name).write_text('[Service]\nType=exec\nExecStart=/bin/true\n')
             # Neither radio activation nor a peripheral connection gates login.
             self.assertNotIn('Before=',service.read_text())
             unit.write_text(unit.read_text().replace('/usr/libexec/bazzite-iwd-migration','/bin/true'))

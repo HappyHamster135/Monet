@@ -11,6 +11,7 @@ AP, DP = '/org/bluez/hci0', '/org/bluez/hci0/dev_AA_BB_CC_DD_EE_FF'
 objects = {AP: {ADAPTER: {'Powered': GLib.Variant('b', scenario != 'power-on')}}}
 device = {'Adapter': GLib.Variant('o', AP), 'Paired': GLib.Variant('b', True),
     'Trusted': GLib.Variant('b', scenario != 'untrusted'), 'Blocked': GLib.Variant('b', False),
+    'Icon': GLib.Variant('s', 'input-mouse'),
     'Connected': GLib.Variant('b', scenario == 'disconnect'),
     'UUIDs': GLib.Variant('as', ['00001812-0000-1000-8000-00805f9b34fb'])}
 if scenario != 'added':
@@ -90,6 +91,7 @@ register(DP, """<node><interface name="org.bluez.Device1"><method name="Connect"
 <property name="Paired" type="b" access="read"/>
 <property name="Trusted" type="b" access="read"/>
 <property name="Blocked" type="b" access="read"/>
+<property name="Icon" type="s" access="read"/>
 <property name="Connected" type="b" access="read"/>
 <property name="UUIDs" type="as" access="read"/>
 </interface></node>""")

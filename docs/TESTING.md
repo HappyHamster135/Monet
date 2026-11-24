@@ -13,11 +13,11 @@ for review. Wi-Fi credentials, scanning privacy and power-saving settings retain
 their existing behavior.
 
 The new bounded Bluetooth startup helper issues an asynchronous Connect call for
-already paired, trusted, unblocked HID inputs on powered adapters. It starts with
+already paired, trusted, unblocked HID mice/keyboards on powered adapters. It starts with
 the Bluetooth service, independently of desktop login. BlueZ object and property
 signals handle adapters/devices that appear during the twenty-second startup
 window. Each device is attempted once; connected devices are remembered so an
-explicit disconnect is respected. It does not scan, pair, change trust, power on
+explicit disconnect is respected. It does not start discovery, pair, change trust, power on
 a radio, restart Bluetooth or wait before allowing the login manager to start.
 There is no continuing polling or reconnect loop after that startup window.
 
@@ -25,7 +25,7 @@ Eleven new checks include a native Gio client talking to a BlueZ provider on a
 private bus. Power and object events cause a connection request within one
 second in the fixture; existing BlueZ attempts, explicit disconnects, untrusted
 devices and read-only inspection are covered. Eligibility checks also cover
-blocked/unknown properties, audio devices and powered-off/missing adapters.
+blocked/unknown properties, audio/gamepad devices and powered-off/missing adapters.
 Native systemd verification passes. All 42 focused wireless, login prerequisite,
 graphics and boot timing checks pass locally on one pinned CPU at low priority.
 

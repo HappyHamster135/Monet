@@ -1,10 +1,10 @@
 #!/usr/bin/python3
-"""Give trusted Bluetooth input devices one early connection attempt at boot.
+"""Give trusted Bluetooth mice and keyboards one early connection attempt at boot.
 
 Run with Bluetooth, before a desktop agent is available. Observe BlueZ events
-for at most twenty seconds, without scanning, pairing, changing trust or powering
-radios on. Each eligible device is attempted once; an explicit disconnect is
-never undone. --inspect only reports aggregate state and makes no connection.
+for at most twenty seconds, without discovery, pairing, changing trust or powering
+radios on. Each eligible device is attempted once; devices observed connected
+are not reconnected after a disconnect. --inspect makes no connection.
 """
 import argparse
 import json
@@ -19,6 +19,7 @@ def known_input(properties):
     return (properties.get('Paired') is True
         and properties.get('Trusted') is True
         and properties.get('Blocked') is False
+        and properties.get('Icon') in ('input-mouse', 'input-keyboard')
         and bool(INPUT_UUIDS.intersection(str(uuid).lower() for uuid in properties.get('UUIDs', []))))
 
 
