@@ -1288,6 +1288,34 @@ class LookFeedback(unittest.TestCase):
         self.helper.commands.clear(); QTest.qWait(2200)
         self.assertFalse(any(c[1].startswith('wallet-') for c in self.helper.commands))
 
+    def test_chatgpt_restore_and_badge_switches_use_their_own_settings(self):
+        wallet = {"enabled": True, "reopenChatGPTWhenLocked": True}
+        self.helper.replies["wallet-status"] = json.dumps(wallet)
+        select_settings_page(self.window, "passwords")
+        row = self.item("reopenChatGPTWhenLocked")
+        self.wait_for(lambda: row.property("tappable"))
+        self.assertTrue(row.property("checked"))
+        self.helper.replies["wallet-chatgpt-restore"] = json.dumps(
+            {"ok": True, "state": dict(wallet, reopenChatGPTWhenLocked=False)})
+        QMetaObject.invokeMethod(row, "tapped")
+        self.wait_for(lambda: not row.property("checked"))
+        self.assertIn(["helper", "wallet-chatgpt-restore", "off"], self.helper.commands)
+
+        app = {"id": "chatgpt", "name": "ChatGPT", "icon": "chatgpt", "popups": True, "badges": True}
+        state = {"quiet": False, "apps": [app]}
+        self.helper.replies["notify"] = json.dumps(state)
+        select_settings_page(self.window, "notifications")
+        self.wait_for(lambda: bool(self.window.property("notifyInfo").toVariant().get("apps")))
+        row = self.item("taskbarBadge-chatgpt")
+        self.assertTrue(row.property("checked"))
+        app["badges"] = False
+        self.helper.replies["notify"] = json.dumps(state)
+        self.helper.replies["notify-badge"] = json.dumps({"ok": True, "state": state})
+        QMetaObject.invokeMethod(row, "tapped")
+        self.wait_for(lambda: not self.window.property("notifyInfo").toVariant()["apps"][0]["badges"])
+        self.assertIn(["helper", "notify-badge", "chatgpt".encode().hex(), "off"], self.helper.commands)
+        self.assertTrue(self.window.property("notifyInfo").toVariant()["apps"][0]["popups"])
+
     def test_app_login_switch_waits_for_service_result(self):
         state = dict(enabled=True, appOffers=False, appOffersAvailable=True, appOffersRunning=False)
         self.helper.replies['wallet-status'] = json.dumps(state)

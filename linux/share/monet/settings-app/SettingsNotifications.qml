@@ -137,39 +137,56 @@ ColumnLayout {
         tone: look
         text: i18n("Apps")
     }
-    SettingsControls.Card {
-        tone: look
-        enabled: sheet.notifyBusy === ""
-        Repeater {
-            model: sheet.notifyInfo.apps || []
+    Repeater {
+        model: sheet.notifyInfo.apps || []
+        SettingsControls.Card {
+            id: appCard
+            required property var modelData
+            tone: look
+            enabled: sheet.notifyBusy === ""
             SettingsControls.SettingRow {
-                id: appRow
-                required property var modelData
-                required property int index
                 tone: look
-                divider: index > 0
+                divider: false
                 tappable: true
                 checkable: true
-                checked: modelData.popups === true
-                strong: false
-                title: modelData.name
-                detail: modelData.popups ? i18n("Pops up") : i18n("Only in the list, without popping up")
+                checked: appCard.modelData.popups === true
+                title: appCard.modelData.name
+                detail: checked ? i18n("Pops up") : i18n("Only in the list, without popping up")
                 lead: Kirigami.Icon {
                     width: 28
                     height: 28
-                    source: appRow.modelData.icon
+                    source: appCard.modelData.icon
                 }
-                onTapped: sheet.notifyApp(modelData, !modelData.popups)
+                onTapped: sheet.notifyApp(appCard.modelData, !checked)
                 SettingsControls.Switch {
                     tone: look
-                    active: appRow.modelData.popups === true
+                    active: appCard.modelData.popups === true
+                    Accessible.ignored: true
+                }
+            }
+            SettingsControls.SettingRow {
+                objectName: "taskbarBadge-" + appCard.modelData.id
+                tone: look
+                tappable: true
+                checkable: true
+                checked: appCard.modelData.badges === true
+                strong: false
+                title: i18n("Show taskbar badge")
+                detail: i18n("Show a count on the %1 icon.", appCard.modelData.name)
+                onTapped: sheet.notifyBadge(appCard.modelData, !checked)
+                SettingsControls.Switch {
+                    tone: look
+                    active: appCard.modelData.badges === true
                     Accessible.ignored: true
                 }
             }
         }
+    }
+    SettingsControls.Card {
+        tone: look
+        visible: (sheet.notifyInfo.apps || []).length === 0
         SettingsControls.SettingRow {
             tone: look
-            visible: (sheet.notifyInfo.apps || []).length === 0
             divider: false
             strong: false
             title: i18n("No apps yet")

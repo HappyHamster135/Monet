@@ -864,7 +864,7 @@ def checkpoint(apps, windows, scene=None, settle=True):
 RETURN_STATES = {"waiting", "opening", "opened", "already-running", "unconfirmed", "missing-app", "documents-unconfirmed",
                  "folders-restored", "folders-unavailable", "files-window-opened", "browser-restored", "browser-opened",
                  "browser-unavailable", "browser-skipped", "documents-opened", "documents-missing", "expired",
-                 "trip-unconfirmed", "partly-restored"}
+                 "trip-unconfirmed", "partly-restored", "wallet-locked"}
 
 
 def trip_id(saved):
@@ -2170,16 +2170,16 @@ def files_window_only(saved):
             and isinstance(frames[0].get("id"), str) and bool(frames[0]["id"]))
 
 
-def restore(path, off, running, entry, launch, freshness=12 * 3600, selected=None, request=None):
+def restore(path, off, running, entry, launch, freshness=12 * 3600, selected=None, request=None, defer=None):
     """A receipt per confirmed app survives interruption. Failed launches stay retryable."""
     try:
         with restore_lock(path):
-            return restore_locked(path, off, running, entry, launch, freshness, selected, request)
+            return restore_locked(path, off, running, entry, launch, freshness, selected, request, defer)
     except BlockingIOError:
         return []
 
 
-def restore_locked(path, off, running, entry, launch, freshness, selected, request):
+def restore_locked(path, off, running, entry, launch, freshness, selected, request, defer):
     saved = read_state(path)
     if request is not None and (not saved or request != trip_id(saved)):
         return []
@@ -2321,7 +2321,8 @@ def restore_locked(path, off, running, entry, launch, freshness, selected, reque
             continue
         item = report["items"][app] = {"status": "opening"}
         save_return(path, saved, report)
-        if not entry(app):
+        app_entry = entry(app)
+        if not app_entry:
             item["status"] = "missing-app"
             save_return(path, saved, report)
             continue
@@ -2369,6 +2370,9 @@ def restore_locked(path, off, running, entry, launch, freshness, selected, reque
                 if files:
                     files_helper().cleanup(pending)
                     saved.pop("files_launch", None)
+            elif selected is None and request is None and defer and defer(app, app_entry):
+                item["status"] = "wallet-locked"
+                done.add(app)
             elif files:
                 kind, job = "files", restore_files(path, saved, off, before)
             elif app == BROWSER and saved.get("version") == 4 and isinstance(saved_windows, list) \

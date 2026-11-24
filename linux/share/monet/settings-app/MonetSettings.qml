@@ -1846,6 +1846,10 @@ Shared.MonetWindow {
         changeNotification("notify-app " + hex(app.id) + (on ? " on" : " off"))
     }
 
+    function notifyBadge(app, on) {
+        changeNotification("notify-badge " + hex(app.id) + (on ? " on" : " off"))
+    }
+
     function setDefault(kind, app) {
         appDefaults = appDefaults.map(k => k.id === kind ? Object.assign({}, k, { current: app.id }) : k)
         ask("default " + kind + " " + hex(app.id), () => ask("defaults", out => sheet.appDefaults = sheet.json(out, sheet.appDefaults)))

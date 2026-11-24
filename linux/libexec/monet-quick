@@ -131,6 +131,7 @@
     monet-quick notify-rule mirrored|fullscreen|urgent on|off
     monet-quick notify-place clock|topright|topcenter
     monet-quick notify-time 3|5|10       seconds a popup stays
+    monet-quick notify-badge ID on|off   show an app’s numbered taskbar badge (hex ID)
     monet-quick notify-app ID on|off     an app's popups (ID as hex of its UTF-8)
     monet-quick access                   the size of everything, the pointer, motion, the screen reader and the magnifier, as JSON
     monet-quick display-sizes             each screen's actual size, scale and density
@@ -3462,8 +3463,8 @@ def write_quiet(value):
     return {"ok": wrote and matches, **quiet_state(actual or "")}
 
 
-def notified_apps(text):
-    """{desktop entry: shows popups} for each [Applications][…] group in plasmanotifyrc's text."""
+def notified_apps(text, key="ShowPopups"):
+    """Read a per-application notification switch, enabled by default in Plasma."""
     apps, current = {}, None
     for line in text.splitlines():
         line = line.strip()
@@ -3473,7 +3474,7 @@ def notified_apps(text):
             apps.setdefault(current, True)
         elif line.startswith("["):
             current = None
-        elif current and line.startswith("ShowPopups="):
+        elif current and line.startswith(key + "="):
             apps[current] = line.split("=", 1)[1].strip() != "false"
     return apps
 
@@ -3495,10 +3496,15 @@ def notify_state():
     except OSError:
         text = ""
     apps = []
-    for app_id, popups in notified_apps(text).items():
+    popup_settings = notified_apps(text)
+    badges = notified_apps(text, "ShowBadges")
+    # Launcher badges can appear before the app sends its first desktop notification.
+    for app_id in dict.fromkeys((*popup_settings, *CHATGPT_IDS)):
+        popups = popup_settings.get(app_id, True)
         entry = entry_by_id(app_id + ".desktop")
         if entry and entry.get("NoDisplay") != "true":
-            apps.append({"id": app_id, "name": entry.get("Name", app_id), "icon": entry.get("Icon", ""), "popups": popups})
+            apps.append({"id": app_id, "name": entry.get("Name", app_id), "icon": entry.get("Icon", ""), "popups": popups,
+                         "badges": badges.get(app_id, True)})
     state["apps"] = sorted(apps, key=lambda app: app["name"].lower())
     return state
 
@@ -3519,10 +3525,11 @@ def change_notifications(command, args):
         writes.append(("Notifications", "PopupPosition", POPUP_PLACES[args[0]]))
     elif command == "notify-time" and len(args) == 1 and args[0].isdigit() and int(args[0]) in POPUP_TIMES:
         writes.append(("Notifications", "PopupTimeout", str(int(args[0]) * 1000)))
-    elif command == "notify-app" and len(args) == 2 and re.fullmatch(r"(?:[0-9a-f]{2})+", args[0]) and args[1] in ("on", "off"):
+    elif command in ("notify-app", "notify-badge") and len(args) == 2 and re.fullmatch(r"(?:[0-9a-f]{2})+", args[0]) and args[1] in ("on", "off"):
         app_id = unhex(args[0])
         if re.fullmatch(r"[\w.+-]+", app_id):
-            writes.append((("Applications", app_id), "ShowPopups", "true" if args[1] == "on" else "false"))
+            key = "ShowBadges" if command == "notify-badge" else "ShowPopups"
+            writes.append((("Applications", app_id), key, "true" if args[1] == "on" else "false"))
     succeeded = bool(writes)
     for group, key, value in writes:
         wrote = kwrite("plasmanotifyrc", group, key, value)
@@ -4154,6 +4161,55 @@ def reload_locker():
 WALLET_BUS = ("org.kde.kwalletd6", "/modules/kwalletd6", "org.kde.KWallet")
 
 
+CHATGPT_IDS = ("chatgpt", "monet-chatgpt")
+
+
+def reopen_chatgpt_when_locked():
+    return not (CONFIG / "monet/chatgpt-wait-for-wallet").exists()
+
+
+def wallet_chatgpt_restore(value):
+    if value not in ("on", "off"):
+        return {"ok": False}
+    flag = CONFIG / "monet/chatgpt-wait-for-wallet"
+    try:
+        if value == "on":
+            flag.unlink(missing_ok=True)
+        else:
+            flag.parent.mkdir(parents=True, exist_ok=True)
+            flag.touch(mode=0o600, exist_ok=True)
+    except OSError:
+        return {"ok": False, "state": wallet_status()}
+    return {"ok": reopen_chatgpt_when_locked() == (value == "on"), "state": wallet_status()}
+
+
+def session_wallet_unlocked():
+    """Read the default collection's lock bit without starting or unlocking a wallet."""
+    try:
+        import dbus
+    except ImportError:
+        return False
+    try:
+        bus = dbus.SessionBus()
+        owner = bus.get_name_owner("org.freedesktop.secrets")
+        service = bus.get_object(owner, "/org/freedesktop/secrets", introspect=False)
+        collection = service.ReadAlias("default", dbus_interface="org.freedesktop.Secret.Service", timeout=1)
+        if collection == "/":
+            return False
+        proxy = bus.get_object(owner, collection, introspect=False)
+        locked = proxy.Get("org.freedesktop.Secret.Collection", "Locked",
+                           dbus_interface="org.freedesktop.DBus.Properties", timeout=1)
+        return isinstance(locked, dbus.Boolean) and not locked
+    except dbus.DBusException:
+        return False
+
+
+def defer_chatgpt(app, entry):
+    is_chatgpt = (app.removesuffix(".desktop").casefold() in CHATGPT_IDS or
+                  isinstance(entry, dict) and entry.get("StartupWMClass", "").casefold() == "chatgpt")
+    return is_chatgpt and not reopen_chatgpt_when_locked() and not session_wallet_unlocked()
+
+
 def wallet_status():
     idle = kread("kwalletrc", "Wallet", "Close When Idle", "false") == "true"
     minutes = kread("kwalletrc", "Wallet", "Idle Timeout", "10")
@@ -4170,6 +4226,7 @@ def wallet_status():
         offers = {}
     if not isinstance(offers, dict): offers = {}
     return {"enabled": kread("kwalletrc", "Wallet", "Enabled", "true") != "false",
+            "reopenChatGPTWhenLocked": reopen_chatgpt_when_locked(),
             "appOffers": offers.get("enabled") is True,
             "appOffersRunning": offers.get("running") is True,
             "appOffersAvailable": type(offers.get("enabled")) is bool and offers.get("error") is not True,
@@ -9375,7 +9432,7 @@ def trip_apps_again(selected=None, request=None):
         return []
     if saved.get("version") in (2, 3):
         return resume.restore(TRIP_APPS, TRIP_APPS_OFF, running_apps, entry_by_id, launch, TRIP_APPS_FRESH,
-                              selected=selected, request=request)
+                              selected=selected, request=request, defer=defer_chatgpt)
     if request is not None:  # A stale UI action cannot replay an older checkpoint format.
         return []
     TRIP_APPS.unlink(missing_ok=True)
@@ -9384,7 +9441,9 @@ def trip_apps_again(selected=None, request=None):
     running = set(running_apps())
     started = []
     for app in saved.get("apps") or []:
-        if isinstance(app, str) and app not in running and entry_by_id(app):
+        if isinstance(app, str) and app not in running and (entry := entry_by_id(app)):
+            if selected is None and defer_chatgpt(app, entry):
+                continue
             launch(app)
             started.append(app)
             time.sleep(0.4)
@@ -9583,7 +9642,8 @@ def reopen_work():
                 if resume.BROWSER in gone:
                     work.pop("browser", None)
             resume.atomic_write(WORK_RETURN, work)
-        started += resume.restore(WORK_RETURN, TRIP_APPS_OFF, running_apps, entry_by_id, launch, TRIP_APPS_FRESH)
+        started += resume.restore(WORK_RETURN, TRIP_APPS_OFF, running_apps, entry_by_id, launch, TRIP_APPS_FRESH,
+                                  defer=defer_chatgpt)
         # Everything back where it was needs no summary or word; what couldn't reopen has both.
         report = resume.read_return(WORK_RETURN)
         if any(item.get("status") in RESTART_ATTENTION for item in report.get("items", {}).values()):
@@ -9640,6 +9700,7 @@ def return_status(ident=None):
         "opened": tr("Opened a window. The app controls its own tabs and documents."),
         "already-running": tr("Already running; left as it was. Its saved work was not opened again."),
         "unconfirmed": tr("Opening wasn't confirmed. Retry checks an existing launch before opening another."),
+        "wallet-locked": tr("Open ChatGPT when you need it. The password vault was locked or unavailable at sign-in."),
         "missing-app": tr("This app is no longer installed. Install it again, then retry."),
         "folders-restored": tr("Saved folder tabs and split views reopened."),
         "folders-unavailable": tr("Folder tabs could not be confirmed. Reconnect any missing drives, then retry."),
@@ -10737,7 +10798,7 @@ def main(argv):
         set_layouts(args[0].split(","))
     elif cmd == "notify":
         emit(notify_state())
-    elif cmd in ("notify-rule", "notify-place", "notify-time", "notify-app"):
+    elif cmd in ("notify-rule", "notify-place", "notify-time", "notify-app", "notify-badge"):
         emit(change_notifications(cmd, args))
     elif cmd == "access":
         emit(access_state())
@@ -10790,6 +10851,8 @@ def main(argv):
         emit(privacy_state())
     elif cmd == "wallet-status":
         emit(wallet_status())
+    elif cmd == "wallet-chatgpt-restore":
+        emit(wallet_chatgpt_restore(args[0]) if len(args) == 1 else {"ok": False})
     elif cmd == "wallet-policy":
         emit(wallet_policy(args[0]) if len(args) == 1 else {"ok": False})
     elif cmd == "wallet-app-offers":

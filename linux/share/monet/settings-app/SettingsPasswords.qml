@@ -157,10 +157,25 @@ ColumnLayout {
             }
         }
         SettingsControls.SettingRow {
+            objectName: "reopenChatGPTWhenLocked"
+            tone: look
+            title: i18n("Reopen ChatGPT when the vault is locked")
+            detail: i18n("When restoring your session, ChatGPT may ask you to unlock saved passwords. Turn this off to open ChatGPT yourself when the vault is locked.")
+            tappable: !sheet.walletBusy && typeof sheet.walletInfo.reopenChatGPTWhenLocked === "boolean"
+            checkable: true
+            checked: sheet.walletInfo.reopenChatGPTWhenLocked === true
+            onTapped: sheet.walletAction("chatgpt-restore", checked ? "off" : "on")
+            SettingsControls.Switch {
+                tone: look
+                active: sheet.walletInfo.reopenChatGPTWhenLocked === true
+                Accessible.ignored: true
+            }
+        }
+        SettingsControls.SettingRow {
             tone: look
             title: i18n("Your login and vault passwords")
             detail: sheet.walletInfo.automaticLogin === true
-                ? i18n("Automatic sign-in needs one vault unlock each session. You can keep a separate vault password. For automatic unlocking at password sign-in, give kdewallet the same password as your login.")
+                ? i18n("Automatic sign-in leaves the vault locked until an app needs a saved password. Signing in with a password can unlock the vault when the two passwords match.")
                 : i18n("Separate passwords are supported: unlock the vault once when first needed. To unlock automatically at password sign-in, give kdewallet the same password as your login. Fingerprint sign-in may still need a vault unlock.")
         }
         SettingsControls.SettingRow {

@@ -38,6 +38,44 @@ class WalletPreferences(unittest.TestCase):
                     if call.args[0] == 'busctl':
                         self.assertIn(call.args[call.args.index('org.kde.KWallet') + 1], allowed)
 
+    def test_restore_choice_round_trips_and_only_checks_the_wallet_for_chatgpt(self):
+        q = self.q
+        with tempfile.TemporaryDirectory() as tmp, patch.object(q, "CONFIG", Path(tmp)), \
+                patch.object(q, "wallet_status", return_value={}), patch.object(q, "session_wallet_unlocked") as unlocked:
+            self.assertFalse(q.defer_chatgpt("chatgpt.desktop", {}))
+            self.assertTrue(q.wallet_chatgpt_restore("off")["ok"])
+            self.assertFalse(q.defer_chatgpt("zen.desktop", {"Name": "ChatGPT"}))
+            unlocked.assert_not_called()
+            unlocked.return_value = False
+            for app, entry in (("chatgpt.desktop", {}), ("monet-chatgpt.desktop", {}),
+                               ("portable.desktop", {"StartupWMClass": "Chatgpt"})):
+                self.assertTrue(q.defer_chatgpt(app, entry))
+            unlocked.return_value = True
+            self.assertFalse(q.defer_chatgpt("chatgpt.desktop", {}))
+            self.assertTrue(q.wallet_chatgpt_restore("on")["ok"])
+            self.assertTrue(q.reopen_chatgpt_when_locked())
+
+    def test_restore_reads_only_the_running_providers_lock_bit(self):
+        try:
+            import dbus
+        except ImportError:
+            self.skipTest("requires dbus-python")
+        with patch.object(dbus, "SessionBus") as session:
+            bus = session.return_value
+            bus.get_name_owner.return_value = ":1.42"
+            proxy = bus.get_object.return_value
+            proxy.ReadAlias.return_value = "/collection/test"
+            for locked in (True, False):
+                proxy.Get.return_value = dbus.Boolean(locked)
+                self.assertEqual(self.q.session_wallet_unlocked(), not locked)
+            self.assertEqual({c.args[0] for c in bus.get_object.call_args_list}, {":1.42"})
+            self.assertEqual(proxy.Get.call_args.args, ("org.freedesktop.Secret.Collection", "Locked"))
+            self.assertEqual({c[0] for c in proxy.method_calls}, {"ReadAlias", "Get"})
+            bus.get_object.reset_mock()
+            bus.get_name_owner.side_effect = dbus.DBusException("provider absent")
+            self.assertFalse(self.q.session_wallet_unlocked())
+            bus.get_object.assert_not_called()
+
     def test_invalid_policy_writes_nothing(self):
         with patch.object(self.q, 'kwrite') as write, patch.object(self.q, 'run') as run:
             for value in ('', 'never-encrypt', 'session;anything', '0', '../other'):

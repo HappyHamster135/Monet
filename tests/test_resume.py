@@ -159,6 +159,18 @@ class RestoreReceipt(unittest.TestCase):
         self.assertEqual(started, ["a.desktop", "b.desktop", "b.desktop"])
         self.assertFalse(self.path.exists())
 
+    def test_locked_wallet_defers_automatic_restore_but_manual_recovery_can_launch(self):
+        deferred = "a.desktop"
+        entry = lambda app: {"Name": app}
+        for manual in (False, True):
+            r.atomic_write(self.path, self.state)
+            started = []
+            r.window_snapshot.side_effect = ([[], [{"id": "a", "app": deferred}]] if manual else [[], [{"id": "b", "app": "b.desktop"}]])
+            r.restore(self.path, self.off, lambda: [], entry, started.append,
+                      selected=deferred if manual else None, defer=lambda app, _: app == deferred)
+            self.assertEqual(started, [deferred] if manual else ["b.desktop"])
+            self.assertEqual(r.read_return(self.path)["items"][deferred]["status"], "opened" if manual else "wallet-locked")
+
     def test_already_running_apps_are_not_reopened(self):
         started = []
         self.assertEqual(self.restore(started.append, ("a.desktop", "b.desktop")), [])

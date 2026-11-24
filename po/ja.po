@@ -5547,11 +5547,6 @@ msgstr ""
 msgid "Your login and vault passwords"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:7462
-msgid ""
-"Automatic sign-in needs one vault unlock each session. You can keep a separate vault password. For automatic unlocking at password sign-in, give kdewallet the same password as your login."
-msgstr ""
-
 #: linux/share/monet/settings-app/MonetSettings.qml:7463
 msgid ""
 "Separate passwords are supported: unlock the vault once when first needed. To unlock automatically at password sign-in, give kdewallet the same password as your login. Fingerprint sign-in may still need a vault unlock."
@@ -13967,3 +13962,30 @@ msgid ""
 "Its own installers open here, one after the other. Read their terms and accept them only if you agree: Monet never does that for you, and turns nothing off."
 msgstr ""
 "公式のインストーラーがここで順番に開きます。規約を読み、同意する場合にのみ承諾してください。Monet が代わりに承諾することはなく、何かをオフにすることもありません。"
+
+#: linux/share/monet/settings-app/SettingsNotifications.qml:174
+msgid "Show taskbar badge"
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsNotifications.qml:175
+msgid "Show a count on the %1 icon."
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsPasswords.qml:162
+msgid "Reopen ChatGPT when the vault is locked"
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsPasswords.qml:163
+msgid ""
+"When restoring your session, ChatGPT may ask you to unlock saved passwords. Turn this off to open ChatGPT yourself when the vault is locked."
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsPasswords.qml:178
+msgid ""
+"Automatic sign-in leaves the vault locked until an app needs a saved password. Signing in with a password can unlock the vault when the two passwords match."
+msgstr ""
+
+#: linux/libexec/monet-quick:9703
+msgid ""
+"Open ChatGPT when you need it. The password vault was locked or unavailable at sign-in."
+msgstr ""

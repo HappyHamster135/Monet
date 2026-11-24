@@ -100,10 +100,13 @@ class Notifications(unittest.TestCase):
                 patch.object(q, "notify_state", return_value={"apps": [], "quiet": False}):
             for command, args in (("notify-rule", ["mirrored", "off"]), ("notify-rule", ["urgent", "on"]),
                                   ("notify-place", ["topright"]), ("notify-time", ["10"]),
-                                  ("notify-app", ["org.kde.dolphin".encode().hex(), "off"])):
+                                  ("notify-app", ["org.kde.dolphin".encode().hex(), "off"]),
+                                  ("notify-badge", ["chatgpt".encode().hex(), "off"])):
                 self.assertTrue(q.change_notifications(command, args)["ok"])
             self.assertEqual(written["DoNotDisturb", "WhenScreenSharing"], "false")
             self.assertEqual(written["('Applications', 'org.kde.dolphin')", "ShowPopups"], "false")
+            self.assertEqual(written["('Applications', 'chatgpt')", "ShowBadges"], "false")
+            self.assertNotIn(("('Applications', 'chatgpt')", "ShowPopups"), written)
             self.assertFalse(any(key in ("ShowInHistory", "NotificationSoundsMuted") for group, key in written))
             with patch.object(q, "kread", return_value="unchanged"):
                 self.assertFalse(q.change_notifications("notify-time", ["5"])["ok"])
