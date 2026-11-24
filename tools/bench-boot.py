@@ -223,6 +223,20 @@ def boot(args, disk, variables, key, index, runtime):
                     or trust.get('Result') != 'success'
                     or (index == 0 and int(trust.get('ExecMainExitTimestampMonotonic', 0)) <= 0)):
                 raise RuntimeError('Trust refresh must run on the first boot and skip normal reboots: '+str(trust))
+        migration_reply = ssh(port,key,'systemctl show bazzite-iwd-migration.service '
+            '-p ConditionResult -p Result -p ExecMainStartTimestampMonotonic '
+            '-p ExecMainExitTimestampMonotonic -p ExecCondition')
+        migration = properties(migration_reply.stdout)
+        radio = ssh(port,key,'systemctl show NetworkManager.service bluetooth.service monet-input-connect.service '
+            '-p Id -p LoadState -p ActiveState -p ConditionResult -p ExecMainStartTimestampMonotonic '
+            '-p ActiveEnterTimestampMonotonic; journalctl -b -u bazzite-iwd-migration.service --no-pager -o short-monotonic')
+        (work/'radio-startup.txt').write_text(migration_reply.stdout+'\n'+migration_reply.stderr
+            +'\n'+radio.stdout+'\n'+radio.stderr)
+        if args.check_wifi_migration and index > 0:
+            if (migration_reply.returncode or migration.get('Result') not in ('success', 'exec-condition')
+                    or migration.get('ExecMainStartTimestampMonotonic') != '0'
+                    or not re.search(r'code=exited\s*;\s*status=1\b', migration.get('ExecCondition', ''))):
+                raise RuntimeError('Routine Wi-Fi migration should skip its reload on normal boots: '+str(migration))
         sessions = ssh(port,key,"loginctl list-sessions --no-legend | while read -r sid rest; do loginctl show-session \"$sid\" -p Type -p Class; echo; done")
         for session in sessions.stdout.split('\n\n'):
             fields=properties(session)
@@ -232,7 +246,7 @@ def boot(args, disk, variables, key, index, runtime):
                       power_on_to_controls_ms=round(first*1000,3),
                       keyboard_verified_ms=round(input_verified*1000,3),
                       sampling_interval_ms=250,guest_properties=values,guest_phases=timing_phases(values),
-                      trust_refresh=trust)
+                      trust_refresh=trust,wifi_migration=migration)
         (work/'timing.json').write_text(json.dumps(result,indent=2)+'\n')
         # Seed the next *normal* boot exactly as the stock successful-login helper
         # would. No trial counters are changed. This is only the disposable VM.
@@ -270,6 +284,8 @@ def main():
     parser.add_argument('--memory',type=int,default=8192); parser.add_argument('--timeout',type=int,default=240)
     parser.add_argument('--check-trust-refresh',action='store_true',
         help='Require trust regeneration on the initial boot and no regeneration on subsequent boots')
+    parser.add_argument('--check-wifi-migration',action='store_true',
+        help='Require routine Wi-Fi migration to skip its systemd reload on normal boots')
     parser.add_argument('--firmware-code',type=Path,default=Path('/usr/share/OVMF/OVMF_CODE_4M.fd'))
     parser.add_argument('--firmware-vars',type=Path,default=Path('/usr/share/OVMF/OVMF_VARS_4M.fd'))
     args=parser.parse_args()

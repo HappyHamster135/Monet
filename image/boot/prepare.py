@@ -14,6 +14,42 @@ TRUST_DROPIN = """# Match Fedora's atomic trust refresh lifecycle: first boot an
 ConditionNeedsUpdate=/etc
 Before=systemd-update-done.service systemd-resolved.service
 """
+WIFI_NEEDED = ('test ! -e /var/lib/bazzite-iwd-migration.done'
+    ' || test -e /etc/NetworkManager/conf.d/99-valve-wifi-backend.conf'
+    ' || test -e /etc/NetworkManager/conf.d/iwd.conf'
+    ' || { test -e /etc/systemd/system/wpa_supplicant.service'
+    ' && test ! -s /etc/systemd/system/wpa_supplicant.service; }'
+    ' || { test -e /run/systemd/system/wpa_supplicant.service'
+    ' && test ! -s /run/systemd/system/wpa_supplicant.service; }')
+
+
+def prepare_wifi(root):
+    """Avoid a redundant systemd reload before NetworkManager on normal boots."""
+    script = root / 'usr/libexec/bazzite-iwd-migration'
+    unit = root / 'usr/lib/systemd/system/bazzite-iwd-migration.service'
+    if script.is_symlink() or unit.is_symlink():
+        raise ValueError('Refusing symlinked image Wi-Fi migration')
+    if not script.exists() and not unit.exists():
+        return
+    expected = """systemctl unmask wpa_supplicant.service
+if [ -f /etc/NetworkManager/conf.d/99-valve-wifi-backend.conf ]; then
+rm -f /etc/NetworkManager/conf.d/99-valve-wifi-backend.conf
+fi
+if [ -f /etc/NetworkManager/conf.d/iwd.conf ]; then
+rm -f /etc/NetworkManager/conf.d/iwd.conf
+fi"""
+    code = '\n'.join(line.strip() for line in script.read_text().splitlines()
+                     if line.strip() and not line.lstrip().startswith('#'))
+    commands = [line for line in unit.read_text().splitlines() if line.startswith('Exec')]
+    if (code != expected or commands != ['ExecStart=/usr/libexec/bazzite-iwd-migration',
+            'ExecStartPost=/usr/bin/touch /var/lib/bazzite-iwd-migration.done']
+            or 'Before=NetworkManager.service' not in unit.read_text().splitlines()):
+        raise ValueError('Unrecognized Wi-Fi migration; review before skipping routine cleanup')
+    destination = unit.with_name(unit.name + '.d') / '50-monet-fast-start.conf'
+    if destination.is_symlink() or destination.parent.is_symlink():
+        raise ValueError('Refusing symlinked image Wi-Fi migration drop-in')
+    destination.parent.mkdir(exist_ok=True)
+    destination.write_text('[Service]\nExecCondition=/bin/sh -c \'' + WIFI_NEEDED + '\'\n')
 
 
 def prepare_trust(root):
@@ -105,6 +141,7 @@ def autoload_config(text):
 def prepare(root):
     root = Path(root)
     prepare_trust(root)
+    prepare_wifi(root)
     prepare_hardware(root)
     config = root / 'usr/lib/dracut/dracut.conf.d/99-nvidia.conf'
     if config.is_symlink():

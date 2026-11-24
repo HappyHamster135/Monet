@@ -130,6 +130,8 @@ for tool in monet-boot monet-reset monet-seal; do
 done
 # A controller or headset paired in Windows works in Monet too: root's part.
 put 755 "$SRC/libexec/monet-pairings" "$LIBEXECDIR/monet-pairings"
+put 755 "$SRC/libexec/monet-input-connect" "$LIBEXECDIR/monet-input-connect"
+put 644 "$SRC/systemd/monet-input-connect.service" "$UNITDIR/monet-input-connect.service"
 # Settings → Security's fixes: root's part, always after an administrator's password.
 put 755 "$SRC/libexec/monet-secure" "$LIBEXECDIR/monet-secure"
 # Retained installation recovery requires normal administrator authentication.
@@ -518,6 +520,7 @@ if [ "$IMAGE" = 1 ]; then
     systemctl enable monet-boot-arm.service monet-boot-check.service monet-reset.service monet-seal.service \
         monet-seal-relearn.service
     systemctl enable monet-pairings.service
+    systemctl enable monet-input-connect.service
     systemctl enable monet-windows-drive.service monet-windows-files.service monet-windows-network.service
     systemctl enable monet-guest-wipe.service
     # Monet's name, version, mark and links where the system describes itself (KDE's
@@ -732,6 +735,7 @@ else
     systemctl enable monet-boot-check.service monet-reset.service monet-seal.service monet-seal-relearn.service \
         >/dev/null 2>&1 || true
     systemctl enable monet-pairings.service >/dev/null 2>&1 || true
+    systemctl enable monet-input-connect.service >/dev/null 2>&1 || true
     systemctl enable monet-windows-drive.service monet-windows-files.service monet-windows-network.service >/dev/null 2>&1 || true
     systemctl enable monet-guest-wipe.service >/dev/null 2>&1 || true
 fi

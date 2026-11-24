@@ -1,0 +1,21 @@
+[Unit]
+Description=Connect trusted Bluetooth mice and keyboards during startup
+After=bluetooth.service
+BindsTo=bluetooth.service
+ConditionPathIsDirectory=/sys/class/bluetooth
+
+[Service]
+Type=exec
+ExecStart=@LIBEXECDIR@/monet-input-connect
+RuntimeMaxSec=25
+Nice=5
+CPUWeight=20
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+RestrictAddressFamilies=AF_UNIX
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=bluetooth.service

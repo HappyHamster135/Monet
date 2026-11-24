@@ -1,0 +1,136 @@
+#!/usr/bin/python3
+"""Give trusted Bluetooth input devices one early connection attempt at boot.
+
+Run with Bluetooth, before a desktop agent is available. Observe BlueZ events
+for at most twenty seconds, without scanning, pairing, changing trust or powering
+radios on. Each eligible device is attempted once; an explicit disconnect is
+never undone. --inspect only reports aggregate state and makes no connection.
+"""
+import argparse
+import json
+
+ADAPTER = 'org.bluez.Adapter1'
+DEVICE = 'org.bluez.Device1'
+INPUT_UUIDS = {'00001124-0000-1000-8000-00805f9b34fb',
+               '00001812-0000-1000-8000-00805f9b34fb'}
+
+
+def known_input(properties):
+    return (properties.get('Paired') is True
+        and properties.get('Trusted') is True
+        and properties.get('Blocked') is False
+        and bool(INPUT_UUIDS.intersection(str(uuid).lower() for uuid in properties.get('UUIDs', []))))
+
+
+def eligible(objects):
+    for path, interfaces in objects.items():
+        device = interfaces.get(DEVICE, {})
+        adapter = objects.get(device.get('Adapter'), {}).get(ADAPTER, {})
+        if (known_input(device) and device.get('Connected') is False
+                and adapter.get('Powered') is True):
+            yield path
+
+
+class Reconnect:
+    def __init__(self, loop, inspect=False):
+        from gi.repository import Gio, GLib
+        self.loop = loop
+        self.inspect = inspect
+        self.manager = None
+        self.handled = set()
+        self.scheduled = False
+        GLib.timeout_add_seconds(20, self.finish)
+        Gio.DBusObjectManagerClient.new_for_bus(Gio.BusType.SYSTEM,
+            Gio.DBusObjectManagerClientFlags.DO_NOT_AUTO_START,
+            'org.bluez', '/', None, None, None, self.ready, None)
+
+    def finish(self):
+        self.loop.quit()
+        return False
+
+    def ready(self, source, result, data):
+        from gi.repository import Gio, GLib
+        try:
+            self.manager = Gio.DBusObjectManagerClient.new_for_bus_finish(result)
+        except GLib.Error:
+            self.finish()
+            return
+        if not self.manager.get_name_owner():
+            self.finish()
+            return
+        for signal in ('object-added', 'object-removed', 'interface-added',
+                       'interface-removed', 'interface-proxy-properties-changed'):
+            self.manager.connect(signal, self.changed)
+        self.manager.connect('notify::name-owner', self.changed)
+        self.changed()
+
+    def snapshot(self):
+        objects = {}
+        for obj in self.manager.get_objects():
+            interfaces = {}
+            for name in (ADAPTER, DEVICE):
+                proxy = obj.get_interface(name)
+                if proxy is not None:
+                    interfaces[name] = {key: value.unpack()
+                        for key in proxy.get_cached_property_names() or []
+                        if (value := proxy.get_cached_property(key)) is not None}
+            objects[obj.get_object_path()] = interfaces
+        return objects
+
+    def changed(self, *args):
+        from gi.repository import GLib
+        if not self.scheduled:
+            self.scheduled = True
+            GLib.idle_add(self.reconcile)
+
+    def reconcile(self):
+        from gi.repository import Gio
+        self.scheduled = False
+        if not self.manager.get_name_owner():
+            self.finish()
+            return False
+        objects = self.snapshot()
+        if self.inspect:
+            devices = [o[DEVICE] for o in objects.values() if known_input(o.get(DEVICE, {}))]
+            print(json.dumps(dict(known_inputs=len(devices),
+                connected_inputs=sum(d.get('Connected') is True for d in devices),
+                eligible_inputs=len(list(eligible(objects))))))
+            self.finish()
+            return False
+        # Remember already connected devices too: a later user disconnect during
+        # this short boot window must not cause us to connect it again.
+        self.handled.update(path for path, obj in objects.items()
+            if obj.get(DEVICE, {}).get('Connected') is True)
+        for path in eligible(objects):
+            if path in self.handled:
+                continue
+            self.handled.add(path)
+            proxy = self.manager.get_object(path).get_interface(DEVICE)
+            proxy.call('Connect', None, Gio.DBusCallFlags.NO_AUTO_START,
+                       10000, None, self.connected, None)
+        return False
+
+    @staticmethod
+    def connected(proxy, result, data):
+        from gi.repository import GLib
+        try:
+            proxy.call_finish(result)
+        except GLib.Error:
+            # InProgress belongs to BlueZ's existing attempt. An asleep or
+            # absent peripheral is ordinary; leave subsequent reconnects to it.
+            pass
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--inspect', action='store_true')
+    args = parser.parse_args()
+    from gi.repository import GLib
+    loop = GLib.MainLoop()
+    reconnect = Reconnect(loop, args.inspect)
+    loop.run()
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

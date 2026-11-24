@@ -91,6 +91,8 @@ rm -f /etc/systemd/system/monet-boot-arm.service /etc/systemd/system/monet-boot-
 # Windows' Bluetooth pairings stay where they are.
 systemctl disable monet-pairings.service >/dev/null 2>&1 || true
 rm -f /etc/systemd/system/monet-pairings.service /var/lib/monet/pairings.json
+systemctl disable --now monet-input-connect.service >/dev/null 2>&1 || true
+rm -f /etc/systemd/system/monet-input-connect.service "$PREFIX/libexec/monet-input-connect"
 # The Guest account goes, with whatever it holds.
 [ -x "$PREFIX/libexec/monet-guest" ] && "$PREFIX/libexec/monet-guest" off >/dev/null 2>&1 || true
 systemctl disable monet-guest-wipe.service >/dev/null 2>&1 || true
