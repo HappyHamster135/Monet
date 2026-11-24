@@ -1,5 +1,36 @@
 # Testing Monet on real hardware
 
+## 0.9.8-9 lighting-device discovery during boot — 24 November 2026
+
+With the OpenRGB change, the VM accepted a key **1.73 seconds earlier** on the
+median cold boot. Two independent overlays used the same installed disk at
+`5e08321`. One restored the original lighting rules after its provisioning
+boot. Both used one vCPU, 8 GiB and software graphics on the same KVM runner.
+The control ran first, with uncontrolled host page cache. Each of the nine
+normal boots recorded the visible login, a masked test keystroke and an active
+login service. [Boot journals, timings and screenshots](https://github.com/HappyHamster135/Monet/actions/runs/45356899018)
+
+| Installed disk | Median visible login (s) | Accepted key, three boots (s) | Median accepted key (s) | Median device manager CPU after keypress (s) |
+| --- | ---: | --- | ---: | ---: |
+| Released 0.9.8-8 | 36.37 | 37.01, 38.21, 36.44 | 37.01 | 7.66 |
+| 0.9.8-9 with the original lighting rules | 27.71 | 28.65, 27.76, 28.63 | 28.63 | 2.83 |
+| 0.9.8-9 with the new lighting rules | 25.98 | 26.19, 27.45, 26.91 | 26.91 | 1.70 |
+
+The early check skips 1,369 product rules when the device and its ancestors
+cannot match any listed vendor and bus. Eligible devices still pass through
+the original rules in order. A native udev replay covered a supported USB
+product and its child, unlisted products and vendors, serial-only IDs on USB,
+an internal keyboard, an SSD and I²C access. The matched tags and queued
+actions agreed. On the ThinkPad, replaying the lighting rules for 487 device
+paths initialized during the first minute took 0.66 and 0.68 s across two
+passes with the original rules and 0.24 s in each pass with the new rules.
+This measures rule processing on the laptop. Its physical power-on time with
+this build remains unmeasured.
+
+The longest remaining measured stage on the VM was 10.65 s between switching
+to the installed system and starting the login manager. The desktop suite
+ran 2,446 checks with 19 skips and zero failures. [Build results](https://github.com/HappyHamster135/Monet/actions/runs/45356899161)
+
 ## 0.9.8-9 input-device discovery during boot — 24 November 2026
 
 The login screen accepted a test key **7.13 seconds earlier** on the median
