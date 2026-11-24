@@ -183,6 +183,7 @@ with private_session() as env:
         until(lambda: window('stretched')['rect']['x'] > 140, 'Move the stretched window')
         pointer.point(557, 51)
         expect('stretched', 277, 0, 610, 800)
+        time.sleep(.5)  # Pausing under the animated layout picker must not select a tile.
         pointer.button(False)
         pointer.sock.close()
         until(lambda: not r.kwin_script("reply(windows().some(w => w.move))"), 'Release stretched window')

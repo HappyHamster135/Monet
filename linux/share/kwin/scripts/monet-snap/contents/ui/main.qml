@@ -286,14 +286,6 @@ Item {
         screen = out.geometry
         const g = w.frameGeometry
         travelled = travelled || Math.abs(g.x - start.x) + Math.abs(g.y - start.y) > 16
-        // A full-height window's header already passes over the layout picker.
-        // Keep a sideways drag there horizontal until the pointer reaches an actual edge.
-        if (Number(w.maximizeMode) === 1 && p.y > area.y + edge
-                && p.x > area.x + edge && p.x < area.x + area.width - 1 - edge) {
-            barNear = false
-            target = null
-            return
-        }
         target = travelled ? aim(p) : null
     }
 
@@ -303,6 +295,12 @@ Item {
         const nearTop = p.y <= a.y + edge
         const nearLeft = p.x <= a.x + edge
         const nearRight = p.x >= a.x + a.width - 1 - edge
+        // Both pointer motion and a stationary hover ask for a target. A full-height
+        // window already crosses the picker on a sideways drag; require an actual edge.
+        if (dragged && Number(dragged.maximizeMode) === 1 && !nearTop && !nearLeft && !nearRight) {
+            barNear = false
+            return null
+        }
         // Near the bar as it is when open, so it opens wherever its layouts will be.
         const middle = screen.x + screen.width / 2
         barNear = p.y < a.y + layoutRow.implicitHeight + 110 && Math.abs(p.x - middle) < layoutRow.implicitWidth / 2 + 90
