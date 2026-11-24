@@ -46,3 +46,21 @@ The login manager's udev-settle safeguard remains: upstream added it to avoid
 [black screens when DRM devices are still initializing](https://github.com/KDE/plasma-login-manager/commit/a8c752fe28c36fa7d3b95461a7b24ce2d9de7f69).
 These changes need boot qualification on the complete image; isolated dependency
 and helper measurements do not establish a new power-on-to-login time.
+
+## Certificate trust on normal boots
+
+The inherited legacy `bootc-update-ca-trust.service` regenerates the trust bundle
+on every boot, taking 1.555 seconds before `sysinit.target` in the recorded
+ThinkPad baseline. Image preparation adds Fedora's current
+[`ConditionNeedsUpdate=/etc` lifecycle](https://gitlab.com/fedora/bootc/base-images/-/merge_requests/663):
+regenerate on first boot and after a deployment, then skip ordinary reboots.
+OSTree removes `/etc/.updated` when deploying; `systemd-update-done.service`
+recreates it. Regeneration remains ordered before that marker and
+`systemd-resolved.service`, so DNS-over-TLS cannot read an old bundle first.
+Local trust edits still require `update-ca-trust`, as in Fedora's service.
+
+The command and existing prerequisites remain intact. Preparation rejects
+unrecognized service layouts or a second trust writer. The boot benchmark checks
+that the candidate runs regeneration on its initial boot and skips it on every
+timed normal reboot. This is a candidate optimization until that image test
+passes; the recorded service duration alone is not an end-to-end saving.

@@ -212,6 +212,17 @@ def boot(args, disk, variables, key, index, runtime):
             'grep -E "^[[:space:]]*set timeout(_style)?=" /boot/grub2/grub.cfg; '
             'grub2-editenv - list | grep -E "^(boot_success|boot_indeterminate|menu_auto_hide|menu_show_once_timeout|boot_counter)="')
         (work/'guest.txt').write_text(evidence.stdout+'\n'+evidence.stderr)
+        trust_reply = ssh(port,key,'systemctl show bootc-update-ca-trust.service '
+            '-p ConditionResult -p Result -p ExecMainStartTimestampMonotonic '
+            '-p ExecMainExitTimestampMonotonic; stat -c "%n %y" /etc/.updated /usr >&2')
+        (work/'trust-refresh.txt').write_text(trust_reply.stdout+'\n'+trust_reply.stderr)
+        trust = properties(trust_reply.stdout)
+        if args.check_trust_refresh:
+            expected = 'yes' if index == 0 else 'no'
+            if (trust_reply.returncode or trust.get('ConditionResult') != expected
+                    or trust.get('Result') != 'success'
+                    or (index == 0 and int(trust.get('ExecMainExitTimestampMonotonic', 0)) <= 0)):
+                raise RuntimeError('Trust refresh must run on the first boot and skip normal reboots: '+str(trust))
         sessions = ssh(port,key,"loginctl list-sessions --no-legend | while read -r sid rest; do loginctl show-session \"$sid\" -p Type -p Class; echo; done")
         for session in sessions.stdout.split('\n\n'):
             fields=properties(session)
@@ -220,7 +231,8 @@ def boot(args, disk, variables, key, index, runtime):
         result = dict(index=index,warmup=index==0,power_on_to_visible_login_ms=round(clock_frame*1000,3),
                       power_on_to_controls_ms=round(first*1000,3),
                       keyboard_verified_ms=round(input_verified*1000,3),
-                      sampling_interval_ms=250,guest_properties=values,guest_phases=timing_phases(values))
+                      sampling_interval_ms=250,guest_properties=values,guest_phases=timing_phases(values),
+                      trust_refresh=trust)
         (work/'timing.json').write_text(json.dumps(result,indent=2)+'\n')
         # Seed the next *normal* boot exactly as the stock successful-login helper
         # would. No trial counters are changed. This is only the disposable VM.
@@ -256,6 +268,8 @@ def main():
     parser.add_argument('disk',type=Path); parser.add_argument('output',type=Path)
     parser.add_argument('--samples',type=int,default=3); parser.add_argument('--cpus',type=int,default=1)
     parser.add_argument('--memory',type=int,default=8192); parser.add_argument('--timeout',type=int,default=240)
+    parser.add_argument('--check-trust-refresh',action='store_true',
+        help='Require trust regeneration on the initial boot and no regeneration on subsequent boots')
     parser.add_argument('--firmware-code',type=Path,default=Path('/usr/share/OVMF/OVMF_CODE_4M.fd'))
     parser.add_argument('--firmware-vars',type=Path,default=Path('/usr/share/OVMF/OVMF_VARS_4M.fd'))
     args=parser.parse_args()

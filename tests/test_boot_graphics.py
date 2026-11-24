@@ -78,3 +78,52 @@ class GraphicsAutoload(unittest.TestCase):
         result = subprocess.run(['udevadm', 'verify', str(FOLDER / '99monet-graphics/61-monet-nvidia-kms.rules')],
                                 capture_output=True, text=True, timeout=5)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+
+class TrustRefreshLifecycle(unittest.TestCase):
+    LEGACY = """[Unit]
+ConditionPathIsMountPoint=/sysroot
+ConditionPathExists=/usr/bin/update-ca-trust
+DefaultDependencies=no
+Requires=local-fs.target
+After=local-fs.target
+Before=sysinit.target
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/update-ca-trust extract
+"""
+
+    def fixture(self, root):
+        unit=root/'usr/lib/systemd/system/bootc-update-ca-trust.service'
+        unit.parent.mkdir(parents=True)
+        unit.write_text(self.LEGACY)
+        return unit
+
+    def test_keeps_regeneration_and_orders_it_before_update_completion_and_tls(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder); unit=self.fixture(root)
+            boot.prepare_trust(root)
+            dropin=unit.with_name(unit.name+'.d')/'50-monet-deployment.conf'
+            self.assertEqual(unit.read_text(),self.LEGACY)
+            self.assertIn('ConditionNeedsUpdate=/etc\n',dropin.read_text())
+            self.assertIn('Before=systemd-update-done.service systemd-resolved.service\n',dropin.read_text())
+            before=dropin.read_bytes(); boot.prepare_trust(root)
+            self.assertEqual(dropin.read_bytes(),before)
+
+    def test_changed_prerequisites_and_parallel_writers_require_review(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder); unit=self.fixture(root)
+            unit.write_text(self.LEGACY.replace('Before=sysinit.target\n',''))
+            with self.assertRaises(ValueError):boot.prepare_trust(root)
+            unit.write_text(self.LEGACY)
+            unit.with_name('atomic-update-ca-trust.service').write_text('[Service]\n')
+            with self.assertRaises(ValueError):boot.prepare_trust(root)
+
+    def test_does_not_follow_a_symlink_outside_the_image(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder); unit=self.fixture(root)
+            outside=root/'external'; outside.mkdir()
+            unit.with_name(unit.name+'.d').symlink_to(outside,target_is_directory=True)
+            with self.assertRaises(ValueError):boot.prepare_trust(root)
+            self.assertEqual(list(outside.iterdir()),[])

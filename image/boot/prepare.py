@@ -8,6 +8,39 @@ import sys
 GRAPHICS = {"i915", "amdgpu", "nvidia", "nvidia_drm", "nvidia_modeset", "nvidia_uvm"}
 ASSIGN = re.compile(r'^(\s*)force_drivers(\+?=)([\"\'])([^\"\']*)\3\s*(#.*)?$')
 HARDWARE_WAIT = '# Monet: wait for setup dependencies only when hardware migration is needed.\n'
+TRUST_DROPIN = """# Match Fedora's atomic trust refresh lifecycle: first boot and deployments.
+# https://gitlab.com/fedora/bootc/base-images/-/merge_requests/663
+[Unit]
+ConditionNeedsUpdate=/etc
+Before=systemd-update-done.service systemd-resolved.service
+"""
+
+
+def prepare_trust(root):
+    """Backport Fedora's deployment condition to the inherited legacy service."""
+    unit = root / 'usr/lib/systemd/system/bootc-update-ca-trust.service'
+    if unit.is_symlink():
+        raise ValueError('Refusing symlinked image certificate-trust service')
+    if not unit.exists():
+        return
+    text = unit.read_text()
+    expected = ('DefaultDependencies=no', 'Requires=local-fs.target',
+                'After=local-fs.target', 'Before=sysinit.target',
+                'ConditionPathIsMountPoint=/sysroot',
+                'ConditionPathExists=/usr/bin/update-ca-trust',
+                'ExecStart=/usr/bin/update-ca-trust extract')
+    if any(line not in text.splitlines() for line in expected):
+        raise ValueError('Unrecognized legacy certificate-trust service; review its boot ordering')
+    # A newer base may replace this service with Fedora's atomic service. Do not
+    # allow two writers to race; review such a transition rather than guessing.
+    for name in ('atomic-update-ca-trust.service', 'coreos-update-ca-trust.service'):
+        if unit.with_name(name).exists():
+            raise ValueError('Multiple certificate-trust refresh services need review')
+    destination = unit.with_name(unit.name + '.d') / '50-monet-deployment.conf'
+    if destination.is_symlink() or destination.parent.is_symlink():
+        raise ValueError('Refusing symlinked image certificate-trust drop-in')
+    destination.parent.mkdir(exist_ok=True)
+    destination.write_text(TRUST_DROPIN)
 
 
 def hardware_config(script, unit):
@@ -71,6 +104,7 @@ def autoload_config(text):
 
 def prepare(root):
     root = Path(root)
+    prepare_trust(root)
     prepare_hardware(root)
     config = root / 'usr/lib/dracut/dracut.conf.d/99-nvidia.conf'
     if config.is_symlink():
