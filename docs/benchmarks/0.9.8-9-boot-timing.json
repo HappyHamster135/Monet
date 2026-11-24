@@ -1,0 +1,1735 @@
+{
+  "schema": 1,
+  "measured_at": "2026-11-24",
+  "source_commit": "a9f1c21859a7216625e13274dcd53927217b916a",
+  "workflow_run": "https://github.com/HappyHamster135/Monet/actions/runs/45299948902",
+  "application_checks_run": "https://github.com/HappyHamster135/Monet/actions/runs/45299948839",
+  "package_source": {
+    "sha": "a9f1c21859a7216625e13274dcd53927217b916a",
+    "run": 45299948839,
+    "artifact": 14878008575,
+    "version": "0.9.8-9"
+  },
+  "scope": "Installed disk power-ons under KVM including UEFI and GRUB; not physical laptop timings",
+  "environment": {
+    "cpus": 1,
+    "memory_mib": 8192,
+    "secure_boot": false,
+    "host_page_cache": "uncontrolled",
+    "order": [
+      "baseline",
+      "candidate"
+    ],
+    "kernel": "7.3.4-ogc8.1.fc45.x86_64",
+    "native_runtime": "Released 0.9.8-8 AMD/Intel base retained",
+    "polling_sleep_ms": 250,
+    "capture_and_processing_add_overhead": true
+  },
+  "toolchain": [
+    "crun version 1.31",
+    "commit: a84965e1278d08d6c75d5b8a41a3e72a7a11fa5b",
+    "rundir: /run/user/1001/crun",
+    "spec: 1.0.0",
+    "+SYSTEMD +SELINUX +APPARMOR +CAP +SECCOMP +EBPF +CRIU +JSON_C",
+    "podman version 5.7.0",
+    "QEMU emulator version 10.2.1 (Debian 1:10.2.1+ds-1ubuntu3.3)",
+    "Copyright (c) 2003-2025 Fabrice Bellard and the QEMU Project developers"
+  ],
+  "normal_boots_per_image": 3,
+  "initial_setup_excluded": true,
+  "initial_setup_note": "The initial power-on includes Bazzite hardware setup, a kernel-argument deployment and its automatic reboot. It is retained but excluded from normal-boot medians.",
+  "physical_baseline": {
+    "version": "0.9.8-8",
+    "firmware_plus_loader_ms": 23454.174,
+    "kernel_to_login_manager_process_start_ms": 11718.795,
+    "power_on_to_login_manager_process_start_ms": 35172.969,
+    "first_visible_login_measured": false,
+    "candidate_hardware_boot_measured": false
+  },
+  "baseline": {
+    "image": {
+      "architecture": "amd64",
+      "image": {
+        "image": "localhost/monet-boot-profile:baseline",
+        "signature": "containerPolicy",
+        "transport": "containers-storage"
+      },
+      "imageDigest": "sha256:15a82fc9df8aab6b90177e87a686b3ff89a68393c5ecea9c4acb42ae80dd4363",
+      "timestamp": "2026-11-17T15:34:27Z",
+      "version": "0.9.8-8"
+    },
+    "timing": {
+      "schema": 1,
+      "scope": "Installed disk cold boots under KVM; not physical laptop timings",
+      "secure_boot": false,
+      "host_page_cache": "uncontrolled",
+      "cpus": 1,
+      "memory_mib": 8192,
+      "first_boot_excluded": true,
+      "boot_state": "Successful normal boot seeded between samples; trial counters untouched",
+      "median_ms": 28854.8,
+      "min_ms": 28578.292,
+      "max_ms": 29478.961,
+      "samples": [
+        {
+          "index": 0,
+          "warmup": true,
+          "power_on_to_visible_login_ms": 120087.782,
+          "power_on_to_controls_ms": 120407.219,
+          "keyboard_verified_ms": 120742.268,
+          "sampling_interval_ms": 250,
+          "guest_properties": {
+            "FirmwareTimestampMonotonic": "0",
+            "LoaderTimestampMonotonic": "0",
+            "InitRDTimestampMonotonic": "1266070",
+            "UserspaceTimestampMonotonic": "2606094",
+            "FinishTimestampMonotonic": "25790862"
+          },
+          "guest_phases": {
+            "firmware_ms": null,
+            "loader_ms": null,
+            "kernel_ms": 1266.07,
+            "initrd_ms": 1340.024,
+            "userspace_start_ms": 2606.094
+          },
+          "trust_refresh": {
+            "ConditionResult": "yes",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "5792919",
+            "ExecMainExitTimestampMonotonic": "12041992"
+          }
+        },
+        {
+          "index": 1,
+          "warmup": false,
+          "power_on_to_visible_login_ms": 29478.961,
+          "power_on_to_controls_ms": 29806.262,
+          "keyboard_verified_ms": 30141.326,
+          "sampling_interval_ms": 250,
+          "guest_properties": {
+            "FirmwareTimestampMonotonic": "0",
+            "LoaderTimestampMonotonic": "0",
+            "InitRDTimestampMonotonic": "1346192",
+            "UserspaceTimestampMonotonic": "2658513",
+            "FinishTimestampMonotonic": "21928689"
+          },
+          "guest_phases": {
+            "firmware_ms": null,
+            "loader_ms": null,
+            "kernel_ms": 1346.192,
+            "initrd_ms": 1312.321,
+            "userspace_start_ms": 2658.513
+          },
+          "trust_refresh": {
+            "ConditionResult": "yes",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "4258363",
+            "ExecMainExitTimestampMonotonic": "11708098"
+          }
+        },
+        {
+          "index": 2,
+          "warmup": false,
+          "power_on_to_visible_login_ms": 28854.8,
+          "power_on_to_controls_ms": 29193.751,
+          "keyboard_verified_ms": 29542.986,
+          "sampling_interval_ms": 250,
+          "guest_properties": {
+            "FirmwareTimestampMonotonic": "0",
+            "LoaderTimestampMonotonic": "0",
+            "InitRDTimestampMonotonic": "1340889",
+            "UserspaceTimestampMonotonic": "2657451",
+            "FinishTimestampMonotonic": "21693115"
+          },
+          "guest_phases": {
+            "firmware_ms": null,
+            "loader_ms": null,
+            "kernel_ms": 1340.889,
+            "initrd_ms": 1316.562,
+            "userspace_start_ms": 2657.451
+          },
+          "trust_refresh": {
+            "ConditionResult": "yes",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "4507767",
+            "ExecMainExitTimestampMonotonic": "11876658"
+          }
+        },
+        {
+          "index": 3,
+          "warmup": false,
+          "power_on_to_visible_login_ms": 28578.292,
+          "power_on_to_controls_ms": 28917.186,
+          "keyboard_verified_ms": 29266.533,
+          "sampling_interval_ms": 250,
+          "guest_properties": {
+            "FirmwareTimestampMonotonic": "0",
+            "LoaderTimestampMonotonic": "0",
+            "InitRDTimestampMonotonic": "1341197",
+            "UserspaceTimestampMonotonic": "2652207",
+            "FinishTimestampMonotonic": "21243126"
+          },
+          "guest_phases": {
+            "firmware_ms": null,
+            "loader_ms": null,
+            "kernel_ms": 1341.197,
+            "initrd_ms": 1311.01,
+            "userspace_start_ms": 2652.207
+          },
+          "trust_refresh": {
+            "ConditionResult": "yes",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "4249767",
+            "ExecMainExitTimestampMonotonic": "11550755"
+          }
+        }
+      ]
+    }
+  },
+  "candidate": {
+    "image": {
+      "architecture": "amd64",
+      "image": {
+        "image": "localhost/monet-boot-profile:candidate",
+        "signature": "containerPolicy",
+        "transport": "containers-storage"
+      },
+      "imageDigest": "sha256:f716b5ba9938046ca92d565922966ae6d930139b72d7c9b377faf68f563930db",
+      "timestamp": "2026-11-17T15:34:27Z",
+      "version": "0.9.8-9"
+    },
+    "timing": {
+      "schema": 1,
+      "scope": "Installed disk cold boots under KVM; not physical laptop timings",
+      "secure_boot": false,
+      "host_page_cache": "uncontrolled",
+      "cpus": 1,
+      "memory_mib": 8192,
+      "first_boot_excluded": true,
+      "boot_state": "Successful normal boot seeded between samples; trial counters untouched",
+      "median_ms": 27363.496,
+      "min_ms": 27356.359,
+      "max_ms": 27393.882,
+      "samples": [
+        {
+          "index": 0,
+          "warmup": true,
+          "power_on_to_visible_login_ms": 138449.634,
+          "power_on_to_controls_ms": 138801.43,
+          "keyboard_verified_ms": 139139.788,
+          "sampling_interval_ms": 250,
+          "guest_properties": {
+            "FirmwareTimestampMonotonic": "0",
+            "LoaderTimestampMonotonic": "0",
+            "InitRDTimestampMonotonic": "1290085",
+            "UserspaceTimestampMonotonic": "2730462",
+            "FinishTimestampMonotonic": "27020841"
+          },
+          "guest_phases": {
+            "firmware_ms": null,
+            "loader_ms": null,
+            "kernel_ms": 1290.085,
+            "initrd_ms": 1440.377,
+            "userspace_start_ms": 2730.462
+          },
+          "trust_refresh": {
+            "ConditionResult": "yes",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "6969436",
+            "ExecMainExitTimestampMonotonic": "13747194"
+          }
+        },
+        {
+          "index": 1,
+          "warmup": false,
+          "power_on_to_visible_login_ms": 27363.496,
+          "power_on_to_controls_ms": 27679.483,
+          "keyboard_verified_ms": 28016.743,
+          "sampling_interval_ms": 250,
+          "guest_properties": {
+            "FirmwareTimestampMonotonic": "0",
+            "LoaderTimestampMonotonic": "0",
+            "InitRDTimestampMonotonic": "1354045",
+            "UserspaceTimestampMonotonic": "2710143",
+            "FinishTimestampMonotonic": "19966762"
+          },
+          "guest_phases": {
+            "firmware_ms": null,
+            "loader_ms": null,
+            "kernel_ms": 1354.045,
+            "initrd_ms": 1356.098,
+            "userspace_start_ms": 2710.143
+          },
+          "trust_refresh": {
+            "ConditionResult": "no",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "0",
+            "ExecMainExitTimestampMonotonic": "0"
+          }
+        },
+        {
+          "index": 2,
+          "warmup": false,
+          "power_on_to_visible_login_ms": 27393.882,
+          "power_on_to_controls_ms": 27711.845,
+          "keyboard_verified_ms": 28053.211,
+          "sampling_interval_ms": 250,
+          "guest_properties": {
+            "FirmwareTimestampMonotonic": "0",
+            "LoaderTimestampMonotonic": "0",
+            "InitRDTimestampMonotonic": "1369327",
+            "UserspaceTimestampMonotonic": "2739749",
+            "FinishTimestampMonotonic": "19970386"
+          },
+          "guest_phases": {
+            "firmware_ms": null,
+            "loader_ms": null,
+            "kernel_ms": 1369.327,
+            "initrd_ms": 1370.422,
+            "userspace_start_ms": 2739.749
+          },
+          "trust_refresh": {
+            "ConditionResult": "no",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "0",
+            "ExecMainExitTimestampMonotonic": "0"
+          }
+        },
+        {
+          "index": 3,
+          "warmup": false,
+          "power_on_to_visible_login_ms": 27356.359,
+          "power_on_to_controls_ms": 27686.952,
+          "keyboard_verified_ms": 28023.689,
+          "sampling_interval_ms": 250,
+          "guest_properties": {
+            "FirmwareTimestampMonotonic": "0",
+            "LoaderTimestampMonotonic": "0",
+            "InitRDTimestampMonotonic": "1349560",
+            "UserspaceTimestampMonotonic": "2658042",
+            "FinishTimestampMonotonic": "19940607"
+          },
+          "guest_phases": {
+            "firmware_ms": null,
+            "loader_ms": null,
+            "kernel_ms": 1349.56,
+            "initrd_ms": 1308.482,
+            "userspace_start_ms": 2658.042
+          },
+          "trust_refresh": {
+            "ConditionResult": "no",
+            "Result": "success",
+            "ExecMainStartTimestampMonotonic": "0",
+            "ExecMainExitTimestampMonotonic": "0"
+          }
+        }
+      ]
+    }
+  },
+  "comparison": {
+    "power_on_to_visible_login_ms": {
+      "baseline_median_ms": 28854.8,
+      "candidate_median_ms": 27363.496,
+      "median_reduction_ms": 1491.304,
+      "median_reduction_percent": 5.168
+    },
+    "power_on_to_controls_ms": {
+      "baseline_median_ms": 29193.751,
+      "candidate_median_ms": 27686.952,
+      "median_reduction_ms": 1506.799,
+      "median_reduction_percent": 5.161
+    },
+    "keyboard_verified_ms": {
+      "baseline_median_ms": 29542.986,
+      "candidate_median_ms": 28023.689,
+      "median_reduction_ms": 1519.297,
+      "median_reduction_percent": 5.143
+    }
+  },
+  "application_checks": {
+    "modules": [
+      {
+        "module": "tests.test_accessible_desktop",
+        "tests": 23,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_action_button",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_activity_bundle",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_app_autofill",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_app_detector",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_app_documents",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [
+          {
+            "test": "tests.test_app_documents.FlatpakAccessibility.test_actual_sandboxed_gtk_fill_save_and_readonly_username",
+            "reason": "explicit isolated Flatpak runtime"
+          },
+          {
+            "test": "tests.test_app_documents.FlatpakElectronAccessibility.test_reversible_app_preference_exposes_electron_without_more_permissions",
+            "reason": "explicit isolated Flatpak runtime"
+          }
+        ],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_app_launch",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_app_library",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_app_login_bus",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_app_logins",
+        "tests": 17,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_app_suggestions",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_app_support",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_archive_apps",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_archive_bundle",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_archive_failures",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_audio_native",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_audio_outputs",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_backup_restore",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_bar_layout",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_bar_microphone",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_battery_management",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_bench",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_beta_release",
+        "tests": 29,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_bookmark_import",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_boot_graphics",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_boot_timing",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_brightness_memory",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_browser_session",
+        "tests": 27,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_capture_retry",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_catalog_cache",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_click_targets",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_clock_format",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_daylight",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_departure",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_departure_documents",
+        "tests": 39,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_desktop_polish",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_desktop_polish_native",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_display_scaling",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_dock_motion",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_dock_preview",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_download_paths",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_downloaded_apps",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_editor_bundle",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_editor_groups",
+        "tests": 27,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_editor_retry",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_editor_session",
+        "tests": 45,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_electron_integration",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [
+          {
+            "test": "tests.test_electron_integration.FlatpakElectronIntegration.test_real_electron_native_picker_and_form_boundaries",
+            "reason": "explicit isolated Flatpak runtime"
+          }
+        ],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_everyday_search",
+        "tests": 37,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_extraction_navigation",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_faceit",
+        "tests": 21,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_files_bundle",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_files_qol",
+        "tests": 17,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_files_session",
+        "tests": 20,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_files_tools",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_firstboot_apps",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_games_library",
+        "tests": 31,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_graphics_use",
+        "tests": 21,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_helper_completion",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_icon_index",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_installer",
+        "tests": 37,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [
+          {
+            "test": "tests.test_installer.WindowsScripts.test_powershell_parses",
+            "reason": "PowerShell not installed"
+          }
+        ],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_keep_awake",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_laptop_native",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_launcher_bundle",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_library_feedback",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_local_apps",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_local_games",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_lock_screen",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_login_brightness",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_login_bundle",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_login_startup",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_look",
+        "tests": 440,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_maintenance",
+        "tests": 29,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_menu_games",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_menu_navigation",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_more_settings",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_multi_restore",
+        "tests": 17,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_native_passwords",
+        "tests": 27,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_native_preview",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_native_runtime_refresh",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_notification_bundle",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_notification_policy",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [
+          {
+            "test": "tests.test_notification_policy.NativePolicy.test_history_filters_and_clear_history_still_work",
+            "reason": "only run on the isolated test bus"
+          },
+          {
+            "test": "tests.test_notification_policy.NativePolicy.test_muted_messages_stay_hidden_after_unmuting_but_new_messages_can_popup",
+            "reason": "only run on the isolated test bus"
+          },
+          {
+            "test": "tests.test_notification_policy.NativePolicy.test_muted_transient_messages_are_not_added_to_history",
+            "reason": "only run on the isolated test bus"
+          },
+          {
+            "test": "tests.test_notification_policy.NativePolicy.test_muting_an_app_hides_existing_popups_without_deleting_them",
+            "reason": "only run on the isolated test bus"
+          },
+          {
+            "test": "tests.test_notification_policy.NativePolicy.test_muting_multiple_active_messages_retains_every_message_and_action",
+            "reason": "only run on the isolated test bus"
+          },
+          {
+            "test": "tests.test_notification_policy.NativePolicy.test_only_important_nontransient_notifications_use_dismiss_to_history",
+            "reason": "only run on the isolated test bus"
+          },
+          {
+            "test": "tests.test_notification_policy.NativePolicy.test_replacing_a_muted_message_updates_history_without_replaying_it",
+            "reason": "only run on the isolated test bus"
+          },
+          {
+            "test": "tests.test_notification_policy.NativePolicy.test_service_muting_also_preserves_history_without_replaying",
+            "reason": "only run on the isolated test bus"
+          }
+        ],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_notifications",
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_nvidia_flatpak",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_on_power",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_panel_editor",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_panel_layout",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_passwords_browser",
+        "tests": 18,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_passwords_bus",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_passwords_consent",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_passwords_package",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_passwords_polish",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_passwords_preview",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_passwords_setup",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_pdf_bundle",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_pdf_capture",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_pdf_departure",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_pdf_restore",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_phone_window",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_power_connection",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_power_reads",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_power_screen",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_priority",
+        "tests": 19,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_profile_upgrades",
+        "tests": 34,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_qml_precompile",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_quick_options",
+        "tests": 23,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_regional_defaults",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_release_publication",
+        "tests": 26,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_reopen_work",
+        "tests": 61,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_rest",
+        "tests": 21,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_resume",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_return_summary",
+        "tests": 22,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_scroll_input",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_seal",
+        "tests": 24,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_search_localization",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_settings_feedback",
+        "tests": 57,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_settings_navigation",
+        "tests": 36,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_settings_polling",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_setup",
+        "tests": 60,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_setup_boot",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_setup_recovery",
+        "tests": 39,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_setup_window",
+        "tests": 18,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_shared_weather",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_shell_menu_style",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_sound_choices",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_source_rpm",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_spelling",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_startup_timing",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_steam_drives",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_store_artwork",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_store_downloads",
+        "tests": 31,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_store_frame_regressions",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_store_installed",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_store_navigation",
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_store_observer",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_store_scrolling",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_switch_preview",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_system_info",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_task_manager_columns",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_task_manager_names",
+        "tests": 33,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_test_runner",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_title_bars",
+        "tests": 34,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_transfer_folders",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_transfers_navigation",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_trip_lifetime",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_ultrawide_dialogs",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_update_recovery",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_update_schedule",
+        "tests": 19,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [
+          {
+            "test": "tests.test_update_schedule.NativeRetry.test_a_persistent_failure_stops_after_three_attempts",
+            "reason": "opt-in transient user-service fixture"
+          },
+          {
+            "test": "tests.test_update_schedule.NativeRetry.test_a_temporary_failure_recovers_on_the_next_attempt",
+            "reason": "opt-in transient user-service fixture"
+          },
+          {
+            "test": "tests.test_update_schedule.NativeRetry.test_native_success_failure_and_skip_events_keep_their_meaning",
+            "reason": "opt-in transient user-service fixture"
+          },
+          {
+            "test": "tests.test_update_schedule.NativeRetry.test_switching_to_a_metered_network_cancels_the_retry",
+            "reason": "opt-in transient user-service fixture"
+          },
+          {
+            "test": "tests.test_update_schedule.NativeRetry.test_turning_automatic_updates_off_cancels_the_retry",
+            "reason": "opt-in transient user-service fixture"
+          }
+        ],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_wallet_preferences",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_weather_search_native",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_widget_activity",
+        "tests": 18,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_window_area",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_window_controls",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_window_frame",
+        "tests": 18,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_window_identity_bundle",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_window_placement",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_windows_partitions",
+        "tests": 45,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [
+          {
+            "test": "tests.test_windows_partitions.PartitionDiscovery.test_native_read_only_discovery_includes_kernel_partitions",
+            "reason": "no native partition devices exposed"
+          }
+        ],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_windows_setup_scripts",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [
+          {
+            "test": "tests.test_windows_setup_scripts.WindowsSetupScripts.test_setup_behaviors",
+            "reason": "PowerShell runtime not installed"
+          }
+        ],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_winpe_deployment",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_winpe_fixture",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_words",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_workspace_return",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      },
+      {
+        "module": "tests.test_zen_defaults",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": [],
+        "exit_code": 0
+      }
+    ],
+    "failed": [],
+    "tests": 2410,
+    "skipped": 19
+  }
+}

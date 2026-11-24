@@ -62,5 +62,8 @@ Local trust edits still require `update-ca-trust`, as in Fedora's service.
 The command and existing prerequisites remain intact. Preparation rejects
 unrecognized service layouts or a second trust writer. The boot benchmark checks
 that the candidate runs regeneration on its initial boot and skips it on every
-timed normal reboot. This is a candidate optimization until that image test
-passes; the recorded service duration alone is not an end-to-end saving.
+timed normal reboot. The [completed installed-disk comparison](../../docs/TESTING.md)
+passes those lifecycle checks and records a 1.507-second median reduction to
+password controls (5.2%) in the one-CPU VM. The service duration alone is not an
+end-to-end saving, and physical hardware timings remain unmeasured for this
+candidate.

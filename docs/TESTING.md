@@ -1,6 +1,6 @@
 # Testing Monet on real hardware
 
-## 0.9.8-9 installed-disk boot profiling — 23 November 2026
+## 0.9.8-9 installed-disk boot profiling — 24 November 2026
 
 `tools/bench-boot.py` cold-starts a disposable qcow2 overlay under KVM, including
 UEFI, GRUB and the installed kernel/initrd. The input disk is never modified.
@@ -35,11 +35,46 @@ that base's kernel/native ABI to isolate the source changes. Images remain local
 to the disposable runner; no registry tag or release is published. Only bounded
 measurement artifacts are retained, and the large guest disks are removed.
 
+The [completed comparison](https://github.com/HappyHamster135/Monet/actions/runs/45299948902)
+uses source commit `a9f1c21859a7216625e13274dcd53927217b916a`. All eight
+power-on sequences finish with visible login controls, an active login manager,
+a test keypress and clean shutdown. Screenshots were inspected, including the
+candidate's first frame and the password field containing the test keystroke.
+The [complete samples, image identities and test summary](benchmarks/0.9.8-9-boot-timing.json)
+are retained in the repository. Normal-boot results are:
+
+| Image | Median visible login (range) | Median password controls (range) |
+| --- | ---: | ---: |
+| Released 0.9.8-8 | 28.855 s (28.578–29.479 s) | 29.194 s (28.917–29.806 s) |
+| 0.9.8-9 development preview | 27.363 s (27.356–27.394 s) | 27.687 s (27.679–27.712 s) |
+
+The observed reduction is 1.491 s to the visible frame and 1.507 s to password
+controls, about 5.2% in this one-CPU VM. Polling sleeps for 250 ms; capture and
+processing add overhead, so retained millisecond values do not imply millisecond
+measurement accuracy. This fixed-order, three-sample comparison with uncontrolled
+host page cache does not establish a general hardware speedup.
+
+The first power-on includes Bazzite hardware setup, a kernel-argument deployment
+and its automatic reboot. Those initial setup runs take 120.407 s and 138.801 s
+to password controls respectively and are excluded as planned. No initial-setup
+speed improvement is established.
+
+The inherited trust service spends a median 7.369 s regenerating the bundle on
+each normal baseline boot. The candidate successfully regenerates after its
+initial deployment, then skips regeneration on all three normal boots:
+`ConditionResult=no`, `Result=success`, and no command start/exit timestamps.
+Image preparation backports Fedora's deployment condition and preserves refresh
+ordering before the update-completion marker and DNS-over-TLS consumers. The
+total boot reduction is smaller than that service's duration because startup
+work overlaps. The remaining candidate chain includes IWD migration,
+NetworkManager, NFS/GSS and Plymouth; changing those dependencies needs remote-home
+and graphics-readiness coverage.
+
 Recorded physical boot metadata is currently 23.454174 s before the kernel
 (firmware plus loader) and 11.718795 s from kernel start to login-manager process
 start: about 35.17 s combined. This is not a first-visible-login measurement, and
-is not a measured 0.9.8-9 improvement. The new tests must finish before recording
-a new end-to-end result. Eight focused checks validate phase accounting, real
+is not a measured physical 0.9.8-9 improvement. A physical candidate boot remains
+unmeasured. Eight focused checks validate phase accounting, real
 release qualification frames, a real installed-disk password form at 1280×800,
 and provisioning-input validation. Failed attempts retain observed frame times
 and SSH diagnostics separately from completed boot measurements.
@@ -90,8 +125,8 @@ initial helper processes start afterward. It cannot report a blank first frame
 as completion of initial page construction. This does not claim that every data
 request has completed by that time.
 
-The [full desktop CI run](https://github.com/HappyHamster135/Monet/actions/runs/45272770900)
-passes 2,405 Python checks with 19 expected skips and no failures. An additional
+The [full desktop CI run](https://github.com/HappyHamster135/Monet/actions/runs/45299948839)
+passes 2,410 Python checks with 19 expected skips and no failures. An additional
 local rerun passes all 91 Store, panel, transfer and window checks that share the
 Settings item finder. The asynchronous page wait applies only to Settings.
 Settings fixtures now wait for asynchronous pages and source audits include the
