@@ -1,5 +1,35 @@
 # Testing Monet on real hardware
 
+## 0.9.8-9 Windows disk discovery before login — 24 November 2026
+
+On commit `4738729`, Windows setup reused its initial disk scan when it found
+no BitLocker volumes. Its median runtime fell by **0.89 s** on the Linux-only
+VM. The complete pre-login service interval improved by 0.10 s, and the
+median time to type at the login screen **increased by 1.45 s**.
+[Boot journals, guest unit commands, screenshots and timings](https://github.com/HappyHamster135/Monet/actions/runs/45367436126)
+
+| Median across four cold boots per configuration | Previous command | New command |
+| --- | ---: | ---: |
+| Windows setup service | 1.15 s | 0.26 s |
+| Installed userspace start to login manager start | 11.96 s | 11.87 s |
+| VM power-on to visible login | 25.75 s | 27.20 s |
+| VM power-on to accepted keystroke | 26.54 s | 27.98 s |
+
+Both configurations used the same provisioned disk, firmware variables, single
+vCPU and 8 GiB of RAM. The first boot was excluded. The order alternated within
+four pairs. The service interval improved in three pairs and keyboard readiness
+improved in one. The older **10.65 s** service measurement came from a different
+runner session. This run also measured the following Windows drive-sharing service
+at 0.49 s with the previous command and 1.00 s with the new one. Earlier in the
+boot, DNS resolution startup took 5.46 s and overlapped initialization of the
+memory-pressure and namespace services. None of these VM numbers establishes
+power-on time on the ThinkPad.
+
+The installed-command regression check covered Linux-only disks, ordinary NTFS,
+BitLocker, failed and malformed inventories, a new mapper after a partial
+unlock, and already-staged or installed Bridge states. The desktop suite
+reported 2,446 checks, 19 skips and zero failures. [Build and test results](https://github.com/HappyHamster135/Monet/actions/runs/45367434910)
+
 ## 0.9.8-9 lighting-device discovery during boot — 24 November 2026
 
 With the OpenRGB change, the VM accepted a key **1.73 seconds earlier** on the
