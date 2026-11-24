@@ -1,5 +1,9 @@
 #!/usr/bin/python3
-"""Bound and diagnose the disposable installer VM, outside the timed boot test."""
+"""Install only a new CI disk-image file, outside the timed KVM boot test.
+
+Uses bootc's documented --generic-image --via-loopback path. No physical block
+device is accepted. Generic mode does not register boot entries in host firmware.
+"""
 import argparse
 from datetime import datetime, timezone
 import os
@@ -14,12 +18,12 @@ import time
 SNAPSHOT = ('date -u; free -m; df -hT; '
     'ps -eo pid,stat,wchan:32,pcpu,comm --sort=-pcpu | head -n 24; '
     'for p in /proc/pressure/*; do echo "$p"; cat "$p"; done; '
-    'journalctl -k -n 25 --no-pager')
+    'dmesg --ctime | tail -n 25')
 
 
 def installer_container():
     reply = subprocess.run(['/usr/bin/podman', 'ps', '-q', '--no-trunc',
-        '--filter', 'label=bcvk.ephemeral=1'], capture_output=True, text=True,
+        '--filter', 'label=monet.boot-profile.install=1'], capture_output=True, text=True,
         timeout=10, check=True)
     identifiers = reply.stdout.split()
     if len(identifiers) > 1:
@@ -31,11 +35,13 @@ def installer_container():
 
 def stop(process, container):
     if process.poll() is None:
-        os.killpg(process.pid, signal.SIGTERM)
+        try: os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError: pass
         try:
             process.wait(timeout=15)
         except subprocess.TimeoutExpired:
-            os.killpg(process.pid, signal.SIGKILL)
+            try: os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError: pass
             process.wait()
     if container:
         try:
@@ -45,30 +51,45 @@ def stop(process, container):
             print('Installer container cleanup timed out', flush=True)
 
 
+def detach_image(disk):
+    # Only detach loop devices backed by the exact new file this helper made.
+    reply = subprocess.run(['losetup','--associated',str(disk),'--output','NAME',
+        '--noheadings'],capture_output=True,text=True,check=True,timeout=10)
+    for device in reply.stdout.split():
+        if not re.fullmatch(r'/dev/loop[0-9]+',device):
+            raise RuntimeError('Unexpected loop device; refusing to detach it')
+        subprocess.run(['losetup','--detach',device],check=True,timeout=10)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('image')
     parser.add_argument('disk', type=Path)
     parser.add_argument('logs', type=Path)
-    parser.add_argument('--bcvk', type=Path,
-        default=Path('target/boot-profile/bcvk-x86_64-unknown-linux-gnu'))
     parser.add_argument('--timeout', type=int, default=1200)
     args = parser.parse_args()
     if os.environ.get('GITHUB_ACTIONS') != 'true':
         parser.error('This installer is only for disposable GitHub runners')
     if not 60 <= args.timeout <= 1800:
         parser.error('Installer timeout must be between 60 and 1800 seconds')
-    if args.disk.exists() or args.disk.suffix != '.qcow2':
-        parser.error('A new disposable qcow2 path is required')
+    args.disk=args.disk.resolve()
+    workspace=Path(__file__).resolve().parents[1]/'target/boot-profile'
+    if (args.disk.exists() or args.disk.suffix != '.raw'
+            or not args.disk.is_relative_to(workspace)):
+        parser.error('A new raw disk file inside target/boot-profile is required')
     if installer_container():
         parser.error('An installer container is already running')
     args.logs.mkdir(parents=True, exist_ok=True)
-    command = [str(args.bcvk.resolve()), 'to-disk',
-        '--log-dir', 'journal,console=' + str(args.logs.resolve()),
-        '--install-log', 'bootc=debug,ostree_ext=debug',
-        '--format', 'qcow2', '--filesystem', 'btrfs', '--disk-size', '64G',
-        '--vcpus', '2', '--memory', '8G', '--target-transport', 'containers-storage',
-        args.image, str(args.disk.resolve())]
+    with args.disk.open('xb') as disk:
+        disk.truncate(64*1024**3)
+    command = ['/usr/bin/podman','run','--rm','--privileged','--pid=host','--ipc=host',
+        '--label=monet.boot-profile.install=1','--security-opt=label=disable',
+        '--cpus='+str(min(2,len(os.sched_getaffinity(0)))),'--memory=8g','--memory-swap=10g',
+        '-v','/dev:/dev','-v','/var/lib/containers:/var/lib/containers',
+        '-v',str(args.disk.parent)+':/output','-e','RUST_LOG=bootc=debug,ostree_ext=debug',
+        '--entrypoint=/usr/bin/bootc',args.image,'install','to-disk',
+        '--generic-image','--via-loopback','--filesystem','btrfs',
+        '--target-transport','containers-storage','/output/'+args.disk.name]
     started = time.monotonic()
     container = None
     next_snapshot = started + 60
@@ -89,8 +110,8 @@ def main():
                         try:
                             container = installer_container() or container
                             if container:
-                                subprocess.run([str(args.bcvk.resolve()), 'ephemeral',
-                                    'ssh', container, '--', SNAPSHOT], stdout=snapshot,
+                                subprocess.run(['/usr/bin/podman','exec',container,
+                                    '/bin/sh','-c',SNAPSHOT], stdout=snapshot,
                                     stderr=subprocess.STDOUT, timeout=20)
                         except (subprocess.SubprocessError, OSError, RuntimeError) as error:
                             snapshot.write(str(error) + '\n')
@@ -101,7 +122,9 @@ def main():
             if not args.disk.is_file() or not args.disk.stat().st_size:
                 raise RuntimeError('Installer did not produce a disk')
         finally:
-            stop(process, container)
+            try: stop(process, container)
+            finally: detach_image(args.disk)
+    with args.disk.open('rb') as disk: os.fsync(disk.fileno())
     print(f'Installed test disk in {time.monotonic()-started:.0f}s (not a boot timing)', flush=True)
 
 

@@ -239,7 +239,7 @@ def main():
     args=parser.parse_args()
     if not 1<=args.samples<=10 or not 1<=args.cpus<=4 or not 1<=args.timeout<=600: parser.error('Invalid sample/resource limits')
     args.disk=args.disk.resolve(); args.output=args.output.resolve()
-    if not args.disk.is_file() or args.disk.suffix!='.qcow2': parser.error('An installed qcow2 file is required')
+    if not args.disk.is_file() or args.disk.suffix not in ('.qcow2','.raw'): parser.error('An installed qcow2 or raw file is required')
     for path in (args.firmware_code,args.firmware_vars):
         if not path.is_file(): parser.error('Missing UEFI firmware: '+str(path))
     for path in (args.disk,args.output,args.firmware_code,args.firmware_vars):
@@ -247,9 +247,9 @@ def main():
     if not os.access('/dev/kvm',os.R_OK|os.W_OK):parser.error('KVM is required; do not benchmark TCG emulation')
     args.output.mkdir(parents=True,exist_ok=False)
     info=json.loads(subprocess.check_output(['qemu-img','info','--output=json',str(args.disk)],text=True))
-    if info['format']!='qcow2':parser.error('Not a qcow2 image')
+    if info['format'] not in ('qcow2','raw'):parser.error('Not a qcow2 or raw image')
     disk=args.output/'working.qcow2'
-    subprocess.run(['qemu-img','create','-q','-f','qcow2','-F','qcow2','-b',str(args.disk),str(disk)],check=True)
+    subprocess.run(['qemu-img','create','-q','-f','qcow2','-F',info['format'],'-b',str(args.disk),str(disk)],check=True)
     variables=args.output/'vars.fd';shutil.copy2(args.firmware_vars,variables)
     with tempfile.TemporaryDirectory(prefix='monet-boot-') as tmp:
         runtime=Path(tmp);key=runtime/'key'

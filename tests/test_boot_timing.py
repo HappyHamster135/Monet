@@ -1,9 +1,6 @@
 """Real greeter/boot frames and systemd phase accounting for boot benchmarks."""
 import importlib.util
 from pathlib import Path
-import subprocess
-import sys
-import tempfile
 import unittest
 
 try:
@@ -57,15 +54,3 @@ class BootTiming(unittest.TestCase):
     def test_multiline_or_non_ed25519_keys_cannot_enter_a_guest_unit(self):
         for key in ('ssh-ed25519 abc monet-boot-benchmark\nExecStart=oops', 'ssh-rsa abc monet-boot-benchmark'):
             with self.assertRaises(ValueError):bench.credentials(key)
-
-    @unittest.skipUnless(sys.platform=='linux', 'Linux installer adapter')
-    def test_installer_adapter_preserves_secondary_status_and_ssh_output(self):
-        spec=importlib.util.spec_from_file_location('boot_adapter',ROOT/'tools/boot-profile-podman.py')
-        adapter=importlib.util.module_from_spec(spec);spec.loader.exec_module(adapter)
-        with tempfile.TemporaryDirectory() as tmp:
-            entry=Path(tmp)/'entrypoint'
-            entry.write_text('#!/bin/bash\nset -euo pipefail\nprintf "%s\\n" "$1"\n')
-            adapter.prepare(['run','--label=bcvk.ephemeral=1','-v',str(entry)+':/var/lib/bcvk/entrypoint'])
-            result=subprocess.run(['bash',str(entry),'status-stream'],capture_output=True,text=True,check=True)
-            self.assertEqual(result.stdout,'status-stream\n')
-            self.assertEqual(result.stderr,'')

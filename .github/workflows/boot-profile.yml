@@ -13,7 +13,6 @@ on:
       - image/boot/**
       - tools/bench-boot.py
       - tools/boot-profile-package.py
-      - tools/boot-profile-podman.py
       - tools/boot-profile-install.py
   workflow_dispatch:
 permissions:
@@ -38,10 +37,11 @@ jobs:
           sudo docker system prune -af >/dev/null
           tools/configure-ci-apt.sh
           sudo apt-get update -q
-          sudo apt-get install -y -q qemu-system-x86 qemu-utils ovmf virtiofsd python3-pil podman
+          sudo apt-get install -y -q qemu-system-x86 qemu-utils ovmf python3-pil podman
           echo "PROFILE_CPU=$(python3 -c 'import os; print(min(os.sched_getaffinity(0)))')" >> "$GITHUB_ENV"
           echo "PROFILE_BUILD_CPUS=$(python3 -c 'import os; print(",".join(map(str, sorted(os.sched_getaffinity(0))[:2])))')" >> "$GITHUB_ENV"
           sudo modprobe kvm_intel || sudo modprobe kvm_amd || true
+          sudo modprobe -a loop btrfs
           sudo test -r /dev/kvm
           sudo test -w /dev/kvm
           mkdir -p target/boot-profile
@@ -55,26 +55,22 @@ jobs:
           /usr/local/bin/monet-bench-crun --version | tee target/boot-profile/toolchain.txt
           podman --version | tee -a target/boot-profile/toolchain.txt
           qemu-system-x86_64 --version | tee -a target/boot-profile/toolchain.txt
-          sudo install -m 755 tools/boot-profile-podman.py /usr/local/bin/podman
-          curl --fail --location --retry 3 https://github.com/bootc-dev/bcvk/releases/download/v0.22.0/bcvk-x86_64-unknown-linux-gnu.tar.gz -o target/boot-profile/bcvk.tar.gz
-          echo 'eb72198c0d36fab75bfcadbb6794a87afa6f496a4da6b1b34d27728243fa6474  target/boot-profile/bcvk.tar.gz' | sha256sum -c
-          tar -xzf target/boot-profile/bcvk.tar.gz -C target/boot-profile
           df -h /
       - name: Fetch the digest-verified baseline
         run: |
           sudo taskset -c "$PROFILE_CPU" nice -n 10 podman pull "$BASE"
           sudo taskset -c "$PROFILE_CPU" nice -n 10 podman run --rm --group-add=keep-groups --cap-add=all --security-opt=seccomp=unconfined --entrypoint /bin/true "$BASE"
-          # Keep the verified immutable source, but allow the guest's storage
-          # copy to change compression without promising the original blob digest.
+          # Keep the verified immutable source; use a local installer reference
+          # without constraining the storage copy's compression representation.
           sudo podman tag "$BASE" localhost/monet-boot-profile:baseline
       - name: Install the baseline test disk
         timeout-minutes: 25
-        run: sudo env GITHUB_ACTIONS=true RUST_LOG=bcvk=debug taskset -c "$PROFILE_BUILD_CPUS" nice -n 10 python3 tools/boot-profile-install.py localhost/monet-boot-profile:baseline target/boot-profile/baseline.qcow2 target/boot-profile/baseline-install
+        run: sudo env GITHUB_ACTIONS=true taskset -c "$PROFILE_BUILD_CPUS" nice -n 10 python3 tools/boot-profile-install.py localhost/monet-boot-profile:baseline target/boot-profile/baseline.raw target/boot-profile/baseline-install
       - name: Measure baseline installed-disk cold boots
         timeout-minutes: 20
         run: |
-          sudo taskset -c "$PROFILE_CPU" nice -n 10 python3 tools/bench-boot.py target/boot-profile/baseline.qcow2 target/boot-profile/baseline
-          sudo rm target/boot-profile/baseline/working.qcow2 target/boot-profile/baseline.qcow2
+          sudo taskset -c "$PROFILE_CPU" nice -n 10 python3 tools/bench-boot.py target/boot-profile/baseline.raw target/boot-profile/baseline
+          sudo rm target/boot-profile/baseline/working.qcow2 target/boot-profile/baseline.raw
       - name: Preserve the baseline before building the candidate
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
@@ -94,12 +90,12 @@ jobs:
           sudo podman image prune -f
       - name: Install the candidate test disk
         timeout-minutes: 25
-        run: sudo env GITHUB_ACTIONS=true RUST_LOG=bcvk=debug taskset -c "$PROFILE_BUILD_CPUS" nice -n 10 python3 tools/boot-profile-install.py localhost/monet-boot-profile:candidate target/boot-profile/candidate.qcow2 target/boot-profile/candidate-install
+        run: sudo env GITHUB_ACTIONS=true taskset -c "$PROFILE_BUILD_CPUS" nice -n 10 python3 tools/boot-profile-install.py localhost/monet-boot-profile:candidate target/boot-profile/candidate.raw target/boot-profile/candidate-install
       - name: Measure candidate installed-disk cold boots
         timeout-minutes: 20
         run: |
-          sudo taskset -c "$PROFILE_CPU" nice -n 10 python3 tools/bench-boot.py target/boot-profile/candidate.qcow2 target/boot-profile/candidate
-          sudo rm target/boot-profile/candidate/working.qcow2 target/boot-profile/candidate.qcow2
+          sudo taskset -c "$PROFILE_CPU" nice -n 10 python3 tools/bench-boot.py target/boot-profile/candidate.raw target/boot-profile/candidate
+          sudo rm target/boot-profile/candidate/working.qcow2 target/boot-profile/candidate.raw
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
