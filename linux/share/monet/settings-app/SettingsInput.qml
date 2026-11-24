@@ -74,6 +74,24 @@ ColumnLayout {
             }
         }
     }
+    SettingsControls.Card {
+        tone: look
+        SettingsControls.SettingRow {
+            tone: look
+            divider: false
+            tappable: true
+            objectName: "wheelScrollingSettings"
+            title: i18n("Mouse wheel scrolling")
+            detail: i18n("Adjust wheel distance, smoothing and sideways scrolling.")
+            onTapped: sheet.ask("utilities wheel-scrolling")
+            SettingsControls.Glyph {
+                width: 16
+                height: 16
+                path: "M9 5l7 7-7 7"
+                color: look.dim
+            }
+        }
+    }
     SettingsControls.Caption {
         tone: look
         text: i18n("Keyboard")

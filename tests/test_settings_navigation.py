@@ -132,6 +132,15 @@ class SettingsNavigation(unittest.TestCase):
                 self.assertIsNotNone(self.window.findChild(QObject, "settingsPageLoader").property("item"))
                 self.assertFalse(self.errors, "\n".join(self.errors))
 
+    def test_mouse_settings_opens_the_wheel_profile_editor(self):
+        from PySide6.QtQuick import QQuickItem
+        select_settings_page(self.window, "input")
+        row = self.window.findChild(QQuickItem, "wheelScrollingSettings")
+        self.assertIsNotNone(row)
+        row.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertIn(["helper", "utilities", "wheel-scrolling"], self.helper.commands)
+
     def test_rapid_page_changes_finish_on_the_last_selection(self):
         for page in ("security", "apps", "wifi", "storage", "light"):
             self.window.setProperty("page", page)

@@ -59,3 +59,11 @@ The settings are in Monet Utilities. Confirmed shortcuts go to the focused
 application so it can show its usual unsaved-document prompt. Run
 `python3 tests/fixtures/quit-protection-wayland.py` and repeat with
 `--platform xcb` to check both window systems in an isolated session.
+
+The wheel scrolling module reads its settings when KWin starts and when the
+preferences page changes them. The input filter runs only when a wheel option
+is enabled. A smooth scroll schedules frames while the wheel is moving and stops
+when focus changes or a mouse button is pressed. For the integration check, build
+`tests/fixtures/wheel-input.c` with `pkg-config --cflags --libs libei-1.0`, then
+run `python3 tests/fixtures/wheel-scrolling-wayland.py --driver /path/to/wheel-input`.
+Repeat with `--platform xcb` for XWayland.

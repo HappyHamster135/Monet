@@ -13,7 +13,9 @@ import tempfile
 PLUGIN = "monet_window_identity.so"
 PASTE_PLUGIN = "monet_plain_paste.so"
 QUIT_PLUGIN = "monet_quit_guard.so"
-PLUGINS = {1: (PLUGIN,), 2: (PLUGIN, PASTE_PLUGIN), 3: (PLUGIN, PASTE_PLUGIN, QUIT_PLUGIN)}
+WHEEL_PLUGIN = "monet_wheel_scroll.so"
+PLUGINS = {1: (PLUGIN,), 2: (PLUGIN, PASTE_PLUGIN), 3: (PLUGIN, PASTE_PLUGIN, QUIT_PLUGIN),
+           4: (PLUGIN, PASTE_PLUGIN, QUIT_PLUGIN, WHEEL_PLUGIN)}
 EXECUTABLE = "/usr/bin/kwin_wayland"
 
 
@@ -46,7 +48,7 @@ def capture():
     names = {"kwin-common"}
     for path in {EXECUTABLE, str(library), *re.findall(r"(?:=>\s+|^\s*)(/\S+)", linked, re.M)}:
         names.update(run("rpm", "-qf", "--qf", "%{NAME}.%{ARCH}\n", str(Path(path).resolve())).splitlines())
-    return {"schema": 3, "path": str(plugin_directory() / PLUGIN), "library": str(library),
+    return {"schema": 4, "path": str(plugin_directory() / PLUGIN), "library": str(library),
             "library_sha256": digest(library), "executable_sha256": digest(EXECUTABLE),
             "package_names": sorted(names), "packages": packages(sorted(names))}
 

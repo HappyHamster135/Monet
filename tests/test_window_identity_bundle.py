@@ -117,16 +117,17 @@ class WindowIdentityBundle(unittest.TestCase):
                     bundle.install(folder)
                 copy.assert_not_called()
 
-    def test_schema_three_checks_quit_guard_before_installing_any_plugin(self):
-        with tempfile.TemporaryDirectory() as temp:
-            folder = Path(temp)
-            self.make_bundle(folder, schema=3)
-            (folder / bundle.QUIT_PLUGIN).write_text("damaged")
-            with patch.object(bundle, "verify"), patch.object(bundle, "atomic_copy") as copy, \
-                    patch.object(bundle, "digest", side_effect=lambda path: Path(path).read_text()), \
-                    self.assertRaisesRegex(ValueError, bundle.QUIT_PLUGIN):
-                bundle.install(folder)
-            copy.assert_not_called()
+    def test_newest_plugin_is_verified_before_installing_any_plugin(self):
+        for schema, plugin in ((3, bundle.QUIT_PLUGIN), (4, bundle.WHEEL_PLUGIN)):
+            with self.subTest(schema=schema), tempfile.TemporaryDirectory() as temp:
+                folder = Path(temp)
+                self.make_bundle(folder, schema=schema)
+                (folder / plugin).write_text("damaged")
+                with patch.object(bundle, "verify"), patch.object(bundle, "atomic_copy") as copy, \
+                        patch.object(bundle, "digest", side_effect=lambda path: Path(path).read_text()), \
+                        self.assertRaisesRegex(ValueError, plugin):
+                    bundle.install(folder)
+                copy.assert_not_called()
 
     def test_sealing_rejects_build_time_library_paths(self):
         with tempfile.TemporaryDirectory() as temporary:

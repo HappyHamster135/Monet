@@ -440,6 +440,9 @@ class Window(QMainWindow):
             self.page(key, lambda: Downloads(self.settings))
         elif key == "wheel":
             self.wheel()
+        elif key == "wheel-scrolling":
+            from wheel_scrolling import WheelScrolling
+            self.page(key, WheelScrolling)
         elif key == "quit-protection":
             from quit_protection import QuitProtection
             self.page(key, QuitProtection)

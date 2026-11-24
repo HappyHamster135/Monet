@@ -20,3 +20,8 @@ find_package(KF6Service CONFIG REQUIRED)
 add_library(monet_quit_guard MODULE quitguard.cpp)
 target_link_libraries(monet_quit_guard PRIVATE KWin::kwin Qt6::GuiPrivate Qt6::DBus KF6::Service KF6::I18n PkgConfig::XKBCOMMON)
 set_target_properties(monet_quit_guard PROPERTIES PREFIX "")
+
+pkg_check_modules(WaylandServer REQUIRED IMPORTED_TARGET wayland-server)
+add_library(monet_wheel_scroll MODULE wheelscroll.cpp)
+target_link_libraries(monet_wheel_scroll PRIVATE KWin::kwin Qt6::GuiPrivate Qt6::DBus PkgConfig::XKBCOMMON PkgConfig::WaylandServer)
+set_target_properties(monet_wheel_scroll PROPERTIES PREFIX "")

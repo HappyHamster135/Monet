@@ -16273,3 +16273,69 @@ msgstr ""
 #: linux/share/monet/utilities/quit_protection.py:176
 msgid "Close tab or window"
 msgstr ""
+
+#: linux/share/monet/settings-app/SettingsInput.qml:83 linux/share/monet/utilities/actions.py:35
+msgid "Mouse wheel scrolling"
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsInput.qml:84
+msgid "Adjust wheel distance, smoothing and sideways scrolling."
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_scrolling.py:17
+msgid "Scrolling style"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_scrolling.py:18
+msgid "System default"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_scrolling.py:18
+msgid "Fixed distance"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_scrolling.py:18
+msgid "Smooth"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_scrolling.py:22
+msgid "Distance per wheel step"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_scrolling.py:23
+msgid "Glide duration"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_scrolling.py:23
+msgid " ms"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_scrolling.py:24
+msgid "Hold to scroll sideways"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_scrolling.py:55
+msgid "Each app handles the mouse wheel using its usual settings."
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_scrolling.py:56
+msgid "Each wheel step scrolls a fixed distance, however fast you turn it."
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_scrolling.py:57
+msgid ""
+"Each wheel step glides to a stop. Turn the wheel the other way to reverse."
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_scrolling.py:61
+msgid ""
+"These settings apply to mouse wheels. Touchpad gestures keep their usual behavior."
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_scrolling.py:70
+msgid "Could not save mouse wheel settings."
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_scrolling.py:78
+msgid "Mouse wheel profiles are unavailable in this desktop session."
+msgstr ""

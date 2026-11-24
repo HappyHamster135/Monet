@@ -1,0 +1,8 @@
+{
+  "KPlugin": {
+    "Name": "Monet mouse-wheel scrolling",
+    "Description": "Adjust physical wheel scrolling and scroll sideways with a modifier",
+    "License": "GPL-3.0-or-later",
+    "EnabledByDefault": true
+  }
+}
