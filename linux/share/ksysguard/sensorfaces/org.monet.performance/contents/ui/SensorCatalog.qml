@@ -4,6 +4,7 @@ import org.kde.ksysguard.sensors as Sensors
 Item {
     id: catalog
     visible: false
+    property bool collectIds: true
     property var sensorIds: []
     property var tree: null
     property int attempts: 0
@@ -13,6 +14,10 @@ Item {
     // The KDE model also follows sensors added/removed after the page opens.
     function scan() {
         if (!tree) return
+        const root = tree.index(-1, 0)
+        ready = tree.rowCount(root) > 0
+        // Summary cards use fixed sensor IDs. They only need the ready signal.
+        if (!collectIds) return
         const found = []
         function visit(parentIndex) {
             for (let row = 0; row < tree.rowCount(parentIndex); ++row) {
@@ -27,8 +32,6 @@ Item {
                 if (tree.rowCount(node)) visit(node)
             }
         }
-        const root = tree.index(-1, 0)
-        ready = tree.rowCount(root) > 0
         visit(root)
         found.sort()
         if (JSON.stringify(found) !== JSON.stringify(sensorIds)) sensorIds = found

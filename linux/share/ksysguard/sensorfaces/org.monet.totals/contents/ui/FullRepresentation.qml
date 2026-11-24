@@ -10,7 +10,7 @@ Faces.SensorFace {
     Layout.minimumWidth: 440
     Performance.WindowActivity { id: activity; item: face.contentItem }
     readonly property bool sampling: activity.active
-    Performance.SensorCatalog { id: catalog }
+    Performance.SensorCatalog { id: catalog; collectIds: false }
     Performance.SummaryReadings { id: totals; sampling: face.sampling && catalog.ready }
     contentItem: GridLayout {
         Layout.minimumHeight: implicitHeight

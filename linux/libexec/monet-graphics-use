@@ -88,20 +88,28 @@ def drm_clients(proc=PROC):
     """Every DRM client this account can see: {(device, client): (pid, engines)}. A client
     open in several processes (a parent and its children) belongs to the first one."""
     found = {}
-    for task in sorted((p for p in proc.iterdir() if p.name.isdigit()), key=lambda p: int(p.name)):
+    for pid in sorted(int(name) for name in os.listdir(proc) if name.isdigit()):
+        task = proc / str(pid)
         try:
-            fds = os.listdir(task / "fd")
+            # Resolve thousands of fd links against their already-open directory.
+            directory = os.open(task / "fd", os.O_RDONLY | os.O_DIRECTORY)
         except OSError:
             continue
-        for fd in fds:
-            try:
-                if not os.readlink(task / "fd" / fd).startswith("/dev/dri/"):
+        try:
+            for fd in os.listdir(directory):
+                try:
+                    device = os.readlink(fd, dir_fd=directory)
+                except OSError:
                     continue
-            except OSError:
-                continue
-            client = drm_client(read(task / "fdinfo" / fd))
-            if client and client[2]:
-                found.setdefault(client[:2], (int(task.name), client[2]))
+                if device.startswith("/dev/dri/"):
+                    client = drm_client(read(task / "fdinfo" / fd))
+                    if client and client[2]:
+                        found.setdefault(client[:2], (pid, client[2]))
+        except OSError:
+            # The process can exit while its descriptors are being enumerated.
+            continue
+        finally:
+            os.close(directory)
     return found
 
 

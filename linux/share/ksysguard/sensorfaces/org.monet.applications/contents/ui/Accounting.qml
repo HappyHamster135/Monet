@@ -45,26 +45,39 @@ QtObject {
             : which === "write" ? readings.write : which === "download" ? readings.download : which === "upload" ? readings.upload : null
         return sensor && typeof sensor.value === "number" ? sensor.value : NaN
     }
-    // KDE's process list, read as plain values.
+    // Ownership and busiest-process lists need just the process identity and
+    // CPU usage. Read the other metrics only for rows that Monet adds up.
     function snapshot(attributes) {
-        const columns = processes.enabledAttributes
-        const at = {}
-        for (let i = 0; i < columns.length; ++i) at[columns[i]] = i
-        const found = []
-        for (let row = 0; row < processes.rowCount(); ++row) {
-            const value = name => name in at ? processes.data(processes.index(row, at[name]), Process.ProcessDataModel.Value) : undefined
-            const values = {}
-            for (const attribute of attributes) values[attribute] = Number(value(attribute)) || 0
-            found.push({pid: Number(value("pid")) || 0, ppid: Number(value("parentPid")) || 0, uid: value("uid"),
-                name: String(value("name") || ""), values: values})
+        const model = processes
+        const columns = Array.from(model.enabledAttributes)
+        const columnOf = {}
+        for (let i = 0; i < columns.length; ++i) columnOf[columns[i]] = i
+        const role = Process.ProcessDataModel.Value
+        function value(row, column) {
+            return column === undefined ? undefined : model.data(model.index(row, column), role)
         }
-        return found
+        const found = []
+        const count = model.rowCount()
+        for (let row = 0; row < count; ++row) {
+            found.push({row: row, pid: Number(value(row, columnOf.pid)) || 0,
+                ppid: Number(value(row, columnOf.parentPid)) || 0, uid: value(row, columnOf.uid),
+                name: String(value(row, columnOf.name) || ""),
+                values: {usage: Number(value(row, columnOf.usage)) || 0}})
+        }
+        function valuesFor(process) {
+            for (const attribute of attributes) {
+                if (!(attribute in process.values))
+                    process.values[attribute] = Number(value(process.row, columnOf[attribute])) || 0
+            }
+            return process.values
+        }
+        return {processes: found, valuesFor: valuesFor}
     }
     function refresh() {
         if (!active || !source || !names) return
         const columns = shown()
         const added = columns.filter(Names.addable)
-        const all = snapshot(added)
+        const sample = snapshot(added)
         const rows = []
         const nameColumn = source.enabledAttributes.indexOf("appName"), menuColumn = source.enabledAttributes.indexOf("menuId")
         for (let row = 0; row < source.rowCount(); ++row) {
@@ -72,7 +85,7 @@ QtObject {
             rows.push({key: names.key(String(value(nameColumn) || ""), String(value(menuColumn) || "")),
                 pids: Array.from(source.data(source.index(row, 0), Process.ProcessDataModel.PIDs) || [])})
         }
-        const result = Names.account(rows, all, added)
+        const result = Names.account(rows, sample.processes, added, sample.valuesFor)
         names.numbers = result.totals
         // A row KDE files under an id Monet can't know (an autostart entry's own file) keeps its own
         // sums: what it would have gained goes to Other, so nothing is counted twice or not at all.
@@ -91,7 +104,7 @@ QtObject {
                 counted[attribute] += Number(source.data(source.index(row, column), Process.ProcessDataModel.Value)) || 0
         }
         cpuMax = Number(header("usage", Process.ProcessDataModel.Maximum)) || 0
-        const others = Names.sums(result.other, added)
+        const others = Names.sums(result.other, added, sample.valuesFor)
         const left = {}
         for (const attribute of columns) {
             const unit = Number(header(attribute, Process.ProcessDataModel.Unit)) || 0
@@ -102,7 +115,7 @@ QtObject {
         otherBusiest = Names.busiest(result.other, 5)
         mostly = Names.mostlyOne(result.other)
         system = left
-        systemBusiest = Names.busiest(Names.systemProcesses(all, result.mine), 5)
+        systemBusiest = Names.busiest(Names.systemProcesses(sample.processes, result.mine), 5)
     }
 
     // Every process, with what the table's columns add up.

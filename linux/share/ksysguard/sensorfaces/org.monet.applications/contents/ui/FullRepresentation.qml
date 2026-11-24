@@ -20,13 +20,16 @@ Native.FullRepresentation {
         id: apps
         active: activity.active
     }
-    // KDE's table is made with the face; a few tries in case it comes a moment later.
+    // Attach as soon as the native table is constructed. A delayed face can
+    // still finish loading after this event-loop turn.
+    function attachTable() {
+        if (!apps.attach(face.contentItem) && ++attaching.tries < 25) attaching.restart()
+    }
+    Component.onCompleted: Qt.callLater(attachTable)
     Timer {
         id: attaching
         interval: 200
-        repeat: true
         property int tries: 0
-        running: true
-        onTriggered: if (apps.attach(face.contentItem) || ++tries >= 25) stop()
+        onTriggered: face.attachTable()
     }
 }

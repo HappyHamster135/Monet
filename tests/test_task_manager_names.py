@@ -1263,6 +1263,17 @@ class ProcessTable(unittest.TestCase):
             QMetaObject.invokeMethod(processes, "refresh")
             QTest.qWait(50)
         self.assertEqual(details()["REPO.exe"], "R.E.P.O.", (shell.commands, errors))
+        from PySide6.QtTest import QSignalSpy
+        changes = QSignalSpy(processes.appsChanged)
+        QMetaObject.invokeMethod(processes, "refresh")
+        self.assertEqual(changes.count(), 0)
+        # Replace an owner without changing the PID list. Subtitles must update.
+        QMetaObject.invokeMethod(window, "setApps", Q_RETURN_ARG("QVariant"), Q_ARG("QVariant", [
+            {"id": "new.desktop", "appName": "New owner", "menuId": "new.desktop", "pids": [2001, 2002]},
+            {"id": "app3241660", "appName": "app3241660", "menuId": "", "pids": [3001, 3002]}]))
+        QMetaObject.invokeMethod(processes, "refresh")
+        self.assertEqual(changes.count(), 1)
+        self.assertEqual(details()["steamwebhelper"], "New owner")
         self.assertEqual(errors, [])
 
 

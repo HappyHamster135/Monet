@@ -6,7 +6,9 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 - **Graphics in Task Manager.** Applications and Processes show a sortable Graphics
   column beside CPU and Memory. Sorting keeps the arrow inside its column. Hover
-  over a shortened heading to read the full name.
+  over a shortened heading to read the full name. Applications and Processes
+  show their tables sooner. Refreshing app totals and checking GPU use take
+  less CPU time at the same sampling rate.
 - **This PC in Files.** Browse your usual folders, system drive and mounted disks
   from one place in Files. Restored tabs and custom start folders are preserved.
 - **Wallet prompts at sign-in.** Settings → Passwords controls whether apps that Monet

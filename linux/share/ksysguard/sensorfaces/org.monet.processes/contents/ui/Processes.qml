@@ -50,13 +50,20 @@ Item {
         const names = {}, nameColumn = grouping.enabledAttributes.indexOf("appName")
         const menuColumn = grouping.enabledAttributes.indexOf("menuId")
         if (nameColumn < 0) return
-        for (let row = 0; row < grouping.rowCount(); ++row) {
+        const count = grouping.rowCount()
+        for (let row = 0; row < count; ++row) {
             const name = String(grouping.data(grouping.index(row, nameColumn), Process.ProcessDataModel.Value) || "")
             const menu = menuColumn < 0 ? "" : String(grouping.data(grouping.index(row, menuColumn), Process.ProcessDataModel.Value) || "")
+            const app = {id: menu || name, name: name}
             for (const pid of grouping.data(grouping.index(row, nameColumn), Process.ProcessDataModel.PIDs) || [])
-                names[Number(pid)] = {"id": menu || name, "name": name}
+                names[Number(pid)] = app
         }
-        apps = names
+        // Keep visible process cells bound to the same map until a process
+        // actually joins, exits, changes owners or gets a new display name.
+        const pids = Object.keys(names)
+        if (pids.length !== Object.keys(apps).length ||
+            pids.some(pid => !apps[pid] || apps[pid].id !== names[pid].id || apps[pid].name !== names[pid].name))
+            apps = names
     }
 
     // The account's apps, as the Applications page groups them: KDE's model, its own copy.

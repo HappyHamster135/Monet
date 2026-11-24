@@ -65,11 +65,12 @@ function addable(attribute) {
     return ADDABLE.includes(attribute)
 }
 
-function sums(processes, attributes) {
+function sums(processes, attributes, valuesFor) {
     const total = {}
     for (const attribute of attributes) total[attribute] = 0
     for (const p of processes) {
-        for (const attribute of attributes) total[attribute] += Number((p.values || {})[attribute]) || 0
+        const values = valuesFor ? valuesFor(p) : p.values || {}
+        for (const attribute of attributes) total[attribute] += Number(values[attribute]) || 0
     }
     return total
 }
@@ -81,7 +82,7 @@ function sums(processes, attributes) {
 // values: {attribute: number}}]. Returns {mine: this account's uid, totals: {key: sums of a row
 // that gained processes, its own with them}, gained: {key: how many}, added: {key: [processes]},
 // other: [processes]}.
-function account(rows, processes, attributes) {
+function account(rows, processes, attributes, valuesFor) {
     const byPid = {}, owner = {}
     for (const p of processes || []) byPid[Number(p.pid)] = p
     for (const row of rows || []) {
@@ -111,7 +112,7 @@ function account(rows, processes, attributes) {
     for (const row of rows || []) {
         if (!added[row.key]) continue
         const own = (row.pids || []).map(pid => byPid[Number(pid)]).filter(p => !!p)
-        totals[row.key] = sums(own.concat(added[row.key]), attributes)
+        totals[row.key] = sums(own.concat(added[row.key]), attributes, valuesFor)
         gained[row.key] = added[row.key].length
     }
     return {mine: mine, totals: totals, gained: gained, added: added, other: other}
