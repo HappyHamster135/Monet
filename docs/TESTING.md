@@ -1,5 +1,48 @@
 # Testing Monet on real hardware
 
+## 0.9.8-9 power-on to a responsive login — 24 November 2026
+
+On a disposable installed disk, the 0.9.8-9 development image reached a
+keyboard-responsive login in **31.19 s** on the median normal boot. Released
+0.9.8-8 took **34.56 s** on the same runner. The first startup after installation
+improved from **174.49 s to 57.52 s**. The ten-second target remains open.
+[Paired boot run and screenshots](https://github.com/HappyHamster135/Monet/actions/runs/45326666936)
+
+| Power-on measurement in seconds | Released 0.9.8-8 | 0.9.8-9 at 084bcbe |
+| --- | ---: | ---: |
+| First installation startup to accepted input, one sample | 174.49 | 57.52 |
+| Kernel starts during that first startup | 2 | 1 |
+| Visible login, median of three normal boots | 33.62 | 30.27 |
+| Visible password controls, median of three normal boots | 33.97 | 30.90 |
+| Accepted input, all three normal boots in order | 36.48, 34.26, 34.56 | 33.70, 30.92, 31.19 |
+
+The installed-disk test includes UEFI, GRUB, the kernel and the native greeter.
+Both images used one vCPU, 8 GiB RAM, software graphics, the same released
+kernel and an uncontrolled host page cache. First startup includes synthetic
+account provisioning. Normal boots reuse that account and collect the journal
+after a test Space produces a masked character in two successive frames.
+These figures compare the accumulated 0.9.8-9 changes with the released image.
+The eight available ThinkPad boot records across earlier deployments showed
+14.01–17.09 s of firmware and 8.42–9.10 s of bootloader time. Physical
+power-on timing with this development image is still pending.
+
+The baseline hardware setup staged a second deployment for the sole argument
+`bluetooth.disable_ertm=1`. On images with that vendor default, Monet now
+supplies it through bootc's install configuration, which also ships on the
+Setup USB. The candidate's initial kernel command line contained the argument
+once and the hardware setup completed in one boot. Other hardware can still
+request its own kernel changes and restart.
+
+In each timed candidate journal the greeter skipped nine desktop timers and
+file watchers. Bluetooth pairing import also skipped its disk scan on this VM,
+which has no pairing records. The Windows-drive helper reuses its block-device
+listing on an unencrypted PC and enumerates again after a BitLocker unlock.
+The two FACEIT shortcut lookups now share a directory walk. On a separate
+1,536-shortcut Btrfs fixture, the median scan fell from 199.6 ms to 8.5 ms over
+11 interleaved samples per version. At the same source revision, the desktop
+suite ran 2,430 checks with 19 skips and zero failures. The Rust tests and Linux
+and Windows builds passed. [Build and test run](https://github.com/HappyHamster135/Monet/actions/runs/45326666958)
+
 ## 0.9.8-9 wireless startup development — 24 November 2026
 
 The inherited IWD cleanup calls `systemctl unmask` before NetworkManager at every
