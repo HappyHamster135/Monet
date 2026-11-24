@@ -22,12 +22,9 @@ monet-windows-files.service after it:
     monet-windows-drive unlock-saved   open the BitLocker drives whose key was typed once
 """
 
-import base64
 import json
 import os
-import random
 import re
-import shutil
 import subprocess
 import sys
 import time
@@ -260,6 +257,8 @@ def handover_key(keys=BITLOCKER_KEYS):
 
 def public_lock(pem):
     """The lock as Windows PowerShell's RSA reads it (an RSAKeyValue, not PEM), or None."""
+    import base64
+
     code, out = feed(["openssl", "rsa", "-noout", "-modulus"], pem)
     found = re.fullmatch(rb"Modulus=([0-9A-F]+)\s*", out or b"")
     if code != 0 or not found:
@@ -337,6 +336,8 @@ def esp_roots():
 def take_handed(volumes, roots=None, keys=BITLOCKER_KEYS):
     """Opens the BitLocker drives with the recovery keys Bridge left on the EFI partition, keeps
     each that fits sealed, and takes the file away. How many keys fitted."""
+    import base64
+
     fitted = 0
     for root, mounted in esp_roots() if roots is None else roots:
         handed = walk(root, HANDED)
@@ -421,6 +422,8 @@ def prepare_games(root, steam):
     """Windows' Games folder as a Steam library both sides can use: steamapps, the library's
     own mark (as Steam writes it when it adds a folder), and Proton's Linux-only folders
     pointing at Monet's own Steam. Returns the folder."""
+    import random
+
     games = child(root, GAMES)
     apps = child(games, "steamapps")
     # A junction someone made in Windows (C:\Games leading to their own folder, say) is never
@@ -1034,6 +1037,8 @@ def same_bytes(src, path):
 def copy_open(src, name, folder):
     """Copies the open file into folder (as the person: nothing follows a link) and checks
     the copy. True when it's there, now or from before; a copy that went wrong is removed."""
+    import shutil
+
     size = os.fstat(src.fileno()).st_size
     existing = folder / name
     if existing.is_file() and existing.stat().st_size == size and same_bytes(src, existing):
@@ -1267,14 +1272,9 @@ APPS_JSON = ".local/share/monet/windows-apps.json"
 # In the person's icon theme, so the app menu names them and Monet frames them as it does any app's.
 APPS_ICONS = ".local/share/icons/hicolor/256x256/apps"
 APP_ICON = "monet-windows-app-{}.png"
-NOT_APPS = re.compile(r"\b(uninstall\w*|unins\d*|read ?me|help|manual|documentation|release notes|licen[cs]e|"
-                      r"web ?site|safe mode|repair|reset|support|feedback|what'?s new|changelog|check for updates|monet)\b", re.I)
 NOT_APP_FOLDERS = {"windows system", "windows accessories", "accessibility", "accessories", "administrative tools",
                    "windows administrative tools", "windows powershell", "windows tools", "system tools",
                    "maintenance", "startup", "monet"}
-NOT_APP_PLACES = re.compile(r"^([a-z]:\\windows|%(systemroot|windir)%)\\|\\(steamapps|games|epic games|riot games|ubisoft|ea games|"
-                            r"electronic arts|gog galaxy|battle\.net|rockstar games|origin( games)?|steam|monet|opera( gx)?)\\"
-                            r"|\\(msedge|chrome|firefox|brave|vivaldi|zen|private_browsing|onedrive)\.exe$", re.I)
 WINDOWS_FOLDERS = {"programfiles": "Program Files", "programfiles(x86)": "Program Files (x86)",
                    "programw6432": "Program Files", "commonprogramfiles": "Program Files/Common Files",
                    "systemroot": "Windows", "windir": "Windows", "programdata": "ProgramData"}
@@ -1327,15 +1327,15 @@ def shortcut_target(data):
 # them, at each sign-in) in the shared Games folder. Windows' own apps (Calculator, Photos,
 # Settings), Xbox's and the like are left out, as they have Monet's own here.
 STORE_APPS = "Games/.monet/store-apps.json"
-STORE_APP = re.compile(r"([\w.-]+)_([a-z0-9]{13})!([\w.-]+)")
-NOT_STORE_APPS = re.compile(r"(Microsoft\.(Windows|Xbox|Gaming|Zune|Bing|GetHelp|Getstarted|Paint|ScreenSketch|SecHealthUI|"
-                            r"YourPhone|People|MicrosoftEdge|Edge|549981C3F5F10|MicrosoftStickyNotes|PowerAutomateDesktop|"
-                            r"MicrosoftOfficeHub|Copilot|StorePurchaseApp|OneDrive|MicrosoftSolitaireCollection|"
-                            r"WidgetsPlatformRuntime)|MicrosoftWindows\.|MicrosoftCorporationII\.|windows\.)", re.I)
 
 
 def store_apps(root):
     """[(name, app id, family name, publisher id, app)] of the Store's apps Bridge listed."""
+    store_app = re.compile(r"([\w.-]+)_([a-z0-9]{13})!([\w.-]+)")
+    not_store_apps = re.compile(r"(Microsoft\.(Windows|Xbox|Gaming|Zune|Bing|GetHelp|Getstarted|Paint|ScreenSketch|SecHealthUI|"
+                                r"YourPhone|People|MicrosoftEdge|Edge|549981C3F5F10|MicrosoftStickyNotes|PowerAutomateDesktop|"
+                                r"MicrosoftOfficeHub|Copilot|StorePurchaseApp|OneDrive|MicrosoftSolitaireCollection|"
+                                r"WidgetsPlatformRuntime)|MicrosoftWindows\.|MicrosoftCorporationII\.|windows\.)", re.I)
     data = read_plain(walk(root, STORE_APPS), root)
     try:
         listed = json.loads(data or b"[]")
@@ -1346,8 +1346,8 @@ def store_apps(root):
         if not isinstance(item, dict):
             continue
         name, app_id = " ".join(str(item.get("name") or "").split())[:80], str(item.get("id") or "")
-        parts = STORE_APP.fullmatch(app_id)
-        if name and parts and not NOT_STORE_APPS.match(app_id):
+        parts = store_app.fullmatch(app_id)
+        if name and parts and not not_store_apps.match(app_id):
             found.append((name, app_id, *parts.groups()))
     return found
 
@@ -1525,6 +1525,11 @@ def as_person(uid, gid, work, items, seconds=60):
 def windows_apps(root, person_name):
     """[{id, name, icon (PNG bytes or None)}] of the apps in the Start menu of the person's own
     Windows account and everyone's, theirs first."""
+    not_apps = re.compile(r"\b(uninstall\w*|unins\d*|read ?me|help|manual|documentation|release notes|licen[cs]e|"
+                          r"web ?site|safe mode|repair|reset|support|feedback|what'?s new|changelog|check for updates|monet)\b", re.I)
+    not_app_places = re.compile(r"^([a-z]:\\windows|%(systemroot|windir)%)\\|\\(steamapps|games|epic games|riot games|ubisoft|ea games|"
+                                r"electronic arts|gog galaxy|battle\.net|rockstar games|origin( games)?|steam|monet|opera( gx)?)\\"
+                                r"|\\(msedge|chrome|firefox|brave|vivaldi|zen|private_browsing|onedrive)\.exe$", re.I)
     profiles = own_windows(root, person_name)
     menus = [(walk(p, "AppData/Roaming/" + START_MENU), p) for p in profiles]
     menus.append((walk(root, "ProgramData/" + START_MENU), profiles[0] if profiles else None))
@@ -1538,11 +1543,11 @@ def windows_apps(root, person_name):
                 continue
             name = " ".join(link.stem.split())
             slug = slug_of(place.with_suffix("").as_posix())
-            if not slug or f"app:{slug}" in seen or name.lower() in seen or NOT_APPS.search(name):
+            if not slug or f"app:{slug}" in seen or name.lower() in seen or not_apps.search(name):
                 continue
             data = read_plain(link, root)
             target = shortcut_target(data) if data and len(data) < 1 << 20 else ""
-            if not target.lower().endswith(".exe") or NOT_APPS.search(target) or NOT_APP_PLACES.search(target):
+            if not target.lower().endswith(".exe") or not_apps.search(target) or not_app_places.search(target):
                 continue
             program = windows_path(target, root, profile)  # None on another drive: kept, without its icon
             if program is not None and not program.is_file():
@@ -1558,7 +1563,7 @@ def windows_apps(root, person_name):
             found.append({"id": f"app:{slug}", "name": name, "icon": icon})
     for name, app_id, family, publisher, app in store_apps(root):
         slug = slug_of(app_id)
-        if f"app:{slug}" in seen or name.lower() in seen or NOT_APPS.search(name):
+        if f"app:{slug}" in seen or name.lower() in seen or not_apps.search(name):
             continue
         seen |= {f"app:{slug}", name.lower()}
         found.append({"id": f"app:{slug}", "name": name, "icon": store_logo(root, family, publisher, app)})
