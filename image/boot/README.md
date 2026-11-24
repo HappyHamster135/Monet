@@ -67,3 +67,13 @@ passes those lifecycle checks and records a 1.507-second median reduction to
 password controls (5.2%) in the one-CPU VM. The service duration alone is not an
 end-to-end saving, and physical hardware timings remain unmeasured for this
 candidate.
+
+## Disk discovery before login
+
+Fedora's read-ahead rule starts `nfsrahead` on each new backing device. The
+ThinkPad and the installed-disk test both logged seven calls for local disks
+and filesystems during startup. Monet narrows the known vendor rule to names
+matching `0:*`. The NFS client names its backing devices from the anonymous
+device number allocated by the kernel. Eligible mounts still use the vendor's
+helper and its configured read-ahead value. [Linux NFS superblock code](https://github.com/torvalds/linux/blob/master/fs/nfs/super.c)
+and [anonymous device allocation](https://github.com/torvalds/linux/blob/master/fs/super.c).

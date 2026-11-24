@@ -1,0 +1,180 @@
+{
+  "date": "2026-11-24",
+  "source": {
+    "boot_benchmark": "https://github.com/HappyHamster135/Monet/actions/runs/45341036563",
+    "candidate_commit": "4c53cfda03de514c393794fdc012695dfec5aeb0",
+    "released_image": "ghcr.io/happyhamster135/monet-amd@sha256:15a82fc9df8aab6b90177e87a686b3ff89a68393c5ecea9c4acb42ae80dd4363"
+  },
+  "thinkpad": {
+    "model": "ThinkPad P16s Gen 2",
+    "os_version": "0.9.8-8",
+    "boot_local_date": "2026-11-23",
+    "automatic_sign_in": true,
+    "firmware_timestamps_s": {
+      "bootloader_launch": 14.38029,
+      "bootloader_load": 14.354588,
+      "exitbootservice_end": 23.454174,
+      "exitbootservice_start": 23.44975,
+      "firmware_start": 0.904717
+    },
+    "kernel_s": 1.836162,
+    "switch_root_s": 6.620013,
+    "login_manager_active_from_kernel_s": 11.71916,
+    "power_to_login_manager_s": 35.173334
+  },
+  "vm": {
+    "vcpus": 1,
+    "memory_mib": 8192,
+    "graphics": "software rendered",
+    "firmware": "OVMF",
+    "secure_boot": false,
+    "host_page_cache": "uncontrolled",
+    "nominal_poll_interval_s": 0.25,
+    "baseline": {
+      "first_boot_accepted_input_s": 265.364,
+      "normal_boots": [
+        {
+          "index": 1,
+          "visible_login_s": 44.557,
+          "visible_controls_s": 44.927,
+          "accepted_input_s": 45.226,
+          "kernel_clock_origin_bounds_s": [
+            4.364,
+            4.996
+          ],
+          "stages_s": {
+            "power_to_guest_kernel": 4.68,
+            "kernel": 1.799,
+            "initrd": 2.669,
+            "system_userspace_to_login_manager_start": 22.262,
+            "login_manager_activation": 6.6,
+            "manager_active_to_visible": 6.547,
+            "visible_to_accepted_input": 0.669
+          }
+        },
+        {
+          "index": 2,
+          "visible_login_s": 42.743,
+          "visible_controls_s": 43.108,
+          "accepted_input_s": 43.697,
+          "kernel_clock_origin_bounds_s": [
+            4.263,
+            4.837
+          ],
+          "stages_s": {
+            "power_to_guest_kernel": 4.55,
+            "kernel": 1.732,
+            "initrd": 2.661,
+            "system_userspace_to_login_manager_start": 21.388,
+            "login_manager_activation": 6.52,
+            "manager_active_to_visible": 5.892,
+            "visible_to_accepted_input": 0.954
+          }
+        },
+        {
+          "index": 3,
+          "visible_login_s": 42.168,
+          "visible_controls_s": 42.531,
+          "accepted_input_s": 43.114,
+          "kernel_clock_origin_bounds_s": [
+            4.302,
+            4.853
+          ],
+          "stages_s": {
+            "power_to_guest_kernel": 4.578,
+            "kernel": 1.749,
+            "initrd": 2.655,
+            "system_userspace_to_login_manager_start": 21.604,
+            "login_manager_activation": 5.95,
+            "manager_active_to_visible": 5.632,
+            "visible_to_accepted_input": 0.946
+          }
+        }
+      ],
+      "median_visible_login_s": 42.743,
+      "median_accepted_input_s": 43.697,
+      "median_stages_s": {
+        "power_to_guest_kernel": 4.578,
+        "kernel": 1.749,
+        "initrd": 2.661,
+        "system_userspace_to_login_manager_start": 21.604,
+        "login_manager_activation": 6.52,
+        "manager_active_to_visible": 5.892,
+        "visible_to_accepted_input": 0.946
+      }
+    },
+    "candidate": {
+      "first_boot_accepted_input_s": 74.814,
+      "normal_boots": [
+        {
+          "index": 1,
+          "visible_login_s": 38.382,
+          "visible_controls_s": 38.737,
+          "accepted_input_s": 39.339,
+          "kernel_clock_origin_bounds_s": [
+            3.821,
+            4.389
+          ],
+          "stages_s": {
+            "power_to_guest_kernel": 4.105,
+            "kernel": 1.794,
+            "initrd": 2.676,
+            "system_userspace_to_login_manager_start": 17.759,
+            "login_manager_activation": 6.447,
+            "manager_active_to_visible": 5.6,
+            "visible_to_accepted_input": 0.957
+          }
+        },
+        {
+          "index": 2,
+          "visible_login_s": 38.893,
+          "visible_controls_s": 39.263,
+          "accepted_input_s": 39.562,
+          "kernel_clock_origin_bounds_s": [
+            4.151,
+            4.758
+          ],
+          "stages_s": {
+            "power_to_guest_kernel": 4.455,
+            "kernel": 2.409,
+            "initrd": 2.671,
+            "system_userspace_to_login_manager_start": 17.848,
+            "login_manager_activation": 5.911,
+            "manager_active_to_visible": 5.599,
+            "visible_to_accepted_input": 0.669
+          }
+        },
+        {
+          "index": 3,
+          "visible_login_s": 37.846,
+          "visible_controls_s": 38.193,
+          "accepted_input_s": 38.776,
+          "kernel_clock_origin_bounds_s": [
+            4.085,
+            4.68
+          ],
+          "stages_s": {
+            "power_to_guest_kernel": 4.382,
+            "kernel": 1.765,
+            "initrd": 2.658,
+            "system_userspace_to_login_manager_start": 17.856,
+            "login_manager_activation": 5.814,
+            "manager_active_to_visible": 5.369,
+            "visible_to_accepted_input": 0.93
+          }
+        }
+      ],
+      "median_visible_login_s": 38.382,
+      "median_accepted_input_s": 39.339,
+      "median_stages_s": {
+        "power_to_guest_kernel": 4.382,
+        "kernel": 1.794,
+        "initrd": 2.671,
+        "system_userspace_to_login_manager_start": 17.848,
+        "login_manager_activation": 5.911,
+        "manager_active_to_visible": 5.599,
+        "visible_to_accepted_input": 0.93
+      }
+    }
+  }
+}

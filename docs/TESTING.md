@@ -1,5 +1,48 @@
 # Testing Monet on real hardware
 
+## 0.9.8-9 installed-disk login recheck — 24 November 2026
+
+On the same single-vCPU KVM runner, normal power-on to a visible login took
+**38.38 s** with development commit `4c53cfd` and **42.74 s** with released
+0.9.8-8. Time to accepted keyboard input improved by **4.36 s**, from 43.70 s
+to 39.34 s. The development image took 39.34, 39.56 and 38.78 s across its
+three normal boots. The initial provisioning boot was measured separately at
+74.81 s, compared with 265.36 s on the release. Both images took longer on this
+runner than in the previous comparison below. The paired result covers all
+changes since the release. [Measured samples](benchmarks/0.9.8-9-login-recheck.json)
+and [workflow, journals and screenshots](https://github.com/HappyHamster135/Monet/actions/runs/45341036563).
+
+| Median time per stage, in seconds | Released 0.9.8-8 | 0.9.8-9 |
+| --- | ---: | ---: |
+| VM power-on to guest kernel clock origin | 4.58 | 4.38 |
+| Kernel | 1.75 | 1.79 |
+| Initial RAM disk | 2.66 | 2.67 |
+| System userspace to login manager beginning startup | 21.60 | 17.85 |
+| Login manager activation, including its device-readiness check | 6.52 | 5.91 |
+| Active login manager to first visible greeter frame | 5.89 | 5.60 |
+| Visible greeter to verified keypress | 0.95 | 0.93 |
+
+The 17.85 s stage is the longest remaining interval on the VM. In all three
+candidate journals, `systemd-resolved.service` was on the critical chain to
+system initialization and took 8.44–8.72 s to report ready. Other services
+started concurrently. The local-disk NFS probes fell from seven per normal
+baseline boot to zero per candidate boot. The login manager retained its
+graphics readiness check. After the test key was accepted, three clock probes
+bounded the alignment of guest and host timestamps to within ±0.32 s across
+both images. Each table row is a separate median.
+
+The ThinkPad P16s Gen 2's latest recorded boot was on 0.9.8-8 with automatic
+sign-in. Its firmware began loading the bootloader at 14.35 s and launched it
+at 14.38 s. Linux's EFI handoff completed at 23.45 s. The kernel and initial
+RAM disk took 6.62 s, and the login manager was active at 35.17 s. Automatic
+sign-in bypassed the password screen on this boot. The firmware phase alone
+exceeded the ten-second physical target. [Linux firmware timestamp definitions](https://github.com/torvalds/linux/blob/master/Documentation/ABI/testing/sysfs-firmware-acpi).
+
+The follow-up to skip an unnecessary work-area query when restoring normal
+windows runs in the signed-in session. It passed the development build and
+desktop suite, with 2,440 desktop checks, 19 skips and zero failures.
+[Build verification](https://github.com/HappyHamster135/Monet/actions/runs/45342808051).
+
 ## 0.9.8-9 power-on to a responsive login — 24 November 2026
 
 On a disposable installed disk, the 0.9.8-9 development image reached a
