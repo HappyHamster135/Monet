@@ -159,6 +159,25 @@ class InstalledRefresh(unittest.TestCase):
             self.until(lambda: not self.shop.installed_running)
         self.assertEqual(self.shop.installed, {})
 
+    def test_refreshed_catalog_replaces_the_searchable_names(self):
+        folder = Path(self.tmp.name)
+        (folder / "appstream.xml").touch()
+        app = dict(APP, name="Étoile", summary="", keywords=[], screenshots=[], icon="",
+                   verified=False, released=0, categories=[], launch=APP["id"] + ".desktop")
+        catalogs = [{APP["id"]: app}, {APP["id"]: dict(app, name="Stern")}]
+        with patch.object(store, "CATALOGS", (folder,)), \
+                patch.object(store, "cached_catalog", side_effect=catalogs), \
+                patch.object(store, "popular", return_value={}), \
+                patch.object(self.shop, "read_installed", return_value={}):
+            for old, new in (("Stern", "etoile"), ("etoile", "Stern")):
+                worker = threading.Thread(target=self.shop.load)
+                self.threads.append(worker)
+                worker.start()
+                self.until(lambda: bool(self.shop.find(new)["apps"]))
+                self.assertEqual(self.shop.find(old)["apps"], [])
+                self.assertEqual([a["id"] for a in self.shop.find(new)["apps"]], [APP["id"]])
+                worker.join(2)
+
     def test_slow_initial_catalog_cannot_undo_a_newer_install(self):
         entered, release = self.event(), self.event()
         directory = Path(self.tmp.name) / "catalog"

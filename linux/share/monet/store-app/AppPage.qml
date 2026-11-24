@@ -305,7 +305,10 @@ Flickable {
                                         radius: 3
                                         color: page.tone.lily
                                         opacity: meter.indeterminate && still ? 0.4 : 1
-                                        Behavior on width { NumberAnimation { duration: Math.round(200 * page.tone.speed) } }
+                                        Behavior on width {
+                                            enabled: !sweep.still
+                                            NumberAnimation { duration: Math.round(200 * page.tone.speed) }
+                                        }
                                         SequentialAnimation on shift {
                                             objectName: "appMeterSweep"
                                             running: meter.indeterminate && meter.visible && !sweep.still

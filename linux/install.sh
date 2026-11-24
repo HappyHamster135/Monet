@@ -111,7 +111,11 @@ put 755 "$SRC/libexec/monet-files" "$BINDIR/monet-files"
 put 755 "$SRC/libexec/monet-file-jobs" "$LIBEXECDIR/monet-file-jobs"
 put 644 "$SRC/systemd/user/monet-screenshot-ready.timer" "$USERUNITDIR/monet-screenshot-ready.timer"
 put 644 "$SRC/systemd/user/app-org.kde.spectacle.service.d/monet.conf" "$USERUNITDIR/app-org.kde.spectacle.service.d/monet.conf"
-for tool in monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-work monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-priority monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
+# Prepare the source and its checked cache before switching the public entry point.
+put 644 "$SRC/libexec/monet-quick" "$LIBEXECDIR/monet_quick.py"
+python3 -I -m compileall -q -f --invalidation-mode checked-hash "$LIBEXECDIR/monet_quick.py"
+put 755 "$SRC/launchers/monet-quick" "$LIBEXECDIR/monet-quick"
+for tool in monet-session monet-look monet-profile monet-light monet-daylight monet-weather monet-resume monet-work monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-priority monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
     put 755 "$SRC/libexec/$tool" "$LIBEXECDIR/$tool"
 done
 if [ "$IMAGE" = 0 ] && [ -d "$SRC/libexec/pulsectl" ]; then

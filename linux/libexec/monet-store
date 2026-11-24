@@ -139,7 +139,11 @@ FAMILIAR_APPS = [
 
 def fold(text):
     """Without accents or capitals: "etretat" finds "Étretat"."""
-    return "".join(c for c in unicodedata.normalize("NFKD", text or "") if not unicodedata.combining(c)).lower()
+    if not text:
+        return ""
+    if text.isascii():
+        return text.lower()
+    return "".join(c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c)).lower()
 
 
 def languages(env=None):
@@ -429,6 +433,17 @@ def picks(path=PICKS):
 
 # ---------------------------------------------------------------- finding and ordering
 
+NAME_PARTS = re.compile(r"[\s\-_.:]+")
+
+
+def search_texts(apps):
+    """A cheap first pass over the exact fields score() can match."""
+    return {
+        app_id: "\n".join((fold(app["name"]), fold(app_id), fold(app["summary"]), *app["keywords"]))
+        for app_id, app in apps.items()
+    }
+
+
 def score(app, words, popular):
     """How well an app answers the words (all of them must be in it somewhere): its name
     first, then its keywords (GIMP's include "photoshop"), its id and its summary; then how
@@ -438,13 +453,10 @@ def score(app, words, popular):
     if name == phrase:
         total += 120
     for w in words:
-        parts = re.split(r"[\s\-_.:]+", name)
         if name.startswith(w):
             total += 60
-        elif any(p.startswith(w) for p in parts):
-            total += 45
         elif w in name:
-            total += 25
+            total += 45 if any(p.startswith(w) for p in NAME_PARTS.split(name)) else 25
         elif w in app["keywords"]:
             total += 40
         elif any(k.startswith(w) for k in app["keywords"]):
@@ -458,11 +470,15 @@ def score(app, words, popular):
     return total + 7 * math.log10(1 + popular.get(app["id"], 0)) + (5 if app["verified"] else 0)
 
 
-def search(apps, query, popular, limit=60):
+def search(apps, query, popular, limit=60, *, texts=None):
     words = fold(query).split()
     if not words:
         return []
-    scored = ((score(a, words, popular), a["id"]) for a in apps.values())
+    ids = apps
+    if texts is not None:
+        first, *rest = words
+        ids = (i for i, text in texts.items() if first in text and all(w in text for w in rest))
+    scored = ((score(apps[i], words, popular), i) for i in ids)
     return [i for s, i in sorted((x for x in scored if x[0] > 0), key=lambda x: (-x[0], x[1]))[:limit]]
 
 
@@ -912,7 +928,7 @@ def shop_type(games):
         loaded = Signal()
         installedChanged = Signal()
         installedReady = Signal(int, object)
-        catalogReady = Signal(object, int, object)
+        catalogReady = Signal(object, object, int, object)
         cacheFrame = Signal(object)
         facts = Signal(str, "QVariant")  # app, {reach: [...], download, installed}
         wanted = Signal(str)
@@ -923,6 +939,7 @@ def shop_type(games):
             super().__init__()
             self.helper = helper
             self.apps, self.popular, self.installed, self.ready = {}, {}, {}, False
+            self.search_texts = {}
             self.jobs = jobs_module()
             self.queue = self.jobs.Queue()
             self.downloads = []
@@ -989,9 +1006,9 @@ def shop_type(games):
                 self.installed = found
                 self.installedChanged.emit()
 
-        @Slot(object, int, object)
-        def catalog_ready(self, apps, revision, installed):
-            self.apps = apps
+        @Slot(object, object, int, object)
+        def catalog_ready(self, apps, texts, revision, installed):
+            self.apps, self.search_texts = apps, texts
             if revision == self.installed_revision and installed is not None:
                 self.installed = installed
             self.ready = True
@@ -1023,7 +1040,7 @@ def shop_type(games):
                 for app_id, app in cached_catalog(folder, langs, blocked, refresh=refresh,
                         note=lambda phase: games.startup_event('store', phase, STARTUP_STARTED), deferred=deferred).items():
                     apps.setdefault(app_id, app)
-            self.catalogReady.emit(apps, revision, self.read_installed())
+            self.catalogReady.emit(apps, search_texts(apps), revision, self.read_installed())
             if deferred:
                 # Let the actual catalog frame through before serializing a
                 # rebuildable cache. Reuse this worker rather than add a daemon.
@@ -1082,7 +1099,7 @@ def shop_type(games):
             shown = set(other["apps"]) if other else set()
             if other:
                 other = {"name": other["name"], "apps": [self.card(i) for i in other["apps"]]}
-            return {"apps": [self.card(i) for i in search(self.apps, query, self.popular) if i not in shown],
+            return {"apps": [self.card(i) for i in search(self.apps, query, self.popular, texts=self.search_texts) if i not in shown],
                     "windows": mine, "instead": other}
 
         @Slot(str, result="QVariant")

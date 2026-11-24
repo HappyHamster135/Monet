@@ -143,7 +143,7 @@ const Qt = { rect: (x, y, width, height) => ({x, y, width, height}) };
 const sizes = {}, together = {}, pendingGeometry = {}, key = w => w.id;
 let placing = false, sharing = false, snapping = true;
 const Workspace = {stackingOrder: []}, screen = {};
-const win = id => ({id, output: screen, minSize: {width: 160, height: 120},
+const win = id => ({id, output: screen, maximizeMode: 0, minSize: {width: 160, height: 120},
     frameGeometry: Qt.rect(0, 0, 300, 200)});
 """ + functions + """
 const a = win('a'), b = win('b'), c = win('c');

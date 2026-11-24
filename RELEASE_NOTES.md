@@ -4,6 +4,12 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 ### New in 0.9.8-9: Startup and Settings polish (in development)
 
+- **Faster Store search.** The Store prepares searchable text when it loads the catalog
+  and reuses result cards as you type or scroll. Localized names, suggestions,
+  result order and keyboard navigation are preserved.
+- **Quicker desktop actions.** Settings, Quick Settings and the app menu can start
+  their shared helper from a checked copy compiled during installation. Settings
+  search also waits for the destination page to load before looking for its control.
 - **Less compilation at first login.** The OS image precompiles Monet's login,
   desktop, window and app interfaces with its matching Qt runtime. Sources remain
   installed, and Qt can fall back if bytecode is damaged or incompatible.

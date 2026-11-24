@@ -7,6 +7,7 @@ import os
 import re
 from pathlib import Path
 import tempfile
+import time
 from tests.settings_support import select_settings_page
 import unittest
 from unittest.mock import patch
@@ -246,12 +247,20 @@ class SettingsSearchUI(unittest.TestCase):
         self.search.setProperty("text", text)
         self.search.forceActiveFocus()
 
+    def activate_result(self, target):
+        QTest.keyClick(self.window, Qt.Key_Return)
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            focused = self.window.activeFocusItem()
+            if focused and focused.objectName() == target:
+                return focused
+            QTest.qWait(10)
+        self.fail(f"Settings search result {target} did not receive keyboard focus")
+
     def test_enter_before_results_arrive_opens_and_focuses_the_correct_control(self):
         self.type_query("make text bigger")
-        QTest.keyClick(self.window, Qt.Key_Return)
-        QTest.qWait(240)
+        self.activate_result("search-size")
         self.assertEqual(self.window.property("page"), "accessibility")
-        self.assertTrue(self.item("search-size").hasActiveFocus())
 
     def test_old_search_response_cannot_replace_a_newer_query(self):
         self.helper.delays = {"birthday": 450, "headphones": 20}
@@ -260,9 +269,8 @@ class SettingsSearchUI(unittest.TestCase):
         self.assertEqual(self.window.property("searchResults").toVariant()[0]["id"], "headphones")
         QTest.keyClick(self.window, Qt.Key_Down)
         self.assertTrue(self.item("searchResult-headphones").hasActiveFocus())
-        QTest.keyClick(self.window, Qt.Key_Return); QTest.qWait(150)
+        self.activate_result("search-output")
         self.assertEqual(self.window.property("page"), "sound")
-        self.assertTrue(self.item("search-output").hasActiveFocus())
 
     def test_calendar_opens_without_saving_or_changing_any_notes(self):
         self.type_query("birthday")
@@ -272,10 +280,8 @@ class SettingsSearchUI(unittest.TestCase):
 
     def test_windows_files_shows_unavailable_state_and_the_access_control(self):
         self.type_query("Windows files")
-        QTest.keyClick(self.window, Qt.Key_Return); QTest.qWait(250)
+        row = self.activate_result("search-shared-files")
         self.assertEqual(self.window.property("page"), "storage")
-        row = self.item("search-shared-files")
-        self.assertTrue(row.hasActiveFocus())
         self.assertIn("Shut down Windows completely", row.property("detail"))
 
     def test_size_controls_do_not_squeeze_or_overlap_text_in_a_narrow_window(self):
@@ -304,8 +310,7 @@ class SettingsSearchUI(unittest.TestCase):
     def test_short_controls_remain_centered_and_inside_the_row(self):
         self.window.setWidth(760)
         self.type_query("Windows files")
-        QTest.keyClick(self.window, Qt.Key_Return); QTest.qWait(250)
-        row = self.item("search-shared-files")
+        row = self.activate_result("search-shared-files")
         self.assertFalse(row.property("stacked"))
         parts = {child.objectName(): child for child in row.childItems()}
         for name in ("settingRowText", "settingRowControls"):

@@ -161,6 +161,43 @@ class StoreScrolling(unittest.TestCase):
             self.assertEqual(green, 0, (width, scale, green))
         self.assertEqual(self.shop.actions, []); self.capture("store-narrow-podium")
 
+    def test_search_reuses_visible_cards_and_opens_the_current_match(self):
+        self.window.resize(self.window.minimumWidth(), 520)
+        prototype = self.shop.apps[0]
+        self.shop.apps = [dict(prototype, id=f"org.example.Match{i}", name=f"Match {i}") for i in range(60)]
+        self.window.setProperty("query", "match")
+        QTest.qWait(100)
+        results = self.item("storeResults")
+        first = self.item("storeResultCard-org.example.Match0")
+        cards = [item for item in self.descendants(results) if item.objectName().startswith("storeResultCard-")]
+        self.assertLess(len(cards), len(self.shop.apps))
+        self.shop.apps.reverse()
+        self.window.setProperty("query", "match two")
+        QTest.qWait(100)
+        self.assertEqual(first.property("app")["id"], self.shop.apps[0]["id"])
+        first.forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Down)
+        QTest.qWait(60)
+        index = results.property("currentIndex")
+        self.assertGreater(index, 0)
+        ident = self.shop.apps[index]["id"]
+        QTest.keyClick(self.window, Qt.Key_Enter)
+        QTest.qWait(60)
+        self.assertEqual(self.window.property("pageId"), ident)
+        # A catalog refresh can reuse the old card for another app during the visit.
+        self.shop.apps[0], self.shop.apps[index] = self.shop.apps[index], self.shop.apps[0]
+        self.shop.installedChanged.emit()
+        QTest.keyClick(self.window, Qt.Key_Escape)
+        QTest.qWait(100)
+        self.assertEqual(self.window.activeFocusItem().property("app")["id"], ident)
+        self.item("storeSearch").forceActiveFocus()
+        QMetaObject.invokeMethod(results, "positionViewAtEnd")
+        QTest.qWait(100)
+        self.assert_visible_in(self.item("storeResultCard-" + self.shop.apps[-1]["id"]), results)
+        self.window.setProperty("query", "another match")
+        QTest.qWait(100)
+        self.assert_visible_in(self.item("storeResultCard-" + self.shop.apps[0]["id"]), results)
+
     def test_grid_arrow_navigation_opens_the_selected_app_with_enter(self):
         self.window.resize(self.window.minimumWidth(), 520); self.choose("tools")
         shelf = self.item("storeShelf"); shelf.forceActiveFocus(Qt.TabFocusReason)

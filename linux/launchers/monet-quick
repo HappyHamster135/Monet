@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+"""Run the installed settings helper with Python's source-validated bytecode cache."""
+from importlib.machinery import SourceFileLoader
+from pathlib import Path
+
+# Files also loads this executable as a module. Keep its globals, __file__ and
+# argv so sibling helpers and commands that relaunch this executable still work.
+_source = str(Path(__file__).resolve().with_name("monet_quick.py"))
+_loader = SourceFileLoader(__name__, _source)
+try:
+    _code = _loader.get_code(__name__)
+except (EOFError, ImportError, ValueError):
+    # A valid cache header can still be followed by an incomplete code object.
+    _code = compile(_loader.get_data(_source), _source, "exec")
+exec(_code, globals())

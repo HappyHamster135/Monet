@@ -411,6 +411,8 @@ MonetWindow {
             // the search, for what it found), so a screen reader says where Back or Forward went.
             if (focus && String(focus.objectName || "").startsWith("storeSection-"))
                 focus = to.query !== "" ? search : root.sectionEntry(to.section)
+            else if (to.focusName?.startsWith("storeResultCard-") && focus?.objectName !== to.focusName)
+                focus = named(results.contentItem, to.focusName)
             if (focus && focus !== root.contentItem && focus.visible && focus.enabled) {
                 root.leftBehind = focus
                 focus.forceActiveFocus(Qt.BacktabFocusReason)
@@ -590,6 +592,7 @@ MonetWindow {
             pageId = ""
         }
         found = loaded && query.trim() !== "" ? shop.find(query) : { apps: [], windows: [], instead: null }
+        if (query.trim() !== "") results.positionViewAtBeginning()
     }
     Component.onCompleted: {
         fitAvailableScreen()
@@ -957,23 +960,30 @@ MonetWindow {
             }
 
             // What a search found: Windows' answer first, then your Windows' apps, then the Store's.
-            Flickable {
+            GridView {
                 id: results
                 objectName: "storeResults"
                 MouseScroll { view: results }
                 anchors.fill: parent
+                anchors.leftMargin: 32
+                anchors.rightMargin: 20
                 visible: root.loaded && root.pageId === "" && root.query !== ""
-                contentHeight: resultsColumn.implicitHeight + 40
+                model: root.found.apps.length
+                cellWidth: Math.floor(width / pageArea.columns)
+                cellHeight: 104
+                reuseItems: true
                 boundsBehavior: Flickable.StopAtBounds
                 clip: true
                 ScrollInput { id: resultsInput; view: results; onScrollRequested: root.cancelFocusReveal(results) }
                 Keys.priority: Keys.AfterItem
-                Keys.onPressed: event => resultsInput.key(event)
-                Column {
-                    id: resultsColumn
-                    x: 32
-                    width: results.width - 64
+                Keys.onPressed: event => {
+                    if ([Qt.Key_Home, Qt.Key_End, Qt.Key_PageUp, Qt.Key_PageDown].includes(event.key)) resultsInput.key(event)
+                    else event.accepted = false
+                }
+                header: Column {
+                    width: results.width - 12
                     spacing: 16
+                    bottomPadding: 16
                     Item { width: 1; height: 8 }
                     Text {
                         horizontalAlignment: Text.AlignLeft
@@ -1079,23 +1089,6 @@ MonetWindow {
                         font.letterSpacing: 0.7
                         font.capitalization: Font.AllUppercase
                     }
-                    GridLayout {
-                        width: parent.width
-                        columns: pageArea.columns
-                        columnSpacing: 12
-                        rowSpacing: 12
-                        Repeater {
-                            model: root.found.apps
-                            AppCard {
-                                required property var modelData
-                                Layout.fillWidth: true
-                                Layout.preferredWidth: 1
-                                tone: look
-                                app: modelData
-                                onChosen: root.choose(modelData, "flathub")
-                            }
-                        }
-                    }
                     Text {
                         horizontalAlignment: Text.AlignLeft
                         width: parent.width
@@ -1106,6 +1099,24 @@ MonetWindow {
                         wrapMode: Text.Wrap
                     }
                 }
+                delegate: FocusScope {
+                    id: resultEntry
+                    required property int index
+                    width: results.cellWidth
+                    height: results.cellHeight
+                    AppCard {
+                        app: root.found.apps[resultEntry.index] || ({})
+                        objectName: "storeResultCard-" + (app.id || "")
+                        anchors.fill: parent
+                        anchors.rightMargin: 12
+                        anchors.bottomMargin: 12
+                        tone: look
+                        focus: true
+                        onActiveFocusChanged: if (activeFocus) results.currentIndex = resultEntry.index
+                        onChosen: if (app.id) root.choose(app, "flathub")
+                    }
+                }
+                footer: Item { width: 1; height: 28 }
             }
 
             AppPage {

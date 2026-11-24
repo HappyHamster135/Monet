@@ -121,7 +121,7 @@ Shared.MonetWindow {
         id: anchorDelay
         interval: 50
         repeat: true
-        running: sheet.pendingAnchor !== "" && sheet.anchorAttempts < 20
+        running: sheet.pageReady && sheet.pendingAnchor !== "" && sheet.anchorAttempts < 20
             && !(sheet.page === "apps" && sheet.loadingDefaults)
         onTriggered: { sheet.anchorAttempts++; sheet.revealSearchTarget() }
     }

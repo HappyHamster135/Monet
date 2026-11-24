@@ -8529,6 +8529,22 @@ class OurOwnStore(unittest.TestCase):
         self.assertEqual(self.store.search(apps, "photo", {}), ["org.gimp.GIMP", "org.kde.krita"])
         self.assertEqual(self.store.search(apps, "photo", {"org.kde.krita": 10 ** 6}), ["org.kde.krita", "org.gimp.GIMP"])
 
+    def test_indexed_search_keeps_localized_matches_ranking_and_limit(self):
+        apps, _ = self.catalog(["sv"], frozenset({"com.example.Blocked"}))
+        gimp, krita = "org.gimp.GIMP", "org.kde.krita"
+        apps[krita]["name"] = "Krita.E\u0301tretat"
+        apps[krita]["summary"] = "Skapa bilder"
+        popular = {krita: 10 ** 6}
+        index = self.store.search_texts(apps)
+        for query, expected in (
+            ("ÉTRETAT", [krita]), ("treta", [krita]), ("kde etretat", [krita]),
+            ("photosh bilder", [gimp]), ("skapa bilder", [krita, gimp]),
+            ("kde photoshop", []), ("", []), ("gimpskapa", []),
+        ):
+            with self.subTest(query=query):
+                self.assertEqual(self.store.search(apps, query, popular, texts=index), expected)
+        self.assertEqual(self.store.search(apps, "skapa bilder", popular, limit=1, texts=index), [krita])
+
     def test_familiar_app_names_suggest_available_apps(self):
         apps, _ = self.catalog([])
         self.assertEqual(self.store.instead("Photoshop", apps), {"name": "Photoshop", "apps": ["org.gimp.GIMP", "org.kde.krita"]})
