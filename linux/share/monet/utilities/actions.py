@@ -17,7 +17,7 @@ ACTIONS = {
     "calendars": Action("Notch calendars", "Calendar subscriptions and appointments", "view-calendar"),
     "shelf": Action("File shelf", "Files", "folder-favorites"),
     "downloads": Action("Watch downloads", "Files", "folder-download"),
-    "notes": Action("Scratchpad", "Writing", "accessories-text-editor"),
+    "notes": Action(tr("Scratchpad"), "Writing notes pads Markdown", "accessories-text-editor"),
     "snippets": Action("Text snippets", "Writing", "edit-paste"),
     "clipboard": Action("Clipboard history", "Writing", "edit-paste", ("qdbus-qt6", "org.kde.klipper", "/klipper", "org.kde.klipper.klipper.showKlipperPopupMenu")),
     "plain": Action("Copy as plain text", "Writing", "edit-copy"),

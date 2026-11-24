@@ -22,6 +22,16 @@ PlasmoidItem {
     readonly property double watchStart: Number(Plasmoid.configuration.watchStart) || 0
     property double now: Date.now()
     property int tab: 0
+    property bool padsOpened: false
+    onTabChanged: if (tab === 4) padsOpened = true
+    Loader {
+        id: padController
+        active: root.padsOpened
+        sourceComponent: PadModel {
+            shown: root.expanded && root.tab === 4
+            onDetached: root.expanded = false
+        }
+    }
     property int musicView: 0
     property bool viewingAgenda: false
     property date agendaDay: new Date()
@@ -207,7 +217,7 @@ PlasmoidItem {
             currentIndex: root.tab
             onCurrentIndexChanged: root.tab = currentIndex
             Repeater {
-                model: [i18n("Music"), i18n("Activity"), i18n("Time"), i18n("Calendar")]
+                model: [i18n("Music"), i18n("Activity"), i18n("Time"), i18n("Calendar"), i18n("Notes")]
                 C.TabButton { required property string modelData; text: modelData }
             }
         }
@@ -216,7 +226,7 @@ PlasmoidItem {
             active: root.expanded
             sourceComponent: root.tab === 1 && root.viewingWatch && watch.registered ? watchPage
                 : root.tab === 3 && root.viewingAgenda ? agendaPage
-                : [musicPage, activityPage, timerPage, calendarPage][root.tab]
+                : root.tab === 4 ? (padController.item ? padPage : null) : [musicPage, activityPage, timerPage, calendarPage][root.tab]
         }
         RowLayout {
             Layout.fillWidth: true
@@ -225,6 +235,7 @@ PlasmoidItem {
             C.Button { text: i18n("Utilities"); icon.name: "applications-utilities"; onClicked: root.openTool("tools") }
         }
     }
+    Component { id: padPage; Scratchpad { pads: padController.item } }
     Component {
         id: musicPage
         Music {

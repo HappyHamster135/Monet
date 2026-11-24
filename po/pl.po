@@ -15158,3 +15158,108 @@ msgstr ""
 msgid ""
 "Turn previously active adapters back on and reconnect paired mice and keyboards that were connected before sleep."
 msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/PadModel.qml:54 linux/share/monet/utilities/pad_editor.py:110
+msgid "Could not save or load this pad. Your text is still in the editor."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/PadModel.qml:68 linux/share/monet/utilities/pad_editor.py:130
+msgid ""
+"This pad changed in another window. Your edits were saved in a separate pad."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Scratchpad.qml:15 linux/share/monet/utilities/pad_editor.py:36
+msgid "Choose a pad"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Scratchpad.qml:24 linux/share/monet/utilities/pad_editor.py:39
+msgid "New pad"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Scratchpad.qml:31 linux/share/monet/utilities/pad_editor.py:49
+msgid "Open floating pad"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Scratchpad.qml:43 linux/share/monet/utilities/pad_editor.py:59
+msgid "Pad text"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Scratchpad.qml:44 linux/share/monet/utilities/pad_editor.py:60
+msgid "Write a note…"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:20 linux/share/monet/utilities/scratchpads.py:83
+msgid "Scratchpad"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:407
+msgid "Could not keep this pad above other windows."
+msgstr ""
+
+#: linux/share/monet/utilities/scratchpads.py:35 linux/share/monet/utilities/scratchpads.py:58
+msgid "Pad %1"
+msgstr ""
+
+#: linux/share/monet/utilities/scratchpads.py:84
+msgid "%1 (recovered)"
+msgstr ""
+
+#: linux/share/monet/utilities/pad_editor.py:43
+msgid "Pad options"
+msgstr ""
+
+#: linux/share/monet/utilities/pad_editor.py:51
+msgid "Preview Markdown"
+msgstr ""
+
+#: linux/share/monet/utilities/pad_editor.py:54
+msgid "Copy all"
+msgstr ""
+
+#: linux/share/monet/utilities/pad_editor.py:55
+msgid "Export text…"
+msgstr ""
+
+#: linux/share/monet/utilities/pad_editor.py:57
+msgid "Delete pad…"
+msgstr ""
+
+#: linux/share/monet/utilities/pad_editor.py:108
+msgid "Choose a name with 1 to 100 characters on one line."
+msgstr ""
+
+#: linux/share/monet/utilities/pad_editor.py:128
+msgid "%1 · Scratchpad"
+msgstr ""
+
+#: linux/share/monet/utilities/pad_editor.py:132 linux/share/monet/utilities/pad_editor.py:212
+msgid "This pad changed. Review it and try again."
+msgstr ""
+
+#: linux/share/monet/utilities/pad_editor.py:178
+msgid "Rename pad"
+msgstr ""
+
+#: linux/share/monet/utilities/pad_editor.py:178
+msgid "Pad name"
+msgstr ""
+
+#: linux/share/monet/utilities/pad_editor.py:195
+msgid "Export pad"
+msgstr ""
+
+#: linux/share/monet/utilities/pad_editor.py:195
+msgid "Text files (*.txt);;Markdown (*.md);;All files (*)"
+msgstr ""
+
+#: linux/share/monet/utilities/pad_editor.py:201
+msgid "The pad could not be exported."
+msgstr ""
+
+#: linux/share/monet/utilities/pad_editor.py:207
+msgid "Delete pad"
+msgstr ""
+
+#: linux/share/monet/utilities/pad_editor.py:207
+msgid "Delete “%1” and its text?"
+msgstr ""

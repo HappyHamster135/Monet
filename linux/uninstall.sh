@@ -227,7 +227,7 @@ rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/pl
 echo "Monet is removed. To also remove Monet Bridge, run \"Uninstall Monet\" in Windows."
 
 # On-demand Keep awake owns native cookies only for its process lifetime.
-rm -f /etc/systemd/user/monet-bluetooth-sleep.service /etc/systemd/user/monet-clean-links.service /etc/systemd/user/monet-output-order.service /etc/systemd/user/monet-brightness.service /etc/systemd/user/monet-keep-awake.service "$PREFIX/share/dbus-1/services/org.monet.KeepAwake.service"
+rm -f /etc/systemd/user/monet-bluetooth-sleep.service /etc/systemd/user/monet-clean-links.service /etc/systemd/user/monet-output-order.service /etc/systemd/user/monet-brightness.service /etc/systemd/user/monet-keep-awake.service "$PREFIX/share/dbus-1/services/org.monet.KeepAwake.service" "$PREFIX/share/dbus-1/services/org.monet.Utilities.service"
 rm -rf "$PREFIX/share/monet/monet_runtime"
 
 # Sign-in brightness belongs to the separate system greeter account.

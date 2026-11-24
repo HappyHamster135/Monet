@@ -341,6 +341,7 @@ put 644 "$SRC/systemd/user/monet-brightness.service" "$USERUNITDIR/monet-brightn
 put 644 "$SRC/systemd/user/plasma-login-wayland.target.d/monet-brightness.conf" "$USERUNITDIR/plasma-login-wayland.target.d/monet-brightness.conf"
 put 644 "$SRC/systemd/user/plasma-powerdevil.service.d/monet-login.conf" "$USERUNITDIR/plasma-powerdevil.service.d/monet-login.conf"
 put 644 "$SRC/systemd/monet-login-brightness.service" "$UNITDIR/monet-login-brightness.service"
+put 644 "$SRC/share/dbus-1/services/org.monet.Utilities.service" "$DATADIR/dbus-1/services/org.monet.Utilities.service"
 put 644 "$SRC/share/dbus-1/services/org.monet.KeepAwake.service" "$DATADIR/dbus-1/services/org.monet.KeepAwake.service"
 put 644 "$SRC/systemd/user/monet-keys.service" "$USERUNITDIR/monet-keys.service"
 put 644 "$SRC/systemd/user/monet-password-offers.service" "$USERUNITDIR/monet-password-offers.service"

@@ -130,37 +130,29 @@ class Downloads(QWidget):
         if path:
             self.show_folder(path)
 
-class Writing(QWidget):
-    def __init__(self, settings, snippets=False):
+class Snippets(QWidget):
+    def __init__(self, settings):
         super().__init__()
         self.settings = settings
-        self.snippets = snippets
         self.current = None
         layout = QVBoxLayout(self)
-        if snippets:
-            self.entries = stored(settings, "snippets", {})
-            self.names = QListWidget()
-            self.names.addItems(list(self.entries))
-            layout.addWidget(self.names, 1)
-            self.names.currentTextChanged.connect(self.select)
+        self.entries = stored(settings, "snippets", {})
+        self.names = QListWidget()
+        self.names.addItems(list(self.entries))
+        layout.addWidget(self.names, 1)
+        self.names.currentTextChanged.connect(self.select)
         self.edit = QPlainTextEdit()
-        self.edit.setPlaceholderText("Write a snippet…" if snippets else "Write a note…")
+        self.edit.setPlaceholderText("Write a snippet…")
         layout.addWidget(self.edit, 2)
-        if snippets:
-            row(layout, ("New snippet…", self.add), ("Copy", self.copy), ("Remove", self.remove))
-            self.names.setCurrentRow(0)
-            self.edit.setEnabled(self.current is not None)
-        else:
-            self.edit.setPlainText(settings.value("scratchpad", ""))
+        row(layout, ("New snippet…", self.add), ("Copy", self.copy), ("Remove", self.remove))
+        self.names.setCurrentRow(0)
+        self.edit.setEnabled(self.current is not None)
         self.edit.textChanged.connect(self.save)
 
     def save(self):
-        if self.snippets:
-            if self.current:
-                self.entries[self.current] = self.edit.toPlainText()
-                self.settings.setValue("snippets", json.dumps(self.entries))
-        else:
-            self.settings.setValue("scratchpad", self.edit.toPlainText())
+        if self.current:
+            self.entries[self.current] = self.edit.toPlainText()
+            self.settings.setValue("snippets", json.dumps(self.entries))
 
     def select(self, name):
         self.current = name or None

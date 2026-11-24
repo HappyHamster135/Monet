@@ -5,14 +5,14 @@ from pathlib import Path
 import re
 import sys
 import tempfile
-from PySide6.QtCore import (QObject, QProcess, QSettings, QSize, Qt, QTimer, QUrl, Slot)
-from PySide6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage
+from PySide6.QtCore import (QObject, QProcess, QSettings, QSize, Qt, QTimer, QUrl, Signal, Slot)
+from PySide6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusServiceWatcher, QDBusVirtualObject
 from PySide6.QtGui import QAction, QCursor, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QDialogButtonBox, QFileDialog, QHBoxLayout, QInputDialog,
     QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMenu, QMessageBox, QPlainTextEdit,
     QPushButton, QStackedWidget, QToolButton, QVBoxLayout, QWidget, QWidgetAction)
 from actions import ACTIONS, DEFAULT_FAVORITES, clean_url, tr
-from pages import Downloads, Shelf, Writing, row, stored
+from pages import Downloads, Shelf, Snippets, row, stored
 
 MODULES = Path(__file__).resolve().parent
 SERVICE = "org.monet.Utilities"
@@ -26,6 +26,8 @@ class Window(QMainWindow):
         self.hidden = stored(self.settings, "hidden", [])
         self.pages = {}
         self.notch_previews = {}
+        self.floating_pads = set()
+        self.pad_store = None
         self.running = set()
         self.converting = False
         self.setWindowTitle("Monet Utilities")
@@ -378,6 +380,41 @@ class Window(QMainWindow):
         page.refresh = read
         return page
 
+    def pads(self):
+        if self.pad_store is None:
+            from scratchpads import Pads
+            self.pad_store = Pads(self.settings)
+            self.pad_store.changed.connect(self.padsChanged)
+        return self.pad_store
+
+    padsChanged = Signal()
+
+    def floating_pad(self, ident):
+        from pad_editor import PadEditor
+        page = next((p for p in self.floating_pads if p.ident == ident), None)
+        created = page is None
+        if created:
+            page = PadEditor(self.pads(), ident, floating=True)
+            self.floating_pads.add(page)
+            page.destroyed.connect(lambda: self.floating_pads.discard(page))
+        page.showNormal() if page.isMinimized() else page.show()
+        page.raise_()
+        page.activateWindow()
+        page.edit.setFocus()
+        if created and QApplication.platformName().startswith("wayland"):
+            # xdg-shell ignores WindowStaysOnTopHint. Scope the request to this pad.
+            job = self.worker([sys.executable, MODULES / "float_pad.py", self.helpers], lambda _: None,
+                              lambda _: page.message(tr("Could not keep this pad above other windows."))
+                              if page in self.floating_pads else None)
+            job.write(page.windowTitle().encode("utf-8"))
+            job.closeWriteChannel()
+
+    def pad_page(self):
+        from pad_editor import PadEditor
+        page = PadEditor(self.pads())
+        page.openPad.connect(self.floating_pad)
+        return page
+
     def run_tool(self, key):
         action = ACTIONS.get(key)
         if not action:
@@ -392,8 +429,10 @@ class Window(QMainWindow):
                 self.issue("Could not open " + action.name)
         elif key == "shelf":
             self.page(key, lambda: Shelf(self.settings))
-        elif key in ("notes", "snippets"):
-            self.page(key, lambda: Writing(self.settings, key == "snippets"))
+        elif key == "notes":
+            self.page(key, self.pad_page).edit.setFocus()
+        elif key == "snippets":
+            self.page(key, lambda: Snippets(self.settings))
         elif key == "calendars":
             from calendars import Calendars
             self.page(key, Calendars).reload()
@@ -468,6 +507,9 @@ class Window(QMainWindow):
     @Slot("QStringList")
     def Open(self, args):
         key = args[0] if args else "tools"
+        if key == "floating-pad" and len(args) == 2 and re.fullmatch(r"[a-f0-9]{32}", args[1]):
+            self.floating_pad(args[1])
+            return
         if key == "watch" and len(args) == 2 and re.fullmatch(r"[1-9][0-9]{0,9}", args[1]):
             from capture import Preview
             widget_id = args[1]
@@ -491,6 +533,10 @@ class Window(QMainWindow):
             self.run_tool(key)
 
     def closeEvent(self, event):
+        notes = self.pages.get("notes")
+        if notes and not notes.flush():
+            event.ignore()
+            return
         if any(getattr(page, "applying_action", False) for page in self.pages.values()):
             self.close_after_process_action = True
             self.hide()
@@ -526,6 +572,15 @@ class Receiver(QObject):
         super().__init__()
         self.window = window
 
+        self.idle = QTimer(self)
+        self.idle.setSingleShot(True)
+        self.idle.setInterval(45000)
+        self.idle.timeout.connect(self.release_if_unused)
+
+    def release_if_unused(self):
+        if not any(w.isVisible() for w in QApplication.topLevelWidgets()) and not self.window.running and not self.window.notch_previews:
+            QApplication.quit()
+
     @Slot(str)
     def Present(self, payload):
         try:
@@ -535,6 +590,48 @@ class Receiver(QObject):
         if isinstance(args, list) and len(args) <= 101 and all(isinstance(a, str) for a in args):
             self.window.Open(args)
 
+class NotchPads(QDBusVirtualObject):
+    """Only the desktop shell can read and edit notes over the session bus."""
+    path = "/Scratchpad"
+    shell = "org.kde.plasmashell"
+
+    def __init__(self, bus, receiver):
+        super().__init__(receiver)
+        self.bus = bus
+        self.receiver = receiver
+        self.owner = ""
+        self.watcher = QDBusServiceWatcher(self.shell, bus, QDBusServiceWatcher.WatchForOwnerChange, self)
+        self.watcher.serviceOwnerChanged.connect(self.owner_changed)
+        receiver.window.padsChanged.connect(self.changed)
+
+    def owner_changed(self, name, previous, current):
+        self.owner = current
+
+    def changed(self):
+        if self.owner:
+            self.bus.send(QDBusMessage.createTargetedSignal(self.owner, self.path, SERVICE, "PadsChanged"))
+
+    def introspect(self, path):
+        return ('<interface name="org.monet.Utilities"><method name="Pad"><arg type="s" direction="in"/>'
+                '<arg type="s" direction="out"/></method><signal name="PadsChanged"/></interface>')
+
+    def handleMessage(self, message, connection):
+        if message.interface() != SERVICE or message.member() != "Pad":
+            return False
+        if not self.owner:
+            self.owner = self.bus.interface().serviceOwner(self.shell).value() or ""
+        if not self.owner or message.service() != self.owner:
+            reply = message.createErrorReply("org.freedesktop.DBus.Error.AccessDenied", "Only the desktop shell can access scratchpads.")
+        elif message.signature() != "s":
+            reply = message.createErrorReply("org.freedesktop.DBus.Error.InvalidArgs", "Expected a string.")
+        else:
+            self.receiver.idle.start()
+            result = self.receiver.window.pads().for_notch(message.arguments()[0])
+            reply = message.createReply(result)
+        connection.send(reply)
+        return True
+
+
 def main(argv, helpers):
     app = QApplication(argv[:1])
     app.setApplicationName("Monet Utilities")
@@ -542,6 +639,8 @@ def main(argv, helpers):
     args = argv[1:] or ["tools"]
     bus = QDBusConnection.sessionBus()
     def forward():
+        if args == ["--pad-service"]:
+            return True
         from PySide6.QtDBus import QDBus
         msg = QDBusMessage.createMethodCall(SERVICE, "/Utilities", SERVICE, "Present")
         msg.setArguments([json.dumps(args)])
@@ -553,7 +652,13 @@ def main(argv, helpers):
     if bus.isConnected():
         if not bus.registerObject("/Utilities", SERVICE, receiver, QDBusConnection.ExportAllSlots):
             return 1
+        bridge = NotchPads(bus, receiver)
+        if not bus.registerVirtualObject(bridge.path, bridge):
+            return 1
         if not bus.registerService(SERVICE):
             return int(not forward())
-    QTimer.singleShot(0, lambda: window.Open(args))
+    if args == ["--pad-service"]:
+        receiver.idle.start()
+    else:
+        QTimer.singleShot(0, lambda: window.Open(args))
     return app.exec()

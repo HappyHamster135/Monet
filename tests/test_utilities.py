@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 MODULE = Path(__file__).resolve().parents[1] / "linux/share/monet/utilities"
 sys.path.insert(0, str(MODULE))
@@ -110,18 +110,94 @@ class DesktopTools(unittest.TestCase):
             self.assertEqual(ShelfList(config).paths(), [])
             self.assertEqual(path.read_bytes(), b"fixture")
 
-    def test_scratchpad_and_named_snippets_survive_reopening(self):
+    def test_migrated_scratchpad_and_named_snippets_survive_reopening(self):
         from PySide6.QtCore import QSettings
-        from pages import Writing
-        with tempfile.TemporaryDirectory() as directory:
+        from scratchpads import Pads
+        from pad_editor import PadEditor
+        from pages import Snippets
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, XDG_DATA_HOME=directory):
             conf = QSettings(str(Path(directory,"notes.ini")), QSettings.IniFormat)
-            note = Writing(conf)
-            note.edit.setPlainText("A note")
-            snips = Writing(conf, True)
+            conf.setValue("scratchpad", "A note")
+            pads = Pads(conf)
+            note = PadEditor(pads)
+            self.assertEqual(note.edit.toPlainText(), "A note")
+            self.assertFalse(conf.contains("scratchpad"))
+            note.edit.setPlainText("A note with edits")
+            self.assertTrue(note.close())
+            snips = Snippets(conf)
             snips.names.addItem("Greeting")
             snips.names.setCurrentRow(0)
             snips.edit.setPlainText("A snippet")
-            restored_note = Writing(conf)
-            restored_snippets = Writing(conf, True)
-            self.assertEqual(restored_note.edit.toPlainText(), "A note")
-            self.assertEqual(restored_snippets.edit.toPlainText(), "A snippet")
+            reopened = PadEditor(Pads(conf))
+            self.assertEqual(reopened.edit.toPlainText(), "A note with edits")
+            restored_snips = Snippets(conf)
+            self.assertEqual(restored_snips.edit.toPlainText(), "A snippet")
+
+    def test_named_pad_selection_preview_export_and_confirmed_deletion(self):
+        from PySide6.QtCore import QSettings
+        from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox
+        from pad_editor import PadEditor
+        from scratchpads import Pads
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, XDG_DATA_HOME=directory):
+            settings = QSettings(str(Path(directory, "notes.ini")), QSettings.IniFormat)
+            pads = Pads(settings)
+            editor = PadEditor(pads)
+            first = editor.ident
+            editor.new()
+            second = editor.ident
+            with patch.object(QInputDialog, "getText", return_value=("Plans", True)):
+                editor.rename()
+            self.assertEqual(editor.choice.currentText(), "Plans")
+            text = "# Plan\n\n- café"
+            editor.edit.setPlainText(text)
+            editor.preview_action.setChecked(True)
+            self.assertIn("café", editor.rendered.toPlainText())
+            self.assertNotIn("# Plan", editor.rendered.toPlainText())
+            dest = Path(directory, "Plans.md")
+            with patch.object(QFileDialog, "getSaveFileName", return_value=(str(dest), "")):
+                editor.export()
+            self.assertEqual(dest.read_text(), text)
+            self.assertTrue(editor.flush())
+            editor.choose(editor.choice.findData(first))
+            self.assertEqual(PadEditor(Pads(settings)).ident, first)
+            editor.choose(editor.choice.findData(second))
+            with patch.object(QMessageBox, "question", return_value=QMessageBox.Cancel):
+                editor.remove()
+            self.assertEqual(editor.ident, second)
+            with patch.object(QMessageBox, "question", return_value=QMessageBox.Yes):
+                editor.remove()
+            self.assertEqual(editor.ident, first)
+            self.assertEqual(len(pads.request("view")["pads"]), 1)
+
+    def test_concurrent_pad_edits_deletion_and_restart_preserve_both_drafts(self):
+        from PySide6.QtCore import QSettings
+        from scratchpads import Pads
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, XDG_DATA_HOME=directory):
+            conf = QSettings(str(Path(directory, "test.ini")), QSettings.IniFormat)
+            pads = Pads(conf)
+            first = pads.request("view")["pad"]
+            saved = pads.request("save", first["id"], first["revision"], "first")["pad"]
+            fork = pads.request("save", first["id"], first["revision"], "second")
+            self.assertTrue(fork["recovered"])
+            self.assertEqual(fork["pad"]["body"], "second")
+            self.assertEqual(pads.request("view", first["id"])["pad"]["body"], "first")
+            self.assertFalse(pads.request("delete", first["id"], first["revision"])["ok"])
+            self.assertTrue(pads.request("delete", first["id"], saved["revision"])["ok"])
+            restored = pads.request("save", first["id"], saved["revision"], "late edit")
+            self.assertTrue(restored["recovered"])
+            after = Pads(conf)
+            self.assertEqual(after.request("view", restored["pad"]["id"])["pad"]["body"], "late edit")
+            self.assertEqual(len(after.request("view")["pads"]), 2)
+
+    def test_corrupt_store_never_consumes_or_replaces_legacy_note(self):
+        from PySide6.QtCore import QSettings
+        from scratchpads import Pads
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, XDG_DATA_HOME=directory):
+            conf = QSettings(str(Path(directory, "test.ini")), QSettings.IniFormat)
+            conf.setValue("scratchpad", "Keep")
+            path = Path(directory, "monet/scratchpads/pads.sqlite3")
+            path.parent.mkdir(parents=True)
+            path.write_bytes(b"unreadable")
+            self.assertFalse(Pads(conf).request("view")["ok"])
+            self.assertEqual(conf.value("scratchpad"), "Keep")
+            self.assertEqual(path.read_bytes(), b"unreadable")
