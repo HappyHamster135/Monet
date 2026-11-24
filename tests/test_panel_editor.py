@@ -60,7 +60,15 @@ class PanelEditor(unittest.TestCase):
         for p in source.glob('*.qml'):
             (folder / p.name).write_text(p.read_text().replace('@LIBEXECDIR@', str(folder)))
         helper = folder / 'monet-quick'
-        helper.write_text('#!/usr/bin/python3\nimport json,sys\nprint(json.dumps(dict(ok=True, available=True, layout=sys.argv[3] if len(sys.argv)>3 else "three", alignment=sys.argv[3] if len(sys.argv)>3 else "start")))\n')
+        helper.write_text("""#!/usr/bin/python3
+import json
+import sys
+choice = sys.argv[3] if len(sys.argv) > 3 else ""
+if sys.argv[1] == "panel-notch":
+    print(json.dumps(dict(ok=True, mode="compact", options=dict(previews=choice == "previews-on"))))
+else:
+    print(json.dumps(dict(ok=True, available=True, layout=choice or "three", alignment=choice or "start")))
+""")
         helper.chmod(0o700)
         native = Path('/usr/share/plasma/shells/org.kde.plasma.desktop/contents/configuration')
         original = native / 'KdePanelConfiguration.qml'
@@ -152,6 +160,17 @@ Window {
         item = self.item(name); item.forceActiveFocus(Qt.TabFocusReason)
         QTest.keyClick(self.window, Qt.Key_Space); QTest.qWait(100)
         return item
+
+    def test_notification_preview_control_round_trips_in_customize_home_bar(self):
+        name = 'notchOption-previews'
+        option = self.item(name)
+        self.assertTrue(option.isVisible())
+        self.assertFalse(option.property('checked'))
+        for enabled in (True, False):
+            self.click(name)
+            QTest.qWait(160)
+            self.assertEqual(self.item('monetPanelEditor').property('notchOptions').toVariant()['previews'], enabled)
+            self.assertEqual(option.property('checked'), enabled)
 
     def test_one_and_three_bar_choices_use_layout_helper(self):
         self.assertTrue(self.item('panelThreeBars').property('checked'))

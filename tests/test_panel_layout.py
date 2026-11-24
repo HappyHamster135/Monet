@@ -89,6 +89,9 @@ class PanelLayouts(unittest.TestCase):
         self.assertEqual(self.state('[notchPanel.screen,notchPanel.location,notchPanel.alignment,notchPanel.lengthMode]'),
                          [0, 'top', 'center', 'fit'])
         self.assertFalse(self.choose('notchPanel')['available'])
+        self.assertFalse(notch('right')['options']['previews'])
+        self.assertTrue(notch('right', 'previews-on')['options']['previews'])
+        self.assertFalse(notch('right', 'previews-off')['options']['previews'])
         self.assertTrue(notch('right', 'levels-on')['options']['levels'])
         self.assertEqual(notch('left', 'wide')['mode'], 'wide')
         self.assertEqual(notch('other')['mode'], 'off')

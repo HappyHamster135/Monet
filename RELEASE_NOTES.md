@@ -12,6 +12,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   In Calendar → Upcoming appointments, link calendar files or follow subscriptions. The agenda shows recurring meetings, schedule changes and all-day events, including a saved copy when offline.
   In Activity → Watch, pin a window region and get an alert when it changes, settles, or shows a phrase.
   Dropping files on it adds them to the shelf. Music levels and accessory alerts are optional.
+- **Notch notifications.** Read a message from Activity, reply or use the actions its app provides. Customize Home Bar can show a brief preview in the closed notch while the desktop is unlocked and Do Not Disturb is off.
 - **Volume mixer.** In the notch’s Music tab, Settings → Sound or the Home Bar sound popup, adjust an app’s volume, mute it or choose which output it plays through. Pin the apps you use most and drag their names to put them in order.
 - **Scratchpads.** Keep several named notes in Utilities or edit them from the notch’s Notes tab. Open a pad above another app, preview Markdown or export text. Existing scratchpad text carries over.
 - **Ports and processes.** In Utilities, search for a listening port or a running process. Inspect its children, end a selected process or branch, or restart a desktop app that has a matching launcher.

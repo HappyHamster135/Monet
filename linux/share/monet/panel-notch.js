@@ -9,7 +9,7 @@
     });
     if (existing.length > 1) { print(JSON.stringify({ok:false})); return; }
     var panel = existing[0], widget = panel && panel.widgets(type)[0];
-    var setting = /^(levels|companion|alerts)-(on|off)$/.exec(choice || "");
+    var setting = /^(levels|companion|alerts|previews)-(on|off)$/.exec(choice || "");
     if (setting) {
         if (!widget) { print(JSON.stringify({ok:false})); return; }
         widget.currentConfigGroup = ["General"];
@@ -39,7 +39,7 @@
     if (widget) widget.currentConfigGroup = ["General"];
     var wide = widget && String(widget.readConfig("wide", false)) === "true";
     var options = {};
-    ["levels", "companion", "alerts"].forEach(function (key) {
+    ["levels", "companion", "alerts", "previews"].forEach(function (key) {
         options[key] = !!widget && String(widget.readConfig(key, key === "alerts")) === "true";
     });
     print(JSON.stringify({ok:true, options:options, mode: !widget ? "off" : wide ? "wide" : "compact"}));

@@ -364,10 +364,12 @@ Item {
                     }
                     Repeater {
                         model: [{key:"levels", label:i18nd("monet", "Show music level")},
+                                {key:"previews", label:i18nd("monet", "Preview notifications in the notch")},
                                 {key:"alerts", label:i18nd("monet", "Low accessory battery alerts")},
                                 {key:"companion", label:i18nd("monet", "Show notch companion")}]
                         C.CheckBox {
                             required property var modelData
+                            objectName: "notchOption-" + modelData.key
                             visible: editor.notchMode === "compact" || editor.notchMode === "wide"
                             text: modelData.label; enabled: !editor.notchBusy
                             checked: !!editor.notchOptions[modelData.key]

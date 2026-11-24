@@ -15043,3 +15043,39 @@ msgstr ""
 #: linux/share/monet/settings-app/VolumeMixer.qml:76
 msgid "Could not save the mixer layout. Try again."
 msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:367
+msgid "Preview notifications in the notch"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NoticeInbox.qml:92
+msgid "Reply…"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NoticeInbox.qml:164
+msgid "Back to notifications"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NoticeInbox.qml:170 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NoticePreview.qml:67
+msgid "Notification"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NoticeInbox.qml:175
+msgid "Dismiss notification"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NoticeInbox.qml:175
+msgid "Clear notifications…"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NoticeInbox.qml:185
+msgid "Remove these notifications from desktop history?"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NoticeInbox.qml:277
+msgid "Reply"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NoticeInbox.qml:282
+msgid "Send reply"
+msgstr ""

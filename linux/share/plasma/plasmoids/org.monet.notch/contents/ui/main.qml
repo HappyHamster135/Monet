@@ -22,8 +22,27 @@ PlasmoidItem {
     readonly property double watchStart: Number(Plasmoid.configuration.watchStart) || 0
     property double now: Date.now()
     property int tab: 0
+    property int requestedNotice: 0
+    Loader {
+        id: preview
+        active: (!root.expanded || root.requestedNotice > 0) && Plasmoid.configuration.previews && power.active
+                && !!power.nativeState?.lockKnown && !power.nativeState.locked && !NM.Server.inhibited
+        source: "NoticePreview.qml"
+        onLoaded: item.watching = Qt.binding(() => !root.expanded)
+    }
+    function openPill() {
+        if (!expanded && preview.item?.noticeId) {
+            requestedNotice = preview.item.noticeId
+            viewingWatch = false
+            tab = 1
+        }
+        expanded = !expanded
+    }
     property bool padsOpened: false
-    onTabChanged: if (tab === 4) padsOpened = true
+    onTabChanged: {
+        if (tab === 4) padsOpened = true
+        if (tab !== 1) requestedNotice = 0
+    }
     Loader {
         id: padController
         active: root.padsOpened
@@ -56,7 +75,7 @@ PlasmoidItem {
     property string agentSummary: ""
     property url downloadFolder: StandardPaths.writableLocation(StandardPaths.DownloadLocation)
     toolTipMainText: i18n("Monet Notch")
-    toolTipSubText: endTime ? remaining() : watch.registered ? i18n("Watching a window") : media?.track || i18n("Music, activity and tools")
+    toolTipSubText: preview.item?.title ? [preview.item.sender, preview.item.title].filter(Boolean).join(" · ") : endTime ? remaining() : watch.registered ? i18n("Watching a window") : media?.track || i18n("Music, activity and tools")
     Repeater {
         id: players
         model: Mpris.MultiplexerModel {}
@@ -122,9 +141,10 @@ PlasmoidItem {
     }
     Component.onCompleted: refreshTime()
     onExpandedChanged: {
-        if (!root.expanded) return
+        if (!root.expanded) { requestedNotice = 0; return }
         agendaDay = new Date()
         refreshTime()
+        if (requestedNotice) return
         if (endTime) tab = 2
         else if (watch.registered) { viewingWatch = true; tab = 1 }
     }
@@ -168,7 +188,7 @@ PlasmoidItem {
         Layout.maximumWidth: Layout.minimumWidth
         Layout.preferredWidth: Layout.minimumWidth
         Accessible.name: root.toolTipMainText + ". " + root.toolTipSubText
-        onClicked: root.expanded = !root.expanded
+        onClicked: root.openPill()
         background: Rectangle {
             radius: height / 2
             color: shelfDrop.containsDrag || pill.activeFocus ? "#30695e" : "#202323"
@@ -182,20 +202,20 @@ PlasmoidItem {
                 source: "MusicLevel.qml"
             }
             Kirigami.Icon {
-                visible: !Plasmoid.configuration.companion
+                visible: !Plasmoid.configuration.companion || !!preview.item?.noticeId
                 Layout.preferredHeight: 17; Layout.preferredWidth: 17
-                source: shelfDrop.containsDrag ? "folder-add" : root.endTime ? "chronometer" : watch.registered ? "view-visible" : root.media ? "audio-x-generic" : "applications-utilities"
+                source: shelfDrop.containsDrag ? "folder-add" : preview.item?.noticeId ? "notifications" : root.endTime ? "chronometer" : watch.registered ? "view-visible" : root.media ? "audio-x-generic" : "applications-utilities"
                 color: "#9dd9c9"; isMask: true
             }
             C.Label {
-                visible: Plasmoid.configuration.companion
+                visible: Plasmoid.configuration.companion && !preview.item?.noticeId
                 text: shelfDrop.containsDrag ? "✿" : root.playing ? "♫" : "◕‿◕"
                 color: "#a8ddc8"
                 Accessible.name: i18n("Notch companion")
             }
             C.Label {
                 Layout.fillWidth: true; color: "#f6f3e9"; textFormat: Text.PlainText; elide: Text.ElideRight
-                text: shelfDrop.containsDrag ? i18n("Shelf") : root.endTime ? root.remaining() : watch.registered ? i18n("Watching") : root.media?.track || i18n("Tools")
+                text: shelfDrop.containsDrag ? i18n("Shelf") : preview.item?.title || (root.endTime ? root.remaining() : watch.registered ? i18n("Watching") : root.media?.track || i18n("Tools"))
             }
         }
         WheelHandler { onWheel: event => root.wheelAction(event) }
@@ -289,33 +309,26 @@ PlasmoidItem {
         ColumnLayout {
 
             Repeater {
-                model: power.batteries
+                model: notices.inDetail ? [] : power.batteries
                 C.Label {
                     required property var modelData
                     Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText
                     text: i18n("%1 · %2%", modelData.name || modelData.kind, modelData.level)
                 }
             }
-            ListView {
-                id: alerts
-                Layout.fillWidth: true; Layout.fillHeight: true; clip: true
-                model: NM.Notifications {
-                    showNotifications: true; showJobs: true; showExpired: true; showDismissed: false; limit: 20
-                    groupMode: NM.Notifications.GroupDisabled
-                }
-                delegate: C.ItemDelegate {
-                    required property var model
-                    width: ListView.view.width
-                    contentItem: C.Label { textFormat: Text.PlainText; elide: Text.ElideRight; text: model.summary || model.applicationName }
-                    onClicked: root.openTool("notifications")
-                }
-                C.Label { anchors.centerIn: parent; visible: alerts.count === 0; text: i18n("No recent notifications") }
+            NoticeInbox {
+                id: notices
+                Layout.fillWidth: true; Layout.fillHeight: true
+                requestedNotice: root.requestedNotice
+                liveSource: root.requestedNotice ? preview.item : null
+                onPreviewFinished: root.requestedNotice = 0
+                onActivated: root.expanded = false
             }
             Component.onCompleted: {
                 runner.connectSource(root.helper + " notch-activity")
             }
             C.Label {
-                Layout.fillWidth: true; visible: text.length > 0; textFormat: Text.PlainText
+                Layout.fillWidth: true; visible: !notices.inDetail && text.length > 0; textFormat: Text.PlainText
                 elide: Text.ElideRight; text: root.agentSummary; Accessible.name: root.agentSummary
             }
             FolderListModel {
@@ -324,11 +337,18 @@ PlasmoidItem {
                 showDirs: false; showDotAndDotDot: false; sortField: FolderListModel.Time; sortReversed: false
             }
             C.Label {
-                Layout.fillWidth: true; visible: arriving.count > 0; elide: Text.ElideMiddle
+                readonly property string latestName: {
+                    if (!arriving.count || arriving.status !== FolderListModel.Ready) return ""
+                    const url = String(arriving.get(0, "fileUrl"))
+                    const folder = String(root.downloadFolder).replace(/\/+$/, "") + "/"
+                    return url.slice(0, url.lastIndexOf("/") + 1) === folder ? arriving.get(0, "fileName") : ""
+                }
+                Layout.fillWidth: true; visible: !notices.inDetail && !!latestName; elide: Text.ElideMiddle
                 textFormat: Text.PlainText
-                text: arriving.count ? i18n("Latest download · %1", arriving.get(0, "fileName")) : ""
+                text: latestName ? i18n("Latest download · %1", latestName) : ""
             }
             RowLayout {
+                visible: !notices.inDetail
                 C.Button { text: i18n("Downloads"); onClicked: root.openTool("downloads") }
                 C.Button { text: i18n("Agent usage"); onClicked: root.openTool("agents") }
                 C.Button {
