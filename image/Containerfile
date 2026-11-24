@@ -173,7 +173,8 @@ RUN --mount=type=bind,from=task-manager,source=/out,target=/tmp/monet-task-manag
 RUN --mount=type=bind,from=login,source=/out,target=/tmp/monet-login,ro \
     python3 /tmp/monet-login/bundle.py install /tmp/monet-login
 RUN --mount=type=bind,from=session,source=/out,target=/tmp/monet-session,ro \
-    python3 /tmp/monet-session/bundle.py install /tmp/monet-session
+    python3 /tmp/monet-session/bundle.py install /tmp/monet-session \
+ && python3 /tmp/monet-session/mediakeys/guard.py install /tmp/monet-session/mediakeys
 
 RUN --mount=type=bind,from=files-recovery,source=/out,target=/tmp/monet-files-recovery,ro \
     python3 /tmp/monet-files-recovery/bundle.py install /tmp/monet-files-recovery \

@@ -16330,3 +16330,35 @@ msgstr ""
 #: linux/share/monet/utilities/wheel_scrolling.py:78
 msgid "Mouse wheel profiles are unavailable in this desktop session."
 msgstr ""
+
+#: linux/share/monet/settings-app/SettingsSound.qml:326 linux/share/monet/utilities/actions.py:69
+msgid "Media keys"
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsSound.qml:327
+msgid "Choose which apps respond to playback keys."
+msgstr ""
+
+#: linux/share/monet/utilities/media_keys.py:48
+msgid "Choose which apps can respond to playback keys on your keyboard."
+msgstr ""
+
+#: linux/share/monet/utilities/media_keys.py:53
+msgid "Apps that can use media keys"
+msgstr ""
+
+#: linux/share/monet/utilities/media_keys.py:58
+msgid "Play key when no player is available"
+msgstr ""
+
+#: linux/share/monet/utilities/media_keys.py:96
+msgid "The desktop media controller is unavailable in this session."
+msgstr ""
+
+#: linux/share/monet/utilities/media_keys.py:134
+msgid "Do nothing"
+msgstr ""
+
+#: linux/share/monet/utilities/media_keys.py:192
+msgid "Could not save media key settings."
+msgstr ""

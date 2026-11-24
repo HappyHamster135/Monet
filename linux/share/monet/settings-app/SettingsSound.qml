@@ -316,6 +316,24 @@ ColumnLayout {
             onMoved: value => sheet.queue("mic", value)
         }
     }
+    SettingsControls.Card {
+        tone: look
+        SettingsControls.SettingRow {
+            objectName: "mediaKeySettings"
+            tone: look
+            divider: false
+            tappable: true
+            title: i18n("Media keys")
+            detail: i18n("Choose which apps respond to playback keys.")
+            onTapped: sheet.ask("utilities media-keys")
+            SettingsControls.Glyph {
+                width: 16
+                height: 16
+                path: "M9 5l7 7-7 7"
+                color: look.dim
+            }
+        }
+    }
     SettingsControls.Pill {
         tone: look
         text: i18n("Advanced sound settings…")

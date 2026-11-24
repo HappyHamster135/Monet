@@ -16328,3 +16328,36 @@ msgstr "Det gick inte att spara inställningarna för mushjulet."
 msgid "Mouse wheel profiles are unavailable in this desktop session."
 msgstr ""
 "Profiler för mushjulet är inte tillgängliga i den här skrivbordssessionen."
+
+#: linux/share/monet/settings-app/SettingsSound.qml:326 linux/share/monet/utilities/actions.py:69
+msgid "Media keys"
+msgstr "Medietangenter"
+
+#: linux/share/monet/settings-app/SettingsSound.qml:327
+msgid "Choose which apps respond to playback keys."
+msgstr "Välj vilka appar som ska svara på uppspelningstangenterna."
+
+#: linux/share/monet/utilities/media_keys.py:48
+msgid "Choose which apps can respond to playback keys on your keyboard."
+msgstr ""
+"Välj vilka appar som får svara på tangentbordets uppspelningstangenter."
+
+#: linux/share/monet/utilities/media_keys.py:53
+msgid "Apps that can use media keys"
+msgstr "Appar som får använda medietangenter"
+
+#: linux/share/monet/utilities/media_keys.py:58
+msgid "Play key when no player is available"
+msgstr "Spela upp-tangenten när ingen spelare är tillgänglig"
+
+#: linux/share/monet/utilities/media_keys.py:96
+msgid "The desktop media controller is unavailable in this session."
+msgstr "Skrivbordets mediekontroller är inte tillgängliga i den här sessionen."
+
+#: linux/share/monet/utilities/media_keys.py:134
+msgid "Do nothing"
+msgstr "Gör ingenting"
+
+#: linux/share/monet/utilities/media_keys.py:192
+msgid "Could not save media key settings."
+msgstr "Det gick inte att spara inställningarna för medietangenterna."

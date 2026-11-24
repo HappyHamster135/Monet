@@ -66,6 +66,7 @@ ACTIONS = {
     "debounce": Action(N_("Keyboard bounce and sticky keys"), "Input", "preferences-desktop-accessibility", ("kcmshell6", "kcm_access")),
     "mixer": Action(N_("Volume mixer"), "Sound volume pin mute app audio output", "audio-volume-high", ("@monet-settings", "sound#mixer")),
     "sound": Action(N_("Sound settings…"), "Sound speakers headphones microphone", "audio-volume-high", ("@monet-settings", "sound")),
+    "media-keys": Action(N_("Media keys"), "Sound music playback keyboard player play pause shortcuts", "media-playback-start"),
     "output-order": Action(N_("Preferred sound output order"), "Sound headphones speakers automatic device priority", "audio-card", ("@monet-settings", "sound#output-order")),
     "output": Action(N_("Cycle sound output"), "Sound", "audio-card"),
     "mic": Action(N_("Mute or unmute microphone"), "Sound", "audio-input-microphone", ("wpctl", "set-mute", "@DEFAULT_AUDIO_SOURCE@", "toggle")),

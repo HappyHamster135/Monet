@@ -440,6 +440,9 @@ class Window(QMainWindow):
             self.page(key, lambda: Downloads(self.settings))
         elif key == "wheel":
             self.wheel()
+        elif key == "media-keys":
+            from media_keys import MediaKeys
+            self.page(key, MediaKeys)
         elif key == "wheel-scrolling":
             from wheel_scrolling import WheelScrolling
             self.page(key, WheelScrolling)
