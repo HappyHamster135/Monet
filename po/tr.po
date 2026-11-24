@@ -15636,3 +15636,109 @@ msgstr ""
 msgctxt "an app's name in the menu"
 msgid "Find a tool"
 msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:399 linux/share/monet/utilities/agent_page.py:134
+msgid "Checking Codex limits…"
+msgstr ""
+
+#: linux/share/monet/utilities/agent_page.py:24
+msgid "Account limits"
+msgstr ""
+
+#: linux/share/monet/utilities/agent_page.py:26
+msgid "Show Codex account limits"
+msgstr ""
+
+#: linux/share/monet/utilities/agent_page.py:29
+msgid ""
+"Uses the signed-in Codex CLI to check your remaining allowance when you open this page or notch Activity."
+msgstr ""
+
+#: linux/share/monet/utilities/agent_page.py:51
+msgid "Choose Codex CLI…"
+msgstr ""
+
+#: linux/share/monet/utilities/agent_page.py:59
+msgid "Session file"
+msgstr ""
+
+#: linux/share/monet/utilities/agent_page.py:61
+msgid ""
+"Choose a local Codex, Claude Code or Copilot CLI session log, or an OpenCode database."
+msgstr ""
+
+#: linux/share/monet/utilities/agent_page.py:66
+msgid "Choose session…"
+msgstr ""
+
+#: linux/share/monet/utilities/agent_page.py:81
+msgid "Choose the Codex CLI executable"
+msgstr ""
+
+#: linux/share/monet/utilities/agent_page.py:84
+msgid "Choose an executable file."
+msgstr ""
+
+#: linux/share/monet/utilities/agent_page.py:141 linux/share/monet/utilities/codex_limits.py:188
+msgid "Could not check Codex limits. Try refreshing."
+msgstr ""
+
+#: linux/share/monet/utilities/agent_page.py:154
+msgid "No session selected."
+msgstr ""
+
+#: linux/share/monet/utilities/agent_page.py:158
+msgid "No usage figures were reported in recent session events."
+msgstr ""
+
+#: linux/share/monet/utilities/agent_page.py:162
+msgid "Choose a local session log or database"
+msgstr ""
+
+#: linux/share/monet/utilities/codex_limits.py:185
+msgid "Install the Codex CLI or choose its executable."
+msgstr ""
+
+#: linux/share/monet/utilities/codex_limits.py:186
+msgid "Sign in to the Codex CLI with a ChatGPT account to see limits."
+msgstr ""
+
+#: linux/share/monet/utilities/codex_limits.py:187
+msgid "Codex did not report any account limit windows."
+msgstr ""
+
+#: linux/share/monet/utilities/codex_limits.py:190
+msgid "Codex limits unavailable"
+msgstr ""
+
+#: linux/share/monet/utilities/codex_limits.py:199
+msgid "%1d window"
+msgstr ""
+
+#: linux/share/monet/utilities/codex_limits.py:201
+msgid "%1h window"
+msgstr ""
+
+#: linux/share/monet/utilities/codex_limits.py:203
+msgid "%1min window"
+msgstr ""
+
+#: linux/share/monet/utilities/codex_limits.py:205
+msgid "Primary window"
+msgstr ""
+
+#: linux/share/monet/utilities/codex_limits.py:205
+msgid "Secondary window"
+msgstr ""
+
+#: linux/share/monet/utilities/codex_limits.py:206
+msgid "%1% left"
+msgstr ""
+
+#: linux/share/monet/utilities/codex_limits.py:207
+msgid "Resets %1"
+msgstr ""
+
+#: linux/share/monet/utilities/codex_limits.py:209
+msgid "Checked %1"
+msgstr ""

@@ -14,6 +14,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   Dropping files on it adds them to the shelf. Music levels and accessory alerts are optional.
 - **Cleaning mode.** In Monet Utilities, choose how long to pause input while wiping the keyboard, trackpad or screen. The normal unlock screen returns when time runs out or when you finish early.
 - **Find Utilities from anywhere.** Press Super+Alt+Space for the tool search and your favorites, or search from the Home Bar or Super+R. Select a result to open it directly.
+- **Codex account limits.** Enable them in Utilities → AI session usage to see your remaining allowance and reset times in the notch. The account check runs when you use the feature.
 - **Notch downloads.** Open Activity → Downloads to see recent files, recognize partial downloads, show a finished file in Files or add it to the shelf. The folder can be changed from the same view.
 - **Notch notifications.** Read a message from Activity, reply or use the actions its app provides. Customize Home Bar can show a brief preview in the closed notch while the desktop is unlocked and Do Not Disturb is off.
 - **Volume mixer.** In the notch’s Music tab, Settings → Sound or the Home Bar sound popup, adjust an app’s volume, mute it or choose which output it plays through. Pin the apps you use most and drag their names to put them in order.

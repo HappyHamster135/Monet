@@ -78,6 +78,7 @@ def fixture():
         assert keys(command[3] + "scratchpad")[0] == "notes"
         assert keys("tools listening ports")[0] == "ports"
         assert keys("cleaning mode")[0] == "lock"
+        assert keys("codex limits")[0] == "agents"
         assert "mic" not in keys("tools MÎCrophone") and keys("s") == [] and keys(";;;") == []
         assert not received
         # Each named tool is discoverable, including the last entries in the catalog.

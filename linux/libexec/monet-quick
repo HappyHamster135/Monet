@@ -10975,7 +10975,13 @@ def main(argv):
             except (OSError, ValueError, sqlite3.Error, TypeError):
                 pass
         emit({"folder": QUrl.fromLocalFile(str(folder)).toString(QUrl.FullyEncoded), "path": str(folder),
-              "available": folder.is_dir() and os.access(folder, os.R_OK | os.X_OK), "agent": agent})
+              "available": folder.is_dir() and os.access(folder, os.R_OK | os.X_OK), "agent": agent,
+              "codexKey": settings.value("codexLimits", "")})
+    elif cmd == "notch-codex-limits" and not args:
+        from PySide6.QtCore import QSettings
+        sys.path.insert(0, str(Path(DATADIR) / "monet/utilities"))
+        from codex_limits import display, snapshot
+        emit(display(snapshot(QSettings("Monet", "Utilities"))))
     elif cmd == "accessory-alert" and len(args) == 2 and re.fullmatch(r"(?:[a-f0-9]{2}){1,1024}", args[0]) and args[1].isdigit() and len(args[1]) <= 2 and int(args[1]) <= 20:
         run("notify-send", "--app-name=Monet", "--icon=battery-low", "--", tr("Low accessory battery"),
             tr("%1 has %2% battery remaining.", unhex(args[0]), args[1]))

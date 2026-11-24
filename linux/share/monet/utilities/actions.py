@@ -68,7 +68,7 @@ ACTIONS = {
     "media": Action(N_("Player queue and lyrics"), "Sound", "view-media-playlist"),
     "notifications": Action(N_("Notification settings"), "Desktop", "preferences-desktop-notification", ("@monet-settings", "notifications")),
     "theme": Action(N_("Light and wallpaper settings"), "Desktop", "preferences-desktop-theme", ("@monet-settings", "light")),
-    "agents": Action(N_("AI session usage"), "System", "utilities-terminal"),
+    "agents": Action(N_("AI session usage"), "System Codex account limits resets allowance Claude Copilot OpenCode tokens", "utilities-terminal"),
     "process-control": Action(N_("End or restart a process"), "System process tree PID force quit", "system-run"),
     "ports": Action(N_("Listening ports"), "System TCP UDP network process tree search quit", "network-wired"),
     "processes": Action(N_("Processes and system monitors"), "System", "utilities-system-monitor", ("plasma-systemmonitor",)),

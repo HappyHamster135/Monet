@@ -72,6 +72,24 @@ PlasmoidItem {
     }
     property string message: ""
     property string agentSummary: ""
+    property string codexKey: ""
+    onCodexKeyChanged: {
+        codexLimits = ({})
+        if (codexKey && activityOpen && !viewingDownloads)
+            runner.connectSource(helper + " notch-codex-limits")
+    }
+    DBus.SignalWatcher {
+        enabled: root.activityOpen
+        busType: DBus.BusType.Session; service: "org.monet.Utilities"
+        path: "/Utilities"; iface: "org.monet.Utilities"
+        function dbusCodexLimitsChanged(key) { root.codexKey = key }
+    }
+    property var codexLimits: ({})
+    Timer {
+        interval: 60000; repeat: true
+        running: root.activityOpen && !root.viewingDownloads && !!root.codexKey
+        onTriggered: runner.connectSource(root.helper + " notch-codex-limits")
+    }
     property bool viewingDownloads: false
     property bool checkingDownloads: false
     property string downloadPath: ""
@@ -84,7 +102,10 @@ PlasmoidItem {
     }
     onActivityOpenChanged: {
         if (activityOpen) refreshActivity()
-        else { downloadAvailable = false; downloadPath = ""; downloadFolder = "" }
+        else {
+            downloadAvailable = false; downloadPath = ""; downloadFolder = ""
+            codexKey = ""; codexLimits = ({})
+        }
     }
     Loader {
         id: downloadFeed
@@ -180,10 +201,19 @@ PlasmoidItem {
                 try {
                     const state = JSON.parse(data.stdout)
                     root.agentSummary = state.agent
+                    root.codexKey = state.codexKey || ""
                     root.downloadPath = state.path
                     root.downloadFolder = state.folder
                     root.downloadAvailable = state.available && state.folder.startsWith("file:///")
                 } catch (_) { root.downloadAvailable = false }
+            }
+            if (source.endsWith(" notch-codex-limits") && root.activityOpen && root.codexKey) {
+                try {
+                    const value = JSON.parse(data.stdout)
+                    if (value.state === "off") { root.codexKey = ""; root.refreshActivity() }
+                    else if (value.generation === root.codexKey) root.codexLimits = value
+                    else runner.connectSource(root.helper + " notch-codex-limits")
+                } catch (_) { root.codexLimits = ({}) }
             }
             if (source.startsWith(root.helper + " focus ") && !source.includes(" focus off ")) {
                 try { if (JSON.parse(data.stdout).ok) return } catch (e) {}
@@ -363,6 +393,16 @@ PlasmoidItem {
                 Layout.fillWidth: true; visible: !notices.inDetail && text.length > 0; textFormat: Text.PlainText
                 elide: Text.ElideRight; text: root.agentSummary; Accessible.name: root.agentSummary
             }
+            C.ToolButton {
+                Layout.fillWidth: true
+                visible: !notices.inDetail && !!root.codexKey
+                text: root.codexLimits.summary || i18n("Checking Codex limits…")
+                Accessible.description: root.codexLimits.details || ""
+                C.ToolTip.visible: hovered && !!root.codexLimits.details
+                C.ToolTip.text: root.codexLimits.details || ""
+                contentItem: C.Label { text: parent.text; elide: Text.ElideRight; textFormat: Text.PlainText }
+                onClicked: root.openTool("agents")
+            }
             C.Label {
                 readonly property string latestName: downloadFeed.item?.latestFinished ?? ""
                 Layout.fillWidth: true; visible: !notices.inDetail && !!latestName; elide: Text.ElideMiddle
@@ -372,7 +412,7 @@ PlasmoidItem {
             RowLayout {
                 visible: !notices.inDetail
                 C.Button { text: i18n("Downloads"); onClicked: root.viewingDownloads = true }
-                C.Button { text: i18n("Agent usage"); onClicked: root.openTool("agents") }
+                C.Button { visible: !root.codexKey; text: i18n("Agent usage"); onClicked: root.openTool("agents") }
                 C.Button {
                     text: i18n("Watch")
                     onClicked: {

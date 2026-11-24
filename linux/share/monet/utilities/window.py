@@ -247,36 +247,6 @@ class Window(QMainWindow):
             box.setPlainText("Fans\n" + ("\n".join(fans) or "No fan speed sensors reported.") + "\n\nUSB\n" + usb.strip())
         self.worker(["lsusb"], loaded)
 
-    def agent_usage(self):
-        def make():
-            box = QWidget()
-            layout = QVBoxLayout(box)
-            label = QLabel("Select a local Codex, Claude Code, Copilot CLI session log, or an OpenCode database.")
-            label.setWordWrap(True)
-            layout.addWidget(label)
-            box.text = QPlainTextEdit()
-            box.text.setReadOnly(True)
-            layout.addWidget(box.text)
-            def refresh():
-                self.settings.sync()
-                if not self.settings.value("agentFile", ""):
-                    box.text.setPlainText("No session selected.")
-                    return
-                self.worker([sys.executable, MODULES / "agents.py"], lambda out: box.text.setPlainText(
-                    out.strip() or "No usage figures were reported in recent session events."))
-            def choose():
-                file, _ = QFileDialog.getOpenFileName(self, "Choose a local session log or database")
-                if file:
-                    self.settings.setValue("agentFile", file)
-                    refresh()
-            def clear():
-                self.settings.remove("agentFile")
-                refresh()
-            row(layout, ("Choose session…", choose), ("Refresh", refresh), ("Forget", clear))
-            box.refresh = refresh
-            return box
-        self.page("agents", make).refresh()
-
     def cycle_output(self):
         def result(out):
             try:
@@ -493,7 +463,8 @@ class Window(QMainWindow):
                 self.show_devices()
                 self.issue("Fan speeds are managed by this PC’s firmware. CoolerControl can manage supported fan controllers.")
         elif key == "agents":
-            self.agent_usage()
+            from agent_page import AgentUsage
+            self.page(key, lambda: AgentUsage(self)).refresh()
         elif key == "devices":
             self.show_devices()
         elif key == "media":

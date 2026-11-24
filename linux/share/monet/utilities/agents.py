@@ -7,6 +7,8 @@ from urllib.parse import quote
 MAX_READ = 1024 * 1024
 
 def counts(data):
+    if not isinstance(data, dict):
+        return {}
     names = {"input_tokens": "Input", "output_tokens": "Output", "cached_input_tokens": "Cached input",
              "cache_read_input_tokens": "Cached input", "reasoning_output_tokens": "Reasoning",
              "total_tokens": "Total"}
@@ -24,6 +26,8 @@ def summary(file):
                 "WHERE json_extract(data,'$.role')='assistant' ORDER BY time_created DESC LIMIT 1").fetchone()
         if latest:
             tokens = json.loads(latest[0] or "{}")
+            if not isinstance(tokens, dict):
+                tokens = {}
             values = counts({"input_tokens": tokens.get("input"), "output_tokens": tokens.get("output")})
             if isinstance(latest[1], (int, float)):
                 values["Reported cost (USD)"] = round(latest[1], 5)
@@ -53,8 +57,8 @@ def summary(file):
                 values = counts(info.get("total_token_usage") or info.get("last_token_usage") or {})
             rates = payload.get("rate_limits") or {}
             for key in ("primary", "secondary"):
-                bucket = rates.get(key) or {}
-                used = bucket.get("used_percent")
+                bucket = rates.get(key) if isinstance(rates, dict) else None
+                used = bucket.get("used_percent") if isinstance(bucket, dict) else None
                 if isinstance(used, (float, int)):
                     values[key.title() + " limit used (%)"] = used
             if values:
