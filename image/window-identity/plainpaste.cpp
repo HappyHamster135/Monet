@@ -15,6 +15,7 @@
 #include <QProcess>
 #include <QSet>
 #include <QPointer>
+#include <QTimer>
 #include <main.h>
 #include <inputmethod.h>
 #include <wayland/surface.h>
@@ -36,6 +37,8 @@ public:
         KGlobalAccel::setGlobalShortcut(action, QKeySequence(Qt::META | Qt::CTRL | Qt::Key_V));
         connect(action, &QAction::triggered, this, &PlainPaste::paste);
         connect(&helper, &QProcess::finished, this, &PlainPaste::finish);
+        deliveryTimer.setSingleShot(true);
+        connect(&deliveryTimer, &QTimer::timeout, this, &PlainPaste::resumeQueue);
     }
 
 private:
@@ -106,7 +109,7 @@ private:
             return;
         }
 
-        if (helper.state() != QProcess::NotRunning) {
+        if (delivery || helper.state() != QProcess::NotRunning) {
             if (queued != window) {
                 queued = window;
                 waiting = 0;
@@ -123,6 +126,10 @@ private:
         initialSelection = seat->selection();
         const bool commit = canCommit(window);
         auto cancel = [this] {
+            if (target && target == queued) {
+                waiting = 0;
+                queued.clear();
+            }
             target.clear();
             helper.closeWriteChannel();
         };
@@ -141,6 +148,28 @@ private:
         });
     }
 
+    void awaitDelivery()
+    {
+        // Keyboard and input-method events reach the app asynchronously. Wait
+        // for its updated editor state before snapshotting the next selection.
+        // Some clients do not use text-input or acknowledge an empty paste.
+        delivery = std::make_unique<QObject>();
+        deliveryTimer.start(350);
+        auto *seat = waylandServer()->seat();
+        auto acknowledged = [this] { deliveryTimer.start(0); };
+        if (canCommit(target)) {
+            connect(seat->textInputV2(), &TextInputV2Interface::surroundingTextChanged, delivery.get(), acknowledged);
+            connect(seat->textInputV3(), &TextInputV3Interface::surroundingTextChanged, delivery.get(), acknowledged);
+        }
+        auto moved = [this] {
+            waiting = 0;
+            queued.clear();
+            deliveryTimer.start(0);
+        };
+        connect(seat, &SeatInterface::focusedKeyboardSurfaceAboutToChange, delivery.get(), moved);
+        connect(seat, &SeatInterface::selectionChanged, delivery.get(), moved);
+    }
+
     void finish(int result, QProcess::ExitStatus status)
     {
         const auto bytes = helper.readAllStandardOutput();
@@ -150,11 +179,21 @@ private:
             // The helper only requests a native paste after checking the
             // destination's editable control and the clipboard formats.
             if (result == 23) {
+                awaitDelivery();
                 sendPasteKey(false);
+                return;
             } else if (result == 24 && !bytes.isEmpty() && bytes.size() <= 3500 && canCommit(target)) {
+                awaitDelivery();
                 kwinApp()->inputMethod()->sendText(QString::fromUtf8(bytes));
+                return;
             }
         }
+        resumeQueue();
+    }
+
+    void resumeQueue()
+    {
+        delivery.reset();
         target.clear();
         if (waiting && queued && queued == focusedWindow()) {
             --waiting;
@@ -168,7 +207,8 @@ private:
     QPointer<Window> target, queued;
     int waiting = 0;
     AbstractDataSource *initialSelection = nullptr; // Identity only; owned by the seat.
-    std::unique_ptr<QObject> watch;
+    std::unique_ptr<QObject> watch, delivery;
+    QTimer deliveryTimer;
     QProcess helper;
 };
 

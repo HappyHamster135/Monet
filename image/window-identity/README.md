@@ -48,3 +48,7 @@ the desktop’s Paste as plain text shortcut. Browsers with a native matching-st
 command and Konsole receive their own paste shortcut in the focused window.
 Other editable controls use an on-demand Utilities helper. The plugin exposes
 no D-Bus input method.
+
+On an image with the plugin installed, run `python3 tests/fixtures/plain-paste-wayland.py`
+from the checkout. It changes fields during clipboard transfer, pastes twice in quick
+succession, and checks that the original HTML remains available, all in a private session.

@@ -5,7 +5,7 @@ import time
 
 
 class Pointer:
-    def __init__(self, display):
+    def __init__(self, display, version=3):
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.sock.settimeout(3)
         self.sock.connect(str(display))
@@ -18,7 +18,7 @@ class Pointer:
             if obj == 2 and op == 0 and b'org_kde_kwin_fake_input\x00' in data:
                 name = struct.unpack_from('=I', data)[0]
                 self.send(2, 0, struct.pack('=I', name) + self.string('org_kde_kwin_fake_input')
-                          + struct.pack('=II', 3, 4))
+                          + struct.pack('=II', version, 4))
                 self.send(4, 0, self.string('Monet window fixture') + self.string('Private test session'))
                 break
             if obj == 3:
@@ -42,3 +42,6 @@ class Pointer:
 
     def button(self, down, button=0x110):
         self.send(4, 2, struct.pack('=II', button, int(down)))
+
+    def key(self, code, down):
+        self.send(4, 10, struct.pack('=II', code, int(down)))
