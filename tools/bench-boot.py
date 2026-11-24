@@ -265,6 +265,14 @@ def boot(args, disk, variables, key, index, runtime):
                     or migration.get('ExecMainStartTimestampMonotonic') != '0'
                     or not re.search(r'code=exited\s*;\s*status=1\b', migration.get('ExecCondition', ''))):
                 raise RuntimeError('Routine Wi-Fi migration should skip its reload on normal boots: '+str(migration))
+        if args.check_install_bluetooth and index == 0:
+            setup = ssh(port, key, "cat /proc/cmdline; journalctl -b --no-pager -o cat -u bazzite-hardware-setup.service")
+            (work/'hardware-setup.txt').write_text(setup.stdout + '\n' + setup.stderr)
+            cmdline, _, messages = setup.stdout.partition('\n')
+            kernels = (work/'serial.log').read_bytes().count(b'monet kernel: Linux version ')
+            if (setup.returncode or cmdline.split().count('bluetooth.disable_ertm=1') != 1
+                    or 'No karg changes needed' not in messages or kernels != 1):
+                raise RuntimeError('Expected one setup boot with the Bluetooth default present at kernel start')
         sessions = ssh(port,key,"loginctl list-sessions --no-legend | while read -r sid rest; do loginctl show-session \"$sid\" -p Type -p Class; echo; done")
         for session in sessions.stdout.split('\n\n'):
             fields=properties(session)
@@ -314,6 +322,8 @@ def main():
         help='Time limit for the excluded setup sequence including any deployment reboot')
     parser.add_argument('--check-trust-refresh',action='store_true',
         help='Require trust regeneration on the initial boot and no regeneration on subsequent boots')
+    parser.add_argument('--check-install-bluetooth', action='store_true',
+        help='Verify the first installed VM boot starts with the hardware setup default and reaches login in one boot')
     parser.add_argument('--check-wifi-migration',action='store_true',
         help='Require routine Wi-Fi migration to skip its systemd reload on normal boots')
     parser.add_argument('--firmware-code',type=Path,default=Path('/usr/share/OVMF/OVMF_CODE_4M.fd'))

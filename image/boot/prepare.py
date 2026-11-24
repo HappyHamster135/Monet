@@ -8,6 +8,14 @@ import sys
 GRAPHICS = {"i915", "amdgpu", "nvidia", "nvidia_drm", "nvidia_modeset", "nvidia_uvm"}
 ASSIGN = re.compile(r'^(\s*)force_drivers(\+?=)([\"\'])([^\"\']*)\3\s*(#.*)?$')
 HARDWARE_WAIT = '# Monet: wait for setup dependencies only when hardware migration is needed.\n'
+BLUETOOTH_DEFAULT = """if [[ ! $KARGS =~ "disable_ertm" ]]; then
+  echo "Adding needed kargs for bluetooth"
+  NEEDED_KARGS+=("--append-if-missing=bluetooth.disable_ertm=1")
+fi"""
+INSTALL_BLUETOOTH = """# Apply the hardware setup default when bootc creates the first boot entry.
+[install]
+kargs = ["bluetooth.disable_ertm=1"]
+"""
 TRUST_DROPIN = """# Match Fedora's atomic trust refresh lifecycle: first boot and deployments.
 # https://gitlab.com/fedora/bootc/base-images/-/merge_requests/663
 [Unit]
@@ -110,6 +118,20 @@ def prepare_hardware(root):
         return
     before = script.read_text(), unit.read_text()
     after = hardware_config(*before)
+    # Monet Setup takes usr/lib/bootc/install from this image. This setting
+    # applies at installation only. Later deployments keep the owner's kargs.
+    # Keep hardware-specific setup and its real reboot decisions in Bazzite.
+    install = root / 'usr/lib/bootc/install/00-monet-bluetooth.toml'
+    if install.is_symlink() or install.parent.is_symlink():
+        raise ValueError('Refusing symlinked bootc install configuration')
+    if install.exists() and install.read_text() != INSTALL_BLUETOOTH:
+        raise ValueError('Conflicting Monet Bluetooth install configuration')
+    if '\n' + BLUETOOTH_DEFAULT + '\n' in before[0]:
+        install.parent.mkdir(parents=True, exist_ok=True)
+        install.write_text(INSTALL_BLUETOOTH)
+    else:
+        # If the base drops the old default, drop our copy of it as well.
+        install.unlink(missing_ok=True)
     for path, old, new in zip((script, unit), before, after):
         if old != new:
             path.write_text(new)

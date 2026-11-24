@@ -105,6 +105,24 @@ class HardwareStartup(unittest.TestCase):
         self.assertIn('Before=systemd-user-sessions.service jupiter-biosupdate.service jupiter-controller-update.service', unit.read_text())
         self.assertIn('After=local-fs.target', unit.read_text())
 
+    def test_bootc_installs_the_global_hardware_default_only_on_matching_images(self):
+        import tomllib
+        script = self.root / 'usr/libexec/bazzite-hardware-setup'
+        unit = self.root / 'usr/lib/systemd/system/bazzite-hardware-setup.service'
+        script.parent.mkdir(parents=True)
+        unit.parent.mkdir(parents=True)
+        unit.write_text(UNIT)
+        script.write_text(HARDWARE + boot.BLUETOOTH_DEFAULT + '\n')
+        config = self.root / 'usr/lib/bootc/install/00-monet-bluetooth.toml'
+        for _ in range(2):
+            boot.prepare_hardware(self.root)
+            self.assertEqual(tomllib.loads(config.read_text()), {'install': {'kargs': ['bluetooth.disable_ertm=1']}})
+            self.assertIn(boot.BLUETOOTH_DEFAULT, script.read_text())
+        self.assertFalse((self.root / 'usr/lib/bootc/kargs.d').exists())
+        script.write_text(script.read_text().replace('disable_ertm=1', 'disable_ertm=0'))
+        boot.prepare_hardware(self.root)
+        self.assertFalse(config.exists())
+
     def test_native_systemd_accepts_the_resulting_units(self):
         hardware = self.root / 'hardware.service'
         hardware.write_text(boot.hardware_config(HARDWARE, UNIT)[1])
