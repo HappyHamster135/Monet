@@ -1,0 +1,25 @@
+# Monet Utilities on 0.9.8-9
+
+Open **Monet Utilities** from the application menu. Type in the search field to find a tool. The gear lets you hide tools and choose up to eight favorites. **Ctrl+K** returns to search from any tool. The launcher's right-click menu also opens the shelf, scratchpad and favorites wheel or switches audio outputs.
+
+In **Customize Home Bar → Top-center notch**, select **Compact** or **Wide**. The notch belongs to the screen containing the bar you customized. Moving the Home Bar leaves the notch at the top. Select **Off** to remove it. Music levels, the companion and low accessory battery alerts each have a separate control.
+
+- Click the notch to open Music, Activity, Time or Calendar. Scroll down over the notch to open it and up to close it. A horizontal wheel or trackpad scroll over it skips a track when the player supports that action.
+- Drop files on the notch, then drag them from **File shelf** into another application. Removing an entry from the shelf keeps the original file.
+- A focus timer borrows Monet's quiet mode until its deadline. The stopwatch and countdown keep their state when the popup closes. Calendar uses the same day notes as the Monet clock.
+- **Watch a window** uses the desktop sharing picker. Drag inside the preview to watch a region. **Alert when the picture changes** fires once. Closing the preview ends sharing.
+- **AI session usage** reads a file you select. **Forget** removes the selection. It shows figures the session recorded. It does not contact an account or send the session to a service.
+
+## Coverage of the reference app
+
+The product reference is [Vorssaint’s feature list](https://vorssaint.com/). Its macOS utilities and Monet’s Linux desktop have different system interfaces. This table records the scope of the local build.
+
+| Area | Available in Monet | Remaining differences |
+| --- | --- | --- |
+| Windows and taskbar | Existing switcher, window previews, taskbar interactions, maximize and snap layouts. The title overlay now rechecks a stationary pointer after focus changes. | A selectable quit-on-last-window rule for individual apps. |
+| Mouse and keyboard | KDE mouse, trackpad, focus and keyboard settings. Input Remapper provides button, key and modifier mappings. Keyboard bounce and sticky-key settings are available. | Dedicated smooth and linear wheel profiles, per-button extra-click filtering and app-specific quit protection. Three-finger click availability depends on the device and its settings. |
+| Clipboard and files | Clipboard history, copying as plain text, explicit link cleanup, reusable snippets, file cut/paste and rename in Files, shelf and download folder monitoring. | Automatic text-trigger expansion, automatic clipboard cleanup and a dedicated global plain-paste shortcut. Monet uses Linux app installation formats. |
+| Audio, energy and displays | Per-app volumes and devices in Monet Sound, cycle output, microphone mute, timed keep-awake, brightness and hardware-supported HDR. | Custom automatic audio priority, per-player blocking of media keys and a Bluetooth-off-during-sleep policy. Apple XDR brightness is hardware-specific. |
+| Desktop tools | Search, favorites, wheel, scratchpad, wallpaper picker, camera mirror, color picker, local text/QR recognition, screenshots, recording and media compression. Storage and Apps handle cleanup and removal. Ports, Task Manager and Updates open on demand. | A cleaning lock with an independently timed keyboard lockout, process-tree management directly from the ports list, a dedicated recording editor and a Homebrew manager. |
+| Notch | Media playback, real output levels, calendar and day notes, notifications, timers, accessory levels and low-battery alerts, newest download, agent usage and an optional companion. | Synchronized lyrics, provider-specific live account limits, external calendar appointments and live window previews embedded in the notch. The player tool shows a queue or lyrics only when the player supplies them. |
+| System monitoring | Existing Task Manager views cover CPU, graphics, memory, network and disks. Utilities also exposes USB devices, power and readable fan sensors. | Manual fan curves require a supported controller and a separate compatible control service. The ThinkPad test covers fan readout only when the firmware exposes it. |
