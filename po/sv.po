@@ -15983,3 +15983,125 @@ msgstr "Antal matchande paket: %1."
 #: linux/share/monet/utilities/brew_page.py:315
 msgid "Remove all installed versions of %1 using Homebrew?"
 msgstr "Vill du ta bort alla installerade versioner av %1 med Homebrew?"
+
+#: linux/share/monet/utilities/recordings.py:252
+msgid "Overlays"
+msgstr "Överlägg"
+
+#: linux/share/monet/utilities/recordings.py:392
+msgid "Add caption…"
+msgstr "Lägg till text…"
+
+#: linux/share/monet/utilities/recordings.py:392
+msgid "Add image…"
+msgstr "Lägg till bild…"
+
+#: linux/share/monet/utilities/recordings.py:392
+msgid "Blur an area…"
+msgstr "Gör ett område suddigt…"
+
+#: linux/share/monet/utilities/recordings.py:397
+msgid "Blur region"
+msgstr "Suddigt område"
+
+#: linux/share/monet/utilities/recordings.py:408
+msgid "Play or seek to a frame before adding an overlay."
+msgstr "Spela upp eller gå till en bildruta innan du lägger till ett överlägg."
+
+#: linux/share/monet/utilities/recording_layer_editor.py:25
+msgid "Overlay position and size"
+msgstr "Överläggets position och storlek"
+
+#: linux/share/monet/utilities/recording_layer_editor.py:26
+msgid "Arrow keys move the overlay. Shift and arrow keys resize it."
+msgstr ""
+"Flytta överlägget med piltangenterna. Håll ned Skift och använd piltangenterna för att ändra storlek."
+
+#: linux/share/monet/utilities/recording_layer_editor.py:112
+msgid "Edit recording overlay"
+msgstr "Redigera överlägg i inspelningen"
+
+#: linux/share/monet/utilities/recording_layer_editor.py:122
+msgid "Drag the box to move it. Drag its lower-right corner to resize."
+msgstr ""
+"Dra rutan för att flytta den. Dra i det nedre högra hörnet för att ändra storlek."
+
+#: linux/share/monet/utilities/recording_layer_editor.py:130
+msgid "Caption"
+msgstr "Text"
+
+#: linux/share/monet/utilities/recording_layer_editor.py:132
+msgid "White"
+msgstr "Vit"
+
+#: linux/share/monet/utilities/recording_layer_editor.py:132
+msgid "Yellow"
+msgstr "Gul"
+
+#: linux/share/monet/utilities/recording_layer_editor.py:133
+msgid "Pink"
+msgstr "Rosa"
+
+#: linux/share/monet/utilities/recording_layer_editor.py:133
+msgid "Light blue"
+msgstr "Ljusblå"
+
+#: linux/share/monet/utilities/recording_layer_editor.py:136
+msgid "Text color"
+msgstr "Textfärg"
+
+#: linux/share/monet/utilities/recording_layer_editor.py:141
+msgid "Choose image…"
+msgstr "Välj bild…"
+
+#: linux/share/monet/utilities/recording_layer_editor.py:142
+msgid "Image"
+msgstr "Bild"
+
+#: linux/share/monet/utilities/recording_layer_editor.py:147
+msgid "Opacity"
+msgstr "Opacitet"
+
+#: linux/share/monet/utilities/recording_layer_editor.py:147
+msgid "Blur strength"
+msgstr "Oskärpa"
+
+#: linux/share/monet/utilities/recording_layer_editor.py:172
+msgid "Remove overlay"
+msgstr "Ta bort överlägget"
+
+#: linux/share/monet/utilities/recording_layer_editor.py:184
+msgid "Choose overlay image"
+msgstr "Välj bild för överlägget"
+
+#: linux/share/monet/utilities/recording_layer_editor.py:185
+msgid "Images (*.png *.jpg *.jpeg *.webp)"
+msgstr "Bilder (*.png *.jpg *.jpeg *.webp)"
+
+#: linux/share/monet/utilities/recording_layer_editor.py:190
+msgid "Choose a readable PNG, JPEG or WebP image."
+msgstr "Välj en läsbar PNG-, JPEG- eller WebP-bild."
+
+#: linux/share/monet/utilities/recording_layer_editor.py:212
+msgid "The end must be later than the start."
+msgstr "Sluttiden måste ligga efter starttiden."
+
+#: linux/share/monet/utilities/recording_layer_editor.py:214
+msgid "Enter the caption to show in the recording."
+msgstr "Ange texten som ska visas i inspelningen."
+
+#: linux/share/monet/utilities/recording_layer_editor.py:216
+msgid "Choose an image to place on the recording."
+msgstr "Välj en bild att placera i inspelningen."
+
+#: linux/share/monet/utilities/recording_layer_editor.py:151
+msgid "Send backward"
+msgstr "Flytta bakåt"
+
+#: linux/share/monet/utilities/recording_layer_editor.py:152
+msgid "Bring forward"
+msgstr "Flytta framåt"
+
+#: linux/share/monet/utilities/recording_layer_editor.py:156
+msgid "Layer order"
+msgstr "Lagerordning"

@@ -1,4 +1,5 @@
 """Export an edited local recording to a new file beside its temporary output."""
+from dataclasses import dataclass
 import ctypes
 import errno
 import os
@@ -34,7 +35,43 @@ class ExportFile:
         self.directory.cleanup()
 
 
-def export_command(source, output, start, end, speed, crop, mute):
+@dataclass(frozen=True)
+class ExportLayer:
+    box: tuple
+    start: int
+    end: int
+    image: Path | None
+    sigma: float
+
+
+def overlay_graph(command, layers, start, end):
+    graph = []
+    base = "[0:v:0]"
+    image_index = 0
+    for i, layer in enumerate(layers):
+        if layer.end <= start or layer.start >= end:
+            continue
+        x, y, w, h = layer.box
+        if not (0 <= x < 1 and 0 <= y < 1 and 0 < w <= 1.000001-x and 0 < h <= 1.000001-y):
+            raise ValueError("Overlay outside the picture")
+        on = f"gte(t,{max(0,layer.start-start)/1000:.3f})*lt(t,{(min(end,layer.end)-start)/1000:.3f})"
+        graph.append(f"{base}split[under{i}][ref{i}]")
+        if layer.image is not None:
+            image_index += 1
+            command.extend(["-threads", "1", "-f", "image2", "-pattern_type", "none", "-i", str(layer.image)])
+            graph.append(f"[{image_index}:v][ref{i}]scale=w='max(1,round(rw*{w:.8f}))':"
+                         f"h='max(1,round(rh*{h:.8f}))':eval=init[art{i}]")
+        else:
+            graph.append(f"[ref{i}]crop=w='max(1,round(iw*{w:.8f}))':h='max(1,round(ih*{h:.8f}))':"
+                         f"x='round(iw*{x:.8f})':y='round(ih*{y:.8f})':exact=1,"
+                         f"gblur=sigma={layer.sigma:.4f}:steps=2:enable='{on}'[art{i}]")
+        base = f"[layer{i}]"
+        graph.append(f"[under{i}][art{i}]overlay=x='round(W*{x:.8f})':y='round(H*{y:.8f})':"
+                     f"format=yuv444:enable='{on}'{base}")
+    return graph, base
+
+
+def export_command(source, output, start, end, speed, crop, mute, layers=()):
     if not 0 <= start < end or speed not in (0.5, 1, 1.5, 2):
         raise ValueError("Invalid trim range or playback speed")
     filters = []
@@ -49,15 +86,24 @@ def export_command(source, output, start, end, speed, crop, mute):
     command = ["nice", "-n", "10", "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-n",
                "-progress", "pipe:1", "-nostats", "-filter_threads", "1", "-filter_complex_threads", "1",
                "-ss", f"{start/1000:.3f}", "-t", f"{(end-start)/1000:.3f}", "-threads", "2",
-               "-protocol_whitelist", "file,pipe", "-i", str(source), "-map_metadata", "-1", "-map_chapters", "-1"]
+               "-protocol_whitelist", "file,pipe", "-i", str(source)]
+    graph, base = overlay_graph(command, layers, start, end)
+    command += ["-map_metadata", "-1", "-map_chapters", "-1"]
     if output.suffix.lower() == ".gif":
         # A palette per frame keeps memory bounded even for long captures.
         filters += ["fps=12", "scale='min(800,iw)':-1:flags=lanczos", "split[a][b]"]
-        graph = "[0:v:0]" + ",".join(filters) + ";[a]palettegen=stats_mode=single[p];[b][p]paletteuse=new=1:dither=bayer[v]"
-        command += ["-filter_complex", graph, "-map", "[v]", "-an", "-loop", "0"]
+        graph.append(base + ",".join(filters) + ";[a]palettegen=stats_mode=single[p];[b][p]paletteuse=new=1:dither=bayer[v]")
+        command += ["-filter_complex", ";".join(graph), "-map", "[v]", "-an", "-loop", "0"]
     elif output.suffix.lower() == ".mp4":
         filters.append("pad=ceil(iw/2)*2:ceil(ih/2)*2")
-        command += ["-map", "0:v:0", "-vf", ",".join(filters), "-c:v", "libx264", "-preset", "veryfast",
+        if graph:
+            graph.append(base + ",".join(filters) + "[v]")
+            command += ["-filter_complex", ";".join(graph), "-map", "[v]"]
+        else:
+            command += ["-map", "0:v:0", "-vf", ",".join(filters)]
+        if speed != 1:
+            command += ["-fps_mode", "vfr", "-enc_time_base:v", "filter"]
+        command += ["-c:v", "libx264", "-preset", "veryfast",
                     "-crf", "20", "-pix_fmt", "yuv420p", "-movflags", "+faststart"]
         if mute:
             command += ["-an"]

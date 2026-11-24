@@ -15995,3 +15995,123 @@ msgstr ""
 #: linux/share/monet/utilities/brew_page.py:315
 msgid "Remove all installed versions of %1 using Homebrew?"
 msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:252
+msgid "Overlays"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:392
+msgid "Add caption…"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:392
+msgid "Add image…"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:392
+msgid "Blur an area…"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:397
+msgid "Blur region"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:408
+msgid "Play or seek to a frame before adding an overlay."
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:25
+msgid "Overlay position and size"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:26
+msgid "Arrow keys move the overlay. Shift and arrow keys resize it."
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:112
+msgid "Edit recording overlay"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:122
+msgid "Drag the box to move it. Drag its lower-right corner to resize."
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:130
+msgid "Caption"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:132
+msgid "White"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:132
+msgid "Yellow"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:133
+msgid "Pink"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:133
+msgid "Light blue"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:136
+msgid "Text color"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:141
+msgid "Choose image…"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:142
+msgid "Image"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:147
+msgid "Opacity"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:147
+msgid "Blur strength"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:172
+msgid "Remove overlay"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:184
+msgid "Choose overlay image"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:185
+msgid "Images (*.png *.jpg *.jpeg *.webp)"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:190
+msgid "Choose a readable PNG, JPEG or WebP image."
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:212
+msgid "The end must be later than the start."
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:214
+msgid "Enter the caption to show in the recording."
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:216
+msgid "Choose an image to place on the recording."
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:151
+msgid "Send backward"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:152
+msgid "Bring forward"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_layer_editor.py:156
+msgid "Layer order"
+msgstr ""

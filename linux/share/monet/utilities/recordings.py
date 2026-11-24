@@ -5,8 +5,8 @@ import subprocess
 from uuid import uuid4
 
 from shiboken6 import isValid
-from PySide6.QtCore import QProcess, QRectF, QSettings, QSignalBlocker, QStandardPaths, Qt, QTimer, QUrl
-from PySide6.QtGui import QBrush, QColor, QIcon, QPainterPath, QPen
+from PySide6.QtCore import QProcess, QRectF, QSettings, QSignalBlocker, QSize, QStandardPaths, Qt, QTimer, QUrl
+from PySide6.QtGui import QBrush, QColor, QIcon, QImage, QPainter, QPainterPath, QPen
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QGraphicsVideoItem
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog, QGraphicsScene,
@@ -34,6 +34,10 @@ class Picture(QGraphicsView):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setMinimumSize(160, 100)
         self.origin = None
+        self.layers = []
+        self.blur_key = None
+        self.blur_preview = QImage()
+        self.playhead = 0
         self.crop = None
         self.choosing = False
         self.changed = lambda: None
@@ -51,6 +55,8 @@ class Picture(QGraphicsView):
         self.fit()
 
     def drawForeground(self, painter, rect):
+        if self.layers:
+            self.draw_layers(painter)
         if not self.crop:
             return
         scene = self.sceneRect()
@@ -63,6 +69,45 @@ class Picture(QGraphicsView):
         painter.setPen(QPen(Qt.white, 0))
         painter.setBrush(Qt.NoBrush)
         painter.drawRect(selection)
+
+    def draw_layers(self, painter):
+        from recording_layers import composed, paint_stamps, pixel_rect
+        frame = self.video.videoSink().videoFrame()
+        ms = frame.startTime() // 1000 if frame.isValid() and frame.startTime() >= 0 else self.playhead
+        layers = [layer for layer in self.layers if layer.start <= ms < layer.end]
+        if not layers:
+            return
+        size = self.sceneRect().size().toSize()
+        if size.isEmpty():
+            return
+        painter.save()
+        painter.setRenderHint(QPainter.SmoothPixmapTransform)
+        paint_stamps(painter, size, (layer for layer in layers if layer.kind != "blur"), size)
+        regions = [layer for layer in layers if layer.kind == "blur"]
+        if regions:
+            # Read back video only while a blur is actually visible. Bound the
+            # interactive composite to the preview resolution, never the export.
+            limit = self.viewport().size().boundedTo(QSize(1200, 800))
+            preview = size.scaled(limit, Qt.KeepAspectRatio).expandedTo(QSize(1, 1))
+            key = (frame.startTime(), size, preview, tuple(layers))
+            if frame.startTime() < 0 or key != self.blur_key:
+                self.blur_preview = composed(frame.toImage(), preview, layers, size)
+                self.blur_key = key
+            # The cached composite includes layers above and below each blur.
+            # Keep the rest of the original video and lettering at native resolution.
+            for layer in regions:
+                rect = pixel_rect(layer.box, size)
+                if self.blur_preview.isNull():
+                    painter.fillRect(rect, Qt.black)
+                else:
+                    painter.drawImage(rect, self.blur_preview, pixel_rect(layer.box, preview))
+        painter.restore()
+
+    def set_layers(self, layers):
+        self.layers = layers
+        self.blur_key = None
+        self.blur_preview = QImage()
+        self.viewport().update()
 
     def choose(self, on):
         self.choosing = on
@@ -115,6 +160,7 @@ class Recordings(QWidget):
         self.home = home
         self.file = None
         self.duration = 0
+        self.awaiting_first_frame = False
         self.recorder = None
         self.exporter = None
         self.cancelled = False
@@ -220,6 +266,13 @@ class Recordings(QWidget):
         options.addWidget(self.crop_button)
         self.reset = QPushButton(tr("Reset crop"), clicked=self.picture.reset_crop)
         options.addWidget(self.reset)
+        self.overlays = QToolButton()
+        self.overlays.setText(tr("Overlays"))
+        self.overlays.setPopupMode(QToolButton.InstantPopup)
+        self.layer_menu = QMenu(self.overlays)
+        self.layer_menu.aboutToShow.connect(self.list_layers)
+        self.overlays.setMenu(self.layer_menu)
+        options.addWidget(self.overlays)
         self.mute = QCheckBox(tr("Mute audio"))
         self.mute.toggled.connect(self.audio.setMuted)
         options.addWidget(self.mute)
@@ -269,9 +322,11 @@ class Recordings(QWidget):
         self.filename.setText(self.file.name)
         self.filename.setToolTip(str(self.file))
         self.duration = 0
+        self.picture.set_layers([])
         self.picture.reset_crop()
         self.rate.setCurrentIndex(1)
         self.mute.setChecked(False)
+        self.awaiting_first_frame = True
         self.message.setText(tr("Opening recording…"))
         self.player.setSource(QUrl.fromLocalFile(str(self.file)))
         self.controls()
@@ -293,8 +348,15 @@ class Recordings(QWidget):
 
     def state_changed(self, state):
         if state == QMediaPlayer.LoadedMedia:
+            if self.awaiting_first_frame and self.player.hasVideo():
+                self.awaiting_first_frame = False
+                QTimer.singleShot(0, self, self.show_first_frame)
             self.message.setText("" if self.player.hasVideo() else tr("This file has no video track."))
         self.controls()
+
+    def show_first_frame(self):
+        if self.player.mediaStatus() == QMediaPlayer.LoadedMedia and self.player.playbackState() == QMediaPlayer.StoppedState:
+            self.player.pause()
 
     def trim_changed(self, start):
         a, b = self.bounds()
@@ -326,6 +388,7 @@ class Recordings(QWidget):
         self.play.setToolTip(name)
 
     def position(self, ms):
+        self.picture.playhead = ms
         with QSignalBlocker(self.seek):
             self.seek.setValue(min(ms, 2147483647))
         self.time.setText(clock(ms))
@@ -347,6 +410,44 @@ class Recordings(QWidget):
         self.crop_button.setChecked(self.picture.choosing)
         self.reset.setVisible(self.picture.crop is not None)
         self.message.clear()
+
+    def list_layers(self):
+        self.layer_menu.clear()
+        for kind, title in (("text", tr("Add caption…")), ("image", tr("Add image…")), ("blur", tr("Blur an area…"))):
+            self.layer_menu.addAction(title, lambda checked=False, kind=kind: self.edit_layer(kind))
+        if self.picture.layers:
+            self.layer_menu.addSeparator()
+        for i, layer in enumerate(self.picture.layers):
+            name = layer.text.strip().splitlines()[0][:48] if layer.text.strip() else tr("Blur region")
+            title = f"{name.replace('&', '&&')}   {clock(layer.start)} – {clock(layer.end)}"
+            self.layer_menu.addAction(title, lambda checked=False, i=i: self.edit_layer(index=i))
+
+    def edit_layer(self, kind=None, index=None):
+        from recording_layer_editor import LayerDialog
+        from recording_layers import Layer
+        self.player.pause()
+        frame = self.picture.video.videoSink().videoFrame().toImage()
+        size = self.picture.video.nativeSize().toSize()
+        if frame.isNull() or size.isEmpty():
+            self.message.setText(tr("Play or seek to a frame before adding an overlay."))
+            return
+        layers = list(self.picture.layers)
+        existing = index is not None
+        if not existing:
+            a, b = self.bounds()
+            start = self.player.position()
+            if not a <= start < b:
+                start = a
+            defaults = {"text": (.15, .76, .70, .15), "image": (.66, .06, .28, .26), "blur": (.30, .34, .40, .28)}
+            index = len(layers)
+            layers.append(Layer(kind, start, b, defaults[kind], amount=45 if kind == "blur" else 100))
+        dialog = LayerDialog(self, layers, index, frame, size, self.player.position(), self.duration, existing)
+        if dialog.exec():
+            if dialog.removed:
+                del dialog.layers[dialog.index]
+            self.picture.set_layers(dialog.layers)
+            self.message.clear()
+        dialog.deleteLater()
 
     def hideEvent(self, event):
         self.player.pause()
@@ -377,7 +478,17 @@ class Recordings(QWidget):
         self.player.pause()
         start, end = self.bounds()
         speed = self.rate.currentData()
-        command = export_command(self.file, output.file, start, end, speed, self.picture.crop, self.mute.isChecked())
+        layers = []
+        try:
+            if self.picture.layers:
+                from recording_layers import export_layers
+                layers = export_layers(self.picture.layers, self.picture.video.nativeSize().toSize(), start, end, output.file.parent)
+            command = export_command(self.file, output.file, start, end, speed, self.picture.crop,
+                                     self.mute.isChecked(), layers)
+        except (OSError, ValueError) as error:
+            output.close()
+            self.message.setText(str(error))
+            return
         job = self.exporter = QProcess(self)
         self.cancelled = False
         def progress():

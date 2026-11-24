@@ -7,7 +7,7 @@ import unittest
 
 MODULE = Path(__file__).resolve().parents[1] / "linux/share/monet/utilities"
 sys.path.insert(0, str(MODULE))
-from recording_export import ExportFile, export_command
+from recording_export import ExportFile, ExportLayer, export_command
 
 
 class RecordingExport(unittest.TestCase):
@@ -27,6 +27,21 @@ class RecordingExport(unittest.TestCase):
             else:
                 self.assertIn("palettegen=stats_mode=single", graph)
                 self.assertIn("-an", cmd)
+
+    def test_overlays_keep_source_time_and_position_through_trim_crop_and_speed(self):
+        art = Path("/sample/50% [art].png")
+        box = (.2, .3, .4, .2)
+        layers = [ExportLayer(box, 200, 900, art, 0), ExportLayer(box, 1200, 2300, None, 12),
+                  ExportLayer(box, 3200, 4000, art, 0)]
+        for ext in (".mp4", ".gif"):
+            cmd = export_command(Path("in.webm"), Path("out"+ext), 500, 3000, 2, box, False, layers)
+            graph = cmd[cmd.index("-filter_complex")+1]
+            self.assertEqual(cmd.count(str(art)), 1)
+            self.assertNotIn(str(art), graph)
+            self.assertIn("gte(t,0.000)*lt(t,0.400)", graph)
+            self.assertIn("gte(t,0.700)*lt(t,1.800)", graph)
+            self.assertLess(graph.index("gblur="), graph.rindex("crop="))
+            self.assertLess(graph.rindex("crop="), graph.index("setpts="))
 
     def test_silent_export_and_invalid_edits(self):
         self.assertIn("-an", export_command(Path("a"), Path("b.mp4"), 0, 1000, 1, None, True))
