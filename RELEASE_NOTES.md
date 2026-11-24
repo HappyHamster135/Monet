@@ -22,6 +22,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   changes. A pointer resting at a window edge gets a second geometry check as the window
   settles, and dismissed snap overlays release input during their fade. After snapping or
   maximizing, the top edge reveals the controls even when the pointer stays still.
+  You can grab or close the window while the snap preview fades.
 - **Graphics in Task Manager.** Applications and Processes show a sortable Graphics
   column beside CPU and Memory. Sorting keeps the arrow inside its column. Hover
   over a shortened heading to read the full name. Applications and Processes

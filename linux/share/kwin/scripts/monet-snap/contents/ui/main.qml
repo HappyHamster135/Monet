@@ -547,6 +547,8 @@ Item {
     // The bar and the preview, over the screen being dragged on; nothing here takes the pointer.
     QuickWindow.Window {
         id: overlay
+        // The title controls recognize this input-transparent compositor surface during its fade.
+        title: "Monet snap preview"
         readonly property bool dragging: root.dragged !== null && root.moving && root.travelled
         flags: Qt.BypassWindowManagerHint | Qt.FramelessWindowHint | Qt.WindowTransparentForInput | Qt.WindowDoesNotAcceptFocus
         color: "transparent"

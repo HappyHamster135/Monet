@@ -24,7 +24,7 @@ The product reference is [Vorssaint’s feature list](https://vorssaint.com/). I
 
 | Area | Available in Monet | Remaining differences |
 | --- | --- | --- |
-| Windows and taskbar | Existing switcher, window previews, taskbar interactions, maximize and snap layouts. The title overlay now rechecks a stationary pointer after focus changes. | A selectable quit-on-last-window rule for individual apps. |
+| Windows and taskbar | Existing switcher, window previews, taskbar interactions, maximize and snap layouts. The title controls follow a stationary pointer after focus changes and stay available as the snap preview fades. | A selectable quit-on-last-window rule for individual apps. |
 | Mouse and keyboard | KDE mouse, trackpad, focus and keyboard settings. Input Remapper provides button, key and modifier mappings. Keyboard bounce and sticky-key settings are available. | Dedicated smooth and linear wheel profiles, per-button extra-click filtering and app-specific quit protection. Three-finger click availability depends on the device and its settings. |
 | Clipboard and files | Clipboard history, copying as plain text, manual or automatic link cleanup, reusable snippets, file cut/paste and rename in Files, shelf and download folder monitoring. | Automatic text-trigger expansion and a dedicated global plain-paste shortcut. Monet uses Linux app installation formats. |
 | Audio, energy and displays | Per-app volumes and devices in Monet Sound, automatic output priority, cycle output, microphone mute, timed keep-awake, optional Bluetooth power and reconnection on wake, brightness and hardware-supported HDR. | Per-player blocking of media keys. Apple XDR brightness is hardware-specific. |

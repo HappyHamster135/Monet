@@ -26,8 +26,10 @@ Window {
     // Windows' numbers: each layout's (-1), then, once one is picked, its parts'.
     property int numbered: -1
 
-    // Release input as soon as the popup is dismissed, including during its fade.
-    flags: Qt.BypassWindowManagerHint | Qt.FramelessWindowHint | (shown ? 0 : Qt.WindowTransparentForInput)
+    // KWin reads outputOnly at each hit test. Its window flags are captured when the surface maps.
+    readonly property bool outputOnly: !shown
+    title: shown ? "" : "Monet snap preview"
+    flags: Qt.BypassWindowManagerHint | Qt.FramelessWindowHint
     color: "transparent"
     visible: false
 

@@ -177,6 +177,11 @@ class Arithmetic(unittest.TestCase):
         self.assertTrue(covered("[other(0, 60, 1920, 40, { dock: true, hidden: true }), w]"))
         self.assertFalse(covered("[w, other(0, 1004, 1920, 76, { dock: true })]"))  # Monet's bar, at the bottom
         # The bar's own window doesn't count.
+        preview = 'other(0, 0, 1920, 1080, {pid:-1,resourceClass:"",captionNormal:"Monet snap preview"})'
+        self.assertFalse(covered(f"[w, {preview}]"))
+        # Ordinary clients and the open, interactive layout picker still cover the controls.
+        self.assertTrue(covered(f"[w, {preview.replace('pid:-1', 'pid:42')}]"))
+        self.assertTrue(covered(f"[w, {preview.replace('Monet snap preview', '')}]"))
         self.assertFalse(self.run_js(f"covered(w, {bar}, [w, other(100, 100, 800, 40)], 'one', o => true)"))
 
     def test_buttons_are_the_frames_own(self):

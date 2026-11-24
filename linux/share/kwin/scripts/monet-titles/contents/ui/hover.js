@@ -97,6 +97,11 @@ function titleless(w) {
     return client.y - frame.y <= BARE && client.width > 0 && client.height > 0
 }
 
+// A fading snap surface can cover the screen visually while clicks already reach the app.
+function isSnapPreview(w) {
+    return w.pid === -1 && !w.resourceClass && w.captionNormal === "Monet snap preview"
+}
+
 // Something already where the bar would go, which it mustn't cover: a window above this one (a
 // menu, a notification, another app), or a panel along that edge, even while it's hidden away
 // (pointing at the edge brings the panel back there instead). ignore: the bar's own window.
@@ -104,7 +109,7 @@ function covered(w, bar, stacking, desktop, ignore) {
     var at = stacking.indexOf(w)
     for (var i = 0; i < stacking.length; i++) {
         var o = stacking[i]
-        if (!o || o === w || o.deleted || (ignore && ignore(o)))
+        if (!o || o === w || o.deleted || isSnapPreview(o) || (ignore && ignore(o)))
             continue
         if (o.dock) {
             if (touches(o.frameGeometry, bar))
