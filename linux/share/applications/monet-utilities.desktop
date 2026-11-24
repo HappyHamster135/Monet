@@ -5,10 +5,18 @@ Comment=Keep files close, capture your screen and find desktop tools
 Icon=applications-utilities
 Exec=@LIBEXECDIR@/monet-utilities
 Categories=Utility;
-Keywords=notch;shelf;scratchpad;clipboard;audio;timer;capture;tools;
+Keywords=toolbox;toolkit;notch;
+Keywords[sv]=verktygslåda;verktyg;notch;
 StartupNotify=true
 SingleMainWindow=true
-Actions=Shelf;Scratchpad;Wheel;Microphone;Output;Color;
+Actions=Search;Shelf;Scratchpad;Wheel;Microphone;Output;Color;
+
+[Desktop Action Search]
+X-KDE-Shortcuts=Meta+Alt+Space
+Name=Find a tool
+Name[sv]=Hitta ett verktyg
+Icon=system-search
+Exec=krunner --runner monet-utilities "tools "
 
 [Desktop Action Shelf]
 Name=File shelf

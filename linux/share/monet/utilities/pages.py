@@ -6,7 +6,7 @@ from PySide6.QtCore import QFileSystemWatcher, QMimeData, QStandardPaths, Qt, QU
 from PySide6.QtGui import QDesktopServices, QDrag, QIcon
 from PySide6.QtWidgets import (QAbstractItemView, QFileDialog, QFileSystemModel, QHBoxLayout, QInputDialog, QLabel,
     QListWidget, QListWidgetItem, QMenu, QPlainTextEdit, QPushButton, QTreeView, QVBoxLayout, QWidget)
-from actions import tr
+from actions import stored, tr
 
 def row(layout, *actions):
     bar = QHBoxLayout()
@@ -16,13 +16,6 @@ def row(layout, *actions):
         bar.addWidget(button)
     bar.addStretch()
     layout.addLayout(bar)
-
-def stored(settings, key, default):
-    try:
-        value = json.loads(settings.value(key, "null"))
-        return value if isinstance(value, type(default)) else default
-    except (ValueError, TypeError):
-        return default
 
 class ShelfList(QListWidget):
     def __init__(self, settings):

@@ -11,8 +11,8 @@ from PySide6.QtGui import QAction, QCursor, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QHBoxLayout, QInputDialog,
     QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMenu, QMessageBox, QPlainTextEdit,
     QPushButton, QStackedWidget, QToolButton, QVBoxLayout, QWidget, QWidgetAction)
-from actions import ACTIONS, DEFAULT_FAVORITES, clean_url, tr
-from pages import Downloads, Shelf, Snippets, row, stored
+from actions import ACTIONS, clean_url, find_tools, preferences, tr
+from pages import Downloads, Shelf, Snippets, row
 
 MODULES = Path(__file__).resolve().parent
 SERVICE = "org.monet.Utilities"
@@ -22,15 +22,13 @@ class Window(QMainWindow):
         super().__init__()
         self.helpers = Path(helpers)
         self.settings = QSettings("Monet", "Utilities")
-        self.favorites = stored(self.settings, "favorites", DEFAULT_FAVORITES)
-        self.hidden = stored(self.settings, "hidden", [])
+        self.favorites, self.hidden = preferences(self.settings)
         self.pages = {}
         self.notch_previews = {}
         self.floating_pads = set()
         self.pad_store = None
         self.running = set()
         self.converting = False
-        self.setWindowTitle("Monet Utilities")
         self.setWindowIcon(QIcon.fromTheme("applications-utilities"))
         self.resize(630, 490)
         central = QWidget()
@@ -81,13 +79,9 @@ class Window(QMainWindow):
         self.home()
 
     def filter(self):
-        words = self.search.text().casefold().split()
         self.catalog.clear()
-        order = list(dict.fromkeys([*self.favorites, *ACTIONS]))
-        for key in order:
-            action = ACTIONS.get(key)
-            if not action or key in self.hidden or not all(w in (action.name + " " + action.group).casefold() for w in words):
-                continue
+        for key, _ in find_tools(self.search.text(), self.favorites, self.hidden):
+            action = ACTIONS[key]
             entry = QListWidgetItem(QIcon.fromTheme(action.icon), action.name)
             entry.setData(Qt.UserRole, key)
             entry.setToolTip(action.group)
@@ -104,6 +98,7 @@ class Window(QMainWindow):
             self.run_tool(item.data(Qt.UserRole))
 
     def home(self):
+        self.setWindowTitle(tr("Monet Utilities"))
         self.title.setText("Utilities")
         self.back.hide()
         self.stack.setCurrentIndex(0)
@@ -119,6 +114,7 @@ class Window(QMainWindow):
 
     def page(self, key, factory):
         self.stack.setCurrentWidget(self.ensure_page(key, factory))
+        self.setWindowTitle(ACTIONS[key].name)
         self.title.setText(ACTIONS[key].name)
         self.back.show()
         self.status.clearMessage()
@@ -155,6 +151,7 @@ class Window(QMainWindow):
             self.hidden, self.favorites = hidden, favorites
             self.settings.setValue("favorites", json.dumps(favorites))
             self.settings.setValue("hidden", json.dumps(hidden))
+            self.settings.sync()
             dialog.accept()
         buttons.accepted.connect(apply)
         buttons.rejected.connect(dialog.reject)
@@ -455,6 +452,8 @@ class Window(QMainWindow):
             if key in ("clipboard", "mic"):
                 self.worker([program, *args], lambda _: self.issue(action.name))
             elif not QProcess.startDetached(program, args)[0]:
+                if not self.isVisible():
+                    self.Open(["tools"])
                 self.issue("Could not open " + action.name)
         elif key == "lock":
             self.cleaning_dialog()
@@ -611,6 +610,32 @@ class Receiver(QObject):
     def release_if_unused(self):
         if not any(w.isVisible() for w in QApplication.topLevelWidgets()) and not self.window.running and not self.window.notch_previews:
             QApplication.quit()
+
+    @Slot(str, str)
+    def OpenTool(self, key, token):
+        self.window.settings.sync()
+        self.window.favorites, self.window.hidden = preferences(self.window.settings)
+        if key != "customize" and (key not in ACTIONS or key in self.window.hidden):
+            return
+        def launch():
+            # Qt Wayland consumes this on the next window activation. External
+            # tools inherit it when started directly from the command bar.
+            if token:
+                os.environ["XDG_ACTIVATION_TOKEN"] = token
+            try:
+                if key == "customize":
+                    self.window.Open(["tools"])
+                    QTimer.singleShot(0, self.window.customize)
+                elif ACTIONS[key].command:
+                    self.window.run_tool(key)
+                    self.idle.start()
+                else:
+                    self.window.Open([key])
+            finally:
+                if token:
+                    os.environ.pop("XDG_ACTIVATION_TOKEN", None)
+        if len(token) <= 4096 and "\x00" not in token:
+            QTimer.singleShot(0, launch)
 
     @Slot(str, result=bool)
     def AddToShelf(self, address):

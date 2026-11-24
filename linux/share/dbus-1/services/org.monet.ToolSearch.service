@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=org.monet.ToolSearch
+Exec=/usr/bin/python3 @DATADIR@/monet/utilities/tool_search.py

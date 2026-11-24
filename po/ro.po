@@ -14386,12 +14386,6 @@ msgctxt "an app's description in the menu"
 msgid "Keep files close, capture your screen and find desktop tools"
 msgstr ""
 
-#: linux/share/applications/monet-utilities.desktop:8
-msgctxt ""
-"words the menu's search finds an app by; keep the semicolons between them"
-msgid "notch;shelf;scratchpad;clipboard;audio;timer;capture;tools;"
-msgstr ""
-
 #: linux/share/applications/monet-utilities.desktop:14
 msgctxt "an app's name in the menu"
 msgid "File shelf"
@@ -15507,4 +15501,183 @@ msgstr ""
 
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:31
 msgid "Could not add %1 to the file shelf."
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:20
+msgid "Notch calendars"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:22
+msgid "Watch downloads"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:24
+msgid "Text snippets"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:25
+msgid "Clipboard history"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:26
+msgid "Copy as plain text"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:28
+msgid "Clean a copied link"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:29
+msgid "Pick a screen color"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:30
+msgid "Screenshot and annotate"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:31
+msgid "Read text or a QR code from the screen"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:32
+msgid "Record a screen region"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:34
+msgid "Camera mirror"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:35
+msgid "Watch a window"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:36
+msgid "Compress media"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:37
+msgid "Open Trash"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:38
+msgid "Browse and rename files"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:39
+msgid "Review storage and unused files"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:40
+msgid "Manage and uninstall apps"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:41
+msgid "System updates"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:42
+msgid "App store and updates"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:43
+msgid "Choose wallpaper"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:44
+msgid "Brightness, displays and HDR"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:45
+msgid "Power and battery"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:48
+msgid "Mouse buttons, scroll direction and acceleration"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:49
+msgid "Trackpad clicks and gestures"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:50
+msgid "Window focus and click behavior"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:51
+msgid "Remap mouse buttons, scroll modifiers and keys"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:53
+msgid "Keyboard bounce and sticky keys"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:56
+msgid "Preferred sound output order"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:57
+msgid "Cycle sound output"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:58
+msgid "Mute or unmute microphone"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:59
+msgid "Player queue and lyrics"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:60
+msgid "Notification settings"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:61
+msgid "Light and wallpaper settings"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:62
+msgid "AI session usage"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:65
+msgid "Processes and system monitors"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:66
+msgid "Fan speeds and supported controllers"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:67
+msgid "USB devices and fan sensors"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:68
+msgid "Bluetooth accessories"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:69
+msgid "Favorite actions wheel"
+msgstr ""
+
+#: linux/share/monet/utilities/tool_search.py:23
+msgid "tools"
+msgstr ""
+
+#: linux/share/monet/utilities/tool_search.py:23 linux/share/monet/utilities/tool_search.py:54
+msgid "Monet Utilities"
+msgstr ""
+
+#: linux/share/monet/utilities/tool_search.py:54
+msgid "Choose favorite tools"
+msgstr ""
+
+#: linux/share/applications/monet-utilities.desktop:8
+msgctxt ""
+"words the menu's search finds an app by; keep the semicolons between them"
+msgid "toolbox;toolkit;notch;"
+msgstr ""
+
+#: linux/share/applications/monet-utilities.desktop:14
+msgctxt "an app's name in the menu"
+msgid "Find a tool"
 msgstr ""

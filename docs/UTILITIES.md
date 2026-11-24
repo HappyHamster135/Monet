@@ -1,6 +1,6 @@
 # Monet Utilities on 0.9.8-9
 
-Open **Monet Utilities** from the application menu. Type in the search field to find a tool. The gear lets you hide tools and choose up to eight favorites. **Ctrl+K** returns to search from any tool. The launcher's right-click menu also opens the shelf, scratchpad and favorites wheel or switches audio outputs.
+Open **Monet Utilities** from the application menu. Type in the search field to find a tool. Press **Super+Alt+Space** to open the tool search with your favorites. Type a name such as “volume mixer” or “scratchpad”, then press Enter to use it. The Utilities results also appear in the Home Bar and in desktop search (**Super+R**). Type **tools** to list favorites. The search provider respects hidden tools. The gear lets you hide tools and choose up to eight favorites. **Ctrl+K** returns to search from any tool. The launcher's right-click menu also opens the shelf, scratchpad and favorites wheel or switches audio outputs.
 
 In **Customize Home Bar → Top-center notch**, select **Compact** or **Wide**. The notch belongs to the screen containing the bar you customized. Moving the Home Bar leaves the notch at the top. Select **Off** to remove it. Music levels, notification previews, the companion and low accessory battery alerts each have a separate control.
 

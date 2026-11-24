@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Service
+Name=Monet Utilities
+Name[sv]=Monet-verktyg
+Comment=Find tools and favorite actions
+Comment[sv]=Hitta verktyg och favoritåtgärder
+Icon=applications-utilities
+X-KDE-PluginInfo-Name=monet-utilities
+X-KDE-PluginInfo-EnabledByDefault=true
+X-Plasma-API=DBus
+X-Plasma-DBusRunner-Service=org.monet.ToolSearch
+X-Plasma-DBusRunner-Path=/runner
+X-Plasma-Request-Actions-Once=true
+X-Plasma-Runner-Min-Letter-Count=3
+X-Plasma-Runner-Syntaxes=tools,tools :q:
+X-Plasma-Runner-Syntax-Descriptions=Show favorite tools,Find a Monet tool
