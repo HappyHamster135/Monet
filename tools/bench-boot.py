@@ -154,19 +154,19 @@ def install_reference_rule(port, key, rule):
     if not re.fullmatch(r'[A-Za-z0-9_-]+[.]rules', name):
         raise ValueError('Invalid reference rule name')
     data = rule.read_bytes()
-    if not 0 < len(data) <= 16384:
+    if not 0 < len(data) <= 1024**2:
         raise ValueError('Invalid reference rule size')
-    encoded = base64.b64encode(data).decode()
     directory = '/etc/udev/rules.d'
     destination = f'{directory}/{name}'
     # Require a genuine A/B difference and never replace an administrator override.
     command = (f'set -eu; test -f /usr/lib/udev/rules.d/{name}; '
                f'test ! -e {destination}; test ! -L {destination}; install -d {directory}; '
-               f'echo {encoded} | base64 -d > {destination}; '
-               f'restorecon {destination}; cmp -s {destination} /usr/lib/udev/rules.d/{name} && exit 1; exit 0')
-    reply = ssh(port, key, command)
+               f'cat > {destination}; test "$(wc -c < {destination})" -eq {len(data)}; '
+               f'restorecon {destination}; status=0; cmp -s {destination} /usr/lib/udev/rules.d/{name} || status=$?; '
+               'test "$status" -eq 1')
+    reply = subprocess.run(ssh_command(port, key, command), input=data, capture_output=True, timeout=30)
     if reply.returncode:
-        raise RuntimeError('Could not install a distinct control rule on the disposable test disk: ' + reply.stderr)
+        raise RuntimeError('Could not install a distinct control rule on the disposable test disk: ' + reply.stderr.decode(errors='replace'))
 
 
 def kernel_origin_bounds(readings):
@@ -258,6 +258,10 @@ def boot(args, disk, variables, key, index, runtime):
                 qmp(monitor,'screendump',filename=str(frame))
                 with Image.open(frame) as image:image.save(work/'timeout.png')
             raise RuntimeError('No stable visible Monet login controls before timeout')
+        udev_cpu = ssh(port, key, 'systemctl show --value -p CPUUsageNSec systemd-udevd.service')
+        udev_ns = udev_cpu.stdout.strip()
+        if udev_cpu.returncode or not udev_ns.isdecimal():
+            raise RuntimeError('Could not read the device manager CPU time after login became responsive')
         if index > 0:
             journal = ssh(port, key, 'journalctl -b --no-pager -o short-monotonic', timeout=30)
             if journal.returncode:
@@ -327,7 +331,7 @@ def boot(args, disk, variables, key, index, runtime):
                 raise RuntimeError('A desktop autologged in; this is not a login-screen sample')
         result = dict(index=index,warmup=index==0,power_on_to_visible_login_ms=round(clock_frame*1000,3),
                       power_on_to_controls_ms=round(first*1000,3),
-                      keyboard_verified_ms=round(input_verified*1000,3),
+                      keyboard_verified_ms=round(input_verified*1000,3),udev_cpu_after_keypress_ns=int(udev_ns),
                       sampling_interval_ms=250,guest_properties=values,guest_phases=timing_phases(values),
                       kernel_origin=kernel_origin_bounds(readings), login_manager=properties(manager.stdout),
                       trust_refresh=trust,wifi_migration=migration)

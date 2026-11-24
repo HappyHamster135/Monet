@@ -5,6 +5,7 @@ import shlex
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 try:
     from PIL import Image
@@ -18,6 +19,26 @@ bench=importlib.util.module_from_spec(spec);spec.loader.exec_module(bench)
 
 
 class BootTiming(unittest.TestCase):
+    def test_large_reference_rule_uses_ssh_stdin_and_survives_intact(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            rule = root / '60-openrgb.rules'
+            rule.write_bytes(b'# shell characters $() and quotes " remain literal\n' * 4500)
+            vendor = root / 'vendor'
+            local = root / 'overrides'
+            vendor.mkdir()
+            (vendor / rule.name).write_text('# optimized\n')
+
+            def local_guest(port, key, command):
+                command = command.replace('/usr/lib/udev/rules.d', str(vendor)).replace('/etc/udev/rules.d', str(local))
+                return ['sh', '-c', command.replace('restorecon ', 'true ')]
+
+            with patch.object(bench, 'ssh_command', side_effect=local_guest):
+                bench.install_reference_rule(0, None, rule)
+                self.assertEqual((local / rule.name).read_bytes(), rule.read_bytes())
+                with self.assertRaises(RuntimeError):
+                    bench.install_reference_rule(0, None, rule)
+
     def test_kernel_clock_offset_is_bounded_by_all_round_trips(self):
         self.assertEqual(bench.kernel_origin_bounds([(108, 100, 116), (211, 200, 214)]),
                          {'earliest_ms': 11, 'latest_ms': 14})

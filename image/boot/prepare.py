@@ -175,6 +175,48 @@ def prepare_input_remapper(root):
                                 for line in lines))
 
 
+def prepare_openrgb(root):
+    """Bypass the OpenRGB product table when no ancestor could match a row."""
+    path = root / 'usr/lib/udev/rules.d/60-openrgb.rules'
+    if path.is_symlink() or not path.is_file():
+        return
+    text = path.read_text()
+    if 'monet_openrgb_' in text:
+        return
+    product = re.compile(r'SUBSYSTEMS=="(usb\|hidraw|serial\|hidraw)", ATTRS\{idVendor\}=="([0-9a-f]{4})", '
+                         r'ATTRS\{idProduct\}=="[0-9a-f]{4}", TAG\+="uaccess", TAG\+="[A-Za-z0-9_-]+"')
+    lines = text.splitlines(keepends=True)
+    start = None
+    vendors = set()
+    subsystems = set()
+    for index, line in enumerate(lines):
+        rule = line.strip()
+        if not rule or rule.startswith('#'):
+            continue
+        match = product.fullmatch(rule)
+        if match:
+            if start is None:
+                start = index
+            subsystems.update(match[1].split('|'))
+            vendors.add(match[2])
+        elif start is not None or rule.endswith('\\'):
+            # Only guard a complete suffix made up of understood product rules.
+            return
+    if start is None:
+        return
+    # Positive parent matches keep devices below hubs eligible. Each table row
+    # still checks its own bus, vendor and product together on the same ancestor.
+    subsystem_pattern = '|'.join(sorted(subsystems))
+    vendor_pattern = '|'.join(sorted(vendors))
+    guard = (f'SUBSYSTEMS=="{subsystem_pattern}", ATTRS{{idVendor}}=="{vendor_pattern}", '
+             'GOTO="monet_openrgb_products"\nGOTO="monet_openrgb_end"\nLABEL="monet_openrgb_products"\n')
+    lines.insert(start, guard)
+    if not text.endswith('\n'):
+        lines.append('\n')
+    lines.append('LABEL="monet_openrgb_end"\n')
+    path.write_text(''.join(lines))
+
+
 def prepare(root):
     root = Path(root)
     # The NFS client gives its backing devices anonymous major:minor names.
@@ -185,6 +227,7 @@ def prepare(root):
     if not rule.is_symlink() and rule.is_file() and rule.read_text().strip() == original:
         rule.write_text(original.replace('PROGRAM=', 'KERNEL=="0:*", PROGRAM=') + '\n')
     prepare_input_remapper(root)
+    prepare_openrgb(root)
     prepare_trust(root)
     prepare_wifi(root)
     prepare_hardware(root)

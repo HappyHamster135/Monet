@@ -100,6 +100,46 @@ class NfsReadAhead(unittest.TestCase):
             self.assertEqual(rule.read_text(), newer)
 
 
+class OpenRgbDiscovery(unittest.TestCase):
+    prefix = 'KERNEL=="port", TAG+="uaccess"\n'
+    table = ('SUBSYSTEMS=="usb|hidraw", ATTRS{idVendor}=="09da", ATTRS{idProduct}=="fa10", '
+             'TAG+="uaccess", TAG+="Bloody_B820R"\n'
+             '# Serial controller\n'
+             'SUBSYSTEMS=="serial|hidraw", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", '
+             'TAG+="uaccess", TAG+="Arctic_RGB_controller"\n')
+
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name)
+        self.rule = self.root / 'usr/lib/udev/rules.d/60-openrgb.rules'
+        self.rule.parent.mkdir(parents=True)
+
+    def test_union_includes_all_bus_and_vendor_ids_and_keeps_the_individual_checks(self):
+        self.rule.write_text(self.prefix + self.table)
+        expected = (self.prefix + 'SUBSYSTEMS=="hidraw|serial|usb", ATTRS{idVendor}=="09da|1a86", '
+                    'GOTO="monet_openrgb_products"\nGOTO="monet_openrgb_end"\nLABEL="monet_openrgb_products"\n'
+                    + self.table + 'LABEL="monet_openrgb_end"\n')
+        for _ in range(2):
+            boot.prepare_openrgb(self.root)
+            self.assertEqual(self.rule.read_text(), expected)
+
+    def test_new_product_syntax_or_trailing_actions_do_not_get_skipped(self):
+        for extra in ('KERNEL=="i2c-*", TAG+="uaccess"\n', self.table.replace('09da', '09*')):
+            original = self.prefix + self.table + extra
+            self.rule.write_text(original)
+            boot.prepare_openrgb(self.root)
+            self.assertEqual(self.rule.read_text(), original)
+
+    def test_symlinked_rules_are_left_to_the_owner(self):
+        original = self.prefix + self.table
+        other = self.root / 'custom.rules'
+        other.write_text(original)
+        self.rule.symlink_to(other)
+        boot.prepare_openrgb(self.root)
+        self.assertEqual(other.read_text(), original)
+
+
 class InputRemapperColdplug(unittest.TestCase):
     original = ('ACTION=="add", SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_PATH}!="platform-sound", '
                 'ATTRS{phys}!="input-remapper*", '
