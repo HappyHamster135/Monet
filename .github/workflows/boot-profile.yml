@@ -91,6 +91,12 @@ jobs:
       - name: Install the candidate test disk
         timeout-minutes: 25
         run: sudo env GITHUB_ACTIONS=true taskset -c "$PROFILE_BUILD_CPUS" nice -n 10 python3 tools/boot-profile-install.py localhost/monet-boot-profile:candidate target/boot-profile/candidate.raw target/boot-profile/candidate-install
+      - name: Measure the same candidate disk with the original input rule
+        timeout-minutes: 20
+        run: |
+          sudo podman run --rm --entrypoint /usr/bin/cat "$BASE" /usr/lib/udev/rules.d/99-input-remapper.rules > target/boot-profile/99-input-remapper.rules
+          sudo taskset -c "$PROFILE_CPU" nice -n 10 python3 tools/bench-boot.py target/boot-profile/candidate.raw target/boot-profile/input-control --reference-udev-rule target/boot-profile/99-input-remapper.rules
+          sudo rm target/boot-profile/input-control/working.qcow2
       - name: Measure candidate installed-disk cold boots
         timeout-minutes: 20
         run: |

@@ -148,6 +148,27 @@ def ssh(port, key, command, timeout=15):
     return subprocess.run(ssh_command(port,key,command),capture_output=True,text=True,timeout=timeout)
 
 
+def install_reference_rule(port, key, rule):
+    """Override one packaged rule on the disposable overlay after provisioning."""
+    name = rule.name
+    if not re.fullmatch(r'[A-Za-z0-9_-]+[.]rules', name):
+        raise ValueError('Invalid reference rule name')
+    data = rule.read_bytes()
+    if not 0 < len(data) <= 16384:
+        raise ValueError('Invalid reference rule size')
+    encoded = base64.b64encode(data).decode()
+    directory = '/etc/udev/rules.d'
+    destination = f'{directory}/{name}'
+    # Require a genuine A/B difference and never replace an administrator override.
+    command = (f'set -eu; test -f /usr/lib/udev/rules.d/{name}; '
+               f'test ! -e {destination}; test ! -L {destination}; install -d {directory}; '
+               f'echo {encoded} | base64 -d > {destination}; '
+               f'restorecon {destination}; cmp -s {destination} /usr/lib/udev/rules.d/{name} && exit 1; exit 0')
+    reply = ssh(port, key, command)
+    if reply.returncode:
+        raise RuntimeError('Could not install a distinct control rule on the disposable test disk: ' + reply.stderr)
+
+
 def kernel_origin_bounds(readings):
     """Bound the guest kernel's monotonic zero on the host's power-on timeline."""
     if not readings:
@@ -297,6 +318,8 @@ def boot(args, disk, variables, key, index, runtime):
             if (setup.returncode or cmdline.split().count('bluetooth.disable_ertm=1') != 1
                     or 'No karg changes needed' not in messages or kernels != 1):
                 raise RuntimeError('Expected one setup boot with the Bluetooth default present at kernel start')
+        if index == 0 and args.reference_udev_rule:
+            install_reference_rule(port, key, args.reference_udev_rule)
         sessions = ssh(port,key,"loginctl list-sessions --no-legend | while read -r sid rest; do loginctl show-session \"$sid\" -p Type -p Class; echo; done")
         for session in sessions.stdout.split('\n\n'):
             fields=properties(session)
@@ -345,6 +368,8 @@ def main():
     parser.add_argument('--memory',type=int,default=8192); parser.add_argument('--timeout',type=int,default=240)
     parser.add_argument('--setup-timeout', type=int, default=600,
         help='Time limit for the excluded setup sequence including any deployment reboot')
+    parser.add_argument('--reference-udev-rule', type=Path,
+        help='Install a control rule in the disposable VM after its excluded first boot')
     parser.add_argument('--check-trust-refresh',action='store_true',
         help='Require trust regeneration on the initial boot and no regeneration on subsequent boots')
     parser.add_argument('--check-install-bluetooth', action='store_true',
@@ -381,6 +406,8 @@ def main():
         secure_boot=False,host_page_cache='uncontrolled',cpus=args.cpus,memory_mib=args.memory,first_boot_excluded=True,
         boot_state='Successful normal boot seeded between samples; trial counters untouched',
         median_ms=statistics.median(times),min_ms=min(times),max_ms=max(times),samples=samples)
+    if args.reference_udev_rule:
+        report['reference_udev_rule'] = args.reference_udev_rule.name
     (args.output/'summary.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps({k:v for k,v in report.items() if k!='samples'}),flush=True)
 

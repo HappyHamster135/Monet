@@ -100,6 +100,38 @@ class NfsReadAhead(unittest.TestCase):
             self.assertEqual(rule.read_text(), newer)
 
 
+class InputRemapperColdplug(unittest.TestCase):
+    original = ('ACTION=="add", SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_PATH}!="platform-sound", '
+                'ATTRS{phys}!="input-remapper*", '
+                'RUN+="/bin/input-remapper-control --command autoload --device $env{DEVNAME}"\n')
+
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name)
+        self.rule = self.root / 'usr/lib/udev/rules.d/99-input-remapper.rules'
+        self.rule.parent.mkdir(parents=True)
+
+    def test_bus_guard_preserves_hotplug_command_and_vendor_device_filters(self):
+        self.rule.write_text('# vendor notes\n' + self.original)
+        for _ in range(2):
+            boot.prepare_input_remapper(self.root)
+            expected = self.original.replace('RUN+=', 'TEST=="/run/dbus/system_bus_socket", RUN+=')
+            self.assertEqual(self.rule.read_text(), '# vendor notes\n' + expected)
+
+    def test_other_rules_and_symlinks_are_preserved(self):
+        changed = self.original + 'SUBSYSTEM=="sound", TAG+="systemd"\n'
+        self.rule.write_text(changed)
+        boot.prepare_input_remapper(self.root)
+        self.assertEqual(self.rule.read_text(), changed)
+        target = self.root / 'custom.rules'
+        target.write_text(self.original)
+        self.rule.unlink()
+        self.rule.symlink_to(target)
+        boot.prepare_input_remapper(self.root)
+        self.assertEqual(target.read_text(), self.original)
+
+
 class TrustRefreshLifecycle(unittest.TestCase):
     LEGACY = """[Unit]
 ConditionPathIsMountPoint=/sysroot

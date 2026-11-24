@@ -160,6 +160,21 @@ def autoload_config(text):
     return '\n'.join(lines) + '\n'
 
 
+def prepare_input_remapper(root):
+    """Skip the per-device autoload client until its system bus exists."""
+    rule = root / 'usr/lib/udev/rules.d/99-input-remapper.rules'
+    if rule.is_symlink() or not rule.is_file():
+        return
+    original = ('ACTION=="add", SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_PATH}!="platform-sound", '
+                'ATTRS{phys}!="input-remapper*", '
+                'RUN+="/bin/input-remapper-control --command autoload --device $env{DEVNAME}"')
+    lines = rule.read_text().splitlines(keepends=True)
+    if [line.strip() for line in lines if line.strip() and not line.lstrip().startswith('#')] == [original]:
+        guarded = original.replace('RUN+=', 'TEST=="/run/dbus/system_bus_socket", RUN+=')
+        rule.write_text(''.join(line.replace(original, guarded) if line.strip() == original else line
+                                for line in lines))
+
+
 def prepare(root):
     root = Path(root)
     # The NFS client gives its backing devices anonymous major:minor names.
@@ -169,6 +184,7 @@ def prepare(root):
     original = 'SUBSYSTEM=="bdi", ACTION=="add", PROGRAM="/usr/libexec/nfsrahead %k", ATTR{read_ahead_kb}="%c"'
     if not rule.is_symlink() and rule.is_file() and rule.read_text().strip() == original:
         rule.write_text(original.replace('PROGRAM=', 'KERNEL=="0:*", PROGRAM=') + '\n')
+    prepare_input_remapper(root)
     prepare_trust(root)
     prepare_wifi(root)
     prepare_hardware(root)
