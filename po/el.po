@@ -14938,3 +14938,206 @@ msgstr ""
 #: linux/share/monet/utilities/recordings.py:493
 msgid "Could not record the screen."
 msgstr ""
+
+#: linux/share/monet/utilities/actions.py:59
+msgid "End or restart a process"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:60 linux/share/monet/utilities/ports.py:211
+msgid "Listening ports"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:36 linux/share/monet/utilities/ports.py:44
+msgid "Process tree"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:40 linux/share/monet/utilities/ports.py:130
+msgid "Port"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:43 linux/share/monet/utilities/ports.py:130 linux/share/monet/utilities/ports.py:131
+msgid "Process"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:43 linux/share/monet/utilities/ports.py:130 linux/share/monet/utilities/ports.py:131
+msgid "PID"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:56
+msgid "Include child processes"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:59
+msgid "Restart app…"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:60
+msgid "Available for an app with a matching launcher."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:61
+msgid "End process…"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:62
+msgid "Force quit…"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:86
+msgid ""
+"This selection includes a protected process or a process owned by another user."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:97
+msgid "Restart app"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:97
+msgid "Force quit"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:97
+msgid "End process"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:99
+msgid "Force quit %1 (PID %2)?"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:99
+msgid "Ask %1 (PID %2) to quit?"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:101
+msgid "Quit and reopen %1 (PID %2)?"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:105
+msgid "This applies to %1 processes, including children."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:107
+msgid "Monet will reopen the app from its launcher after this process exits."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:109
+msgid ""
+"The selected processes will stop immediately. Unsaved work can be lost."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:111
+msgid "Save any work you want to keep before continuing."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:130
+msgid "Protocol"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:130
+msgid "Local address"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:157
+msgid "Owner unavailable"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:202
+msgid "Find a port, address or process…"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:202
+msgid "Find a process by name or PID…"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:211
+msgid "Running processes"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:234
+msgid "Manage process…"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:266
+msgid "Reading listening ports…"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:266
+msgid "Reading processes…"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:278
+msgid "Could not read listening ports."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:278
+msgid "Could not read processes."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:293
+msgid "No matching ports."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:293
+msgid "No matching processes."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:295
+msgid "No listening ports."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:295
+msgid "No running processes found."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:311
+msgid "The process or port changed. The list has been refreshed."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:348
+msgid "Waiting for the app to restart…"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:348
+msgid "Sending the quit request…"
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:360
+msgid "The app was relaunched."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:361
+msgid "The app is still running. Check it for a save or quit prompt."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:362
+msgid "The app’s launcher is unavailable."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:363
+msgid "The process exited, but its app could not be reopened."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:368
+msgid "Sent the force-quit request."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:368
+msgid "Asked the process to quit."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:370
+msgid "Sent force-quit requests to %1 processes."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:370
+msgid "Asked %1 processes to quit."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:373
+msgid "%1 could no longer be reached."
+msgstr ""
+
+#: linux/share/monet/utilities/ports.py:377
+msgid ""
+"The process changed or could not be stopped. Review the refreshed list."
+msgstr ""

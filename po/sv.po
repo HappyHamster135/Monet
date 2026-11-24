@@ -14893,3 +14893,210 @@ msgstr "Inspelningen avbröts."
 #: linux/share/monet/utilities/recordings.py:493
 msgid "Could not record the screen."
 msgstr "Det gick inte att spela in skärmen."
+
+#: linux/share/monet/utilities/actions.py:59
+msgid "End or restart a process"
+msgstr "Avsluta eller starta om en process"
+
+#: linux/share/monet/utilities/actions.py:60 linux/share/monet/utilities/ports.py:211
+msgid "Listening ports"
+msgstr "Lyssnande portar"
+
+#: linux/share/monet/utilities/ports.py:36 linux/share/monet/utilities/ports.py:44
+msgid "Process tree"
+msgstr "Processträd"
+
+#: linux/share/monet/utilities/ports.py:40 linux/share/monet/utilities/ports.py:130
+msgid "Port"
+msgstr "Port"
+
+#: linux/share/monet/utilities/ports.py:43 linux/share/monet/utilities/ports.py:130 linux/share/monet/utilities/ports.py:131
+msgid "Process"
+msgstr "Process"
+
+#: linux/share/monet/utilities/ports.py:43 linux/share/monet/utilities/ports.py:130 linux/share/monet/utilities/ports.py:131
+msgid "PID"
+msgstr "PID"
+
+#: linux/share/monet/utilities/ports.py:56
+msgid "Include child processes"
+msgstr "Inkludera underprocesser"
+
+#: linux/share/monet/utilities/ports.py:59
+msgid "Restart app…"
+msgstr "Starta om appen…"
+
+#: linux/share/monet/utilities/ports.py:60
+msgid "Available for an app with a matching launcher."
+msgstr "Tillgängligt för appar som har en matchande startpost."
+
+#: linux/share/monet/utilities/ports.py:61
+msgid "End process…"
+msgstr "Avsluta processen…"
+
+#: linux/share/monet/utilities/ports.py:62
+msgid "Force quit…"
+msgstr "Tvångsavsluta…"
+
+#: linux/share/monet/utilities/ports.py:86
+msgid ""
+"This selection includes a protected process or a process owned by another user."
+msgstr ""
+"Markeringen innehåller en skyddad process eller en process som tillhör en annan användare."
+
+#: linux/share/monet/utilities/ports.py:97
+msgid "Restart app"
+msgstr "Starta om appen"
+
+#: linux/share/monet/utilities/ports.py:97
+msgid "Force quit"
+msgstr "Tvångsavsluta"
+
+#: linux/share/monet/utilities/ports.py:97
+msgid "End process"
+msgstr "Avsluta processen"
+
+#: linux/share/monet/utilities/ports.py:99
+msgid "Force quit %1 (PID %2)?"
+msgstr "Tvångsavsluta %1 (PID %2)?"
+
+#: linux/share/monet/utilities/ports.py:99
+msgid "Ask %1 (PID %2) to quit?"
+msgstr "Be %1 (PID %2) att avsluta?"
+
+#: linux/share/monet/utilities/ports.py:101
+msgid "Quit and reopen %1 (PID %2)?"
+msgstr "Avsluta och öppna %1 (PID %2) igen?"
+
+#: linux/share/monet/utilities/ports.py:105
+msgid "This applies to %1 processes, including children."
+msgstr "Detta gäller %1 processer, inklusive underprocesser."
+
+#: linux/share/monet/utilities/ports.py:107
+msgid "Monet will reopen the app from its launcher after this process exits."
+msgstr "Monet öppnar appen från dess startpost när processen har avslutats."
+
+#: linux/share/monet/utilities/ports.py:109
+msgid ""
+"The selected processes will stop immediately. Unsaved work can be lost."
+msgstr ""
+"De valda processerna stoppas omedelbart. Osparat arbete kan gå förlorat."
+
+#: linux/share/monet/utilities/ports.py:111
+msgid "Save any work you want to keep before continuing."
+msgstr "Spara det arbete du vill behålla innan du fortsätter."
+
+#: linux/share/monet/utilities/ports.py:130
+msgid "Protocol"
+msgstr "Protokoll"
+
+#: linux/share/monet/utilities/ports.py:130
+msgid "Local address"
+msgstr "Lokal adress"
+
+#: linux/share/monet/utilities/ports.py:157
+msgid "Owner unavailable"
+msgstr "Okänd ägare"
+
+#: linux/share/monet/utilities/ports.py:202
+msgid "Find a port, address or process…"
+msgstr "Sök efter en port, adress eller process…"
+
+#: linux/share/monet/utilities/ports.py:202
+msgid "Find a process by name or PID…"
+msgstr "Sök efter processnamn eller PID…"
+
+#: linux/share/monet/utilities/ports.py:211
+msgid "Running processes"
+msgstr "Processer som körs"
+
+#: linux/share/monet/utilities/ports.py:234
+msgid "Manage process…"
+msgstr "Hantera processen…"
+
+#: linux/share/monet/utilities/ports.py:266
+msgid "Reading listening ports…"
+msgstr "Läser av lyssnande portar…"
+
+#: linux/share/monet/utilities/ports.py:266
+msgid "Reading processes…"
+msgstr "Läser in processer…"
+
+#: linux/share/monet/utilities/ports.py:278
+msgid "Could not read listening ports."
+msgstr "Det gick inte att läsa av lyssnande portar."
+
+#: linux/share/monet/utilities/ports.py:278
+msgid "Could not read processes."
+msgstr "Det gick inte att läsa in processerna."
+
+#: linux/share/monet/utilities/ports.py:293
+msgid "No matching ports."
+msgstr "Inga portar matchar sökningen."
+
+#: linux/share/monet/utilities/ports.py:293
+msgid "No matching processes."
+msgstr "Inga processer matchar sökningen."
+
+#: linux/share/monet/utilities/ports.py:295
+msgid "No listening ports."
+msgstr "Inga lyssnande portar."
+
+#: linux/share/monet/utilities/ports.py:295
+msgid "No running processes found."
+msgstr "Hittade inga processer som körs."
+
+#: linux/share/monet/utilities/ports.py:311
+msgid "The process or port changed. The list has been refreshed."
+msgstr "Processen eller porten har ändrats. Listan har uppdaterats."
+
+#: linux/share/monet/utilities/ports.py:348
+msgid "Waiting for the app to restart…"
+msgstr "Väntar på att appen ska starta om…"
+
+#: linux/share/monet/utilities/ports.py:348
+msgid "Sending the quit request…"
+msgstr "Skickar begäran om avslut…"
+
+#: linux/share/monet/utilities/ports.py:360
+msgid "The app was relaunched."
+msgstr "Appen har startats om."
+
+#: linux/share/monet/utilities/ports.py:361
+msgid "The app is still running. Check it for a save or quit prompt."
+msgstr ""
+"Appen körs fortfarande. Kontrollera om den frågar om du vill spara eller avsluta."
+
+#: linux/share/monet/utilities/ports.py:362
+msgid "The app’s launcher is unavailable."
+msgstr "Appens startpost är inte tillgänglig."
+
+#: linux/share/monet/utilities/ports.py:363
+msgid "The process exited, but its app could not be reopened."
+msgstr "Processen avslutades, men appen kunde inte öppnas igen."
+
+#: linux/share/monet/utilities/ports.py:368
+msgid "Sent the force-quit request."
+msgstr "Begäran om tvångsavslut har skickats."
+
+#: linux/share/monet/utilities/ports.py:368
+msgid "Asked the process to quit."
+msgstr "Processen har ombetts att avsluta."
+
+#: linux/share/monet/utilities/ports.py:370
+msgid "Sent force-quit requests to %1 processes."
+msgstr "Begäran om tvångsavslut har skickats till %1 processer."
+
+#: linux/share/monet/utilities/ports.py:370
+msgid "Asked %1 processes to quit."
+msgstr "%1 processer har ombetts att avsluta."
+
+#: linux/share/monet/utilities/ports.py:373
+msgid "%1 could no longer be reached."
+msgstr "%1 gick inte längre att nå."
+
+#: linux/share/monet/utilities/ports.py:377
+msgid ""
+"The process changed or could not be stopped. Review the refreshed list."
+msgstr ""
+"Processen har ändrats eller kunde inte stoppas. Kontrollera den uppdaterade listan."

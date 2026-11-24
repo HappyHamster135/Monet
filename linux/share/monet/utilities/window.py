@@ -413,8 +413,9 @@ class Window(QMainWindow):
                 self.issue("Link copied." if key == "clean" else "Plain text copied.")
             except ValueError as error:
                 self.issue(str(error))
-        elif key == "ports":
-            self.output_page(key, ["ss", "-lntup"])
+        elif key in ("ports", "process-control"):
+            from ports import ProcessBrowser
+            self.page(key, lambda: ProcessBrowser(self, key == "ports")).refresh()
         elif key == "fans":
             import shutil
             if shutil.which("coolercontrol"):
@@ -490,6 +491,11 @@ class Window(QMainWindow):
             self.run_tool(key)
 
     def closeEvent(self, event):
+        if any(getattr(page, "applying_action", False) for page in self.pages.values()):
+            self.close_after_process_action = True
+            self.hide()
+            event.ignore()
+            return
         editor = self.pages.get("recordings")
         if editor and editor.recorder:
             # Spectacle still owns the active recording. Keep its process alive
