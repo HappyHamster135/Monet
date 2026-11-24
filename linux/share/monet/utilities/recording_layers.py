@@ -96,32 +96,61 @@ class Layer:
         return max(1., self.amount * height / 2000)
 
 
-def paint_stamps(painter, size, layers, source_size):
+def blur_patches(frame, size, layers, source_size):
+    """Build only the rectangles that need a blur, in their stacking order."""
+    patches = {}
+    if frame.isNull():
+        return patches
+    placed = []
+    scale_x = frame.width() / size.width()
+    scale_y = frame.height() / size.height()
     for layer in layers:
         rect = pixel_rect(layer.box, size)
-        original = pixel_rect(layer.box, source_size)
-        painter.drawImage(rect, layer.stamp(original.size()))
+        if layer.kind == "blur":
+            source = QRectF(rect.x() * scale_x, rect.y() * scale_y, rect.width() * scale_x, rect.height() * scale_y)
+            patch = QImage(rect.size(), QImage.Format_RGBA8888)
+            patch.fill(Qt.black)
+            painter = QPainter(patch)
+            painter.setRenderHint(QPainter.SmoothPixmapTransform)
+            painter.drawImage(QRectF(patch.rect()), frame, source)
+            painter.translate(-rect.topLeft())
+            for previous, image in placed:
+                if rect.intersects(previous):
+                    painter.drawImage(previous, image)
+            painter.end()
+            pixels = Image.frombuffer("RGBA", (patch.width(), patch.height()), patch.constBits(),
+                                      "raw", "RGBA", patch.bytesPerLine(), 1)
+            blurred = pixels.filter(ImageFilter.GaussianBlur(layer.sigma(size.height())))
+            data = blurred.tobytes()
+            image = QImage(data, patch.width(), patch.height(), patch.width() * 4, QImage.Format_RGBA8888).copy()
+            patches[layer] = image
+        else:
+            image = layer.stamp(pixel_rect(layer.box, source_size).size())
+        placed.append((rect, image))
+    return patches
+
+
+def paint_layers(painter, size, layers, source_size, patches):
+    for layer in layers:
+        rect = pixel_rect(layer.box, size)
+        if layer.kind == "blur":
+            image = patches.get(layer)
+            if image is None:
+                painter.fillRect(rect, Qt.black)
+                continue
+        else:
+            image = layer.stamp(pixel_rect(layer.box, source_size).size())
+        painter.drawImage(rect, image)
 
 
 def composed(frame, size, layers, source_size):
-    """Paint in order, including anything underneath a later blur region."""
+    """Composite a still for the placement dialog."""
     canvas = frame.scaled(size, Qt.IgnoreAspectRatio, Qt.SmoothTransformation).convertToFormat(QImage.Format_RGBA8888)
-    if canvas.isNull():
-        return canvas
-    for layer in layers:
-        if layer.kind == "blur":
-            rect = pixel_rect(layer.box, size)
-            patch = canvas.copy(rect)
-            raw = Image.frombytes("RGBA", (patch.width(), patch.height()), patch.constBits().tobytes())
-            blurred = raw.filter(ImageFilter.GaussianBlur(layer.sigma(size.height())))
-            buf = blurred.tobytes()
-            image = QImage(buf, patch.width(), patch.height(), patch.width() * 4, QImage.Format_RGBA8888)
-            painter = QPainter(canvas)
-            painter.drawImage(rect.topLeft(), image)
-        else:
-            painter = QPainter(canvas)
-            painter.setRenderHint(QPainter.SmoothPixmapTransform)
-            paint_stamps(painter, size, (layer,), source_size)
+    if not canvas.isNull():
+        patches = blur_patches(canvas, size, layers, source_size) if any(l.kind == "blur" for l in layers) else {}
+        painter = QPainter(canvas)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform)
+        paint_layers(painter, size, layers, source_size, patches)
         painter.end()
     return canvas
 

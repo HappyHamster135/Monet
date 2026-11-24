@@ -6,14 +6,14 @@ from uuid import uuid4
 
 from shiboken6 import isValid
 from PySide6.QtCore import QProcess, QRectF, QSettings, QSignalBlocker, QSize, QStandardPaths, Qt, QTimer, QUrl
-from PySide6.QtGui import QBrush, QColor, QIcon, QImage, QPainter, QPainterPath, QPen
+from PySide6.QtGui import QBrush, QColor, QIcon, QPainter, QPainterPath, QPen
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
-from PySide6.QtMultimediaWidgets import QGraphicsVideoItem
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog, QGraphicsScene,
     QGraphicsView, QHBoxLayout, QLabel, QMenu, QProgressBar, QPushButton, QSizePolicy, QSlider, QStyle, QToolButton, QVBoxLayout, QWidget)
 
 from actions import tr
 from recording_export import ExportFile, export_command
+from recording_preview import PreviewVideo
 
 
 def clock(ms):
@@ -26,7 +26,7 @@ class Picture(QGraphicsView):
     def __init__(self):
         super().__init__()
         self.setScene(QGraphicsScene(self))
-        self.video = QGraphicsVideoItem()
+        self.video = PreviewVideo(lambda: any(layer.kind == "blur" for layer in self.active_layers()))
         self.scene().addItem(self.video)
         self.video.nativeSizeChanged.connect(self.fit)
         self.setBackgroundBrush(QBrush(QColor("#171717")))
@@ -36,17 +36,16 @@ class Picture(QGraphicsView):
         self.origin = None
         self.layers = []
         self.blur_key = None
-        self.blur_preview = QImage()
+        self.blur_patches = {}
         self.playhead = 0
         self.crop = None
         self.choosing = False
         self.changed = lambda: None
 
-    def fit(self, size=None):
+    def fit(self):
         size = self.video.nativeSize()
         if size.isEmpty():
             return
-        self.video.setSize(size)
         self.setSceneRect(QRectF(0, 0, size.width(), size.height()))
         self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)
 
@@ -70,11 +69,17 @@ class Picture(QGraphicsView):
         painter.setBrush(Qt.NoBrush)
         painter.drawRect(selection)
 
+    def active_layers(self):
+        if not self.video.frame.isValid():
+            return []
+        ms = self.video.frame.startTime() // 1000
+        if ms < 0:
+            ms = self.playhead
+        return [layer for layer in self.layers if layer.start <= ms < layer.end]
+
     def draw_layers(self, painter):
-        from recording_layers import composed, paint_stamps, pixel_rect
-        frame = self.video.videoSink().videoFrame()
-        ms = frame.startTime() // 1000 if frame.isValid() and frame.startTime() >= 0 else self.playhead
-        layers = [layer for layer in self.layers if layer.start <= ms < layer.end]
+        from recording_layers import blur_patches, paint_layers
+        layers = self.active_layers()
         if not layers:
             return
         size = self.sceneRect().size().toSize()
@@ -82,31 +87,23 @@ class Picture(QGraphicsView):
             return
         painter.save()
         painter.setRenderHint(QPainter.SmoothPixmapTransform)
-        paint_stamps(painter, size, (layer for layer in layers if layer.kind != "blur"), size)
-        regions = [layer for layer in layers if layer.kind == "blur"]
-        if regions:
-            # Read back video only while a blur is actually visible. Bound the
-            # interactive composite to the preview resolution, never the export.
+        if any(layer.kind == "blur" for layer in layers):
             limit = self.viewport().size().boundedTo(QSize(1200, 800))
             preview = size.scaled(limit, Qt.KeepAspectRatio).expandedTo(QSize(1, 1))
-            key = (frame.startTime(), size, preview, tuple(layers))
-            if frame.startTime() < 0 or key != self.blur_key:
-                self.blur_preview = composed(frame.toImage(), preview, layers, size)
+            key = (self.video.frame_number, size, preview, tuple(layers))
+            if key != self.blur_key:
+                frame = self.video.image
+                if frame.isNull():
+                    frame = self.video.snapshot(preview)
+                self.blur_patches = blur_patches(frame, preview, layers, size)
                 self.blur_key = key
-            # The cached composite includes layers above and below each blur.
-            # Keep the rest of the original video and lettering at native resolution.
-            for layer in regions:
-                rect = pixel_rect(layer.box, size)
-                if self.blur_preview.isNull():
-                    painter.fillRect(rect, Qt.black)
-                else:
-                    painter.drawImage(rect, self.blur_preview, pixel_rect(layer.box, preview))
+        paint_layers(painter, size, layers, size, self.blur_patches)
         painter.restore()
 
     def set_layers(self, layers):
         self.layers = layers
         self.blur_key = None
-        self.blur_preview = QImage()
+        self.blur_patches = {}
         self.viewport().update()
 
     def choose(self, on):
@@ -205,10 +202,11 @@ class Recordings(QWidget):
         self.player = QMediaPlayer(self)
         self.audio = QAudioOutput(self)
         self.player.setAudioOutput(self.audio)
-        self.player.setVideoOutput(self.picture.video)
+        self.player.setVideoSink(self.picture.video.videoSink())
         self.player.durationChanged.connect(self.set_duration)
         self.player.positionChanged.connect(self.position)
         self.player.mediaStatusChanged.connect(self.state_changed)
+        self.picture.video.nativeSizeChanged.connect(self.controls)
         self.player.hasVideoChanged.connect(lambda *_: self.controls())
         self.player.hasAudioChanged.connect(lambda *_: self.controls())
         self.player.errorOccurred.connect(lambda _, why: self.message.setText(why))
@@ -301,6 +299,9 @@ class Recordings(QWidget):
         self.browse.setEnabled(free)
         self.record.setEnabled(free)
         self.editor.setEnabled(free and self.file is not None and self.duration > 0 and self.player.hasVideo())
+        has_picture = not self.picture.video.nativeSize().isEmpty()
+        self.crop_button.setEnabled(has_picture)
+        self.overlays.setEnabled(has_picture)
         self.mute.setEnabled(self.player.hasAudio())
         self.reset.setVisible(self.picture.crop is not None)
 
@@ -426,7 +427,7 @@ class Recordings(QWidget):
         from recording_layer_editor import LayerDialog
         from recording_layers import Layer
         self.player.pause()
-        frame = self.picture.video.videoSink().videoFrame().toImage()
+        frame = self.picture.video.snapshot(QSize(920, 500))
         size = self.picture.video.nativeSize().toSize()
         if frame.isNull() or size.isEmpty():
             self.message.setText(tr("Play or seek to a frame before adding an overlay."))
