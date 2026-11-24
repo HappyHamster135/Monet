@@ -16056,3 +16056,37 @@ msgstr ""
 #: linux/share/monet/utilities/recording_layer_editor.py:156
 msgid "Layer order"
 msgstr ""
+
+#: image/window-identity/plainpaste.cpp:33 linux/share/monet/utilities/plain_paste.py:213
+msgid "Paste as plain text"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:35
+msgid "Paste as plain text shortcut"
+msgstr ""
+
+#: linux/share/monet/utilities/plain_paste.py:24 linux/share/monet/utilities/plain_paste.py:52
+msgid "Could not read the clipboard."
+msgstr ""
+
+#: linux/share/monet/utilities/plain_paste.py:35 linux/share/monet/utilities/plain_paste.py:39 linux/share/monet/utilities/plain_paste.py:47
+#: linux/share/monet/utilities/plain_paste.py:57
+msgid "Copy some text first."
+msgstr ""
+
+#: linux/share/monet/utilities/plain_paste.py:138 linux/share/monet/utilities/plain_paste.py:182 linux/share/monet/utilities/plain_paste.py:190
+#: linux/share/monet/utilities/plain_paste.py:211
+msgid "This field could not accept the paste."
+msgstr ""
+
+#: linux/share/monet/utilities/plain_paste.py:146
+msgid "Focus an editable text field and try again."
+msgstr ""
+
+#: linux/share/monet/utilities/plain_paste.py:165 linux/share/monet/utilities/plain_paste.py:169 linux/share/monet/utilities/plain_paste.py:188
+msgid "The focused field changed. Try pasting again."
+msgstr ""
+
+#: linux/share/monet/utilities/plain_paste.py:192 linux/share/monet/utilities/plain_paste.py:196 linux/share/monet/utilities/plain_paste.py:198
+msgid "The field changed during paste. Check its contents."
+msgstr ""

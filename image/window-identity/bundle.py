@@ -11,6 +11,7 @@ import sys
 import tempfile
 
 PLUGIN = "monet_window_identity.so"
+PASTE_PLUGIN = "monet_plain_paste.so"
 EXECUTABLE = "/usr/bin/kwin_wayland"
 
 
@@ -43,13 +44,13 @@ def capture():
     names = {"kwin-common"}
     for path in {EXECUTABLE, str(library), *re.findall(r"(?:=>\s+|^\s*)(/\S+)", linked, re.M)}:
         names.update(run("rpm", "-qf", "--qf", "%{NAME}.%{ARCH}\n", str(Path(path).resolve())).splitlines())
-    return {"schema": 1, "path": str(plugin_directory() / PLUGIN), "library": str(library),
+    return {"schema": 2, "path": str(plugin_directory() / PLUGIN), "library": str(library),
             "library_sha256": digest(library), "executable_sha256": digest(EXECUTABLE),
             "package_names": sorted(names), "packages": packages(sorted(names))}
 
 
 def verify(manifest):
-    if manifest.get("schema") != 1 or not re.fullmatch(
+    if manifest.get("schema") not in (1, 2) or not re.fullmatch(
             r"/usr/lib(?:64)?/qt6/plugins/kwin/plugins/" + re.escape(PLUGIN), manifest.get("path", "")):
         raise ValueError("Invalid window identity plugin destination")
     if not re.fullmatch(r"/usr/lib(?:64)?/libkwin\.so\.\d+(?:\.\d+)*", manifest.get("library", "")):
@@ -83,23 +84,28 @@ def atomic_copy(source, target, mode):
 def seal(bundle):
     manifest = json.loads((bundle / "runtime.json").read_text())
     verify(manifest)
-    dynamic = run("readelf", "-d", str(bundle / PLUGIN))
-    if "(RPATH)" in dynamic or "(RUNPATH)" in dynamic:
-        raise ValueError("Window identity plugin must not contain build-time library paths")
-    manifest["files"] = {name: digest(bundle / name) for name in (PLUGIN, "source.tar.xz")}
+    plugins = (PLUGIN, PASTE_PLUGIN) if manifest["schema"] == 2 else (PLUGIN,)
+    for plugin in plugins:
+        dynamic = run("readelf", "-d", str(bundle / plugin))
+        if "(RPATH)" in dynamic or "(RUNPATH)" in dynamic:
+            raise ValueError("Window identity plugin must not contain build-time library paths")
+    manifest["files"] = {name: digest(bundle / name) for name in (*plugins, "source.tar.xz")}
     (bundle / "runtime.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
 
 def install(bundle):
     manifest = json.loads((bundle / "runtime.json").read_text())
     verify(manifest)
-    for name in (PLUGIN, "source.tar.xz"):
+    plugins = (PLUGIN, PASTE_PLUGIN) if manifest["schema"] == 2 else (PLUGIN,)
+    for name in (*plugins, "source.tar.xz"):
         if digest(bundle / name) != manifest["files"][name]:
             raise ValueError("Damaged window identity bundle: " + name)
-    linked = run("ldd", "-r", str(bundle / PLUGIN))
-    if "not found" in linked or "undefined symbol" in linked:
-        raise ValueError("Window identity plugin has unresolved dependencies")
-    atomic_copy(bundle / PLUGIN, Path(manifest["path"]), 0o755)
+    for plugin in plugins:
+        linked = run("ldd", "-r", str(bundle / plugin))
+        if "not found" in linked or "undefined symbol" in linked:
+            raise ValueError("Window identity plugin has unresolved dependencies")
+    for plugin in plugins:
+        atomic_copy(bundle / plugin, Path(manifest["path"]).with_name(plugin), 0o755)
     docs = Path("/usr/share/doc/monet-window-identity")
     docs.mkdir(parents=True, exist_ok=True)
     for name in ("source.tar.xz", "runtime.json", "README.md"):

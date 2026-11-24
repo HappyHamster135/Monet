@@ -32,6 +32,7 @@ ACTIONS = {
     "notes": Action(N_("Scratchpad"), "Writing notes pads Markdown", "accessories-text-editor"),
     "snippets": Action(N_("Text snippets"), "Writing", "edit-paste"),
     "clipboard": Action(N_("Clipboard history"), "Writing", "edit-paste", ("qdbus-qt6", "org.kde.klipper", "/klipper", "org.kde.klipper.klipper.showKlipperPopupMenu")),
+    "paste-shortcut": Action(N_("Paste as plain text shortcut"), "Writing", "edit-paste", ("kcmshell6", "kcm_keys")),
     "plain": Action(N_("Copy as plain text"), "Writing", "edit-copy"),
     "link-settings": Action(N_("Copied link settings"), "Writing", "preferences-system"),
     "clean": Action(N_("Clean a copied link"), "Writing", "edit-clear"),

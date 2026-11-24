@@ -42,3 +42,9 @@ VM fixtures in `prototypes/window-identity` build this same source and use an is
 nested compositor. They check identical windows, stale IDs, ambiguous IDs across separate
 Wayland connections, native editor capture and cancellation. The VM's system compositor
 does not need replacing for those checks.
+
+The same ABI-checked bundle also installs `monet_plain_paste.so`. It handles
+the desktop’s Paste as plain text shortcut. Browsers with a native matching-style
+command and Konsole receive their own paste shortcut in the focused window.
+Other editable controls use an on-demand Utilities helper. The plugin exposes
+no D-Bus input method.

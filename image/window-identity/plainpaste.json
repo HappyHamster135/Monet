@@ -1,0 +1,8 @@
+{
+  "KPlugin": {
+    "Name": "Monet plain-text paste",
+    "Description": "Paste without formatting in the focused application",
+    "License": "GPL-3.0-or-later",
+    "EnabledByDefault": true
+  }
+}

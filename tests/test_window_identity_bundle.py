@@ -73,10 +73,11 @@ class WindowIdentityBundle(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     bundle.capture()
 
-    def make_bundle(self, folder):
-        for name in (bundle.PLUGIN,"source.tar.xz"):
+    def make_bundle(self, folder, schema=1):
+        names = (bundle.PLUGIN, "source.tar.xz") if schema == 1 else (bundle.PLUGIN, bundle.PASTE_PLUGIN, "source.tar.xz")
+        for name in names:
             (folder/name).write_bytes(b"original")
-        manifest = dict(self.manifest,files={name:"original" for name in (bundle.PLUGIN,"source.tar.xz")})
+        manifest = dict(self.manifest, schema=schema, files={name:"original" for name in names})
         (folder/"runtime.json").write_text(json.dumps(manifest))
 
     def test_damaged_binary_or_source_never_installs_any_file(self):
@@ -100,6 +101,21 @@ class WindowIdentityBundle(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError,"unresolved dependencies"):
                         bundle.install(folder)
                     copy.assert_not_called()
+
+    def test_second_plugin_must_be_intact_and_resolve_before_either_is_installed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            self.make_bundle(folder, schema=2)
+            with patch.object(bundle, "verify"), patch.object(bundle, "atomic_copy") as copy, \
+                    patch.object(bundle, "digest", side_effect=lambda path: Path(path).read_text()):
+                (folder / bundle.PASTE_PLUGIN).write_text("damaged")
+                with self.assertRaisesRegex(ValueError, bundle.PASTE_PLUGIN):
+                    bundle.install(folder)
+                (folder / bundle.PASTE_PLUGIN).write_text("original")
+                with patch.object(bundle, "run", side_effect=["", "undefined symbol: missing"]), \
+                        self.assertRaisesRegex(ValueError, "unresolved"):
+                    bundle.install(folder)
+                copy.assert_not_called()
 
     def test_sealing_rejects_build_time_library_paths(self):
         with tempfile.TemporaryDirectory() as temporary:

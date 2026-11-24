@@ -7,7 +7,12 @@ modules = Path("@DATADIR@") / "monet/utilities"
 if not modules.is_absolute():
     modules = Path(__file__).resolve().parents[1] / "share/monet/utilities"
 sys.path.insert(0, str(modules))
-from window import main
 
 if __name__ == "__main__":
+    if sys.argv[1:2] == ["paste-plain"]:
+        from plain_paste import main
+        if len(sys.argv) == 4 and sys.argv[2].isdecimal() and sys.argv[3] in ("commit", "edit"):
+            sys.exit(main(int(sys.argv[2]), sys.argv[3]))
+        sys.exit(2)
+    from window import main
     sys.exit(main(sys.argv, "@LIBEXECDIR@"))

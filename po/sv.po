@@ -16105,3 +16105,37 @@ msgstr "Flytta framåt"
 #: linux/share/monet/utilities/recording_layer_editor.py:156
 msgid "Layer order"
 msgstr "Lagerordning"
+
+#: image/window-identity/plainpaste.cpp:33 linux/share/monet/utilities/plain_paste.py:213
+msgid "Paste as plain text"
+msgstr "Klistra in som oformaterad text"
+
+#: linux/share/monet/utilities/actions.py:35
+msgid "Paste as plain text shortcut"
+msgstr "Kortkommando för att klistra in som oformaterad text"
+
+#: linux/share/monet/utilities/plain_paste.py:24 linux/share/monet/utilities/plain_paste.py:52
+msgid "Could not read the clipboard."
+msgstr "Det gick inte att läsa urklipp."
+
+#: linux/share/monet/utilities/plain_paste.py:35 linux/share/monet/utilities/plain_paste.py:39 linux/share/monet/utilities/plain_paste.py:47
+#: linux/share/monet/utilities/plain_paste.py:57
+msgid "Copy some text first."
+msgstr "Kopiera lite text först."
+
+#: linux/share/monet/utilities/plain_paste.py:138 linux/share/monet/utilities/plain_paste.py:182 linux/share/monet/utilities/plain_paste.py:190
+#: linux/share/monet/utilities/plain_paste.py:211
+msgid "This field could not accept the paste."
+msgstr "Det gick inte att klistra in i det här fältet."
+
+#: linux/share/monet/utilities/plain_paste.py:146
+msgid "Focus an editable text field and try again."
+msgstr "Klicka i ett redigerbart textfält och försök igen."
+
+#: linux/share/monet/utilities/plain_paste.py:165 linux/share/monet/utilities/plain_paste.py:169 linux/share/monet/utilities/plain_paste.py:188
+msgid "The focused field changed. Try pasting again."
+msgstr "Ett annat fält fick fokus. Försök klistra in igen."
+
+#: linux/share/monet/utilities/plain_paste.py:192 linux/share/monet/utilities/plain_paste.py:196 linux/share/monet/utilities/plain_paste.py:198
+msgid "The field changed during paste. Check its contents."
+msgstr "Fältet ändrades under inklistringen. Kontrollera innehållet."
