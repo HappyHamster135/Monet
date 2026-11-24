@@ -14634,3 +14634,100 @@ msgstr ""
 #: linux/share/monet/utilities/calendars.py:106
 msgid "Could not remove this calendar."
 msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:34
+msgid "Could not read your output preferences."
+msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:70
+msgid ""
+"These preferences changed elsewhere. Review the new order and try again."
+msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:71
+msgid ""
+"Could not apply your output order. Check that your audio session is running and try again."
+msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:76 linux/libexec/monet-quick:9002
+msgid "Preferred output order"
+msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:77
+msgid ""
+"Choose which headphones or speakers to use when devices connect or disconnect."
+msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:80
+msgid "Manage…"
+msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:80
+msgid "Manage preferred sound outputs"
+msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:86
+msgid "Switch outputs automatically"
+msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:87
+msgid ""
+"Your first available choice plays. You can still switch manually until the next device change."
+msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:100
+msgid "%1. %2"
+msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:101
+msgid "Disconnected"
+msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:105
+msgid "Move %1 up"
+msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:109
+msgid "Move %1 down"
+msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:113
+msgid "Remove %1 from the order"
+msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:125
+msgid "Add %1 to the order"
+msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:134
+msgid "Connect an audio output, then refresh."
+msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:150
+msgid "Apply"
+msgstr ""
+
+#: linux/libexec/monet-quick:9002
+msgid "Sound · Automatic output switching"
+msgstr ""
+
+#: linux/libexec/monet-quick:9003
+msgid ""
+"preferred output order; audio device priority; automatically switch sound outputs"
+msgstr ""
+
+#: linux/libexec/monet-quick:10469
+msgid "Only one sound output is available."
+msgstr ""
+
+#: linux/libexec/monet-quick:10469
+msgid "No sound output is available."
+msgstr ""
+
+#: linux/libexec/monet-quick:10476
+msgid "The sound output could not be changed."
+msgstr ""
+
+#: linux/libexec/monet-quick:10478
+msgid "Sound output"
+msgstr ""

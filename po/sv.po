@@ -516,7 +516,7 @@ msgstr ""
 #: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/WeatherDetails.qml:296 linux/libexec/monet-files-tools:626 linux/share/monet/passwords/app.py:359
 #: linux/share/monet/passwords/app_fill.py:117 linux/share/monet/passwords/app_support_ui.py:41
 msgid "Refresh"
-msgstr ""
+msgstr "Uppdatera"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.startup/contents/ui/Startup.qml:100
 msgid "Back to startup apps"
@@ -8944,7 +8944,7 @@ msgstr ""
 
 #: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/WeatherDetails.qml:296
 msgid "Updating…"
-msgstr ""
+msgstr "Uppdaterar…"
 
 #: linux/share/plasma/plasmoids/org.monet.weather/contents/ui/WeatherStore.qml:34
 msgid "Weather is unavailable. Try again."
@@ -14607,3 +14607,100 @@ msgstr "Det gick inte att spara kalendern."
 #: linux/share/monet/utilities/calendars.py:106
 msgid "Could not remove this calendar."
 msgstr "Det gick inte att ta bort kalendern."
+
+#: linux/share/monet/settings-app/OutputOrder.qml:34
+msgid "Could not read your output preferences."
+msgstr "Det gick inte att läsa dina ljudinställningar."
+
+#: linux/share/monet/settings-app/OutputOrder.qml:70
+msgid ""
+"These preferences changed elsewhere. Review the new order and try again."
+msgstr "Inställningarna har ändrats på annat håll. Kontrollera den nya ordningen och försök igen."
+
+#: linux/share/monet/settings-app/OutputOrder.qml:71
+msgid ""
+"Could not apply your output order. Check that your audio session is running and try again."
+msgstr "Det gick inte att använda den valda ordningen. Kontrollera att ljudtjänsten körs och försök igen."
+
+#: linux/share/monet/settings-app/OutputOrder.qml:76 linux/libexec/monet-quick:9002
+msgid "Preferred output order"
+msgstr "Prioriterade ljudutgångar"
+
+#: linux/share/monet/settings-app/OutputOrder.qml:77
+msgid ""
+"Choose which headphones or speakers to use when devices connect or disconnect."
+msgstr "Välj vilka hörlurar eller högtalare som ska användas när enheter ansluts eller kopplas från."
+
+#: linux/share/monet/settings-app/OutputOrder.qml:80
+msgid "Manage…"
+msgstr "Hantera…"
+
+#: linux/share/monet/settings-app/OutputOrder.qml:80
+msgid "Manage preferred sound outputs"
+msgstr "Hantera prioriterade ljudutgångar"
+
+#: linux/share/monet/settings-app/OutputOrder.qml:86
+msgid "Switch outputs automatically"
+msgstr "Byt ljudutgång automatiskt"
+
+#: linux/share/monet/settings-app/OutputOrder.qml:87
+msgid ""
+"Your first available choice plays. You can still switch manually until the next device change."
+msgstr "Den första tillgängliga utgången används. Ett manuellt val gäller tills en enhet ansluts eller kopplas från."
+
+#: linux/share/monet/settings-app/OutputOrder.qml:100
+msgid "%1. %2"
+msgstr "%1. %2"
+
+#: linux/share/monet/settings-app/OutputOrder.qml:101
+msgid "Disconnected"
+msgstr "Frånkopplad"
+
+#: linux/share/monet/settings-app/OutputOrder.qml:105
+msgid "Move %1 up"
+msgstr "Flytta upp %1"
+
+#: linux/share/monet/settings-app/OutputOrder.qml:109
+msgid "Move %1 down"
+msgstr "Flytta ned %1"
+
+#: linux/share/monet/settings-app/OutputOrder.qml:113
+msgid "Remove %1 from the order"
+msgstr "Ta bort %1 från listan"
+
+#: linux/share/monet/settings-app/OutputOrder.qml:125
+msgid "Add %1 to the order"
+msgstr "Lägg till %1 i listan"
+
+#: linux/share/monet/settings-app/OutputOrder.qml:134
+msgid "Connect an audio output, then refresh."
+msgstr "Anslut en ljudutgång och uppdatera listan."
+
+#: linux/share/monet/settings-app/OutputOrder.qml:150
+msgid "Apply"
+msgstr "Verkställ"
+
+#: linux/libexec/monet-quick:9002
+msgid "Sound · Automatic output switching"
+msgstr "Ljud · Automatiskt byte av ljudutgång"
+
+#: linux/libexec/monet-quick:9003
+msgid ""
+"preferred output order; audio device priority; automatically switch sound outputs"
+msgstr "prioriterade ljudutgångar; prioritera ljudenheter; byt ljudutgång automatiskt"
+
+#: linux/libexec/monet-quick:10469
+msgid "Only one sound output is available."
+msgstr "Endast en ljudutgång är tillgänglig."
+
+#: linux/libexec/monet-quick:10469
+msgid "No sound output is available."
+msgstr "Ingen ljudutgång är tillgänglig."
+
+#: linux/libexec/monet-quick:10476
+msgid "The sound output could not be changed."
+msgstr "Det gick inte att byta ljudutgång."
+
+#: linux/libexec/monet-quick:10478
+msgid "Sound output"
+msgstr "Ljudutgång"

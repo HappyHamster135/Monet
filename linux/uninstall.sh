@@ -29,7 +29,7 @@ if [ "$(id -u)" -ne 0 ]; then
             -e '/^\[KDE Action Restrictions\]$/,/^\[/{/^\[KDE Action Restrictions\]$/d;/^\[/!d}' "$kdeglobals"
     fi
     systemctl --user stop monet-keep-awake.service monet-brightness.service monet-priority.service >/dev/null 2>&1 || true
-    systemctl --user disable --now monet-screenshot-ready.timer monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-this-pc.service monet-files-place.path monet-onedrive.service >/dev/null 2>&1 || true
+    systemctl --user disable --now monet-output-order.service monet-screenshot-ready.timer monet-brightness.service monet-light.timer monet-light-sync.path monet-fresh.service monet-keys.service monet-names.path monet-frames.path monet-zen.path monet-this-pc.service monet-files-place.path monet-onedrive.service >/dev/null 2>&1 || true
     computer="${XDG_DATA_HOME:-$HOME/.local/share}/monet/This PC"
     "$PREFIX/libexec/monet-quick" remove-this-pc-place >/dev/null 2>&1 || true
     if [ "$(kreadconfig6 --file dolphinrc --group General --key HomeUrl 2>/dev/null)" = "$computer" ]; then
@@ -227,7 +227,7 @@ rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/pl
 echo "Monet is removed. To also remove Monet Bridge, run \"Uninstall Monet\" in Windows."
 
 # On-demand Keep awake owns native cookies only for its process lifetime.
-rm -f /etc/systemd/user/monet-brightness.service /etc/systemd/user/monet-keep-awake.service "$PREFIX/share/dbus-1/services/org.monet.KeepAwake.service"
+rm -f /etc/systemd/user/monet-output-order.service /etc/systemd/user/monet-brightness.service /etc/systemd/user/monet-keep-awake.service "$PREFIX/share/dbus-1/services/org.monet.KeepAwake.service"
 rm -rf "$PREFIX/share/monet/monet_runtime"
 
 # Sign-in brightness belongs to the separate system greeter account.

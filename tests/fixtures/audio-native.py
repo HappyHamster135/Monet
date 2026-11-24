@@ -817,9 +817,53 @@ QtObject {
             policy.terminate()
 
 
+def output_priority():
+    start_server()
+    quick = str(ROOT / "linux/libexec/monet-quick")
+    sys.path.insert(0, str(ROOT / "linux/share/monet"))
+    from monet_runtime import output_order
+    from contextlib import ExitStack
+    with ExitStack() as stack:
+        def launch(args):
+            proc = subprocess.Popen(args, stdout=log, stderr=log)
+            stack.callback(lambda: (proc.terminate(), proc.wait(5)))
+            return proc
+        launch(["wireplumber", "--profile=policy"])
+        wait_for(lambda: "route-settings" in subprocess.check_output(["pw-metadata", "-l"], text=True), "policy")
+        def listed():
+            return json.loads(subprocess.check_output([quick, "output-order", "get"], text=True))["connected"]
+        wait_for(lambda: len(listed()) == 2, "two available outputs")
+        by_name = {bytes.fromhex(d["key"]).decode(): d for d in listed()}
+        third = dict(key="monet_three".encode().hex(), name="Third", port="")
+        path = output_order.settings_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        output_order.write(path, dict(enabled=True, devices=[third, by_name["monet_two"], by_name["monet_one"]]))
+        pactl("set-default-sink", "monet_one")
+        launch([quick, "output-order", "watch"])
+        def expect(name):
+            wait_for(lambda: pactl("get-default-sink") == name, "preferred " + name)
+        expect("monet_two")
+        def plug():
+            return pactl("load-module", "module-null-sink", "sink_name=monet_three", "sink_properties=device.description=Third")
+        plugged = plug()
+        expect("monet_three")
+        pactl("set-default-sink", "monet_one")
+        pactl("set-sink-volume", "monet_two", "37%")
+        QTest.qWait(400)
+        assert pactl("get-default-sink") == "monet_one", "manual choice reverted"
+        pactl("unload-module", plugged)
+        expect("monet_two")
+        # Pulse may reuse module IDs. Occupy a slot to exercise renumbering as well.
+        pactl("load-module", "module-null-sink", "sink_name=unranked")
+        reconnected = plug()
+        expect("monet_three")
+        pactl("unload-module", reconnected)
+        expect("monet_two")
+
+
 try:
     {'native': native_updates, 'fallback': fallback, 'recovery': recovery,
-     'widget': widget, 'notifications': notifications, 'dock-volume': dock_volume,
+     'widget': widget, 'output-order': output_priority, 'notifications': notifications, 'dock-volume': dock_volume,
      'dock-volume-memory': dock_volume_memory}[sys.argv[1]]()
 finally:
     for component, obj in objects: obj.deleteLater()

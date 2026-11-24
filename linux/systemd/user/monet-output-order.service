@@ -1,0 +1,15 @@
+[Unit]
+Description=Choose preferred Monet sound outputs when devices change
+PartOf=graphical-session.target
+After=pipewire-pulse.service
+StartLimitIntervalSec=0
+
+[Service]
+ExecStart=@LIBEXECDIR@/monet-quick output-order watch
+Restart=on-failure
+RestartSec=5
+Slice=background.slice
+TimeoutStopSec=3
+
+[Install]
+WantedBy=graphical-session.target

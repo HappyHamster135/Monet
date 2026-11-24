@@ -153,7 +153,7 @@ class EverydaySearch(unittest.TestCase):
 
 try:
     from PySide6.QtCore import QAbstractListModel, QModelIndex, Property, QObject, QSettings, QStandardPaths, QTimer, QUrl, Qt, Signal, Slot
-    from PySide6.QtGui import QGuiApplication
+    from PySide6.QtGui import QAccessible, QGuiApplication
     from PySide6.QtQml import QQmlApplicationEngine
     from PySide6.QtQuick import QQuickWindow
     from PySide6.QtTest import QTest
@@ -179,6 +179,12 @@ if QT:
                 result = {"results": self.q.everyday_search(query)}
                 delay = self.delays.get(query, 30)
                 if self.fail: result = {}; code = 1
+            elif verb == "output-order" and hasattr(self, "order"):
+                if command[2] == "save":
+                    values = json.loads(bytes.fromhex(command[3]))
+                    assert values["revision"] == self.order["revision"]
+                    self.order.update(enabled=values["enabled"], devices=values["devices"], revision="second")
+                result = self.order
             elif verb == "search-open":
                 self.actions.append(command[2]); result = {"ok": not self.fail}
                 code = 1 if self.fail else 0
@@ -256,6 +262,53 @@ class SettingsSearchUI(unittest.TestCase):
                 return focused
             QTest.qWait(10)
         self.fail(f"Settings search result {target} did not receive keyboard focus")
+
+    def test_output_order_editor_keeps_disconnected_devices_and_accepts_single_clicks(self):
+        from PySide6.QtCore import QPointF
+        def device(name):
+            return {"name": name, "key": name.encode().hex(), "port": ""}
+        speakers, headset = device("Speakers"), device("USB Headset")
+        self.helper.order = dict(ok=True, devices=[], enabled=False, connected=[speakers, headset], revision="first")
+        select_settings_page(self.window, "sound")
+        card = self.item("search-output-order")
+        def button(name):
+            queue = [card]
+            while queue:
+                item = queue.pop()
+                if item.isVisible() and item.isEnabled() and item.activeFocusOnTab():
+                    iface = QAccessible.queryAccessibleInterface(item)
+                    if iface and iface.text(QAccessible.Text.Name) == name:
+                        return item
+                queue.extend(item.childItems())
+            self.fail("Missing output-order button: " + name)
+        def click(name):
+            item = button(name)
+            parent = item.parentItem()
+            while parent and parent.metaObject().indexOfProperty("contentY") < 0:
+                parent = parent.parentItem()
+            self.assertIsNotNone(parent)
+            center = QPointF(item.width()/2, item.height()/2)
+            y = item.mapToItem(parent, center).y() + parent.property("contentY")
+            parent.setProperty("contentY", max(0, min(y-parent.height()/2, parent.property("contentHeight")-parent.height())))
+            QTest.qWait(30)
+            pos = item.mapToScene(center).toPoint()
+            self.assertTrue(self.window.geometry().size().width() > pos.x() >= 0)
+            self.assertTrue(self.window.height() > pos.y() >= 0)
+            QTest.mouseClick(self.window, Qt.LeftButton, Qt.NoModifier, pos)
+            QTest.qWait(80)
+        click("Manage preferred sound outputs")
+        click("Add Speakers to the order")
+        click("Add USB Headset to the order")
+        click("Move USB Headset up")
+        click("Apply")
+        self.assertEqual(self.helper.order["devices"], [headset, speakers])
+        self.assertTrue(self.helper.order["enabled"])
+        self.helper.order["connected"] = [speakers]
+        click("Manage preferred sound outputs")
+        click("Remove USB Headset from the order")
+        click("Cancel")
+        self.assertEqual(self.helper.order["devices"], [headset, speakers])
+        self.assertFalse(card.property("editing"))
 
     def test_enter_before_results_arrive_opens_and_focuses_the_correct_control(self):
         self.type_query("make text bigger")

@@ -28,12 +28,12 @@ Exec=@LIBEXECDIR@/monet-utilities wheel
 [Desktop Action Microphone]
 Name=Mute or unmute microphone
 Icon=audio-input-microphone
-Exec=@LIBEXECDIR@/monet-utilities mic
+Exec=wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
 
 [Desktop Action Output]
 Name=Cycle sound output
 Icon=audio-card
-Exec=@LIBEXECDIR@/monet-utilities output
+Exec=@LIBEXECDIR@/monet-quick cycle-output notify
 
 [Desktop Action Color]
 Name=Pick a screen color

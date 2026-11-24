@@ -51,6 +51,9 @@ class NativeAudio(unittest.TestCase):
             self.assertEqual(code, 0, output.read_text())
 
 
+    def test_ranked_outputs_follow_physical_changes_and_respect_manual_choice(self):
+        self.fixture("output-order")
+
     def test_native_changes_are_immediate_and_idle_does_not_spawn_commands(self):
         self.fixture('native')
 

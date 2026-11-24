@@ -131,6 +131,19 @@ class SoundChoices(unittest.TestCase):
             self.pw.sinks = {53: "auto_null"}; self.pw.names["auto_null"] = "Dummy Output"; self.pw.sink = "auto_null"
             self.assertEqual(self.ask("outputs"), [{"id": 53, "name": "Dummy Output", "default": True, "none": True}])
 
+    def test_cycle_uses_playable_devices_and_reports_the_verified_output(self):
+        devices = self.ask("outputs")
+        old = next(i for i, d in enumerate(devices) if d["default"])
+        following = devices[(old + 1) % len(devices)]
+        cycled = self.ask("cycle-output")
+        self.assertTrue(cycled["ok"])
+        self.assertIn(following["name"], cycled["message"])
+        self.assertEqual(self.pw.sink.encode().hex(), following["key"])
+        self.pw.obeys = False
+        self.assertFalse(self.ask("cycle-output")["ok"])
+        with patch.object(self.q, "outputs", return_value=[dict(none=True, default=True)]):
+            self.assertFalse(self.ask("cycle-output")["ok"])
+
     def test_a_renumbered_output_is_found_by_its_name(self):
         headphones = next(o for o in self.ask("outputs") if o["name"] == "WH-1000XM4")
         # Plugged in elsewhere, WirePlumber again: the headphones are 91 now, and 73 is the screen.

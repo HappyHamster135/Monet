@@ -736,7 +736,7 @@ def output_name(listed, props, port):
     return (node_label(description) if RAW_NODE.search(description) else description), hardware if hardware != description else ''
 
 
-def outputs():
+def outputs(with_ports=False):
     """Playable outputs, using the active port name where available."""
     found = sinks(run("wpctl", "status") or "")
     metadata = pulse_nodes("sinks")
@@ -746,6 +746,8 @@ def outputs():
         item = metadata.get(sink["id"])
         if item is not None:
             props = item["properties"]
+            if with_ports:
+                sink["port"] = item.get("active_port") or ""
             if disconnected_port(item):
                 continue
             sink["none"] = props.get("node.name") == "auto_null"
@@ -8997,6 +8999,8 @@ def search_catalog():
          N_("reduce motion; stop animations; less movement; disable animation"), "accessibility#motion", "preferences-desktop-accessibility"),
         ("headphones", tr("Headphones and speakers"), tr("Sound · Choose where sound plays"),
          N_("headphones; earphones; earbuds; speakers; no sound; change audio output; play sound through"), "sound#output", "audio-headphones"),
+        ("output-order", tr("Preferred output order"), tr("Sound · Automatic output switching"),
+         N_("preferred output order; audio device priority; automatically switch sound outputs"), "sound#output-order", "audio-card"),
         ("microphone", tr("Microphone"), tr("Sound · Microphone volume"),
          N_("microphone; mic; people cannot hear me; input volume; recording sound"), "sound#microphone", "audio-input-microphone"),
         ("bluetooth", tr("Connect a Bluetooth device"), tr("Bluetooth · Pair headphones, a mouse or a controller"),
@@ -10459,6 +10463,25 @@ def main(argv):
     on = bool(args) and args[0] == "on"
     if cmd == "status":
         emit(status(args[0] if args else "all"))
+    elif cmd == "cycle-output" and args in ([], ["notify"]):
+        devices = [d for d in outputs() if not d["none"]]
+        if len(devices) < 2:
+            data = {"ok": False, "message": tr("Only one sound output is available.") if devices else tr("No sound output is available.")}
+        else:
+            index = next((i for i, d in enumerate(devices) if d["default"]), -1)
+            chosen = devices[(index + 1) % len(devices)]
+            result = output_action(chosen["id"], chosen.get("key"))
+            playing = next((d for d in result["outputs"] if d["default"]), {})
+            data = {"ok": result["ok"], "message": tr("Playing through %1", playing.get("name", chosen["name"]))
+                    if result["ok"] else tr("The sound output could not be changed.")}
+        if args:
+            run("notify-send", "--app-name=Monet", "--icon=audio-card", "--", tr("Sound output"), data["message"])
+        emit(data)
+    elif cmd == "output-order":
+        shared = Path(DATADIR) / "monet" if Path(DATADIR).is_absolute() else Path(__file__).resolve().parents[1] / "share/monet"
+        sys.path.insert(0, str(shared))
+        from monet_runtime.output_order import command
+        return command(args, lambda: outputs(with_ports=True))
     elif cmd == "quick-options":
         result = quick_options(args)
         emit(result)

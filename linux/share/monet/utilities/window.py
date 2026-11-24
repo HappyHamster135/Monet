@@ -276,16 +276,12 @@ class Window(QMainWindow):
         self.page("agents", make).refresh()
 
     def cycle_output(self):
-        def names(out):
-            found = [line.split("\t")[1] for line in out.splitlines() if "\t" in line]
-            if len(found) < 2:
-                self.issue("Only one sound output is available." if found else "No sound output is available.")
-                return
-            def current(value):
-                index = found.index(value.strip()) + 1 if value.strip() in found else 0
-                self.worker(["pactl", "set-default-sink", found[index % len(found)]], lambda _: self.issue("Sound output changed."))
-            self.worker(["pactl", "get-default-sink"], current)
-        self.worker(["pactl", "list", "short", "sinks"], names)
+        def result(out):
+            try:
+                self.issue(json.loads(out)["message"])
+            except (KeyError, ValueError):
+                self.issue("The sound output could not be changed.")
+        self.worker([self.helpers / "monet-quick", "cycle-output"], result)
 
     def capture_text(self):
         area = tempfile.TemporaryDirectory(prefix="monet-capture-")

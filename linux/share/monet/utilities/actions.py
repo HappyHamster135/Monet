@@ -43,6 +43,7 @@ ACTIONS = {
     "shortcuts": Action("Keyboard shortcuts", "Input", "input-keyboard", ("kcmshell6", "kcm_keys")),
     "debounce": Action("Keyboard bounce and sticky keys", "Input", "preferences-desktop-accessibility", ("kcmshell6", "kcm_access")),
     "sound": Action("Per-app volume and output devices", "Sound", "audio-volume-high", ("@monet-settings", "sound")),
+    "output-order": Action("Preferred sound output order", "Sound headphones speakers automatic device priority", "audio-card", ("@monet-settings", "sound#output-order")),
     "output": Action("Cycle sound output", "Sound", "audio-card"),
     "mic": Action("Mute or unmute microphone", "Sound", "audio-input-microphone", ("wpctl", "set-mute", "@DEFAULT_AUDIO_SOURCE@", "toggle")),
     "media": Action("Player queue and lyrics", "Sound", "view-media-playlist"),

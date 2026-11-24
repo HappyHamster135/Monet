@@ -144,6 +144,7 @@ ColumnLayout {
         text: soundColumn.showAllOutputs ? i18n("Show selected output") : i18n("Show all %1 outputs", soundColumn.speakers.length)
         onClicked: soundColumn.showAllOutputs = !soundColumn.showAllOutputs
     }
+    OutputOrder { tone: look; host: sheet }
     SettingsControls.Card {
         tone: look
         SettingsControls.SliderRow {
