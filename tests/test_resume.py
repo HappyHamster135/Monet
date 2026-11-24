@@ -159,17 +159,19 @@ class RestoreReceipt(unittest.TestCase):
         self.assertEqual(started, ["a.desktop", "b.desktop", "b.desktop"])
         self.assertFalse(self.path.exists())
 
-    def test_locked_wallet_defers_automatic_restore_but_manual_recovery_can_launch(self):
-        deferred = "a.desktop"
-        entry = lambda app: {"Name": app}
+    def test_only_automatic_restore_marks_direct_launches(self):
+        from unittest.mock import Mock
         for manual in (False, True):
             r.atomic_write(self.path, self.state)
-            started = []
-            r.window_snapshot.side_effect = ([[], [{"id": "a", "app": deferred}]] if manual else [[], [{"id": "b", "app": "b.desktop"}]])
-            r.restore(self.path, self.off, lambda: [], entry, started.append,
-                      selected=deferred if manual else None, defer=lambda app, _: app == deferred)
-            self.assertEqual(started, [deferred] if manual else ["b.desktop"])
-            self.assertEqual(r.read_return(self.path)["items"][deferred]["status"], "opened" if manual else "wallet-locked")
+            start = Mock()
+            def launch(app):
+                r.session_start(start, app)
+            r.window_snapshot.side_effect = [[], [{"app": "a.desktop", "id": "a"}], [{"app": "b.desktop", "id": "b"}]]
+            r.restore(self.path, self.off, lambda: [], lambda _: True, launch,
+                      selected="a.desktop" if manual else None, restore_launcher="/mark")
+            self.assertEqual(start.call_args_list[0].args, ("a.desktop",))
+            self.assertEqual(start.call_args_list[0].kwargs, {} if manual else {"prefix": ("/mark", "--exec")})
+            self.assertEqual(r._RESTORE_PREFIX.get(), ())
 
     def test_already_running_apps_are_not_reopened(self):
         started = []

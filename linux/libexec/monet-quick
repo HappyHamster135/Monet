@@ -4164,50 +4164,24 @@ WALLET_BUS = ("org.kde.kwalletd6", "/modules/kwalletd6", "org.kde.KWallet")
 CHATGPT_IDS = ("chatgpt", "monet-chatgpt")
 
 
-def reopen_chatgpt_when_locked():
-    return not (CONFIG / "monet/chatgpt-wait-for-wallet").exists()
+def restored_wallet_prompts():
+    return (CONFIG / "monet/allow-restored-wallet-prompts").exists()
 
 
-def wallet_chatgpt_restore(value):
+def wallet_restore_prompts(value):
     if value not in ("on", "off"):
         return {"ok": False}
-    flag = CONFIG / "monet/chatgpt-wait-for-wallet"
+    flag = CONFIG / "monet/allow-restored-wallet-prompts"
     try:
         if value == "on":
-            flag.unlink(missing_ok=True)
-        else:
             flag.parent.mkdir(parents=True, exist_ok=True)
             flag.touch(mode=0o600, exist_ok=True)
+        else:
+            flag.unlink(missing_ok=True)
+        flag.with_name("chatgpt-wait-for-wallet").unlink(missing_ok=True)
     except OSError:
         return {"ok": False, "state": wallet_status()}
-    return {"ok": reopen_chatgpt_when_locked() == (value == "on"), "state": wallet_status()}
-
-
-def session_wallet_unlocked():
-    """Read the default collection's lock bit without starting or unlocking a wallet."""
-    try:
-        import dbus
-    except ImportError:
-        return False
-    try:
-        bus = dbus.SessionBus()
-        owner = bus.get_name_owner("org.freedesktop.secrets")
-        service = bus.get_object(owner, "/org/freedesktop/secrets", introspect=False)
-        collection = service.ReadAlias("default", dbus_interface="org.freedesktop.Secret.Service", timeout=1)
-        if collection == "/":
-            return False
-        proxy = bus.get_object(owner, collection, introspect=False)
-        locked = proxy.Get("org.freedesktop.Secret.Collection", "Locked",
-                           dbus_interface="org.freedesktop.DBus.Properties", timeout=1)
-        return isinstance(locked, dbus.Boolean) and not locked
-    except dbus.DBusException:
-        return False
-
-
-def defer_chatgpt(app, entry):
-    is_chatgpt = (app.removesuffix(".desktop").casefold() in CHATGPT_IDS or
-                  isinstance(entry, dict) and entry.get("StartupWMClass", "").casefold() == "chatgpt")
-    return is_chatgpt and not reopen_chatgpt_when_locked() and not session_wallet_unlocked()
+    return {"ok": restored_wallet_prompts() == (value == "on"), "state": wallet_status()}
 
 
 def wallet_status():
@@ -4226,7 +4200,8 @@ def wallet_status():
         offers = {}
     if not isinstance(offers, dict): offers = {}
     return {"enabled": kread("kwalletrc", "Wallet", "Enabled", "true") != "false",
-            "reopenChatGPTWhenLocked": reopen_chatgpt_when_locked(),
+            "restoredWalletPrompts": restored_wallet_prompts(),
+            "restorePromptControl": Path(LIBEXECDIR, "monet-restore-launch").is_file(),
             "appOffers": offers.get("enabled") is True,
             "appOffersRunning": offers.get("running") is True,
             "appOffersAvailable": type(offers.get("enabled")) is bool and offers.get("error") is not True,
@@ -9424,15 +9399,30 @@ def remember_apps(apps=None, game=None):
     return keep
 
 
+def automatic_launcher():
+    helper = Path(LIBEXECDIR, "monet-restore-launch")
+    return str(helper) if not restored_wallet_prompts() and helper.is_file() else None
+
+
+def restore_app(app, helper):
+    if not helper:
+        return launch(app)
+    subprocess.Popen([helper, "--desktop", app], start_new_session=True,
+                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return True
+
+
 def trip_apps_again(selected=None, request=None):
     """At the sign-in after a trip: the apps that were open start again, once."""
     resume = resume_helper()
     saved = resume.read_state(TRIP_APPS)
     if not saved:
         return []
+    helper = automatic_launcher() if selected is None and request is None else None
     if saved.get("version") in (2, 3):
-        return resume.restore(TRIP_APPS, TRIP_APPS_OFF, running_apps, entry_by_id, launch, TRIP_APPS_FRESH,
-                              selected=selected, request=request, defer=defer_chatgpt)
+        return resume.restore(TRIP_APPS, TRIP_APPS_OFF, running_apps, entry_by_id,
+                              lambda app: restore_app(app, helper), TRIP_APPS_FRESH,
+                              selected=selected, request=request, restore_launcher=helper)
     if request is not None:  # A stale UI action cannot replay an older checkpoint format.
         return []
     TRIP_APPS.unlink(missing_ok=True)
@@ -9441,10 +9431,8 @@ def trip_apps_again(selected=None, request=None):
     running = set(running_apps())
     started = []
     for app in saved.get("apps") or []:
-        if isinstance(app, str) and app not in running and (entry := entry_by_id(app)):
-            if selected is None and defer_chatgpt(app, entry):
-                continue
-            launch(app)
+        if isinstance(app, str) and app not in running and entry_by_id(app):
+            restore_app(app, helper)
             started.append(app)
             time.sleep(0.4)
     return started
@@ -9642,8 +9630,9 @@ def reopen_work():
                 if resume.BROWSER in gone:
                     work.pop("browser", None)
             resume.atomic_write(WORK_RETURN, work)
-        started += resume.restore(WORK_RETURN, TRIP_APPS_OFF, running_apps, entry_by_id, launch, TRIP_APPS_FRESH,
-                                  defer=defer_chatgpt)
+        helper = automatic_launcher()
+        started += resume.restore(WORK_RETURN, TRIP_APPS_OFF, running_apps, entry_by_id,
+                                  lambda app: restore_app(app, helper), TRIP_APPS_FRESH, restore_launcher=helper)
         # Everything back where it was needs no summary or word; what couldn't reopen has both.
         report = resume.read_return(WORK_RETURN)
         if any(item.get("status") in RESTART_ATTENTION for item in report.get("items", {}).values()):
@@ -9700,7 +9689,7 @@ def return_status(ident=None):
         "opened": tr("Opened a window. The app controls its own tabs and documents."),
         "already-running": tr("Already running; left as it was. Its saved work was not opened again."),
         "unconfirmed": tr("Opening wasn't confirmed. Retry checks an existing launch before opening another."),
-        "wallet-locked": tr("Open ChatGPT when you need it. The password vault was locked or unavailable at sign-in."),
+        "wallet-locked": tr("A previous version left this app closed because the password vault was locked."),
         "missing-app": tr("This app is no longer installed. Install it again, then retry."),
         "folders-restored": tr("Saved folder tabs and split views reopened."),
         "folders-unavailable": tr("Folder tabs could not be confirmed. Reconnect any missing drives, then retry."),
@@ -10851,8 +10840,8 @@ def main(argv):
         emit(privacy_state())
     elif cmd == "wallet-status":
         emit(wallet_status())
-    elif cmd == "wallet-chatgpt-restore":
-        emit(wallet_chatgpt_restore(args[0]) if len(args) == 1 else {"ok": False})
+    elif cmd == "wallet-restore-prompts":
+        emit(wallet_restore_prompts(args[0]) if len(args) == 1 else {"ok": False})
     elif cmd == "wallet-policy":
         emit(wallet_policy(args[0]) if len(args) == 1 else {"ok": False})
     elif cmd == "wallet-app-offers":

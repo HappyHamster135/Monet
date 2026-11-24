@@ -38,43 +38,34 @@ class WalletPreferences(unittest.TestCase):
                     if call.args[0] == 'busctl':
                         self.assertIn(call.args[call.args.index('org.kde.KWallet') + 1], allowed)
 
-    def test_restore_choice_round_trips_and_only_checks_the_wallet_for_chatgpt(self):
+    def test_restore_prompt_choice_preserves_existing_opt_out(self):
         q = self.q
         with tempfile.TemporaryDirectory() as tmp, patch.object(q, "CONFIG", Path(tmp)), \
-                patch.object(q, "wallet_status", return_value={}), patch.object(q, "session_wallet_unlocked") as unlocked:
-            self.assertFalse(q.defer_chatgpt("chatgpt.desktop", {}))
-            self.assertTrue(q.wallet_chatgpt_restore("off")["ok"])
-            self.assertFalse(q.defer_chatgpt("zen.desktop", {"Name": "ChatGPT"}))
-            unlocked.assert_not_called()
-            unlocked.return_value = False
-            for app, entry in (("chatgpt.desktop", {}), ("monet-chatgpt.desktop", {}),
-                               ("portable.desktop", {"StartupWMClass": "Chatgpt"})):
-                self.assertTrue(q.defer_chatgpt(app, entry))
-            unlocked.return_value = True
-            self.assertFalse(q.defer_chatgpt("chatgpt.desktop", {}))
-            self.assertTrue(q.wallet_chatgpt_restore("on")["ok"])
-            self.assertTrue(q.reopen_chatgpt_when_locked())
+                patch.object(q, "LIBEXECDIR", tmp), patch.object(q, "wallet_status", return_value={}):
+            self.assertFalse(q.restored_wallet_prompts())
+            legacy = Path(tmp, "monet/chatgpt-wait-for-wallet")
+            legacy.parent.mkdir()
+            legacy.touch()
+            self.assertFalse(q.restored_wallet_prompts())
+            launcher = Path(tmp, "monet-restore-launch")
+            launcher.touch()
+            self.assertEqual(q.automatic_launcher(), str(launcher))
+            self.assertTrue(q.wallet_restore_prompts("off")["ok"])
+            self.assertFalse(legacy.exists())
+            self.assertFalse(q.restored_wallet_prompts())
+            self.assertTrue(q.wallet_restore_prompts("on")["ok"])
+            self.assertTrue(q.restored_wallet_prompts())
+            self.assertIsNone(q.automatic_launcher())
 
-    def test_restore_reads_only_the_running_providers_lock_bit(self):
-        try:
-            import dbus
-        except ImportError:
-            self.skipTest("requires dbus-python")
-        with patch.object(dbus, "SessionBus") as session:
-            bus = session.return_value
-            bus.get_name_owner.return_value = ":1.42"
-            proxy = bus.get_object.return_value
-            proxy.ReadAlias.return_value = "/collection/test"
-            for locked in (True, False):
-                proxy.Get.return_value = dbus.Boolean(locked)
-                self.assertEqual(self.q.session_wallet_unlocked(), not locked)
-            self.assertEqual({c.args[0] for c in bus.get_object.call_args_list}, {":1.42"})
-            self.assertEqual(proxy.Get.call_args.args, ("org.freedesktop.Secret.Collection", "Locked"))
-            self.assertEqual({c[0] for c in proxy.method_calls}, {"ReadAlias", "Get"})
-            bus.get_object.reset_mock()
-            bus.get_name_owner.side_effect = dbus.DBusException("provider absent")
-            self.assertFalse(self.q.session_wallet_unlocked())
-            bus.get_object.assert_not_called()
+    def test_manual_launch_does_not_get_the_restore_wrapper(self):
+        q = self.q
+        with patch.object(q, "launch", return_value=True) as normal, patch.object(q.subprocess, "Popen") as start:
+            for app in ("com.example.Editor.desktop", "com.example.Chat.desktop"):
+                self.assertTrue(q.restore_app(app, "/usr/libexec/monet-restore-launch"))
+                self.assertEqual(start.call_args.args[0], ["/usr/libexec/monet-restore-launch", "--desktop", app])
+                normal.assert_not_called()
+            q.restore_app(app, None)
+            normal.assert_called_once_with(app)
 
     def test_invalid_policy_writes_nothing(self):
         with patch.object(self.q, 'kwrite') as write, patch.object(self.q, 'run') as run:

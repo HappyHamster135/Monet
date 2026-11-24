@@ -13971,21 +13971,21 @@ msgstr ""
 msgid "Show a count on the %1 icon."
 msgstr ""
 
-#: linux/share/monet/settings-app/SettingsPasswords.qml:162
-msgid "Reopen ChatGPT when the vault is locked"
-msgstr ""
-
-#: linux/share/monet/settings-app/SettingsPasswords.qml:163
-msgid ""
-"When restoring your session, ChatGPT may ask you to unlock saved passwords. Turn this off to open ChatGPT yourself when the vault is locked."
-msgstr ""
-
 #: linux/share/monet/settings-app/SettingsPasswords.qml:178
 msgid ""
 "Automatic sign-in leaves the vault locked until an app needs a saved password. Signing in with a password can unlock the vault when the two passwords match."
 msgstr ""
 
-#: linux/libexec/monet-quick:9703
+#: linux/share/monet/settings-app/SettingsPasswords.qml:163
+msgid "Let restored apps ask to unlock saved passwords"
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsPasswords.qml:164
 msgid ""
-"Open ChatGPT when you need it. The password vault was locked or unavailable at sign-in."
+"When off, apps that Monet reopens at sign-in can start with the vault locked. Apps you launch yourself can still ask to unlock it."
+msgstr ""
+
+#: linux/libexec/monet-quick:9692
+msgid ""
+"A previous version left this app closed because the password vault was locked."
 msgstr ""

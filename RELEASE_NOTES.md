@@ -4,9 +4,10 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 ### New in 0.9.8-9: Startup and Settings polish (in development)
 
-- **ChatGPT at sign-in.** In Settings → Passwords, choose whether ChatGPT can reopen
-  while the vault is locked. In Settings → Notifications, each listed app has
-  its own switch for the numbered badge on its taskbar icon.
+- **Wallet prompts at sign-in.** Settings → Passwords controls whether apps that Monet
+  restores can ask to unlock saved passwords. Restores are quiet by default. Apps you
+  launch yourself can still ask.
+- **Taskbar badges.** In Settings → Notifications, each listed app has its own switch for the numbered badge on its taskbar icon.
 - **Reopen portable apps.** Session restore can match a window to its installed launcher
   by window class when the app omits its desktop ID. New portable app shortcuts keep
   the window class supplied by the package.

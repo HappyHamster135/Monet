@@ -1288,18 +1288,18 @@ class LookFeedback(unittest.TestCase):
         self.helper.commands.clear(); QTest.qWait(2200)
         self.assertFalse(any(c[1].startswith('wallet-') for c in self.helper.commands))
 
-    def test_chatgpt_restore_and_badge_switches_use_their_own_settings(self):
-        wallet = {"enabled": True, "reopenChatGPTWhenLocked": True}
+    def test_wallet_restore_and_app_badges_have_independent_switches(self):
+        wallet = {"enabled": True, "restorePromptControl": True, "restoredWalletPrompts": True}
         self.helper.replies["wallet-status"] = json.dumps(wallet)
         select_settings_page(self.window, "passwords")
-        row = self.item("reopenChatGPTWhenLocked")
+        row = self.item("restoredWalletPrompts")
         self.wait_for(lambda: row.property("tappable"))
         self.assertTrue(row.property("checked"))
-        self.helper.replies["wallet-chatgpt-restore"] = json.dumps(
-            {"ok": True, "state": dict(wallet, reopenChatGPTWhenLocked=False)})
+        self.helper.replies["wallet-restore-prompts"] = json.dumps(
+            {"ok": True, "state": dict(wallet, restoredWalletPrompts=False)})
         QMetaObject.invokeMethod(row, "tapped")
         self.wait_for(lambda: not row.property("checked"))
-        self.assertIn(["helper", "wallet-chatgpt-restore", "off"], self.helper.commands)
+        self.assertIn(["helper", "wallet-restore-prompts", "off"], self.helper.commands)
 
         app = {"id": "chatgpt", "name": "ChatGPT", "icon": "chatgpt", "popups": True, "badges": True}
         state = {"quiet": False, "apps": [app]}

@@ -13,7 +13,7 @@ BUNDLES = ("notifications", "dock", "editor-recovery", "task-manager", "login", 
 def runtime_packages(root):
     # Reuse each bundle's actual ELF dependency closure instead of maintaining
     # an incomplete hand-written list of Qt, KDE and supporting libraries.
-    names = {"polkit-kde", "polkit-qt6-1"}
+    names = {"polkit-kde", "polkit-qt6-1", "kf6-kwallet", "kf6-kwallet-libs"}
     for name in BUNDLES:
         manifest = runpy.run_path(str(root / name / "bundle.py"))["capture"]()
         packages = manifest["package_names"]

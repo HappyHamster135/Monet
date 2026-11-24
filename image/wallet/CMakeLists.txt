@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.22)
+project(monet-restore-launch LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 20)
+find_package(Qt6 REQUIRED COMPONENTS Gui DBus)
+find_package(KF6KIO REQUIRED)
+add_executable(monet-restore-launch restore-launch.cpp)
+target_link_libraries(monet-restore-launch PRIVATE Qt6::Gui Qt6::DBus KF6::KIOGui KF6::Service KF6::ConfigCore KF6::CoreAddons)

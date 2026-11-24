@@ -157,17 +157,18 @@ ColumnLayout {
             }
         }
         SettingsControls.SettingRow {
-            objectName: "reopenChatGPTWhenLocked"
+            objectName: "restoredWalletPrompts"
+            visible: sheet.walletInfo.restorePromptControl === true
             tone: look
-            title: i18n("Reopen ChatGPT when the vault is locked")
-            detail: i18n("When restoring your session, ChatGPT may ask you to unlock saved passwords. Turn this off to open ChatGPT yourself when the vault is locked.")
-            tappable: !sheet.walletBusy && typeof sheet.walletInfo.reopenChatGPTWhenLocked === "boolean"
+            title: i18n("Let restored apps ask to unlock saved passwords")
+            detail: i18n("When off, apps that Monet reopens at sign-in can start with the vault locked. Apps you launch yourself can still ask to unlock it.")
+            tappable: !sheet.walletBusy && sheet.walletInfo.enabled === true && typeof sheet.walletInfo.restoredWalletPrompts === "boolean"
             checkable: true
-            checked: sheet.walletInfo.reopenChatGPTWhenLocked === true
-            onTapped: sheet.walletAction("chatgpt-restore", checked ? "off" : "on")
+            checked: sheet.walletInfo.restoredWalletPrompts === true
+            onTapped: sheet.walletAction("restore-prompts", checked ? "off" : "on")
             SettingsControls.Switch {
                 tone: look
-                active: sheet.walletInfo.reopenChatGPTWhenLocked === true
+                active: sheet.walletInfo.restoredWalletPrompts === true
                 Accessible.ignored: true
             }
         }

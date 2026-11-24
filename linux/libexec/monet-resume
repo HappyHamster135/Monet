@@ -12,6 +12,7 @@ import configparser
 import copy
 from collections import Counter
 from contextlib import contextmanager
+from contextvars import ContextVar
 from functools import lru_cache
 import hashlib
 import json
@@ -1248,7 +1249,7 @@ def start_app(app, saved, launch):
                  and not any(ord(c) < 32 for c in p) and Path(p).is_file()]
         if paths:
             command = [EDITORS[app]] + (["--new", "--startanon"] if EDITORS[app] == "kate" else [])
-            subprocess.Popen([*command, "--", *paths], start_new_session=True,
+            subprocess.Popen([*_RESTORE_PREFIX.get(), *command, "--", *paths], start_new_session=True,
                              stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             return
     launch(app)
@@ -1262,7 +1263,7 @@ def restore_files(path, saved, off, before, checkpoint=None):
     if not (receipt.get("boot") == boot_id() and helper.alive(receipt)):
         helper.cleanup(receipt)
         try:
-            session, pid = helper.start(saved["files"])
+            session, pid = session_start(helper.start, saved["files"])
         except OSError:
             return False
         receipt = {"session": session.name, "pid": pid, "boot": boot_id()}
@@ -1305,7 +1306,7 @@ def restore_browser(path, saved, off, checkpoint=None):
             return None
         started = time.time()
         try:
-            pid = helper.launch(state)
+            pid = session_start(helper.launch, state)
         except OSError:
             return False
         receipt = {"boot": boot_id(), "started": started, "pid": pid,
@@ -1639,7 +1640,7 @@ def restore_pdf_window(path, saved, group, off, before, live, used, launch, manu
             return False
         receipt["started"] = True
         atomic_write(path, saved)
-        helper.start(receipt)
+        session_start(helper.start, receipt)
     deadline = time.monotonic() + 20
     for _ in range(40):
         yield
@@ -1939,7 +1940,7 @@ def restore_editor_windows(path, saved, app, group, off, before, used, manual):
             if off.exists():
                 return False
             helper.cleanup(receipt)
-            receipt = dict(helper.start(app, expected, windows=True), boot=boot, expected=expected)
+            receipt = dict(session_start(helper.start, app, expected, windows=True), boot=boot, expected=expected)
             group["editor_launch"] = receipt
             atomic_write(path, saved)
         pid, confirmed = receipt["pid"], False
@@ -2092,7 +2093,7 @@ def restore_editors(path, saved, app, off, before, launch, manual):
         else:
             if not continuing:
                 helper.cleanup(receipt)
-                receipt = dict(helper.start(app, expected), boot=boot_id(), expected=expected)
+                receipt = dict(session_start(helper.start, app, expected), boot=boot_id(), expected=expected)
                 group["editor_launch"] = receipt
                 atomic_write(path, saved)
             pid = receipt["pid"]
@@ -2170,16 +2171,32 @@ def files_window_only(saved):
             and isinstance(frames[0].get("id"), str) and bool(frames[0]["id"]))
 
 
-def restore(path, off, running, entry, launch, freshness=12 * 3600, selected=None, request=None, defer=None):
+# Restore helpers also handle explicit recovery. Only launches within the
+# automatic replay get marked, including document-specific native sessions.
+_RESTORE_PREFIX = ContextVar("restore_prefix", default=())
+
+
+def session_start(method, *args, **kwargs):
+    prefix = _RESTORE_PREFIX.get()
+    if prefix:
+        kwargs["prefix"] = prefix
+    return method(*args, **kwargs)
+
+
+def restore(path, off, running, entry, launch, freshness=12 * 3600, selected=None, request=None, restore_launcher=None):
     """A receipt per confirmed app survives interruption. Failed launches stay retryable."""
+    prefix = (restore_launcher, "--exec") if restore_launcher and selected is None and request is None else ()
+    token = _RESTORE_PREFIX.set(prefix)
     try:
         with restore_lock(path):
-            return restore_locked(path, off, running, entry, launch, freshness, selected, request, defer)
+            return restore_locked(path, off, running, entry, launch, freshness, selected, request)
     except BlockingIOError:
         return []
+    finally:
+        _RESTORE_PREFIX.reset(token)
 
 
-def restore_locked(path, off, running, entry, launch, freshness, selected, request, defer):
+def restore_locked(path, off, running, entry, launch, freshness, selected, request):
     saved = read_state(path)
     if request is not None and (not saved or request != trip_id(saved)):
         return []
@@ -2321,8 +2338,7 @@ def restore_locked(path, off, running, entry, launch, freshness, selected, reque
             continue
         item = report["items"][app] = {"status": "opening"}
         save_return(path, saved, report)
-        app_entry = entry(app)
-        if not app_entry:
+        if not entry(app):
             item["status"] = "missing-app"
             save_return(path, saved, report)
             continue
@@ -2370,9 +2386,6 @@ def restore_locked(path, off, running, entry, launch, freshness, selected, reque
                 if files:
                     files_helper().cleanup(pending)
                     saved.pop("files_launch", None)
-            elif selected is None and request is None and defer and defer(app, app_entry):
-                item["status"] = "wallet-locked"
-                done.add(app)
             elif files:
                 kind, job = "files", restore_files(path, saved, off, before)
             elif app == BROWSER and saved.get("version") == 4 and isinstance(saved_windows, list) \

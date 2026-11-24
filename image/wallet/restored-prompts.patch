@@ -1,0 +1,259 @@
+diff --git a/src/runtime/ksecretd/autotests/mockkwalletd.cpp b/src/runtime/ksecretd/autotests/mockkwalletd.cpp
+index 134ea4e..c53598c 100644
+--- a/src/runtime/ksecretd/autotests/mockkwalletd.cpp
++++ b/src/runtime/ksecretd/autotests/mockkwalletd.cpp
+@@ -89,7 +89,7 @@ void KSecretD::activatePasswordDialog()
+ {
+ }
+
+-QFuture<int> KSecretD::open(const QString & /*wallet*/, qlonglong /*wId*/)
++QFuture<int> KSecretD::open(const QString & /*wallet*/, qlonglong /*wId*/, bool /*interactive*/)
+ {
+     QPromise<int> promise;
+     promise.start();
+diff --git a/src/runtime/ksecretd/ksecretd.cpp b/src/runtime/ksecretd/ksecretd.cpp
+index 5a63546..ca84436 100644
+--- a/src/runtime/ksecretd/ksecretd.cpp
++++ b/src/runtime/ksecretd/ksecretd.cpp
+@@ -159,12 +159,12 @@ void KSecretD::processTransactions()
+
+         switch (curtrans.tType) {
+         case KWalletTransaction::Open:
+-            res = doTransactionOpen(curtrans.wallet, curtrans.wId, curtrans.modal);
++            res = !curtrans.interactive && findWallet(curtrans.wallet).first < 0 ? -1 : doTransactionOpen(curtrans.wallet, curtrans.wId, curtrans.modal);
+
+             // multiple requests from the same client
+             // should not produce multiple password
+             // dialogs on a failure
+-            if (res < 0) {
++            if (res < 0 && curtrans.interactive) {
+                 for (auto &x : _transactions) {
+                     if (x.tType == KWalletTransaction::Open && x.wallet == curtrans.wallet && x.wId == curtrans.wId) {
+                         x.promise.addResult(-1);
+@@ -186,7 +186,7 @@ void KSecretD::processTransactions()
+     }
+ }
+
+-QFuture<int> KSecretD::open(const QString &wallet, qlonglong wId)
++QFuture<int> KSecretD::open(const QString &wallet, qlonglong wId, bool interactive)
+ {
+     if (!isEnabled()) { // guard
+         return QtFuture::makeReadyValueFuture<int>(-1);
+@@ -196,6 +196,7 @@ QFuture<int> KSecretD::open(const QString &wallet, qlonglong wId)
+
+     xact.wallet = wallet;
+     xact.wId = wId;
++    xact.interactive = interactive;
+     xact.modal = true; // mark dialogs as modal, the app has blocking wait
+     xact.promise.start();
+
+@@ -204,7 +205,9 @@ QFuture<int> KSecretD::open(const QString &wallet, qlonglong wId)
+     _transactions.push_back(std::move(xact));
+
+     QTimer::singleShot(0, this, SLOT(processTransactions()));
+-    checkActiveDialog();
++    if (interactive) {
++        checkActiveDialog();
++    }
+
+     return future;
+ }
+diff --git a/src/runtime/ksecretd/ksecretd.h b/src/runtime/ksecretd/ksecretd.h
+index e6b200c..151bce3 100644
+--- a/src/runtime/ksecretd/ksecretd.h
++++ b/src/runtime/ksecretd/ksecretd.h
+@@ -45,6 +45,7 @@ public:
+     qlonglong wId;
+     QString wallet;
+     bool modal;
++    bool interactive = true;
+     QPromise<int> promise;
+ };
+
+@@ -59,7 +60,7 @@ public:
+     // Is the wallet enabled?  If not, all open() calls fail.
+     static bool isEnabled();
+
+-    QFuture<int> open(const QString &wallet, qlonglong wId);
++    QFuture<int> open(const QString &wallet, qlonglong wId, bool interactive = true);
+     // Close and lock the wallet
+     int close(int handle);
+
+diff --git a/src/runtime/ksecretd/kwalletfreedesktopprompt.cpp b/src/runtime/ksecretd/kwalletfreedesktopprompt.cpp
+index 36d5060..894a8a1 100644
+--- a/src/runtime/ksecretd/kwalletfreedesktopprompt.cpp
++++ b/src/runtime/ksecretd/kwalletfreedesktopprompt.cpp
+@@ -7,6 +7,7 @@
+ #include "kwalletfreedesktopprompt.h"
+
+ #include "ksecretd.h"
++#include "../restore-origin.h"
+ #include "kwalletfreedesktopcollection.h"
+ #include "kwalletfreedesktoppromptadaptor.h"
+
+@@ -61,6 +62,13 @@ void KWalletFreedesktopPrompt::Prompt(const QString &window_id)
+         return;
+     }
+
++    // This object exists only when the request needs interaction. Preserve
++    // the normal dismissed response, including its type for libsecret.
++    if (MonetRestore::quiet(m_responseBusName)) {
++        Dismiss();
++        fdoService()->deletePrompt(fdoObjectPath().path());
++        return;
++    }
+     const int wId = window_id.toInt();
+     for (auto properties : std::as_const(m_propertiesList)) {
+         /* When type is "PromptType::Open" the properties.label actually stores
+diff --git a/src/runtime/ksecretd/kwalletportalsecrets.cpp b/src/runtime/ksecretd/kwalletportalsecrets.cpp
+index 7b8372b..7de5fb6 100644
+--- a/src/runtime/ksecretd/kwalletportalsecrets.cpp
++++ b/src/runtime/ksecretd/kwalletportalsecrets.cpp
+@@ -8,6 +8,8 @@
+ #include "kwalletportalsecrets.h"
+
+ #include "kwalletportalsecretsadaptor.h"
++#include "../restore-origin.h"
++#include <QRegularExpression>
+
+ #include <QRandomGenerator>
+
+@@ -27,7 +29,15 @@ uint KWalletPortalSecrets::RetrieveSecret(const QDBusObjectPath &handle,
+                                           const QVariantMap &options,
+                                           QVariantMap &results)
+ {
+-    Q_UNUSED(handle);
++    QString sender = message().service();
++    const auto portal = connection().interface()->serviceOwner(QStringLiteral("org.freedesktop.portal.Desktop"));
++    if (portal.isValid() && portal.value() == sender) {
++        // The frontend puts the original caller's unique bus name in the
++        // request handle. Different instances of the same Flatpak stay distinct.
++        static const QRegularExpression path(QStringLiteral("^/org/freedesktop/portal/desktop/request/([0-9]+)_([0-9]+)/[A-Za-z0-9_]+$"));
++        const auto match = path.match(handle.path());
++        sender = match.hasMatch() ? QStringLiteral(":") + match.captured(1) + QLatin1Char('.') + match.captured(2) : QString();
++    }
+     Q_UNUSED(options);
+     Q_UNUSED(results);
+
+@@ -35,7 +45,7 @@ uint KWalletPortalSecrets::RetrieveSecret(const QDBusObjectPath &handle,
+
+     Request request{message(), fd.fileDescriptor(), app_id};
+
+-    auto future = m_kwalletd->open(KWallet::Backend::networkWallet(), 0);
++    auto future = m_kwalletd->open(KWallet::Backend::networkWallet(), 0, !MonetRestore::quiet(sender));
+     future.then(this, [this, request](int walletHandle) {
+         walletOpened(request, walletHandle);
+     });
+diff --git a/src/runtime/kwalletd/kwalletd.cpp b/src/runtime/kwalletd/kwalletd.cpp
+index 5898b64..0f9b720 100644
+--- a/src/runtime/kwalletd/kwalletd.cpp
++++ b/src/runtime/kwalletd/kwalletd.cpp
+@@ -15,6 +15,7 @@
+ #include "kwalletadaptor.h"
+ #include "kwalletsettings.h"
+ #include "secretserviceclient.h"
++#include "../restore-origin.h"
+
+ #include "../kwalletbackend/kwalletbackend.h"
+ #include "../kwalletbackend/kwalletentry.h"
+@@ -292,7 +293,7 @@ bool KWalletD::isEnabled() const
+     return m_enabled && m_backend->isAvailable();
+ }
+
+-int KWalletD::openInternal(const QString &wallet, qlonglong wId, const QString &appId)
++int KWalletD::openInternal(const QString &wallet, qlonglong wId, const QString &appId, bool interactive)
+ {
+     if (wId < 0) {
+         return -1;
+@@ -304,12 +305,15 @@ int KWalletD::openInternal(const QString &wallet, qlonglong wId, const QString &
+         return -1;
+     }
+     if (!wallets.contains(wallet)) {
++        if (!interactive) {
++            return -1;
++        }
+         m_backend->createCollection(wallet, &ok);
+         if (!ok) {
+             return -1;
+         }
+     }
+-    bool unlocked = m_backend->unlockCollection(wallet, &ok);
++    bool unlocked = m_backend->unlockCollection(wallet, &ok, interactive);
+     if (!ok || !unlocked) {
+         return -1;
+     }
+@@ -328,7 +332,7 @@ int KWalletD::openInternal(const QString &wallet, qlonglong wId, const QString &
+
+ int KWalletD::open(const QString &wallet, qlonglong wId, const QString &appId)
+ {
+-    int rnd = openInternal(wallet, wId, appId);
++    int rnd = openInternal(wallet, wId, appId, !calledFromDBus() || !MonetRestore::quiet(message().service()));
+     if (rnd < 0) {
+         return -1;
+     }
+@@ -347,9 +351,13 @@ int KWalletD::openAsync(const QString &wallet, qlonglong wId, const QString &app
+
+     const int tid = ++s_lastTransaction;
+
+-    QTimer::singleShot(0, [this, wallet, wId, appId, tid]() {
+-        int rnd = openInternal(wallet, wId, appId);
++    const bool interactive = !calledFromDBus() || !MonetRestore::quiet(message().service());
++    QTimer::singleShot(0, [this, wallet, wId, appId, tid, interactive]() {
++        int rnd = openInternal(wallet, wId, appId, interactive);
+         if (rnd < 0) {
++            if (!interactive) {
++                Q_EMIT walletAsyncOpened(tid, -1);
++            }
+             return;
+         }
+         Q_EMIT walletAsyncOpened(tid, rnd);
+diff --git a/src/runtime/kwalletd/kwalletd.h b/src/runtime/kwalletd/kwalletd.h
+index 2d07019..980d704 100644
+--- a/src/runtime/kwalletd/kwalletd.h
++++ b/src/runtime/kwalletd/kwalletd.h
+@@ -141,7 +141,7 @@ public Q_SLOTS:
+     QString localWallet();
+
+ protected:
+-    int openInternal(const QString &wallet, qlonglong wId, const QString &appId);
++    int openInternal(const QString &wallet, qlonglong wId, const QString &appId, bool interactive);
+     // Migrate a single wallet, returns true on success
+     // sourceWallet is the wallet name on kwallet backend
+     // destWallet is the collection name on secretservice
+diff --git a/src/runtime/kwalletd/secretserviceclient.cpp b/src/runtime/kwalletd/secretserviceclient.cpp
+index 80a4fdb..ef23b04 100644
+--- a/src/runtime/kwalletd/secretserviceclient.cpp
++++ b/src/runtime/kwalletd/secretserviceclient.cpp
+@@ -455,7 +455,7 @@ bool SecretServiceClient::isAvailable() const
+     return m_service != nullptr;
+ }
+
+-bool SecretServiceClient::unlockCollection(const QString &collectionName, bool *ok)
++bool SecretServiceClient::unlockCollection(const QString &collectionName, bool *ok, bool interactive)
+ {
+     if (!attemptConnection()) {
+         *ok = false;
+@@ -475,6 +475,10 @@ bool SecretServiceClient::unlockCollection(const QString &collectionName, bool *
+
+     gboolean locked = secret_collection_get_locked(collection);
+
++    if (locked && !interactive) {
++        *ok = false;
++        return false;
++    }
+     if (locked) {
+         gboolean success = secret_service_unlock_sync(m_service.get(), g_list_append(nullptr, collection), nullptr, nullptr, &error);
+         *ok = wasErrorFree(&error);
+diff --git a/src/runtime/kwalletd/secretserviceclient.h b/src/runtime/kwalletd/secretserviceclient.h
+index aa1597e..eb4556d 100644
+--- a/src/runtime/kwalletd/secretserviceclient.h
++++ b/src/runtime/kwalletd/secretserviceclient.h
+@@ -50,7 +50,7 @@ public:
+     bool useKSecretBackend() const;
+     bool isAvailable() const;
+
+-    bool unlockCollection(const QString &collectionName, bool *ok);
++    bool unlockCollection(const QString &collectionName, bool *ok, bool interactive = true);
+
+     QString defaultCollection(bool *ok);
+     void setDefaultCollection(const QString &collectionName, bool *ok);

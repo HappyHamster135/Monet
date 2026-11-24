@@ -335,13 +335,13 @@ def prepare(saved):
     return {k: state[k] for k in ("digest", "content_digest", "windows", "tabs")}
 
 
-def launch(saved):
+def launch(saved, *, prefix=()):
     profile = profile_path(saved.get("profile"))
     if not profile or owner(saved["profile"]):
         raise OSError("Browser profile unavailable or already open")
     # Zen restores normal sessions itself. No one-shot prefs or startup settings
     # need changing, and no URLs are passed to a shell or another profile.
-    process = subprocess.Popen(["flatpak", "run", FLATPAK, "--new-instance", "--profile", str(profile)],
+    process = subprocess.Popen([*prefix, "flatpak", "run", FLATPAK, "--new-instance", "--profile", str(profile)],
                                start_new_session=True, stdin=subprocess.DEVNULL,
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return process.pid

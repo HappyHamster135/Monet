@@ -20,7 +20,7 @@ class NativeRuntimeRefresh(unittest.TestCase):
                 patch.object(runtime.subprocess, "run") as run:
             runtime.refresh(ROOT / "image")
         self.assertEqual(capture.call_count, len(runtime.BUNDLES))
-        expected = sorted({"shared.x86_64", "polkit-kde", "polkit-qt6-1",
+        expected = sorted({"shared.x86_64", "polkit-kde", "polkit-qt6-1", "kf6-kwallet", "kf6-kwallet-libs",
                            *(name + ".x86_64" for name in runtime.BUNDLES)})
         run.assert_called_once_with(["dnf5", "-y", "upgrade", *expected], check=True)
 
