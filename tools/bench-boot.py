@@ -175,7 +175,10 @@ def boot(args, disk, variables, key, index, runtime):
     try:
         with (work/'qemu.log').open('w') as log:
             process = subprocess.Popen(command,stdout=log,stderr=subprocess.STDOUT)
-        deadline = started + args.timeout; next_ssh = started; active = False
+        # Initial hardware setup stages a deployment and reboots the VM. Its
+        # whole sequence is excluded from steady-state boot measurements.
+        deadline = started + (args.setup_timeout if index == 0 else args.timeout)
+        next_ssh = started
         while time.monotonic() < deadline:
             if process.poll() is not None: raise RuntimeError('VM exited before its login screen')
             if shutil.disk_usage(args.output).free < 8 * 1024**3: raise RuntimeError('Keeping 8 GiB disk headroom')
@@ -307,6 +310,8 @@ def main():
     parser.add_argument('disk',type=Path); parser.add_argument('output',type=Path)
     parser.add_argument('--samples',type=int,default=3); parser.add_argument('--cpus',type=int,default=1)
     parser.add_argument('--memory',type=int,default=8192); parser.add_argument('--timeout',type=int,default=240)
+    parser.add_argument('--setup-timeout', type=int, default=600,
+        help='Time limit for the excluded setup sequence including any deployment reboot')
     parser.add_argument('--check-trust-refresh',action='store_true',
         help='Require trust regeneration on the initial boot and no regeneration on subsequent boots')
     parser.add_argument('--check-wifi-migration',action='store_true',
@@ -315,6 +320,7 @@ def main():
     parser.add_argument('--firmware-vars',type=Path,default=Path('/usr/share/OVMF/OVMF_VARS_4M.fd'))
     args=parser.parse_args()
     if not 1<=args.samples<=10 or not 1<=args.cpus<=4 or not 1<=args.timeout<=600: parser.error('Invalid sample/resource limits')
+    if not 1 <= args.setup_timeout <= 1200: parser.error('Invalid initial setup timeout')
     args.disk=args.disk.resolve(); args.output=args.output.resolve()
     if not args.disk.is_file() or args.disk.suffix not in ('.qcow2','.raw'): parser.error('An installed qcow2 or raw file is required')
     for path in (args.firmware_code,args.firmware_vars):
