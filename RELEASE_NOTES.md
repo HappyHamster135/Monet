@@ -16,7 +16,8 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 - **Preferred sound outputs.** In Settings → Sound, rank headphones and speakers in the order you want to use them. Monet switches when devices connect or disconnect and remembers choices that are temporarily offline.
 - **First click after switching windows.** The previous title overlay retires on focus
   changes. A pointer resting at a window edge gets a second geometry check as the window
-  settles, and dismissed snap overlays release input during their fade.
+  settles, and dismissed snap overlays release input during their fade. After snapping or
+  maximizing, the top edge reveals the controls even when the pointer stays still.
 - **Graphics in Task Manager.** Applications and Processes show a sortable Graphics
   column beside CPU and Memory. Sorting keeps the arrow inside its column. Hover
   over a shortened heading to read the full name. Applications and Processes

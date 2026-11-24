@@ -210,6 +210,7 @@ QtObject {
     property var effects: []
     property var calls: []
     signal windowAdded(var window)
+    signal windowRemoved(var window)
     signal windowActivated(var window)
     // The topmost windows under a point, as KWin's windowAt: on this desktop, shown, hit.
     function windowAt(p, count) {
@@ -395,6 +396,25 @@ class Behaviour(unittest.TestCase):
         self.assertIsNone(self.shown_for())
         self.assertFalse(self.bar.isVisible())
         self.assertFalse(self.errors, "\n".join(self.errors))
+
+    def test_stationary_pointer_gets_controls_after_a_snap_overlay_closes(self):
+        self.stack("filled", "popup")
+        self.js("Workspace.activeWindow = scene.filled; scene.popup.frameGeometry = Qt.rect(50, 0, 400, 60)")
+        self.point(150, 1, 800)
+        self.assertIsNone(self.shown_for())
+        self.stack("filled")
+        self.js("Workspace.windowRemoved(scene.popup)")
+        QTest.qWait(350)
+        self.assertEqual(self.shown_for(), "Filled")
+
+    def test_maximizing_under_a_stationary_pointer_reveals_the_controls(self):
+        self.stack("app")
+        self.js("Workspace.activeWindow = scene.app")
+        self.point(150, 1, 400)
+        self.assertIsNone(self.shown_for())
+        self.js("scene.app.frameGeometry = Qt.rect(0, 0, 1920, 1080)")
+        QTest.qWait(350)
+        self.assertEqual(self.shown_for(), "Files")
 
     def test_passing_by_is_not_pointing(self):
         self.stack("app")

@@ -104,6 +104,20 @@ Item {
         return Hover.aimedAt(p, root.topWindow, root.canShow)
     }
 
+    function atClientEdge(w, p) {
+        return w && !w.deleted && w.managed && (w.normalWindow || w.dialog || w.utility)
+            && w.output && Hover.atTop(w.clientGeometry, w.output.geometry, p)
+    }
+
+    function nearEdge(p) {
+        // A snap outline or closing menu can be the top hit until KWin removes it.
+        return atClientEdge(Workspace.activeWindow, p) || atClientEdge(root.topWindow(p), p)
+    }
+
+    function edgeChanged() {
+        if (root.hovering && !bar.held && nearEdge(Workspace.cursorPos)) root.queueEvaluation()
+    }
+
     // As the pointer moves (once a frame at most): the bar stays while the pointer's on it or
     // holds it, comes a moment after the pointer reaches a window's top (passing by isn't enough),
     // and goes a moment after the pointer leaves it.
@@ -123,13 +137,7 @@ Item {
             return
         }
         const aimed = aimedAt(p)
-        if (!aimed && retry && !bar.held && !root.busy()) {
-            // Window geometry or a disappearing popup can lag the pointer event
-            // on a focus switch. Retry a stationary, eligible edge once.
-            const candidate = root.topWindow(p)
-            if (Hover.titleless(candidate) && candidate.output
-                    && Hover.atTop(candidate.clientGeometry, candidate.output.geometry, p)) settleEdge.restart()
-        }
+        if (!aimed && retry && !bar.held && !root.busy() && nearEdge(p)) settleEdge.restart()
         if (bar.open && aimed === w) {
             away.stop()
             return
@@ -172,6 +180,9 @@ Item {
                 introduce.restart()
             }
         }
+        function onWindowRemoved(w) {
+            if (w && !root.ours(w)) root.edgeChanged()
+        }
         function onWindowActivated(w) {
             if (root.asked && root.asked.window === w) root.act()
             // KWin may announce the same client again as an internal popup maps.
@@ -187,6 +198,16 @@ Item {
             }
             root.queueEvaluation()
         }
+    }
+
+    Connections {
+        target: Workspace.activeWindow
+        ignoreUnknownSignals: true
+        function onClientGeometryChanged() {
+            if (target && !target.move && !target.resize && root.atClientEdge(target, Workspace.cursorPos))
+                root.queueEvaluation()
+        }
+        function onInteractiveMoveResizeFinished() { root.edgeChanged() }
     }
 
     // Give a new foreground window a brief introduction after its first map.
@@ -224,6 +245,9 @@ Item {
             const w = root.aimedAt(Workspace.cursorPos)
             if (w && w === root.pending && !bar.held) {
                 bar.openFor(w)
+            } else if (root.pending && !bar.held && root.nearEdge(Workspace.cursorPos)) {
+                // The outline may appear during the hover delay itself.
+                settleEdge.restart()
             }
             root.pending = null
         }
@@ -323,7 +347,6 @@ Item {
         smoke: root.smoke
         onOpenChanged: {
             if (!bar.open) {
-                look.stop()
                 previewTime.stop()
                 root.preview = null
             }
