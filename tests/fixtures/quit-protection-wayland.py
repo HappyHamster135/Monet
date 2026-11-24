@@ -94,10 +94,20 @@ def worker(home, platform):
         assert '"monet_quit_guard"' in plugins, plugins
         start("GuardOne")
         start("GuardTwo")
+        wait(lambda: r.kwin_script("reply(workspace.activeWindow?.caption)") == "GuardTwo",
+             "The second client did not finish mapping")
         focus("GuardOne")
+        # This rule was saved before KWin started. It must already protect W.
+        assert close.enable.isChecked() and not quit.enable.isChecked()
         chord(ctrl, q)
         chord(ctrl, w)
-        expect("GuardOne Ctrl+Q", "GuardOne Ctrl+W")
+        expect("GuardOne Ctrl+Q")
+        chord(ctrl, w)
+        expect("GuardOne Ctrl+W")
+        close.enable.setChecked(False)
+        configure()
+        chord(ctrl, w)
+        expect("GuardOne Ctrl+W")
         quit.feedback.setChecked(False)
         quit.hold.setValue(.35)
         quit.enable.setChecked(True)
@@ -215,6 +225,9 @@ def worker(home, platform):
 def run(platform, plugin):
     with private_session() as env:
         home = Path(env["HOME"])
+        prefs = Path(env["XDG_CONFIG_HOME"]) / "Monet"
+        prefs.mkdir()
+        (prefs / "QuitProtection.conf").write_text("[close]\nenabled=true\nmode=twice\ndoubleMs=1000\nfeedback=false\n")
         binary = home / "kwin_wayland"
         shutil.copyfile(shutil.which("kwin_wayland"), binary)
         binary.chmod(0o700)
