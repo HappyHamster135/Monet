@@ -111,11 +111,14 @@ class Window(QMainWindow):
         self.filter()
         self.search.setFocus()
 
-    def page(self, key, factory):
+    def ensure_page(self, key, factory):
         if key not in self.pages:
             self.pages[key] = factory()
             self.stack.addWidget(self.pages[key])
-        self.stack.setCurrentWidget(self.pages[key])
+        return self.pages[key]
+
+    def page(self, key, factory):
+        self.stack.setCurrentWidget(self.ensure_page(key, factory))
         self.title.setText(ACTIONS[key].name)
         self.back.show()
         self.status.clearMessage()
@@ -608,6 +611,17 @@ class Receiver(QObject):
     def release_if_unused(self):
         if not any(w.isVisible() for w in QApplication.topLevelWidgets()) and not self.window.running and not self.window.notch_previews:
             QApplication.quit()
+
+    @Slot(str, result=bool)
+    def AddToShelf(self, address):
+        url = QUrl(address)
+        path = url.toLocalFile()
+        if not url.isLocalFile() or url.host() or not os.path.isabs(path) or "\0" in path:
+            return False
+        self.idle.start()
+        shelf = self.window.ensure_page("shelf", lambda: Shelf(self.window.settings))
+        shelf.files.add_paths([path])
+        return os.path.normpath(path) in shelf.files.paths()
 
     @Slot(str)
     def Present(self, payload):

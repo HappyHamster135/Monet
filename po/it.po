@@ -15415,3 +15415,63 @@ msgstr ""
 #: linux/share/monet/utilities/cleaning.py:36
 msgid "Cleaning mode requires the Monet lock screen."
 msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:25
+msgid "Refresh downloads"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:30
+msgid "Folder…"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:31
+msgid "Manage watched folder"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:76
+msgid "Checking downloads…"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:77
+msgid "No recent files in this folder."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:77 linux/share/monet/utilities/pages.py:121
+msgid "The watched folder is unavailable."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:98
+msgid "Partial download"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:103
+msgid "Show %1 in Files"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:109
+msgid "Add %1 to file shelf"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:110
+msgid "Add to file shelf"
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:123
+msgid "Watch another folder…"
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:123
+msgid "Use Downloads folder"
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:146
+msgid "Watch a folder"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:30
+msgid "Added %1 to the file shelf."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:31
+msgid "Could not add %1 to the file shelf."
+msgstr ""

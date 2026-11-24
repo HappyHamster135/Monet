@@ -10958,10 +10958,12 @@ def main(argv):
         emit(result)
         return 0 if result.get("ok") else 1
     elif cmd == "notch-activity" and not args:
-        from PySide6.QtCore import QSettings, QUrl
+        from PySide6.QtCore import QSettings, QStandardPaths, QUrl
         settings = QSettings("Monet", "Utilities")
         path = settings.value("downloads", "")
-        folder = QUrl.fromLocalFile(path).toString() if path and Path(path).is_dir() else downloads_dir().as_uri()
+        if not isinstance(path, str) or not os.path.isabs(path):
+            path = QStandardPaths.writableLocation(QStandardPaths.DownloadLocation)
+        folder = Path(path)
         agent = ""
         chosen = settings.value("agentFile", "")
         if chosen:
@@ -10972,7 +10974,8 @@ def main(argv):
                 agent = format_summary(summary(chosen))
             except (OSError, ValueError, sqlite3.Error, TypeError):
                 pass
-        emit({"folder": folder, "agent": agent})
+        emit({"folder": QUrl.fromLocalFile(str(folder)).toString(QUrl.FullyEncoded), "path": str(folder),
+              "available": folder.is_dir() and os.access(folder, os.R_OK | os.X_OK), "agent": agent})
     elif cmd == "accessory-alert" and len(args) == 2 and re.fullmatch(r"(?:[a-f0-9]{2}){1,1024}", args[0]) and args[1].isdigit() and len(args[1]) <= 2 and int(args[1]) <= 20:
         run("notify-send", "--app-name=Monet", "--icon=battery-low", "--", tr("Low accessory battery"),
             tr("%1 has %2% battery remaining.", unhex(args[0]), args[1]))

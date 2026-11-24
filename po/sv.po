@@ -15423,3 +15423,63 @@ msgstr "Börja rengöringen"
 #: linux/share/monet/utilities/cleaning.py:36
 msgid "Cleaning mode requires the Monet lock screen."
 msgstr "Rengöringsläget kräver Monets låsskärm."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:25
+msgid "Refresh downloads"
+msgstr "Uppdatera hämtningar"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:30
+msgid "Folder…"
+msgstr "Mapp…"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:31
+msgid "Manage watched folder"
+msgstr "Hantera bevakad mapp"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:76
+msgid "Checking downloads…"
+msgstr "Kontrollerar hämtningar…"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:77
+msgid "No recent files in this folder."
+msgstr "Det finns inga nya filer i den här mappen."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:77 linux/share/monet/utilities/pages.py:121
+msgid "The watched folder is unavailable."
+msgstr "Den bevakade mappen är inte tillgänglig."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:98
+msgid "Partial download"
+msgstr "Ofullständig hämtning"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:103
+msgid "Show %1 in Files"
+msgstr "Visa %1 i Filer"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:109
+msgid "Add %1 to file shelf"
+msgstr "Lägg till %1 på filhyllan"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:110
+msgid "Add to file shelf"
+msgstr "Lägg till på filhyllan"
+
+#: linux/share/monet/utilities/pages.py:123
+msgid "Watch another folder…"
+msgstr "Bevaka en annan mapp…"
+
+#: linux/share/monet/utilities/pages.py:123
+msgid "Use Downloads folder"
+msgstr "Använd hämtningsmappen"
+
+#: linux/share/monet/utilities/pages.py:146
+msgid "Watch a folder"
+msgstr "Bevaka en mapp"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:30
+msgid "Added %1 to the file shelf."
+msgstr "Lade till %1 på filhyllan."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Downloads.qml:31
+msgid "Could not add %1 to the file shelf."
+msgstr "Det gick inte att lägga till %1 på filhyllan."

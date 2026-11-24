@@ -2,10 +2,11 @@
 import json
 import os
 from pathlib import Path
-from PySide6.QtCore import QDir, QFileSystemWatcher, QMimeData, QSettings, QStandardPaths, Qt, QTimer, QUrl
+from PySide6.QtCore import QFileSystemWatcher, QMimeData, QStandardPaths, Qt, QUrl
 from PySide6.QtGui import QDesktopServices, QDrag, QIcon
 from PySide6.QtWidgets import (QAbstractItemView, QFileDialog, QFileSystemModel, QHBoxLayout, QInputDialog, QLabel,
     QListWidget, QListWidgetItem, QMenu, QPlainTextEdit, QPushButton, QTreeView, QVBoxLayout, QWidget)
+from actions import tr
 
 def row(layout, *actions):
     bar = QHBoxLayout()
@@ -117,18 +118,57 @@ class Downloads(QWidget):
         self.view.setColumnWidth(0, 245)
         self.view.doubleClicked.connect(lambda index: QDesktopServices.openUrl(QUrl.fromLocalFile(self.model.filePath(index))))
         layout.addWidget(self.view)
-        row(layout, ("Watch another folder…", self.choose))
-        self.show_folder(settings.value("downloads", QStandardPaths.writableLocation(QStandardPaths.DownloadLocation)))
+        self.folder_watch = QFileSystemWatcher(self)
+        self.folder_watch.directoryChanged.connect(self.refresh)
+        self.unavailable = QLabel(tr("The watched folder is unavailable."))
+        layout.addWidget(self.unavailable)
+        row(layout, (tr("Watch another folder…"), self.choose), (tr("Use Downloads folder"), self.reset_folder))
+        self.refresh()
 
-    def show_folder(self, path):
+    def refresh(self):
+        path = self.settings.value("downloads", "")
+        if not isinstance(path, str) or not os.path.isabs(path):
+            path = QStandardPaths.writableLocation(QStandardPaths.DownloadLocation)
         self.path.setText(path)
-        self.view.setRootIndex(self.model.setRootPath(path))
-        self.settings.setValue("downloads", path)
+        available = os.path.isdir(path) and os.access(path, os.R_OK | os.X_OK)
+        index = self.model.setRootPath(path) if available else None
+        available = bool(index and index.isValid())
+        if available:
+            self.view.setRootIndex(index)
+        self.view.setVisible(available)
+        self.unavailable.setVisible(not available)
+        # Watch the parent to detect removal or reconnection without revisiting
+        # the system roots while the selected folder is unavailable.
+        if self.isVisible():
+            parent = Path(path).parent
+            while not parent.is_dir() and parent != parent.parent:
+                parent = parent.parent
+            desired = str(parent)
+            watched = self.folder_watch.directories()
+            if desired not in watched:
+                if watched:
+                    self.folder_watch.removePaths(watched)
+                self.folder_watch.addPath(desired)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.refresh()
+
+    def hideEvent(self, event):
+        watched = self.folder_watch.directories()
+        if watched:
+            self.folder_watch.removePaths(watched)
+        super().hideEvent(event)
+
+    def reset_folder(self):
+        self.settings.remove("downloads")
+        self.refresh()
 
     def choose(self):
-        path = QFileDialog.getExistingDirectory(self, "Watch a folder", self.path.text())
+        path = QFileDialog.getExistingDirectory(self, tr("Watch a folder"), self.path.text())
         if path:
-            self.show_folder(path)
+            self.settings.setValue("downloads", path)
+            self.refresh()
 
 class Snippets(QWidget):
     def __init__(self, settings):

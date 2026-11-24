@@ -1,6 +1,4 @@
 import QtQuick
-import QtCore
-import Qt.labs.folderlistmodel
 import QtQuick.Layouts
 import QtQuick.Controls as C
 import org.kde.kirigami as Kirigami
@@ -34,6 +32,7 @@ PlasmoidItem {
         if (!expanded && preview.item?.noticeId) {
             requestedNotice = preview.item.noticeId
             viewingWatch = false
+            viewingDownloads = false
             tab = 1
         }
         expanded = !expanded
@@ -73,7 +72,25 @@ PlasmoidItem {
     }
     property string message: ""
     property string agentSummary: ""
-    property url downloadFolder: StandardPaths.writableLocation(StandardPaths.DownloadLocation)
+    property bool viewingDownloads: false
+    property bool checkingDownloads: false
+    property string downloadPath: ""
+    property url downloadFolder: ""
+    property bool downloadAvailable: false
+    readonly property bool activityOpen: expanded && tab === 1 && !(viewingWatch && watch.registered)
+    function refreshActivity() {
+        checkingDownloads = true
+        runner.connectSource(helper + " notch-activity")
+    }
+    onActivityOpenChanged: {
+        if (activityOpen) refreshActivity()
+        else { downloadAvailable = false; downloadPath = ""; downloadFolder = "" }
+    }
+    Loader {
+        id: downloadFeed
+        active: root.activityOpen && root.downloadAvailable
+        sourceComponent: DownloadFeed { directory: root.downloadFolder }
+    }
     toolTipMainText: i18n("Monet Notch")
     toolTipSubText: preview.item?.title ? [preview.item.sender, preview.item.title].filter(Boolean).join(" · ") : endTime ? remaining() : watch.registered ? i18n("Watching a window") : media?.track || i18n("Music, activity and tools")
     Repeater {
@@ -141,7 +158,7 @@ PlasmoidItem {
     }
     Component.onCompleted: refreshTime()
     onExpandedChanged: {
-        if (!root.expanded) { requestedNotice = 0; return }
+        if (!root.expanded) { requestedNotice = 0; viewingDownloads = false; return }
         agendaDay = new Date()
         refreshTime()
         if (requestedNotice) return
@@ -158,11 +175,15 @@ PlasmoidItem {
                 try { root.outputNames = JSON.parse(data.stdout) } catch (_) {}
             }
             if (source.endsWith(" notch-activity")) {
+                root.checkingDownloads = false
+                if (!root.activityOpen) return
                 try {
                     const state = JSON.parse(data.stdout)
                     root.agentSummary = state.agent
-                    if (state.folder.startsWith("file:///")) root.downloadFolder = state.folder
-                } catch (_) {}
+                    root.downloadPath = state.path
+                    root.downloadFolder = state.folder
+                    root.downloadAvailable = state.available && state.folder.startsWith("file:///")
+                } catch (_) { root.downloadAvailable = false }
             }
             if (source.startsWith(root.helper + " focus ") && !source.includes(" focus off ")) {
                 try { if (JSON.parse(data.stdout).ok) return } catch (e) {}
@@ -249,6 +270,7 @@ PlasmoidItem {
             Layout.fillWidth: true; Layout.fillHeight: true
             active: root.expanded
             sourceComponent: root.tab === 1 && root.viewingWatch && watch.registered ? watchPage
+                : root.tab === 1 && root.viewingDownloads ? downloadsPage
                 : root.tab === 3 && root.viewingAgenda ? agendaPage
                 : root.tab === 0 && root.musicView === 3 ? mixerPage
                 : root.tab === 4 ? (padController.item ? padPage : null) : [musicPage, activityPage, timerPage, calendarPage][root.tab]
@@ -305,6 +327,19 @@ PlasmoidItem {
         }
     }
     Component {
+        id: downloadsPage
+        Downloads {
+            feed: downloadFeed.item
+            localPath: root.downloadPath
+            directory: root.downloadFolder
+            checking: root.checkingDownloads
+            opener: FolderOpenController {}
+            onBackRequested: root.viewingDownloads = false
+            onRefreshRequested: { root.downloadAvailable = false; root.refreshActivity() }
+            onManageRequested: root.openTool("downloads")
+        }
+    }
+    Component {
         id: activityPage
         ColumnLayout {
 
@@ -324,32 +359,19 @@ PlasmoidItem {
                 onPreviewFinished: root.requestedNotice = 0
                 onActivated: root.expanded = false
             }
-            Component.onCompleted: {
-                runner.connectSource(root.helper + " notch-activity")
-            }
             C.Label {
                 Layout.fillWidth: true; visible: !notices.inDetail && text.length > 0; textFormat: Text.PlainText
                 elide: Text.ElideRight; text: root.agentSummary; Accessible.name: root.agentSummary
             }
-            FolderListModel {
-                id: arriving
-                folder: root.downloadFolder
-                showDirs: false; showDotAndDotDot: false; sortField: FolderListModel.Time; sortReversed: false
-            }
             C.Label {
-                readonly property string latestName: {
-                    if (!arriving.count || arriving.status !== FolderListModel.Ready) return ""
-                    const url = String(arriving.get(0, "fileUrl"))
-                    const folder = String(root.downloadFolder).replace(/\/+$/, "") + "/"
-                    return url.slice(0, url.lastIndexOf("/") + 1) === folder ? arriving.get(0, "fileName") : ""
-                }
+                readonly property string latestName: downloadFeed.item?.latestFinished ?? ""
                 Layout.fillWidth: true; visible: !notices.inDetail && !!latestName; elide: Text.ElideMiddle
                 textFormat: Text.PlainText
                 text: latestName ? i18n("Latest download · %1", latestName) : ""
             }
             RowLayout {
                 visible: !notices.inDetail
-                C.Button { text: i18n("Downloads"); onClicked: root.openTool("downloads") }
+                C.Button { text: i18n("Downloads"); onClicked: root.viewingDownloads = true }
                 C.Button { text: i18n("Agent usage"); onClicked: root.openTool("agents") }
                 C.Button {
                     text: i18n("Watch")
