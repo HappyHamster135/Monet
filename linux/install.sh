@@ -333,6 +333,7 @@ put 644 "$SRC/systemd/user/monet-light.timer" "$USERUNITDIR/monet-light.timer"
 put 644 "$SRC/systemd/user/monet-light-sync.service" "$USERUNITDIR/monet-light-sync.service"
 put 644 "$SRC/systemd/user/monet-light-sync.path" "$USERUNITDIR/monet-light-sync.path"
 put 644 "$SRC/systemd/user/monet-fresh.service" "$USERUNITDIR/monet-fresh.service"
+put 644 "$SRC/systemd/user/monet-clean-links.service" "$USERUNITDIR/monet-clean-links.service"
 put 644 "$SRC/systemd/user/monet-output-order.service" "$USERUNITDIR/monet-output-order.service"
 put 644 "$SRC/systemd/user/monet-keep-awake.service" "$USERUNITDIR/monet-keep-awake.service"
 put 644 "$SRC/systemd/user/monet-brightness.service" "$USERUNITDIR/monet-brightness.service"
@@ -434,6 +435,12 @@ install -d "$DATADIR/monet"
 put 644 "$SRC/share/monet/widgets/ScrollInput.qml" "$DATADIR/monet/widgets/ScrollInput.qml"
 install -d "$DATADIR/monet/utilities"
 install -m 644 "$SRC"/share/monet/utilities/*.py "$DATADIR/monet/utilities/"
+install -Dm644 "$SRC/clipboard/ext-data-control-v1.xml" "$DATADIR/monet/utilities/ext-data-control-v1.xml"
+if [ -f "$SRC/share/monet/utilities/libmonetclipboard.so" ]; then
+    install -m 755 "$SRC/share/monet/utilities/libmonetclipboard.so" "$DATADIR/monet/utilities/"
+else
+    sh "$SRC/clipboard/build.sh" "$DATADIR/monet/utilities/libmonetclipboard.so"
+fi
 if [ -d "$SRC/share/monet/agenda-wheels" ]; then
     tree "$SRC/share/monet/agenda-wheels" "$DATADIR/monet/agenda-wheels"
 fi

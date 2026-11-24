@@ -12,6 +12,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   In Calendar → Upcoming appointments, link calendar files or follow subscriptions. The agenda shows recurring meetings, schedule changes and all-day events, including a saved copy when offline.
   In Activity → Watch, pin a window region and get an alert when it changes, settles, or shows a phrase.
   Dropping files on it adds them to the shelf. Music levels and accessory alerts are optional.
+- **Copied links.** In Utilities → Copied link settings, turn on automatic cleanup to remove tracking parameters when you copy a plain web address.
 - **Preferred sound outputs.** In Settings → Sound, rank headphones and speakers in the order you want to use them. Monet switches when devices connect or disconnect and remembers choices that are temporarily offline.
 - **First click after switching windows.** The previous title overlay retires on focus
   changes. A pointer resting at a window edge gets a second geometry check as the window

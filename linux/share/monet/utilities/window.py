@@ -8,10 +8,10 @@ import tempfile
 from PySide6.QtCore import (QObject, QProcess, QSettings, QSize, Qt, QTimer, QUrl, Slot)
 from PySide6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage
 from PySide6.QtGui import QAction, QCursor, QIcon, QKeySequence, QShortcut
-from PySide6.QtWidgets import (QApplication, QDialog, QDialogButtonBox, QFileDialog, QHBoxLayout, QInputDialog,
+from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QDialogButtonBox, QFileDialog, QHBoxLayout, QInputDialog,
     QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMenu, QMessageBox, QPlainTextEdit,
     QPushButton, QStackedWidget, QToolButton, QVBoxLayout, QWidget, QWidgetAction)
-from actions import ACTIONS, DEFAULT_FAVORITES, clean_url
+from actions import ACTIONS, DEFAULT_FAVORITES, clean_url, tr
 from pages import Downloads, Shelf, Writing, row, stored
 
 MODULES = Path(__file__).resolve().parent
@@ -352,6 +352,32 @@ class Window(QMainWindow):
         self.worker(["nice", "-n", "10", "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-n",
                      "-threads","2","-filter_threads","1","-i",source,*opts,"-threads","2",output], finish, fail)
 
+    def link_settings(self):
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        switch = QCheckBox(tr("Clean copied links automatically"))
+        layout.addWidget(switch)
+        detail = QLabel(tr("Remove common tracking parameters when you copy a plain web address. Formatted text, files and recognized signed links keep their original contents."))
+        detail.setWordWrap(True)
+        layout.addWidget(detail)
+        layout.addStretch()
+        command = [sys.executable, MODULES / "clipboard_links.py"]
+        def read():
+            switch.setEnabled(False)
+            def show(result):
+                switch.setChecked(result.strip() == "on")
+                switch.setEnabled(True)
+            self.worker([*command, "status"], show)
+        def change(on):
+            switch.setEnabled(False)
+            def failed(message):
+                self.issue(message)
+                read()
+            self.worker([*command, "on" if on else "off"], lambda _: read(), failed)
+        switch.clicked.connect(change)
+        page.refresh = read
+        return page
+
     def run_tool(self, key):
         action = ACTIONS.get(key)
         if not action:
@@ -375,6 +401,8 @@ class Window(QMainWindow):
             self.page(key, lambda: Downloads(self.settings))
         elif key == "wheel":
             self.wheel()
+        elif key == "link-settings":
+            self.page(key, self.link_settings).refresh()
         elif key in ("clean", "plain"):
             clipboard = QApplication.clipboard()
             try:

@@ -93,7 +93,7 @@ jobs:
         run: |
           tools/configure-ci-apt.sh
           sudo apt-get update -q
-          sudo apt-get install -y -q mingw-w64 cmake qt6-base-dev python3-pip
+          sudo apt-get install -y -q mingw-w64 cmake qt6-base-dev libwayland-dev libwayland-bin python3-pip
           rustup toolchain install && rustup target add x86_64-unknown-linux-musl x86_64-pc-windows-gnu
       - name: Build
         run: |

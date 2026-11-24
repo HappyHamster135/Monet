@@ -14602,3 +14602,16 @@ msgstr ""
 #: linux/libexec/monet-quick:10478
 msgid "Sound output"
 msgstr ""
+
+#: linux/share/monet/utilities/actions.py:24
+msgid "Copied link settings"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:358
+msgid "Clean copied links automatically"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:360
+msgid ""
+"Remove common tracking parameters when you copy a plain web address. Formatted text, files and recognized signed links keep their original contents."
+msgstr ""

@@ -23,6 +23,19 @@ class Tools(unittest.TestCase):
         with self.assertRaises(ValueError):
             clean_url("file:///tmp/document")
 
+    def test_tracking_cleanup_keeps_the_original_url_spelling(self):
+        url = "HTTPS://example.org/A%2Fb?item=one+two&%75tm_source=ref&item=%2B#"
+        self.assertEqual(clean_url(url), "HTTPS://example.org/A%2Fb?item=one+two&item=%2B#")
+        self.assertEqual(clean_url("https://e.org/?utm_source=x#?gclid=a"), "https://e.org/#?gclid=a")
+        for field in ("X-Amz-Signature", "X-Goog-Signature", "access_token", "hmac", "expires", "%73ig"):
+            url = f"https://e.org/?utm_campaign=a&{field}=abc"
+            self.assertEqual(clean_url(url), url)
+        for url in ("https://name@e.org/?fbclid=a", "https://e.org/?", "https://e.org/#"):
+            self.assertEqual(clean_url(url), url)
+        for value in ("https://e.org/\x00?a=b", "https://e.org/\\bad?gclid=a", "https://e.org text"):
+            with self.assertRaises(ValueError):
+                clean_url(value)
+
     def test_agent_summary_reads_reported_numbers_only(self):
         with tempfile.TemporaryDirectory() as directory:
             log = Path(directory) / "sample.jsonl"

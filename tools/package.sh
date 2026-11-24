@@ -45,6 +45,7 @@ case "$KIND" in
         for source in README.md LICENSE.upstream build.py automatic-submit.js release.json; do
             cp "$ROOT/browser/monet-passwords/$source" "$OUT/share/doc/monet/passwords-connector/"
         done
+        sh "$ROOT/linux/clipboard/build.sh" "$OUT/share/monet/utilities/libmonetclipboard.so"
         bash "$ROOT/tools/build-settings-style.sh" "$OUT/lib/monet/qt"
         # What's new, for Settings → Updates and the note after an update (monet-quick whats-new).
         cp "$ROOT/RELEASE_NOTES.md" "$OUT/share/monet/release-notes.md"

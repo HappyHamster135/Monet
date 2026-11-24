@@ -1,0 +1,19 @@
+[Unit]
+Description=Clean tracking parameters from copied web links
+PartOf=graphical-session.target
+
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+Type=notify
+TimeoutStartSec=8
+ExecReload=/bin/kill -USR1 $MAINPID
+ExecStart=/usr/bin/python3 -B @DATADIR@/monet/utilities/clipboard_links.py
+Slice=background.slice
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=3
+
+[Install]
+WantedBy=graphical-session.target

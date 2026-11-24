@@ -14704,3 +14704,16 @@ msgstr "Det gick inte att byta ljudutgång."
 #: linux/libexec/monet-quick:10478
 msgid "Sound output"
 msgstr "Ljudutgång"
+
+#: linux/share/monet/utilities/actions.py:24
+msgid "Copied link settings"
+msgstr "Inställningar för kopierade länkar"
+
+#: linux/share/monet/utilities/window.py:358
+msgid "Clean copied links automatically"
+msgstr "Rensa kopierade länkar automatiskt"
+
+#: linux/share/monet/utilities/window.py:360
+msgid ""
+"Remove common tracking parameters when you copy a plain web address. Formatted text, files and recognized signed links keep their original contents."
+msgstr "Ta bort vanliga spårningsparametrar när du kopierar en webbadress som ren text. Formaterad text, filer och identifierade signerade länkar behåller sitt innehåll."

@@ -1,6 +1,10 @@
 """Desktop actions and clipboard/file transformations, independent of the interface."""
 from dataclasses import dataclass
-from urllib.parse import unquote_plus, urlsplit, urlunsplit
+from gettext import translation
+from pathlib import Path
+from links import clean_url
+
+tr = translation("monet", localedir=str(Path(__file__).resolve().parents[2] / "locale"), fallback=True).gettext
 
 @dataclass(frozen=True)
 class Action:
@@ -17,6 +21,7 @@ ACTIONS = {
     "snippets": Action("Text snippets", "Writing", "edit-paste"),
     "clipboard": Action("Clipboard history", "Writing", "edit-paste", ("qdbus-qt6", "org.kde.klipper", "/klipper", "org.kde.klipper.klipper.showKlipperPopupMenu")),
     "plain": Action("Copy as plain text", "Writing", "edit-copy"),
+    "link-settings": Action(tr("Copied link settings"), "Writing", "preferences-system"),
     "clean": Action("Clean a copied link", "Writing", "edit-clear"),
     "color": Action("Pick a screen color", "Capture", "color-picker"),
     "screenshot": Action("Screenshot and annotate", "Capture", "spectacle", ("spectacle", "-r")),
@@ -58,18 +63,3 @@ ACTIONS = {
     "wheel": Action("Favorite actions wheel", "Desktop", "view-more"),
 }
 DEFAULT_FAVORITES = ["shelf", "notes", "screenshot", "color", "awake", "sound"]
-
-def clean_url(text):
-    """Leave signature-bearing URLs and the exact encoding of retained parameters intact."""
-    value = text.strip()
-    if not value or any(c.isspace() for c in value):
-        raise ValueError("Copy one web link first.")
-    parts = urlsplit(value)
-    if parts.scheme.lower() not in ("http", "https") or not parts.hostname:
-        raise ValueError("Copy one web link first.")
-    fields = [(unquote_plus(p.partition("=")[0]).casefold(), p) for p in parts.query.split("&")]
-    if any(k in ("sig", "signature", "policy", "key-pair-id") or k.startswith(("x-amz-", "x-goog-")) for k, _ in fields):
-        return value
-    query = "&".join(p for k, p in fields if not k.startswith("utm_") and k not in
-                     {"fbclid", "gclid", "dclid", "msclkid", "mc_eid", "mc_cid"})
-    return urlunsplit(parts._replace(query=query)) if query != parts.query else value
