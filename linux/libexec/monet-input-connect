@@ -41,6 +41,7 @@ class Reconnect:
         self.manager = None
         self.handled = set()
         self.scheduled = False
+        self.pending = 0
         GLib.timeout_add_seconds(20, self.finish)
         Gio.DBusObjectManagerClient.new_for_bus(Gio.BusType.SYSTEM,
             Gio.DBusObjectManagerClientFlags.DO_NOT_AUTO_START,
@@ -111,7 +112,7 @@ class Reconnect:
                 eligible_inputs=len(list(eligible(objects))))))
             self.finish()
             return False
-        if devices and all(d.get('Connected') is True for d in devices):
+        if devices and not self.pending and all(d.get('Connected') is True for d in devices):
             self.finish()
             return False
         # Remember already connected devices too: a later user disconnect during
@@ -123,12 +124,12 @@ class Reconnect:
                 continue
             self.handled.add(path)
             proxy = self.manager.get_object(path).get_interface(DEVICE)
+            self.pending += 1
             proxy.call('Connect', None, Gio.DBusCallFlags.NO_AUTO_START,
                        10000, None, self.connected, None)
         return False
 
-    @staticmethod
-    def connected(proxy, result, data):
+    def connected(self, proxy, result, data):
         from gi.repository import GLib
         try:
             proxy.call_finish(result)
@@ -136,6 +137,8 @@ class Reconnect:
             # InProgress belongs to BlueZ's existing attempt. An asleep or
             # absent peripheral is ordinary; leave subsequent reconnects to it.
             pass
+        self.pending -= 1
+        self.changed()
 
 
 def main():

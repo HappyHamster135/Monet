@@ -210,3 +210,8 @@ class NativeInputReconnect(unittest.TestCase):
     def test_hid_data_and_signal_strength_do_not_trigger_reconciliation(self):
         records,_=self.run_case('traffic')
         self.assertEqual(sum(r['event']=='Connect' for r in records),1)
+
+    def test_link_connected_signal_does_not_end_pending_profile_setup(self):
+        records,_=self.run_case('deferred-reply')
+        self.assertEqual([r['event'] for r in records],
+                         ['GetManagedObjects','Connect','connected-reply'])

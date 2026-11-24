@@ -74,6 +74,14 @@ def method(connection, sender, path, interface, name, parameters, invocation):
     elif name == 'Connect':
         if scenario in ('in-progress', 'traffic'):
             invocation.return_dbus_error('org.bluez.Error.InProgress', 'Another client is connecting')
+        elif scenario == 'deferred-reply':
+            # An ACL link can be reported before HID/GATT setup has completed.
+            changed(DP, DEVICE, {'Connected': GLib.Variant('b', True)})
+            def finish_connection():
+                record('connected-reply')
+                invocation.return_value(None)
+                return False
+            GLib.timeout_add(200, finish_connection)
         else:
             invocation.return_value(None)
             changed(DP, DEVICE, {'Connected': GLib.Variant('b', True)})
