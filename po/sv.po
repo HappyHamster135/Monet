@@ -14428,3 +14428,39 @@ msgstr "Det finns ingen låttext för det här spåret."
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:234
 msgid "No upcoming tracks shared by this player."
 msgstr "Spelaren visar inga kommande spår."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Watch.qml:52
+msgid "Back to activity"
+msgstr "Tillbaka till aktivitet"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Watch.qml:55
+msgid "Watched region"
+msgstr "Bevakat område"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Watch.qml:56
+msgid "Stop watching"
+msgstr "Avsluta bevakning"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Watch.qml:64
+msgid "Live window preview"
+msgstr "Förhandsvisning av fönster i realtid"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Watch.qml:68
+msgid "Preview unavailable"
+msgstr "Förhandsvisning inte tillgänglig"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Watch.qml:68
+msgid "Waiting for the window…"
+msgstr "Väntar på fönstret…"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Watch.qml:72
+msgid "Edit region and alerts"
+msgstr "Ändra område och aviseringar"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:46
+msgid "Watching a window"
+msgstr "Bevakar ett fönster"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:181
+msgid "Watching"
+msgstr "Bevakar"

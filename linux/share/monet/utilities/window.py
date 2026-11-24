@@ -25,6 +25,7 @@ class Window(QMainWindow):
         self.favorites = stored(self.settings, "favorites", DEFAULT_FAVORITES)
         self.hidden = stored(self.settings, "hidden", [])
         self.pages = {}
+        self.notch_previews = {}
         self.running = set()
         self.converting = False
         self.setWindowTitle("Monet Utilities")
@@ -434,6 +435,16 @@ class Window(QMainWindow):
     @Slot("QStringList")
     def Open(self, args):
         key = args[0] if args else "tools"
+        if key == "watch" and len(args) == 2 and re.fullmatch(r"[1-9][0-9]{0,9}", args[1]):
+            from capture import Preview
+            widget_id = args[1]
+            preview = self.notch_previews.get(widget_id)
+            if preview is None:
+                preview = Preview(self, False, widget_id)
+                self.notch_previews[widget_id] = preview
+                preview.destroyed.connect(lambda: self.notch_previews.pop(widget_id, None))
+            preview.edit()
+            return
         self.showNormal() if self.isMinimized() else self.show()
         self.raise_()
         self.activateWindow()
@@ -450,6 +461,8 @@ class Window(QMainWindow):
         if self.converting and QMessageBox.question(self, "Cancel conversion?", "A conversion is running. Cancel it and close Utilities?") != QMessageBox.Yes:
             event.ignore()
             return
+        for preview in list(self.notch_previews.values()):
+            preview.close()
         for job in list(self.running):
             job.kill()
             job.waitForFinished(1000)

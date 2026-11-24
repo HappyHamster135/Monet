@@ -9,6 +9,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   Compact or Wide to put the notch at the top center of that screen. It offers media
   controls, notifications, countdowns, focus sessions, a stopwatch and the shared calendar.
   The Music tab follows timed lyrics and updates the upcoming queue when the player shares it.
+  In Activity → Watch, pin a window region and get an alert when it changes, settles, or shows a phrase.
   Dropping files on it adds them to the shelf. Music levels and accessory alerts are optional.
 - **First click after switching windows.** The previous title overlay retires on focus
   changes. A pointer resting at a window edge gets a second geometry check as the window

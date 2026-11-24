@@ -9,6 +9,7 @@ import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.plasma5support as P5
 import org.kde.plasma.private.mpris as Mpris
 import org.kde.notificationmanager as NM
+import org.kde.plasma.workspace.dbus as DBus
 
 PlasmoidItem {
     id: root
@@ -22,11 +23,27 @@ PlasmoidItem {
     property double now: Date.now()
     property int tab: 0
     property int musicView: 0
+    property bool viewingWatch: false
+    readonly property string watchPath: "/WindowWatch/n" + Plasmoid.id
+    DBus.DBusServiceWatcher {
+        id: watch
+        busType: DBus.BusType.Session
+        watchedService: "org.monet.WindowWatch.n" + Plasmoid.id
+        onRegisteredChanged: {
+            root.viewingWatch = registered
+            if (registered) root.tab = 1
+        }
+    }
+    Component.onDestruction: {
+        if (watch.registered)
+            DBus.SessionBus.asyncCall({service: watch.watchedService, path: root.watchPath,
+                iface: "org.monet.WindowWatch", member: "Stop"})
+    }
     property string message: ""
     property string agentSummary: ""
     property url downloadFolder: StandardPaths.writableLocation(StandardPaths.DownloadLocation)
     toolTipMainText: i18n("Monet Notch")
-    toolTipSubText: endTime ? remaining() : media?.track || i18n("Music, activity and tools")
+    toolTipSubText: endTime ? remaining() : watch.registered ? i18n("Watching a window") : media?.track || i18n("Music, activity and tools")
     Repeater {
         id: players
         model: Mpris.MultiplexerModel {}
@@ -91,7 +108,12 @@ PlasmoidItem {
         onTriggered: root.refreshTime()
     }
     Component.onCompleted: refreshTime()
-    onExpandedChanged: expanded => { if (expanded) refreshTime() }
+    onExpandedChanged: {
+        if (!expanded) return
+        refreshTime()
+        if (endTime) tab = 2
+        else if (watch.registered) { viewingWatch = true; tab = 1 }
+    }
     P5.DataSource {
         id: runner
         engine: "executable"
@@ -145,7 +167,7 @@ PlasmoidItem {
             Kirigami.Icon {
                 visible: !Plasmoid.configuration.companion
                 Layout.preferredHeight: 17; Layout.preferredWidth: 17
-                source: shelfDrop.containsDrag ? "folder-add" : root.endTime ? "chronometer" : root.media ? "audio-x-generic" : "applications-utilities"
+                source: shelfDrop.containsDrag ? "folder-add" : root.endTime ? "chronometer" : watch.registered ? "view-visible" : root.media ? "audio-x-generic" : "applications-utilities"
                 color: "#9dd9c9"; isMask: true
             }
             C.Label {
@@ -156,7 +178,7 @@ PlasmoidItem {
             }
             C.Label {
                 Layout.fillWidth: true; color: "#f6f3e9"; textFormat: Text.PlainText; elide: Text.ElideRight
-                text: shelfDrop.containsDrag ? i18n("Shelf") : root.endTime ? root.remaining() : root.media?.track || i18n("Tools")
+                text: shelfDrop.containsDrag ? i18n("Shelf") : root.endTime ? root.remaining() : watch.registered ? i18n("Watching") : root.media?.track || i18n("Tools")
             }
         }
         WheelHandler { onWheel: event => root.wheelAction(event) }
@@ -189,7 +211,8 @@ PlasmoidItem {
         Loader {
             Layout.fillWidth: true; Layout.fillHeight: true
             active: root.expanded
-            sourceComponent: [musicPage, activityPage, timerPage, calendarPage][root.tab]
+            sourceComponent: root.tab === 1 && root.viewingWatch && watch.registered ? watchPage
+                : [musicPage, activityPage, timerPage, calendarPage][root.tab]
         }
         RowLayout {
             Layout.fillWidth: true
@@ -203,6 +226,14 @@ PlasmoidItem {
         Music {
             media: root.media; playing: root.playing; view: root.musicView
             onViewRequested: index => root.musicView = index
+        }
+    }
+    Component {
+        id: watchPage
+        Watch {
+            service: watch.watchedService; path: root.watchPath
+            onBackRequested: root.viewingWatch = false
+            onEditing: root.expanded = false
         }
     }
     Component {
@@ -252,7 +283,16 @@ PlasmoidItem {
             RowLayout {
                 C.Button { text: i18n("Downloads"); onClicked: root.openTool("downloads") }
                 C.Button { text: i18n("Agent usage"); onClicked: root.openTool("agents") }
-                C.Button { text: i18n("Watch"); onClicked: root.openTool("watch") }
+                C.Button {
+                    text: i18n("Watch")
+                    onClicked: {
+                        if (watch.registered) root.viewingWatch = true
+                        else {
+                            runner.connectSource(root.helper + " utilities watch " + Plasmoid.id)
+                            root.expanded = false
+                        }
+                    }
+                }
             }
         }
     }

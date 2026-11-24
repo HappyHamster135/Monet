@@ -14442,3 +14442,39 @@ msgstr ""
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:234
 msgid "No upcoming tracks shared by this player."
 msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Watch.qml:52
+msgid "Back to activity"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Watch.qml:55
+msgid "Watched region"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Watch.qml:56
+msgid "Stop watching"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Watch.qml:64
+msgid "Live window preview"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Watch.qml:68
+msgid "Preview unavailable"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Watch.qml:68
+msgid "Waiting for the window…"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Watch.qml:72
+msgid "Edit region and alerts"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:46
+msgid "Watching a window"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:181
+msgid "Watching"
+msgstr ""

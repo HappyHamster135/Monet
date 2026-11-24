@@ -90,6 +90,11 @@ if __name__ == "__main__":
     try:
         if sys.argv[1] == "player":
             print(player_info())
+        elif sys.argv[1:] == ["watch-text"]:
+            from io import BytesIO
+            data = sys.stdin.buffer.read(3 * 960 * 720 + 1024)
+            if data:
+                print(read_text(BytesIO(data)))
         elif sys.argv[1] == "read" and len(sys.argv) == 3:
             qr = read_qr(sys.argv[2])
             text = read_text(sys.argv[2]) if not qr else ""
