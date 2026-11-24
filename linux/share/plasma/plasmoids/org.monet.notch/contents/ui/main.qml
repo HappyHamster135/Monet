@@ -21,6 +21,7 @@ PlasmoidItem {
     readonly property double watchStart: Number(Plasmoid.configuration.watchStart) || 0
     property double now: Date.now()
     property int tab: 0
+    property int musicView: 0
     property string message: ""
     property string agentSummary: ""
     property url downloadFolder: StandardPaths.writableLocation(StandardPaths.DownloadLocation)
@@ -199,37 +200,9 @@ PlasmoidItem {
     }
     Component {
         id: musicPage
-        ColumnLayout {
-            Item { Layout.fillHeight: true }
-            Image {
-                Layout.alignment: Qt.AlignHCenter; Layout.preferredHeight: 82; Layout.preferredWidth: 82
-                visible: status === Image.Ready; asynchronous: true; sourceSize: Qt.size(164,164)
-                source: root.media?.artUrl || ""; fillMode: Image.PreserveAspectFit
-            }
-            C.Label {
-                Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; textFormat: Text.PlainText
-                elide: Text.ElideRight; font.bold: true; text: root.media?.track || i18n("Nothing playing")
-            }
-            C.Label {
-                Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; textFormat: Text.PlainText
-                text: root.media?.artist || root.media?.identity || i18n("Start a song or video in a media player.")
-            }
-            RowLayout {
-                Layout.alignment: Qt.AlignHCenter
-                C.ToolButton { icon.name: "media-skip-backward"; Accessible.name: i18n("Previous track"); enabled: !!root.media?.canGoPrevious; onClicked: root.media.container.Previous() }
-                C.ToolButton {
-                    icon.name: root.playing ? "media-playback-pause" : "media-playback-start"
-                    Accessible.name: root.playing ? i18n("Pause") : i18n("Play")
-                    enabled: !!(root.playing ? root.media?.canPause : root.media?.canPlay)
-                    onClicked: root.playing ? root.media.container.Pause() : root.media.container.Play()
-                }
-                C.ToolButton { icon.name: "media-skip-forward"; Accessible.name: i18n("Next track"); enabled: !!root.media?.canGoNext; onClicked: root.media.container.Next() }
-            }
-            C.Button {
-                Layout.alignment: Qt.AlignHCenter; visible: !!root.media
-                text: i18n("Queue and lyrics"); onClicked: root.openTool("media")
-            }
-            Item { Layout.fillHeight: true }
+        Music {
+            media: root.media; playing: root.playing; view: root.musicView
+            onViewRequested: index => root.musicView = index
         }
     }
     Component {

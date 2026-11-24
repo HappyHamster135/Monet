@@ -45,39 +45,21 @@ def read_text(path):
         lib.TessBaseAPIDelete(ctx)
 
 def player_info():
-    import dbus
-    bus = dbus.SessionBus()
+    from player import snapshots
     players = []
-    for name in bus.list_names():
-        if not name.startswith("org.mpris.MediaPlayer2.") or name.endswith(".plasma-browser-integration.instance"):
-            continue
-        try:
-            obj = bus.get_object(name, "/org/mpris/MediaPlayer2", introspect=False)
-            prop = dbus.Interface(obj, "org.freedesktop.DBus.Properties")
-            meta = prop.Get("org.mpris.MediaPlayer2.Player", "Metadata", timeout=1)
-            title = str(meta.get("xesam:title", ""))
-            status = str(prop.Get("org.mpris.MediaPlayer2.Player", "PlaybackStatus", timeout=1))
-            chunks = [str(prop.Get("org.mpris.MediaPlayer2", "Identity", timeout=1)), title]
-            lyrics = str(meta.get("xesam:asText", "")).strip()
-            if lyrics:
-                chunks.extend(["", "Lyrics", lyrics])
-            try:
-                tracks = list(prop.Get("org.mpris.MediaPlayer2.TrackList", "Tracks", timeout=1))
-                current = meta.get("mpris:trackid")
-                start = tracks.index(current) + 1 if current in tracks else 0
-                following = tracks[start:start + 20]
-                if following:
-                    entries = obj.GetTracksMetadata(dbus.Array(following, signature="o"),
-                                                    dbus_interface="org.mpris.MediaPlayer2.TrackList", timeout=2)
-                    chunks.extend(["", "Up next", *[str(track.get("xesam:title", "Untitled")) for track in entries]])
-            except dbus.DBusException:
-                pass
-            if len(chunks) == 2:
-                chunks.extend(["", "This player hasn’t shared lyrics or a queue."])
-            players.append((status != "Playing", "\n".join(chunks)))
-        except dbus.DBusException:
-            continue
-    return "\n\n".join(chunks for _, chunks in sorted(players)) or "No media player is available."
+    for item in sorted(snapshots(), key=lambda player: not player["playing"]):
+        chunks = [item["identity"], item["title"]]
+        lyrics = item["lyrics"]
+        words = lyrics["text"] or "\n".join(line["text"] for line in lyrics["timed"])
+        if words:
+            chunks.extend(["", "Lyrics", words])
+        if item["queue"]:
+            chunks.extend(["", "Up next", *[track["title"] or "Untitled" for track in item["queue"]]])
+        if not words and not item["queue"]:
+            chunks.extend(["", "This player hasn’t shared lyrics or a queue."])
+        players.append("\n".join(chunks))
+    return "\n\n".join(players) or "No media player is available."
+
 
 def read_qr(path):
     from PySide6.QtCore import QTimer, QUrl

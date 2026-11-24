@@ -14337,10 +14337,6 @@ msgstr ""
 msgid "Start a song or video in a media player."
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:230
-msgid "Queue and lyrics"
-msgstr ""
-
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:244
 msgid "%1 · %2%"
 msgstr ""
@@ -14444,4 +14440,36 @@ msgstr ""
 #: linux/share/plasma/plasmoids/org.monet.notch/metadata.json
 msgctxt "what a part of Monet is, in KDE's lists"
 msgid "Music, activities and tools at the top of your screen"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:181
+msgid "Now playing"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:182
+msgid "Lyrics"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:183
+msgid "Up next"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:186
+msgid "Follow lyrics"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:208
+msgid "Instrumental"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:226
+msgid "Untitled"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:234
+msgid "No lyrics available for this track."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:234
+msgid "No upcoming tracks shared by this player."
 msgstr ""
