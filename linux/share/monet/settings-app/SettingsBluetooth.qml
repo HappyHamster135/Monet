@@ -13,7 +13,24 @@ import "FocusNavigation.js" as FocusNavigation
 
 
 ColumnLayout {
+    id: bluetoothPage
     spacing: 20
+    property string sleepMode: ""
+    property bool sleepBusy: true
+    property bool sleepError: false
+
+    function sleepSetting(choice) {
+        sleepBusy = true
+        sheet.ask("bluetooth-sleep " + choice, (out) => {
+            if (!bluetoothPage) return
+            const result = sheet.json(out, {})
+            bluetoothPage.sleepBusy = false
+            bluetoothPage.sleepError = !result.ok
+            if (["off", "restore", "stay-off"].includes(result.mode))
+                bluetoothPage.sleepMode = result.mode
+        })
+    }
+    Component.onCompleted: sleepSetting("status")
     SettingsControls.PageTitle {
         readonly property int connected: sheet.devices.filter(d => d.connected).length
         tone: look
@@ -88,5 +105,39 @@ ColumnLayout {
         visible: sheet.info.bluetooth === true
         text: i18n("Pair a new device…")
         onClicked: sheet.ask("kde bluetooth")
+    }
+    SettingsControls.Card {
+        tone: look
+        visible: typeof sheet.info.bluetooth === "boolean" || ["restore", "stay-off"].includes(bluetoothPage.sleepMode)
+        SettingsControls.SettingRow {
+            tone: look
+            id: sleepRow
+            objectName: "bluetoothSleepRow"
+            checkable: true
+            checked: ["restore", "stay-off"].includes(bluetoothPage.sleepMode)
+            title: i18n("Turn Bluetooth off during sleep")
+            detail: bluetoothPage.sleepError ? i18n("Could not apply the Bluetooth sleep setting. Try again.")
+                : i18n("Wake this PC with its power button or built-in keyboard.")
+            divider: false
+            tappable: !bluetoothPage.sleepBusy
+            onTapped: bluetoothPage.sleepSetting(["off", ""].includes(bluetoothPage.sleepMode) ? "restore" : "off")
+            SettingsControls.Switch {
+                tone: look
+                active: sleepRow.checked
+            }
+        }
+        SettingsControls.SettingRow {
+            tone: look
+            id: wakeRow
+            objectName: "bluetoothWakeRow"
+            checkable: true
+            checked: bluetoothPage.sleepMode === "restore"
+            visible: ["restore", "stay-off"].includes(bluetoothPage.sleepMode)
+            title: i18n("Restore Bluetooth on wake")
+            detail: i18n("Turn previously active adapters back on and reconnect paired mice and keyboards that were connected before sleep.")
+            tappable: !bluetoothPage.sleepBusy
+            onTapped: bluetoothPage.sleepSetting(bluetoothPage.sleepMode === "restore" ? "stay-off" : "restore")
+            SettingsControls.Switch { tone: look; active: wakeRow.checked }
+        }
     }
 }

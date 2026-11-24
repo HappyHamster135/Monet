@@ -15098,3 +15098,24 @@ msgstr ""
 msgid ""
 "The process changed or could not be stopped. Review the refreshed list."
 msgstr ""
+
+#: linux/share/monet/settings-app/SettingsBluetooth.qml:118
+msgid "Turn Bluetooth off during sleep"
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsBluetooth.qml:119
+msgid "Could not apply the Bluetooth sleep setting. Try again."
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsBluetooth.qml:120
+msgid "Wake this PC with its power button or built-in keyboard."
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsBluetooth.qml:136
+msgid "Restore Bluetooth on wake"
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsBluetooth.qml:137
+msgid ""
+"Turn previously active adapters back on and reconnect paired mice and keyboards that were connected before sleep."
+msgstr ""

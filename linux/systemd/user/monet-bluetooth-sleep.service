@@ -1,0 +1,20 @@
+[Unit]
+Description=Apply Monet's Bluetooth setting when this desktop sleeps
+ConditionPathExists=%E/monet/bluetooth-sleep
+PartOf=graphical-session.target
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/python3 -B @DATADIR@/monet/monet_runtime/bluetooth_sleep.py watch @LIBEXECDIR@
+TimeoutStartSec=8
+TimeoutStopSec=4
+Restart=on-failure
+RestartSec=4
+Slice=background.slice
+NoNewPrivileges=yes
+RestrictAddressFamilies=AF_UNIX
+
+[Install]
+WantedBy=graphical-session.target

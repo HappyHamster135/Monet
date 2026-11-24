@@ -15,6 +15,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 - **Ports and processes.** In Utilities, search for a listening port or a running process. Inspect its children, end a selected process or branch, or restart a desktop app that has a matching launcher.
 - **Screen recorder and editor.** Record a region, window or screen from Utilities. Trim the recording, crop the picture, change speed or mute audio, then export a new MP4 or animated GIF.
 - **Copied links.** In Utilities → Copied link settings, turn on automatic cleanup to remove tracking parameters when you copy a plain web address.
+- **Bluetooth during sleep.** Settings → Bluetooth can turn the radio off during sleep. Choose whether to restore it on wake and reconnect the mice and keyboards you were using. This feature is off by default.
 - **Preferred sound outputs.** In Settings → Sound, rank headphones and speakers in the order you want to use them. Monet switches when devices connect or disconnect and remembers choices that are temporarily offline.
 - **First click after switching windows.** The previous title overlay retires on focus
   changes. A pointer resting at a window edge gets a second geometry check as the window

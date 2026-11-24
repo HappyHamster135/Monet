@@ -15100,3 +15100,26 @@ msgid ""
 "The process changed or could not be stopped. Review the refreshed list."
 msgstr ""
 "Processen har ändrats eller kunde inte stoppas. Kontrollera den uppdaterade listan."
+
+#: linux/share/monet/settings-app/SettingsBluetooth.qml:118
+msgid "Turn Bluetooth off during sleep"
+msgstr "Stäng av Bluetooth i viloläge"
+
+#: linux/share/monet/settings-app/SettingsBluetooth.qml:119
+msgid "Could not apply the Bluetooth sleep setting. Try again."
+msgstr ""
+"Det gick inte att ändra Bluetooth-inställningen för viloläge. Försök igen."
+
+#: linux/share/monet/settings-app/SettingsBluetooth.qml:120
+msgid "Wake this PC with its power button or built-in keyboard."
+msgstr "Väck datorn med strömknappen eller det inbyggda tangentbordet."
+
+#: linux/share/monet/settings-app/SettingsBluetooth.qml:136
+msgid "Restore Bluetooth on wake"
+msgstr "Återställ Bluetooth när datorn vaknar"
+
+#: linux/share/monet/settings-app/SettingsBluetooth.qml:137
+msgid ""
+"Turn previously active adapters back on and reconnect paired mice and keyboards that were connected before sleep."
+msgstr ""
+"Slå på de adaptrar som var aktiva och återanslut parkopplade möss och tangentbord som var anslutna före viloläget."

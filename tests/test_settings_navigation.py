@@ -761,6 +761,30 @@ class SettingsNavigation(unittest.TestCase):
         QTest.qWait(250)
         self.capture("automatic-battery-saver")
 
+    def test_bluetooth_sleep_switches_follow_saved_choices(self):
+        self.helper.replies.update({"status": '{"bluetooth":true}', "bluetooth-sleep": '{"ok":true,"mode":"off"}'})
+        self.open("bluetooth")
+        sleep_row = self.item("bluetoothSleepRow")
+        wake_row = self.item("bluetoothWakeRow")
+        self.assertTrue(sleep_row.isVisible())
+        self.assertFalse(wake_row.isVisible())
+        self.helper.commands.clear()
+        self.helper.replies["bluetooth-sleep"] = '{"ok":true,"mode":"restore"}'
+        sleep_row.forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Space)
+        self.wait_for(lambda: wake_row.isVisible() and wake_row.property("checked"))
+        self.helper.replies["bluetooth-sleep"] = '{"ok":true,"mode":"stay-off"}'
+        wake_row.forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.wait_for(lambda: not wake_row.property("checked"))
+        self.assertTrue(sleep_row.property("checked"))
+        self.open("light")
+        self.open("bluetooth")
+        self.assertTrue(self.item("bluetoothSleepRow").property("checked"))
+        self.assertFalse(self.item("bluetoothWakeRow").property("checked"))
+        self.assertEqual([command[2] for command in self.helper.commands if command[1] == "bluetooth-sleep"],
+                         ["restore", "stay-off", "status"])
+
     def test_failed_power_change_keeps_the_confirmed_mode_and_releases_controls(self):
         state = dict(mode="automatic", activeMode="balanced", modes=["automatic", "power-saver", "performance"],
                      hasBattery=True, batterySaverAuto=True, batterySaverThreshold=20)
