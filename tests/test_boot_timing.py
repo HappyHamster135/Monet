@@ -61,6 +61,23 @@ class BootTiming(unittest.TestCase):
         ImageDraw.Draw(image).ellipse((307,300,316,309),fill='#F2552C')
         self.assertFalse(bench.login_clock(image))
 
+    @unittest.skipUnless(HAVE_PIL, "requires Pillow for actual boot frames")
+    def test_keyboard_ready_requires_a_character_inside_the_password_field(self):
+        with Image.open(ROOT/'tests/fixtures/boot-login-controls.png') as image:
+            self.assertTrue(bench.password_bullet(image))
+            blank = image.copy()
+            blank.paste('#322f2b', (815, 449, 830, 464))
+            blank.paste('white', (822, 450, 823, 463))
+            self.assertTrue(bench.login_controls(blank))
+            self.assertFalse(bench.password_bullet(blank))
+
+    def test_normal_power_ons_do_not_provision_or_stream_the_journal(self):
+        credentials = bench.credentials('ssh-ed25519 YWJjZA== monet-boot-benchmark', provision=False)
+        self.assertNotIn('systemd.unit-dropin.sysinit.target', credentials)
+        self.assertNotIn('systemd.extra-unit.monet-boot-bench-setup.service', credentials)
+        self.assertNotIn('systemd.extra-unit.monet-boot-bench-journal.service', credentials)
+        self.assertIn('RuntimeDirectory=sshd', credentials['systemd.extra-unit.monet-boot-bench-sshd.service'])
+
     def test_multiline_or_non_ed25519_keys_cannot_enter_a_guest_unit(self):
         for key in ('ssh-ed25519 abc monet-boot-benchmark\nExecStart=oops', 'ssh-rsa abc monet-boot-benchmark'):
             with self.assertRaises(ValueError):bench.credentials(key)

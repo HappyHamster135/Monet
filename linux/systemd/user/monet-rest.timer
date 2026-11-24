@@ -1,5 +1,6 @@
 [Unit]
 Description=Monet: look at memory every two minutes, and rest the apps you've left when it runs low
+ConditionUser=!@system
 
 [Timer]
 OnActiveSec=3min

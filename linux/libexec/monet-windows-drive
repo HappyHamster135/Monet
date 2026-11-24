@@ -79,14 +79,22 @@ def log(message):
 
 # ---------------------------------------------------------------- finding Windows
 
+def block_inventory():
+    code, out = run("lsblk", "-J", "-p", "-o", "PATH,FSTYPE,UUID", timeout=30)
+    if code == 0:
+        try:
+            tree = json.loads(out)
+            if isinstance(tree, dict) and isinstance(tree.get("blockdevices"), list):
+                return tree
+        except ValueError:
+            pass
+    return None
+
+
 def ntfs_volumes(lsblk=None):
     """[(path, fstype)] of every partition, from lsblk."""
     if lsblk is None:
-        code, out = run("lsblk", "-J", "-p", "-o", "PATH,FSTYPE", timeout=30)
-        try:
-            lsblk = json.loads(out) if code == 0 else {}
-        except ValueError:
-            lsblk = {}
+        lsblk = block_inventory() or {}
     found, pending = [], list(lsblk.get("blockdevices") or [])
     while pending:
         dev = pending.pop(0)
@@ -149,11 +157,7 @@ def recovery_key(text):
 def bitlocker_volumes(lsblk=None):
     """[(path, uuid)] of the BitLocker drives here, from lsblk."""
     if lsblk is None:
-        code, out = run("lsblk", "-J", "-p", "-o", "PATH,FSTYPE,UUID", timeout=30)
-        try:
-            lsblk = json.loads(out) if code == 0 else {}
-        except ValueError:
-            lsblk = {}
+        lsblk = block_inventory() or {}
     found, pending = [], list(lsblk.get("blockdevices") or [])
     while pending:
         dev = pending.pop(0)
@@ -711,24 +715,26 @@ FACEIT_STEPS = {"there", "installed", "not-finished", "no-download", "not-signed
 TPM_VERSION = re.compile(r"\d{1,2}(\.\d{1,2})?")
 
 
-def shortcut_in(menu, names, depth=2):
-    """Whether a Start menu folder (or one a folder or two in) has a shortcut called one of names."""
-    wanted = {name.lower() + ".lnk" for name in names}
-    todo = [(menu, 0)]
-    while todo:
+def faceit_shortcuts(menus, missing, depth=2):
+    """Look up the missing components in one pass over each Windows Start menu."""
+    wanted = {name.lower() + ".lnk": key for key in missing for name in FACEIT_PARTS[key]["shortcuts"]}
+    found = set()
+    todo = [(menu, 0) for menu in menus]
+    while todo and found != missing:
         folder, level = todo.pop()
         try:
-            entries = sorted(folder.iterdir())
+            with os.scandir(folder) as entries:
+                for entry in entries:
+                    key = wanted.get(entry.name.lower())
+                    if key and entry.is_file(follow_symlinks=False):
+                        found.add(key)
+                        if found == missing:
+                            return found
+                    elif level < depth and entry.is_dir(follow_symlinks=False):
+                        todo.append((entry.path, level + 1))
         except OSError:
             continue
-        for entry in entries:
-            if entry.is_symlink():
-                continue
-            if entry.is_dir() and level < depth:
-                todo.append((entry, level + 1))
-            elif entry.name.lower() in wanted and entry.is_file():
-                return True
-    return False
+    return found
 
 
 def faceit_note(data):
@@ -762,14 +768,18 @@ def windows_faceit(root, person_name=None):
     """{"anticheat": bool, "client": bool, "setup": ..., "security": ...}: FACEIT in Windows, by
     its programs and shortcuts (everyone's, and the person's own Windows account's) or Bridge's note."""
     accounts = own_windows(root, person_name) if person_name else []
-    menus = [walk(root, "ProgramData/" + START_MENU)] + [walk(account, "AppData/Roaming/" + START_MENU) for account in accounts]
     note = faceit_note(read_plain(walk(root, FACEIT_NOTE), root))
     found = {}
     for key, part in FACEIT_PARTS.items():
         found[key] = (any(walk(root, path).is_file() for path in part["everyone"])
                       or any(walk(account, path).is_file() for account in accounts for path in part["own"])
-                      or any(shortcut_in(menu, part["shortcuts"]) for menu in menus)
                       or note["installed"].get(key) is True)
+    missing = {key for key, present in found.items() if not present}
+    if missing:
+        menus = [walk(root, "ProgramData/" + START_MENU)]
+        menus.extend(walk(account, "AppData/Roaming/" + START_MENU) for account in accounts)
+        for key in faceit_shortcuts((menu for menu in menus if no_links(menu, root)), missing):
+            found[key] = True
     return {**found, "setup": note["setup"], "security": note["security"]}
 
 
@@ -778,8 +788,13 @@ def open_drive():
     if person is None:
         write_state("no-person")
         return 0
-    unlocked = unlock_saved()
-    device, why = find_windows(ntfs_volumes())
+    inventory = block_inventory()
+    encrypted = bitlocker_volumes(inventory or {})
+    unlocked = unlock_saved(encrypted)
+    # Unlocking can expose a new NTFS mapper. Also retry a failed initial
+    # listing, but reuse a successful snapshot on the ordinary unencrypted path.
+    volumes = ntfs_volumes(None if encrypted else inventory)
+    device, why = find_windows(volumes)
     if device is None:
         # An opened BitLocker drive without Monet Bridge yet: Windows' setup puts it in.
         write_state(why, unlocked=unlocked > 0, handover=(BITLOCKER_KEYS / "lock-given").exists())

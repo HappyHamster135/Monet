@@ -1,5 +1,6 @@
 [Unit]
 Description=Monet: each Steam game by its own name in Task Manager, as games arrive and leave
+ConditionUser=!@system
 
 [Path]
 # Steam's own folder, native and Flatpak: its games' manifests, and the list of every

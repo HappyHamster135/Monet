@@ -45,6 +45,19 @@ def login_controls(image):
     return False
 
 
+def password_bullet(image):
+    """Read the first masked character in the bench's fixed 1280x800 login field."""
+    if image.size != (1280, 800):
+        return False
+    patch = image.crop((816, 450, 829, 463)).convert('RGB')
+    # A cursor alone is a narrow vertical line. Require a filled, roughly
+    # round character with dark corners as in the real native greeter fixture.
+    bright = {(x, y) for y in range(13) for x in range(13)
+              if min(patch.getpixel((x, y))) > 180}
+    return (50 <= len(bright) <= 125 and (6, 6) in bright
+            and all(corner not in bright for corner in ((0, 0), (0, 12), (12, 0), (12, 12))))
+
+
 def login_clock(image):
     """Recognize the brand dot and large clock in the spacious greeter layout."""
     pixels = image.convert('RGB').resize((320, 200)).load()
@@ -86,10 +99,10 @@ def qmp(path, command, **arguments):
             return reply.get('return')
 
 
-def credentials(public_key):
+def credentials(public_key, *, provision=True):
     if not re.fullmatch(r'ssh-ed25519 [A-Za-z0-9+/=]+ monet-boot-benchmark', public_key):
         raise ValueError('Unexpected benchmark public key')
-    setup = ('install -d -m 0755 /etc/ssh /etc/sudoers.d /run/sshd; ssh-keygen -A; '
+    setup = ('install -d -m 0755 /etc/ssh /etc/sudoers.d; ssh-keygen -A; '
              # ExecStart expands systemd's %s specifier even inside shell quotes.
              # The validated key contains no echo options or backslash escapes.
              f'echo "{public_key}" > /etc/ssh/monet-bench-authorized_keys; '
@@ -98,20 +111,22 @@ def credentials(public_key):
              'echo monet-bench:MonetBenchmarkOnly42 | chpasswd; fi; '
              'echo "monet-bench ALL=(root) NOPASSWD: ALL" > /etc/sudoers.d/90-monet-bench; '
              'chmod 0440 /etc/sudoers.d/90-monet-bench; '
-             'restorecon -RF /etc/ssh /etc/sudoers.d/90-monet-bench /run/sshd')
+             'restorecon -RF /etc/ssh /etc/sudoers.d/90-monet-bench')
     unit = ('[Unit]\nDefaultDependencies=no\nConditionPathExists=!/etc/initrd-release\n'
             'After=local-fs.target systemd-tmpfiles-setup.service systemd-sysusers.service\n'
             'Before=systemd-user-sessions.service plasmalogin.service monet-boot-bench-sshd.service\n'
             '[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/bin/sh -ec \''+setup+'\'\n')
-    return {'systemd.extra-unit.monet-boot-bench-setup.service':unit,
+    setup_units = {'systemd.extra-unit.monet-boot-bench-setup.service':unit,
             'systemd.unit-dropin.sysinit.target':'[Unit]\nWants=monet-boot-bench-setup.service monet-boot-bench-journal.service\n',
             'systemd.extra-unit.monet-boot-bench-journal.service':
                 '[Unit]\nDefaultDependencies=no\nConditionPathExists=!/etc/initrd-release\n'
                 'After=local-fs.target systemd-journal-flush.service\n[Service]\n'
                 "ExecStart=/bin/sh -c 'exec journalctl -b -f -n all -o short-monotonic >/dev/ttyS0'\n",
+    }
+    return {**(setup_units if provision else {}),
             'systemd.extra-unit.monet-boot-bench-sshd.service':
                 '[Unit]\nAfter=network.target firewalld.service monet-boot-bench-setup.service\n'
-                '[Service]\nType=exec\n'
+                '[Service]\nType=exec\nRuntimeDirectory=sshd\n'
                 'ExecStartPre=-/usr/bin/firewall-cmd --add-service=ssh --timeout=900\n'
                 'ExecStart=/usr/sbin/sshd -D -e -f /dev/null -h /etc/ssh/ssh_host_ed25519_key '
                 '-oPermitRootLogin=no -oAllowUsers=monet-bench -oUsePAM=no '
@@ -151,7 +166,7 @@ def boot(args, disk, variables, key, index, runtime):
         '-device','qemu-xhci','-device','usb-tablet','-device','usb-kbd',
         '-nic',f'user,model=virtio-net-pci,hostfwd=tcp:127.0.0.1:{port}-:22',
         '-qmp',f'unix:{monitor},server,nowait','-serial',f'file:{work / "serial.log"}']
-    for name, value in credentials(key.with_suffix('.pub').read_text().strip()).items():
+    for name, value in credentials(key.with_suffix('.pub').read_text().strip(), provision=index == 0).items():
         payload = base64.b64encode(value.encode()).decode()
         command += ['-smbios', f'type=11,value=io.systemd.credential.binary:{name}={payload}']
     process = None; probe = None; active = False
@@ -174,7 +189,7 @@ def boot(args, disk, variables, key, index, runtime):
                         returncode=probe.returncode,stdout=output[-200:],stderr=error[-600:]))+'\n')
                 active = probe.returncode == 0 and output.strip() == 'active'
                 probe = None; next_ssh = time.monotonic()+2
-            if not active and probe is None and time.monotonic() >= next_ssh:
+            if input_verified is not None and not active and probe is None and time.monotonic() >= next_ssh:
                 probe = subprocess.Popen(ssh_command(port,key,'systemctl is-active plasmalogin.service'),
                     stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
                 probe_started = time.monotonic()
@@ -191,18 +206,28 @@ def boot(args, disk, variables, key, index, runtime):
                         # Never submit a password or authenticate a desktop.
                         qmp(monitor,'send-key',keys=[{'type':'qcode','data':'spc'}],)
                         input_sent = time.monotonic()-started
-                    if detected:
-                        if first is None: first = captured
+                    if detected and first is None:
+                        first = captured
+                    if detected and password_bullet(image):
                         stable += 1
-                        if stable >= 2 and active:
-                            image.save(work/'login.png'); input_verified=time.monotonic()-started; break
-                    else: first = None; stable = 0
+                        if stable >= 2 and input_verified is None:
+                            input_verified = captured
+                            image.save(work/'login.png')
+                        if input_verified is not None and active:
+                            break
+                    else:
+                        stable = 0
             time.sleep(.25)
         else:
             if monitor.exists():
                 qmp(monitor,'screendump',filename=str(frame))
                 with Image.open(frame) as image:image.save(work/'timeout.png')
             raise RuntimeError('No stable visible Monet login controls before timeout')
+        if index > 0:
+            journal = ssh(port, key, 'journalctl -b --no-pager -o short-monotonic', timeout=30)
+            if journal.returncode:
+                raise RuntimeError('Could not collect the timed guest journal')
+            (work/'guest-journal.log').write_text(journal.stdout)
         props = 'FirmwareTimestampMonotonic LoaderTimestampMonotonic InitRDTimestampMonotonic UserspaceTimestampMonotonic FinishTimestampMonotonic'
         reply = ssh(port,key,'systemctl show '+ ' '.join('-p '+p for p in props.split()))
         if reply.returncode: raise RuntimeError('Cannot collect guest boot timing')

@@ -73,6 +73,15 @@ class SeenOnWindowsDrive(unittest.TestCase):
         self.assertEqual(self.found("ann")["client"], True)
         self.assertEqual(self.found(None)["client"], False)  # nobody's own account: not looked in
 
+    def test_a_menu_is_walked_once_for_both_missing_components(self):
+        menu = self.root / "Programs"
+        put(menu / "Games/Other.lnk")
+        put(menu / "Games/Windows/Other.lnk")
+        with mock.patch.object(os, "scandir", wraps=os.scandir) as scan:
+            self.assertEqual(self.drive.faceit_shortcuts([menu], {"client", "anticheat"}), set())
+        self.assertCountEqual([Path(call.args[0]) for call in scan.call_args_list],
+                              [menu, menu / "Games", menu / "Games/Windows"])
+
     def test_a_start_menu_shortcut_counts(self):
         put(self.root / "ProgramData/Microsoft/Windows/Start Menu/Programs/FACEIT AC/FACEIT AC.lnk")
         put(self.root / "ProgramData/Microsoft/Windows/Start Menu/Programs/FACEIT/FACEIT.lnk")

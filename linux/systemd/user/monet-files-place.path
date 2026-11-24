@@ -1,5 +1,6 @@
 [Unit]
 Description=Monet: initialize Files places when KDE creates them
+ConditionUser=!@system
 ConditionUser=!guest
 
 [Path]

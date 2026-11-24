@@ -1,6 +1,6 @@
 [Unit]
 Description=Monet: a controller or headset paired in Windows works in Monet too
-ConditionPathIsDirectory=/var/lib/bluetooth
+ConditionPathExistsGlob=/var/lib/bluetooth/*/*/info
 After=local-fs.target bluetooth.service
 
 [Service]

@@ -126,6 +126,39 @@ class WindowsStartup(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.state = self.root / 'state.json'
 
+    def open_with_inventory(self, responses):
+        with patch.object(drive, 'owner', return_value=('person', 1000, 1000, self.root)), \
+                patch.object(drive, 'run', side_effect=responses) as run, \
+                patch.object(drive, 'unlock_saved', return_value=0) as unlock, \
+                patch.object(drive, 'write_state') as state:
+            drive.open_drive()
+        return run, unlock, state
+
+    def test_plain_disk_needs_only_one_device_listing(self):
+        tree = {'blockdevices': [{'path': '/dev/disk', 'fstype': 'btrfs'}]}
+        run, unlock, state = self.open_with_inventory([(0, json.dumps(tree))])
+        self.assertEqual(run.call_count, 1)
+        unlock.assert_called_once_with([])
+        self.assertEqual(state.call_args.args, ('no-windows',))
+
+    def test_unlock_is_followed_by_a_fresh_listing_that_can_see_the_mapper(self):
+        device = {'path': '/dev/locked', 'fstype': 'BitLocker', 'uuid': '1234-abcd'}
+        mapper = {'path': '/dev/mapper/opened', 'fstype': 'ntfs'}
+        responses = [(0, json.dumps({'blockdevices': [row]}))
+                     for row in (device, {**device, 'children': [mapper]})]
+        with patch.object(drive, 'find_windows', return_value=(None, 'no-windows')) as find:
+            run, unlock, _ = self.open_with_inventory(responses)
+        unlock.assert_called_once_with([('/dev/locked', '1234-abcd')])
+        self.assertEqual(run.call_count, 2)
+        find.assert_called_once_with([('/dev/locked', 'bitlocker'), ('/dev/mapper/opened', 'ntfs')])
+
+    def test_a_failed_first_listing_does_not_hide_the_next_one(self):
+        tree = {'blockdevices': [{'path': '/dev/recovered', 'fstype': 'btrfs'}]}
+        with patch.object(drive, 'find_windows', return_value=(None, 'no-windows')) as find:
+            run, _, _ = self.open_with_inventory([(1, ''), (0, json.dumps(tree))])
+        self.assertEqual(run.call_count, 2)
+        find.assert_called_once_with([('/dev/recovered', 'btrfs')])
+
     def test_only_background_network_exchange_waits_for_network_and_the_login_manager(self):
         import configparser
         units = []
@@ -146,7 +179,7 @@ class WindowsStartup(unittest.TestCase):
             for name, value in {'STATE': self.state, 'DRIVE': self.root / 'windows'}.items():
                 stack.enter_context(patch.object(drive, name, value))
             for name, value in {'owner': ('person', 1000, 1000, self.root), 'unlock_saved': 0,
-                    'ntfs_volumes': [], 'find_windows': ('/dev/mock', 'open'), 'hide': None,
+                    'block_inventory': {'blockdevices': []}, 'find_windows': ('/dev/mock', 'open'), 'hide': None,
                     'steam_root': self.root / 'steam', 'prepare_games': self.root / 'games',
                     'mount': True, 'share': True, 'share_files': True, 'windows_launchers': {}, 'windows_faceit': False}.items():
                 stack.enter_context(patch.object(drive, name, return_value=value))

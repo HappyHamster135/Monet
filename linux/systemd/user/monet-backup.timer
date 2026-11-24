@@ -1,5 +1,6 @@
 [Unit]
 Description=Monet: look for your backup drive every quarter of an hour
+ConditionUser=!@system
 
 [Timer]
 OnBootSec=5min

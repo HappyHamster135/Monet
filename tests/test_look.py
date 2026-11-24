@@ -5255,7 +5255,7 @@ class PairingsFromWindows(unittest.TestCase):
     def test_it_runs_at_every_start(self):
         unit = (ROOT / "linux/systemd/monet-pairings.service").read_text()
         for line in ("ExecStart=@LIBEXECDIR@/monet-pairings", "After=local-fs.target bluetooth.service",
-                     "ConditionPathIsDirectory=/var/lib/bluetooth", "WantedBy=multi-user.target"):
+                     "ConditionPathExistsGlob=/var/lib/bluetooth/*/*/info", "WantedBy=multi-user.target"):
             self.assertIn(line, unit)
         install = (ROOT / "linux/install.sh").read_text()
         self.assertIn('put 755 "$SRC/libexec/monet-pairings" "$LIBEXECDIR/monet-pairings"', install)
@@ -6953,7 +6953,6 @@ class BitLockerWindows(unittest.TestCase):
                 mock.patch.object(d, "esp_roots", lambda: []):
             self.assertEqual(d.unlock_saved(volumes), 1)
         script = (ROOT / "linux/libexec/monet-windows-drive").read_text(encoding="utf-8")
-        self.assertIn("    unlocked = unlock_saved()\n    device, why = find_windows(ntfs_volumes())", script)
         self.assertIn('["systemd-creds", "encrypt", f"--name={CRED_NAME}", "-", keys / f"{uuid}.cred"]', script)
         self.assertIn('BITLOCKER_KEYS = Path("/var/lib/monet/bitlocker")', script)
         setup = (ROOT / "linux/systemd/monet-windows-setup.service").read_text(encoding="utf-8")

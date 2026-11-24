@@ -1,5 +1,6 @@
 [Unit]
 Description=Monet: Zen in Monet's look, as it arrives and makes its profile
+ConditionUser=!@system
 
 [Path]
 # Zen arriving from the Store (for the whole PC or this account), Zen making

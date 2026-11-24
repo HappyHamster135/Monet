@@ -1,5 +1,6 @@
 [Unit]
 Description=Notice Light or Dark being picked in KDE's settings
+ConditionUser=!@system
 
 [Path]
 PathChanged=%h/.config/kdeglobals

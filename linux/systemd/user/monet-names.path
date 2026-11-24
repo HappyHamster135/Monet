@@ -1,5 +1,6 @@
 [Unit]
 Description=Monet: plain names for the apps chosen at setup, as they arrive
+ConditionUser=!@system
 
 [Path]
 # Made by monet-apps when the last of them is in.

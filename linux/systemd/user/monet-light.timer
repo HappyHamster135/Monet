@@ -1,5 +1,6 @@
 [Unit]
 Description=Follow sunrise and sunset for Monet's light
+ConditionUser=!@system
 
 [Timer]
 OnCalendar=*-*-* *:*:00
