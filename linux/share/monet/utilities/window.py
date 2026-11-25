@@ -8,7 +8,7 @@ import tempfile
 from PySide6.QtCore import (QObject, QProcess, QSettings, QSize, Qt, QTimer, QUrl, Signal, Slot)
 from PySide6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusServiceWatcher, QDBusVirtualObject
 from PySide6.QtGui import QAction, QCursor, QIcon, QKeySequence, QShortcut
-from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QHBoxLayout, QInputDialog,
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QInputDialog,
     QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMenu, QMessageBox, QPlainTextEdit,
     QPushButton, QStackedWidget, QToolButton, QVBoxLayout, QWidget, QWidgetAction)
 from actions import ACTIONS, clean_url, find_tools, preferences, tr
@@ -259,7 +259,7 @@ class Window(QMainWindow):
         dialog = QDialog(self)
         dialog.setWindowTitle(tr("Cleaning mode"))
         layout = QVBoxLayout(dialog)
-        message = QLabel(tr("Lock the screen while you wipe the keyboard, trackpad or display. When cleaning ends, unlock as usual."))
+        message = QLabel()
         message.setWordWrap(True)
         layout.addWidget(message)
         duration = QComboBox()
@@ -268,7 +268,32 @@ class Window(QMainWindow):
             duration.addItem(label, seconds)
         saved = duration.findData(self.settings.value("cleaningSeconds", 60, type=int))
         duration.setCurrentIndex(saved if saved >= 0 else 1)
-        layout.addWidget(duration)
+        options = QFormLayout()
+        layout.addLayout(options)
+        options.addRow(tr("Cleaning time"), duration)
+        display = QComboBox(dialog)
+        display.setObjectName("cleaningDisplay")
+        display.setAccessibleName(tr("During cleaning"))
+        display.addItem(tr("Lock the session"), "lock")
+        native = QApplication.platformName().startswith("wayland") and any(
+            (Path(root) / "kwin/plugins/monet_cleaning.so").is_file() for root in QApplication.libraryPaths())
+        if native:
+            display.addItem(tr("Darken displays"), "dark")
+            display.addItem(tr("Keep desktop visible"), "visible")
+        if native:
+            options.addRow(tr("During cleaning"), display)
+        else:
+            display.hide()
+        display.setCurrentIndex(max(0, display.findData(self.settings.value("cleaningDisplay", "lock"))))
+        def describe():
+            descriptions = {
+                "lock": tr("Lock the screen while you wipe the keyboard, trackpad or display. When cleaning ends, unlock as usual."),
+                "dark": tr("Pause desktop input and darken every display. Your desktop returns when cleaning ends."),
+                "visible": tr("Pause desktop input while your apps stay visible. Click Finish cleaning or press Esc five times to return."),
+            }
+            message.setText(descriptions[display.currentData()])
+        display.currentIndexChanged.connect(describe)
+        describe()
         buttons = QDialogButtonBox(QDialogButtonBox.Cancel)
         start = buttons.addButton(tr("Start cleaning"), QDialogButtonBox.AcceptRole)
         start.setDefault(True)
@@ -279,7 +304,36 @@ class Window(QMainWindow):
         if dialog.exec() == QDialog.Accepted:
             seconds = duration.currentData()
             self.settings.setValue("cleaningSeconds", seconds)
-            self.worker([sys.executable, MODULES / "cleaning.py", str(seconds)], lambda _: None)
+            if native:
+                self.settings.setValue("cleaningDisplay", display.currentData())
+            if display.currentData() != "lock":
+                self.start_desktop_cleaning(seconds, display.currentData() == "dark")
+            else:
+                self.worker([sys.executable, MODULES / "cleaning.py", str(seconds)], lambda _: None)
+
+    def start_desktop_cleaning(self, seconds, dark):
+        from PySide6.QtDBus import QDBusPendingCallWatcher
+        bus = QDBusConnection.sessionBus()
+        def request(path, interface, method, args, callback):
+            message = QDBusMessage.createMethodCall("org.kde.KWin", path, interface, method)
+            message.setArguments(args)
+            watcher = QDBusPendingCallWatcher(bus.asyncCall(message, 3000), self)
+            def finished(call):
+                reply = call.reply()
+                call.deleteLater()
+                if reply.type() == QDBusMessage.ErrorMessage:
+                    self.issue(tr("This option requires the Monet desktop cleaning component."))
+                else:
+                    callback(reply.arguments())
+            watcher.finished.connect(finished)
+        def began(result):
+            if result != [True]:
+                self.issue(tr("Could not start cleaning. Release the pointer and try again on an unlocked desktop."))
+        # KWin returns false when the plugin is already loaded. Begin verifies
+        # the Utilities owner, the time limit and the active session itself.
+        def loaded(_):
+            request("/org/monet/Cleaning", "org.monet.Cleaning", "Begin", [seconds, dark], began)
+        request("/Plugins", "org.kde.KWin.Plugins", "LoadPlugin", ["monet_cleaning"], loaded)
 
     def capture_text(self):
         area = tempfile.TemporaryDirectory(prefix="monet-capture-")

@@ -1,0 +1,8 @@
+{
+    "KPlugin": {
+        "Name": "Monet desktop cleaning mode",
+        "Description": "Pause desktop input while you clean the keyboard or display",
+        "License": "GPL-3.0-or-later",
+        "EnabledByDefault": false
+    }
+}

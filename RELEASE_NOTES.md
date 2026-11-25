@@ -13,7 +13,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   In Activity → Watch, pin a window region and get an alert when it changes, settles, or shows a phrase.
   Dropping files on it adds them to the shelf. Music levels and accessory alerts are optional.
 - **Homebrew packages.** Search for formulae and casks, install or remove individual packages, and review and apply updates from Monet Utilities.
-- **Cleaning mode.** In Monet Utilities, choose how long to pause input while wiping the keyboard, trackpad or screen. The normal unlock screen returns when time runs out or when you finish early.
+- **Cleaning mode.** Pause input for up to two minutes while you wipe the keyboard or display. Keep your apps visible, darken every display or lock the session. Visible and darkened cleaning both return to the desktop when time runs out, when you click **Finish cleaning**, or when you press Esc five times.
 - **Find Utilities from anywhere.** Press Super+Alt+Space for the tool search and your favorites, or search from the Home Bar or Super+R. Select a result to open it directly.
 - **Codex account limits.** Enable them in Utilities → AI session usage to see your remaining allowance and reset times in the notch. The account check runs when you use the feature.
 - **Notch downloads.** Open Activity → Downloads to see recent files, recognize partial downloads, show a finished file in Files or add it to the shelf. The folder can be changed from the same view.

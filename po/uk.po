@@ -16555,3 +16555,46 @@ msgstr ""
 #: linux/share/monet/utilities/recordings.py:855
 msgid "The video was saved. Click zooms were unavailable for this take."
 msgstr ""
+
+#: image/window-identity/cleaning.cpp:82 image/window-identity/cleaning.cpp:93
+msgid "Press Esc five times to finish early."
+msgstr ""
+
+#: image/window-identity/cleaning.cpp:92
+msgid "Esc presses: %1 of 5"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:274
+msgid "During cleaning"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:275
+msgid "Lock the session"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:279
+msgid "Darken displays"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:280
+msgid "Keep desktop visible"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:287
+msgid ""
+"Pause desktop input and darken every display. Your desktop returns when cleaning ends."
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:288
+msgid ""
+"Pause desktop input while your apps stay visible. Click Finish cleaning or press Esc five times to return."
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:321
+msgid "This option requires the Monet desktop cleaning component."
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:327
+msgid ""
+"Could not start cleaning. Release the pointer and try again on an unlocked desktop."
+msgstr ""

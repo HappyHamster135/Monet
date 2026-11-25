@@ -75,3 +75,11 @@ change or focus switch clears the click history. An outstanding suppressed
 press still owns its release. Test with the same libei driver using
 `python3 tests/fixtures/extra-click-wayland.py --driver /path/to/wheel-input`.
 Repeat with `--platform xcb` and with `--saved` to check saved preferences.
+
+Utilities loads `monet_cleaning.so` on demand for **Darken displays** and
+**Keep desktop visible**. The compositor draws the countdown and finish button
+on each output. A bounded timer, five deliberate Esc presses, the finish
+button, session lock or loss of the Utilities owner releases the input filter.
+The standard Plasma locker handles **Lock the session** independently.
+Exercise the two-output flow with
+`python3 tests/fixtures/visible-cleaning-wayland.py --plugin /path/to/monet_cleaning.so`.
