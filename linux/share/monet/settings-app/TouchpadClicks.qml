@@ -37,11 +37,13 @@ ColumnLayout {
         else if (button === Qt.MiddleButton) middle++
     }
     DBus.SignalWatcher {
+        objectName: "touchpadDevicesWatcher"
         enabled: panel.host.pollingActive && panel.host.page === "input"
         busType: DBus.BusType.Session; service: "org.kde.KWin"
         path: "/org/kde/KWin/InputDevice"; iface: "org.kde.KWin.InputDeviceManager"
-        function dbusDeviceAdded(name) { reload.restart() }
-        function dbusDeviceRemoved(name) { reload.restart() }
+        // SignalWatcher appends the case-sensitive KWin signal name to "dbus".
+        function dbusdeviceAdded(name) { reload.restart() }
+        function dbusdeviceRemoved(name) { reload.restart() }
     }
     Connections {
         target: panel.host

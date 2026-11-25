@@ -91,7 +91,12 @@ Shared.MonetWindow {
         && (typeof windowActivity === "undefined" || windowActivity.active)
     readonly property var statusPages: ["light", "wifi", "bluetooth", "display", "sound", "power"]
     readonly property bool statusPage: statusPages.includes(page)
-    onPollingActiveChanged: { if (pollingActive) { refresh(); if (page === "power") loadKeepAwake() } }
+    onPollingActiveChanged: {
+        if (!pollingActive) return
+        refresh()
+        if (page === "power") loadKeepAwake()
+        if (page === "input") loadInputDevices()
+    }
     onActiveChanged: if (active && page === "display") scheduleLoad()
     // Also acknowledge changes made in another display settings window.
     Screen.onDevicePixelRatioChanged: if (sheet.pollingActive && ["display", "accessibility"].includes(sheet.page)) displayChanged.restart()

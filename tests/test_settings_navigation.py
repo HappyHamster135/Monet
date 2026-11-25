@@ -141,6 +141,38 @@ class SettingsNavigation(unittest.TestCase):
         QTest.keyClick(self.window, Qt.Key_Return)
         self.assertIn(["helper", "utilities", "wheel-scrolling"], self.helper.commands)
 
+    def test_input_deep_link_loads_devices_when_window_is_first_exposed(self):
+        self.activity = self.games.WindowActivity()
+        hidden = QWindow()
+        self.activity.watch(hidden)
+        self.engine.rootContext().setContextProperty("windowActivity", self.activity)
+        self.helper.replies["input"] = json.dumps({"touchpads": [{"name": "Built-in pad", "id": "a" * 64}]})
+        self.open("input#touchpad-clicks")
+        self.assertFalse(self.window.property("pollingActive"))
+        self.assertNotIn(["helper", "input"], self.helper.commands)
+        self.app.processEvents()
+        self.activity.watch(self.window)
+        self.wait_for(lambda: bool(self.window.property("inputInfo").toVariant().get("touchpads")))
+        self.assertEqual(self.window.property("currentAnchor"), "touchpad-clicks")
+
+    def test_visible_touchpad_list_follows_native_hotplug_signals(self):
+        from PySide6.QtDBus import QDBusConnection, QDBusMessage
+
+        bus = QDBusConnection.sessionBus()
+        self.helper.replies["input"] = json.dumps({"touchpads": []})
+        self.open("input#touchpad-clicks")
+        self.wait_for(lambda: "touchpads" in self.window.property("inputInfo").toVariant())
+        watcher = self.window.findChild(QObject, "touchpadDevicesWatcher")
+        self.assertTrue(watcher.setProperty("service", bus.baseService()))
+        pad = {"name": "External pad", "id": "b" * 64}
+        for member, pads in (("deviceAdded", [pad]), ("deviceRemoved", [])):
+            self.helper.replies["input"] = json.dumps({"touchpads": pads})
+            signal = QDBusMessage.createTargetedSignal(bus.baseService(), watcher.property("path"),
+                                                       watcher.property("iface"), member)
+            signal.setArguments(["event9"])
+            self.assertTrue(bus.send(signal))
+            self.wait_for(lambda: self.window.property("inputInfo").toVariant()["touchpads"] == pads)
+
     def test_touchpad_switches_reported_choices_and_counts_actual_buttons(self):
         from PySide6.QtQuick import QQuickItem
         def item(name):
