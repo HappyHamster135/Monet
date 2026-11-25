@@ -208,6 +208,17 @@ def patch_audio(applet):
                     monetWindowStreams: groupToolTipListView.monetWindowStreams
 ''')
     tooltip = applet/'qml/ToolTipInstance.qml'
+    # The title and the thumbnail select the same window. The handler stays
+    # behind the header controls so the close button keeps its own click.
+    replace(tooltip, 'id: headerHoverHandler\n            active: (root.index !== -1) && !Plasmoid.configuration.showToolTips',
+            'id: headerHoverHandler\n            active: root.index !== -1')
+    replace(tooltip, '// make the header clickable if image tooltips are disabled (and thus there is no other clickable area that activates the window)',
+            '// The title selects the window even when a thumbnail is visible.')
+    replace(tooltip, '                PlasmaComponents3.ToolTip.text: i18nc("@info:tooltip Close this window", "Close window")',
+            '''                text: i18nc("@info:tooltip Close this window", "Close window")
+                display: PlasmaComponents3.ToolButton.IconOnly
+                Accessible.name: closeButton.text
+                PlasmaComponents3.ToolTip.text: closeButton.text''')
     prepend(tooltip, '    property bool hasTrackInATitle: false', '''    // Monet: when each of the app's streams plays for one window, every
     // window that plays sound has its own slider. Otherwise the app has one.
     property var monetWindowStreams: null

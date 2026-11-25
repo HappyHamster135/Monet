@@ -34,16 +34,27 @@ class PanelIcons(unittest.TestCase):
             value = engine.evaluate(args[-1]); self.assertFalse(value.isError(), value.toString())
             return [engine.evaluate('printed').toString()]
         with patch.object(q, 'busjson', side_effect=bus):
-            self.assertEqual(q.panel_icons('7'), {'ok':True, 'available':True, 'alignment':'start'})
+            self.assertEqual(q.panel_icons('7'), {'ok':True, 'available':True, 'alignment':'start',
+                                                'active':1, 'group':0, 'middle':2})
             self.assertEqual(q.panel_icons('7', 'center')['alignment'], 'center')
             self.assertEqual(q.panel_icons('7', 'start')['alignment'], 'start')
             self.assertFalse(q.panel_icons('8', 'center')['ok'])
+            engine.evaluate('config.middleClickAction = "NewInstance"; config.minimizeActiveTaskOnClick = "false"')
+            self.assertEqual(q.panel_icons('7')['active'], 0)
+            self.assertEqual(q.panel_icons('7')['middle'], 2)
+            self.assertEqual(q.panel_icons('7', 'group-3')['group'], 3)
+            self.assertEqual(q.panel_icons('7', 'middle-3')['middle'], 3)
+            self.assertEqual(q.panel_icons('7', 'active-1')['active'], 1)
+            self.assertEqual(q.panel_icons('7', 'group-1')['group'], 1)
+            self.assertTrue(engine.evaluate('config.showToolTips').toBool())
         config = json.loads(engine.evaluate('JSON.stringify(config)').toString())
         self.assertEqual(config['launchers'], ['my-app.desktop'])
         self.assertTrue(config['fill'])
         with patch.object(q, 'busjson') as bus:
             self.assertFalse(q.panel_icons('7; print(1)', 'center')['ok'])
             self.assertFalse(q.panel_icons('7', 'unknown')['ok'])
+            for invalid in ('active-2', 'middle-6', 'group-4', 'group-1; print(1)'):
+                self.assertFalse(q.panel_icons('7', invalid)['ok'])
             bus.assert_not_called()
 
 
@@ -74,6 +85,12 @@ if sys.argv[1] == "panel-notch":
     if choice == "tab-music-hide": tabs.remove("music")
     if choice == "tab-activity-earlier": tabs[:2] = ["activity", "music"]
     print(json.dumps(dict(ok=True, mode="compact", tabs=tabs, options=dict(previews=choice == "previews-on"))))
+elif sys.argv[1] == "panel-icons":
+    actions = dict(active=1, group=0, middle=2)
+    if "-" in choice:
+        key, value = choice.split("-")
+        actions[key] = int(value)
+    print(json.dumps(dict(ok=True, available=True, alignment=choice or "start", **actions)))
 else:
     print(json.dumps(dict(ok=True, available=True, layout=choice or "three", alignment=choice or "start")))
 """)
@@ -201,6 +218,17 @@ Window {
         self.assertTrue(self.item('panelOneBar').property('checked'))
         self.click('panelThreeBars'); QTest.qWait(200)
         self.assertTrue(self.item('panelThreeBars').property('checked'))
+
+    def test_keyboard_changes_group_click_action(self):
+        self.click('panelBehaviorPage')
+        group = self.item('panelClick-group')
+        self.assertTrue(group.isVisible())
+        self.assertEqual(group.property('currentIndex'), 0)
+        group.forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Down)
+        QTest.qWait(250)
+        self.assertEqual(self.item('monetPanelEditor').property('iconActions').toVariant()['group'], 1)
+        self.assertEqual(group.property('currentIndex'), 1)
 
     def test_shape_choices_apply_without_rebuilding_or_changing_height(self):
         self.click('panelDock')

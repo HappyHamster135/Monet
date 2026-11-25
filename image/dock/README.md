@@ -1,5 +1,7 @@
 # Monet dock motion
 
+Clicking either the title or thumbnail in a window preview activates that window. The close button keeps its own action.
+
 The native Plasma icons-only task applet gains an upward lift and smooth
 magnification under the pointer. Neighbouring icons ease into the effect, giving
 a continuous wave as the pointer moves along the dock. Only painting transforms

@@ -8385,25 +8385,49 @@ def set_screen_feature(name, what, on):
         run("kscreen-doctor", f"output.{name}.{'hdr' if what == 'hdr' else 'vrrpolicy'}.{value}", timeout=30)
 
 
-def panel_icons(ident, alignment=None):
-    if not re.fullmatch(r'[0-9]{1,10}', str(ident)) or alignment not in (None, 'start', 'center'):
+def panel_icons(ident, choice=None):
+    if not re.fullmatch(r'[0-9]{1,10}', str(ident)):
         return {"ok": False}
+    updates = {}
+    if choice in ('start', 'center'):
+        updates = {"monetIconAlignment": choice, "fill": True}
+    elif choice is not None:
+        match = re.fullmatch(r'active-[01]|group-[0-3]|middle-[0-5]', choice)
+        if not match:
+            return {"ok": False}
+        field, index = choice.split('-')
+        if field == 'active':
+            updates["minimizeActiveTaskOnClick"] = index == '1'
+        elif field == 'group':
+            updates["groupedTaskVisualization"] = int(index)
+            if index == '1':
+                updates["showToolTips"] = True
+        else:
+            updates["middleClickAction"] = int(index)
     script = '''(function() {
 var p = panelById(PANEL_ID);
 if (!p) { print(JSON.stringify({ok:false})); return; }
 var tasks = p.widgets("org.kde.plasma.icontasks").concat(p.widgets("org.kde.plasma.taskmanager"));
-var alignment = ALIGNMENT;
+var updates = PANEL_UPDATES;
+var keys = Object.keys(updates);
 tasks.forEach(function(w) {
     w.currentConfigGroup = ["General"];
-    if (alignment !== null) {
-        w.writeConfig("monetIconAlignment", alignment);
-        w.writeConfig("fill", true);
-        w.reloadConfig();
-    }
+    keys.forEach(function(key) { w.writeConfig(key, updates[key]); });
+    if (keys.length) w.reloadConfig();
 });
+// Plasma scripting reads stored KConfig values as strings, including booleans.
+function shared(key, fallback, decode) {
+    var values = tasks.map(function(w) { return decode(w.readConfig(key, fallback)); });
+    return values.length && values.every(function(v) { return v === values[0]; }) ? values[0] : -1;
+}
+var middleNames = ["None", "Close", "NewInstance", "ToggleMinimized", "ToggleGrouping", "BringToCurrentDesktop"];
 print(JSON.stringify({ok:true, available:tasks.length > 0,
-    alignment:tasks.length ? String(tasks[0].readConfig("monetIconAlignment", "start")) : ""}));
-})();'''.replace('PANEL_ID', str(int(ident))).replace('ALIGNMENT', json.dumps(alignment))
+    alignment:tasks.length ? String(tasks[0].readConfig("monetIconAlignment", "start")) : "",
+    active:shared("minimizeActiveTaskOnClick", true, function(v) { return /^(true|1)$/i.test(String(v)) ? 1 : 0; }),
+    group:shared("groupedTaskVisualization", 0, Number),
+    middle:shared("middleClickAction", 2, function(v) { return middleNames.includes(v) ? middleNames.indexOf(v) : Number(v); })
+}));
+})();'''.replace('PANEL_ID', str(int(ident))).replace('PANEL_UPDATES', json.dumps(updates))
     result = busjson("--user", "call", "org.kde.plasmashell", "/PlasmaShell",
                      "org.kde.PlasmaShell", "evaluateScript", "s", script)
     try:

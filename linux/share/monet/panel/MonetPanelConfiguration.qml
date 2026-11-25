@@ -36,6 +36,7 @@ Item {
     property bool showAdvanced: false
     property int draftSize: panel.thickness
     property string icons: ""
+    property var iconActions: ({})
     property bool iconsAvailable: false
     property string barLayout: ""
     property bool layoutAvailable: false
@@ -181,9 +182,9 @@ Item {
         }
     }
 
-    function requestIcons(alignment) {
+    function requestIcons(choice) {
         busy = true
-        runner.connectSource("@LIBEXECDIR@/monet-quick panel-icons " + plasmoid.id + (alignment ? " " + alignment : ""))
+        runner.connectSource("@LIBEXECDIR@/monet-quick panel-icons " + plasmoid.id + (choice ? " " + choice : ""))
     }
     function requestLayout(layout) {
         layoutBusy = true
@@ -193,7 +194,7 @@ Item {
         notchBusy = true
         notchRunner.connectSource("@LIBEXECDIR@/monet-quick panel-notch " + plasmoid.id + (mode ? " " + mode : ""))
     }
-    Component.onCompleted: { requestIcons(""); requestLayout(""); requestNotch("") }
+    Component.onCompleted: { requestLayout(""); requestNotch("") }
     P5Support.DataSource {
         id: notchRunner
         engine: "executable"
@@ -224,11 +225,11 @@ Item {
                 editor.layoutAvailable = result.available
                 editor.barLayout = result.layout
                 editor.problem = result.available ? "" : i18nd("monet", "This screen has extra bars. Use Advanced to arrange them first.")
-                editor.requestIcons("")
                 editor.schedulePlacement(true)
             } catch (e) {
                 editor.problem = i18nd("monet", "Could not change the bar layout. Close this editor and try again.")
             }
+            editor.requestIcons("")
         }
     }
     P5Support.DataSource {
@@ -242,6 +243,7 @@ Item {
                 if (data["exit code"] !== 0 || !result.ok) throw new Error()
                 editor.iconsAvailable = result.available
                 editor.icons = result.alignment
+                editor.iconActions = result
             } catch (e) {
                 editor.problem = i18nd("monet", "Could not read the app layout. Close this editor and try again.")
             }
@@ -734,6 +736,38 @@ Item {
                     visible: !editor.showAdvanced && editor.page === 2
                     Layout.fillWidth: true
                     spacing: 10
+                    Repeater {
+                        model: editor.iconsAvailable ? [
+                            {key: "active", label: i18nd("monet", "Click an active window’s icon"),
+                             options: [i18nd("monet", "Keep the window visible"), i18nd("monet", "Minimize the window")]},
+                            {key: "group", label: i18nd("monet", "Click an app with several windows"),
+                             options: [i18nd("monet", "Cycle through windows"), i18nd("monet", "Show previews on click and hover"),
+                                       i18nd("monet", "Show window overview"), i18nd("monet", "List window titles")]},
+                            {key: "middle", label: i18nd("monet", "Middle-click an app icon"),
+                             options: [i18nd("monet", "Do nothing"), i18nd("monet", "Close the window or group"),
+                                       i18nd("monet", "Open a new window"), i18nd("monet", "Minimize or restore the window or group"),
+                                       i18nd("monet", "Group or ungroup windows"), i18nd("monet", "Move windows to this desktop")]}
+                        ] : []
+                        ColumnLayout {
+                            id: actionRow
+                            required property var modelData
+                            Layout.fillWidth: true
+                            spacing: 3
+                            Heading { text: actionRow.modelData.label }
+                            C.ComboBox {
+                                objectName: "panelClick-" + actionRow.modelData.key
+                                Layout.fillWidth: true
+                                Layout.minimumWidth: 0
+                                Accessible.name: actionRow.modelData.label
+                                model: actionRow.modelData.options
+                                currentIndex: editor.iconActions[actionRow.modelData.key] ?? -1
+                                displayText: currentIndex < 0 ? i18nd("monet", "Choose an action") : currentText
+                                enabled: !editor.busy && !editor.layoutBusy
+                                onActivated: index => editor.requestIcons(actionRow.modelData.key + "-" + index)
+                            }
+                        }
+                    }
+                    Hint { visible: editor.problem !== ""; text: editor.problem }
                     Heading { text: i18nd("monet", "Bar visibility") }
                     Repeater {
                         model: [

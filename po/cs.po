@@ -19067,3 +19067,63 @@ msgstr ""
 msgctxt "what a part of Monet is, in KDE's lists"
 msgid "Search open windows by title or application"
 msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:741
+msgid "Click an active window’s icon"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:742
+msgid "Keep the window visible"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:742
+msgid "Minimize the window"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:743
+msgid "Click an app with several windows"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:744
+msgid "Cycle through windows"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:744
+msgid "Show previews on click and hover"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:745
+msgid "Show window overview"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:745
+msgid "List window titles"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:746
+msgid "Middle-click an app icon"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:747
+msgid "Close the window or group"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:748
+msgid "Open a new window"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:748
+msgid "Minimize or restore the window or group"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:749
+msgid "Group or ungroup windows"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:749
+msgid "Move windows to this desktop"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:764
+msgid "Choose an action"
+msgstr ""
