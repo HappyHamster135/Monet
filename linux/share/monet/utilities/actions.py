@@ -36,6 +36,8 @@ DIRECT_ACTIONS = {
 
 ACTIONS = {
     **DIRECT_ACTIONS,
+    "command-bar": Action(N_("Command Bar"), "Search apps windows files calculator units snippets clipboard emoji", "system-search", ("krunner",)),
+    "emoji": Action(N_("Find an emoji"), "Search emoji smiley symbols copy", "face-smile", ("krunner", "--runner", "monet-utilities", "emoji: ")),
     "calendars": Action(N_("Notch calendars"), "Calendar subscriptions and appointments", "view-calendar"),
     "shelf": Action(N_("File shelf"), "Files", "folder-favorites"),
     "downloads": Action(N_("Watch downloads"), "Files", "folder-download"),
@@ -95,6 +97,13 @@ ACTIONS = {
     "quick-panel": Action(N_("Quick Panel"), "Favorite tools floating launcher grid", "view-grid"),
     "wheel": Action(N_("Favorite actions wheel"), "Desktop", "view-more"),
 }
+SEARCH_HINTS = {
+    "command-bar": N_("Search apps, windows, files and tools"),
+    "snippets": N_("Type snippet: and a name to copy a saved snippet"),
+    "clipboard": N_("Type clip: and a few words to find copied text"),
+    "emoji": N_("Type emoji: and a name to copy an emoji"),
+}
+
 DEFAULT_FAVORITES = ["shelf", "notes", "screenshot", "color", "awake", "sound"]
 
 

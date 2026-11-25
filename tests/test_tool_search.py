@@ -49,6 +49,29 @@ def fixture():
         def Present(self, payload):
             received.append(tuple(json.loads(payload)))
 
+    clip_entries = ["Newest entry", "A long C++ example\n" + "text " * 80, "▨ 640x480"]
+    copied, history_reads = [], []
+
+    class Clipboard(dbus.service.Object):
+        @dbus.service.signal("org.kde.klipper.klipper")
+        def clipboardHistoryUpdated(self):
+            pass
+
+        @dbus.service.method("org.kde.klipper.klipper", out_signature="as")
+        def getClipboardHistoryMenu(self):
+            history_reads.append(True)
+            return clip_entries
+
+        @dbus.service.method("org.kde.klipper.klipper", in_signature="i", out_signature="s")
+        def getClipboardHistoryItem(self, index):
+            return clip_entries[index] if 0 <= index < len(clip_entries) else ""
+
+        @dbus.service.method("org.kde.klipper.klipper", in_signature="s")
+        def setClipboardContents(self, value):
+            copied.append(str(value))
+
+    clipboard_name = dbus.service.BusName("org.kde.klipper", bus=bus)
+    clipboard = Clipboard(clipboard_name, "/klipper")
     legacy = False
     name = dbus.service.BusName("org.monet.Utilities", bus=bus)
     target = Target(name, "/Utilities")
@@ -87,15 +110,19 @@ def fixture():
         second = proxy(dbus.SessionBus(private=True))
         # The test owns the target on this thread, so pump while the provider calls back.
         context = GLib.MainContext.default()
-        def run(instance, key, action=""):
+        def call(method, *args):
             done, errors = [], []
-            instance.Run(key, action, reply_handler=lambda: done.append(True), error_handler=errors.append)
+            method(*args, reply_handler=lambda *reply: done.append(reply), error_handler=errors.append)
             limit = time.monotonic() + 4
             while not done and not errors and time.monotonic() < limit:
                 while context.pending():
                     context.iteration(False)
                 time.sleep(.005)
             assert done and not errors, errors
+            return done[0]
+
+        def run(instance, key, action=""):
+            call(instance.Run, key, action)
         run(second, "notes")
         run(runner, "shelf")
         run(runner, "shelf")
@@ -116,6 +143,45 @@ def fixture():
         legacy = True
         run(runner, "shelf")
         assert received[-1] == ("shelf",)
+        assert not history_reads, "Unscoped tool searches accessed clipboard history"
+        config.setValue("snippets", json.dumps({"Greeting": "Hi!\nSecond line.", "Other": "Hi!"}))
+        config.setValue("snippetShortcuts", json.dumps({"Greeting": "hello"}))
+        config.sync()
+        snippet, = runner.Match("tools snippet:hello")
+        assert snippet[1] == "Greeting" and "hello" not in snippet[0] and "Hi!" not in repr(snippet)
+        run(runner, snippet[0])
+        assert copied == ["Hi!\nSecond line."]
+        assert runner.Match("snippet: Second line")[0][0] == snippet[0]
+        assert not history_reads
+        rows, = call(runner.Match, "clip:")
+        assert len(rows) == 2
+        rows, = call(runner.Match, "tools clip: C++")
+        clip, = rows
+        reads = len(history_reads)
+        assert call(runner.Match, "clip: C++ ex")[0][0][0] == clip[0] and len(history_reads) == reads
+        clip_entries.append("Another matching edit")
+        clipboard.clipboardHistoryUpdated()
+        assert call(runner.Match, "clip: matching")[0][0][1] == "Another matching edit"
+        assert len(history_reads) == reads + 1
+        original = clip_entries[1]
+        assert len(clip[1]) < len(original) and "C++" not in clip[0]
+        clip_entries.insert(0, "Arrived after search")
+        run(runner, clip[0])
+        assert copied[-1] == original
+        clip_entries.remove(original)
+        run(runner, clip[0])
+        assert len(copied) == 2
+        rocket = runner.Match("emoji: rocket")[0]
+        assert rocket[0] == "emoji/🚀", rocket
+        run(runner, rocket[0])
+        assert copied[-1] == "🚀"
+        config.setValue("hidden", json.dumps(["snippets", "clipboard", "emoji"]))
+        config.sync()
+        reads = len(history_reads)
+        for prefix, key in (("clip", clip[0]), ("snippet", snippet[0]), ("emoji", rocket[0])):
+            assert not runner.Match(prefix + ":")
+            run(runner, key)
+        assert len(copied) == 3 and len(history_reads) == reads
     finally:
         child.terminate()
         child.wait(timeout=3)

@@ -434,6 +434,19 @@ PlasmoidItem {
             Layout.fillWidth: true
             C.Button { visible: root.offerShelf && root.visibleTabs.length > 0; text: i18n("File shelf"); icon.name: "folder-open"; onClicked: root.showShelf() }
             Item { Layout.fillWidth: true }
+            C.ToolButton {
+                visible: tools.offers("command-bar")
+                icon.name: "system-search"
+                text: i18n("Command Bar")
+                display: C.AbstractButton.IconOnly
+                C.ToolTip.visible: hovered
+                C.ToolTip.text: text
+                onClicked: {
+                    root.expanded = false
+                    DBus.SessionBus.asyncCall({service: "org.kde.krunner", path: "/App",
+                        iface: "org.kde.krunner.App", member: "display"})
+                }
+            }
             C.Button { text: i18n("Utilities"); icon.name: "applications-utilities"; onClicked: root.openTool("tools") }
         }
     }

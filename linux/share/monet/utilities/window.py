@@ -9,7 +9,7 @@ from PySide6.QtGui import QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QInputDialog,
     QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox, QPlainTextEdit,
     QPushButton, QStackedWidget, QToolButton, QVBoxLayout, QWidget)
-from actions import ACTIONS, DIRECT_ACTIONS, clean_url, find_tools, preferences, tr
+from actions import ACTIONS, DIRECT_ACTIONS, SEARCH_HINTS, clean_url, find_tools, preferences, tr
 from pages import Downloads, Shelf, ShelfList, Snippets, row
 
 MODULES = Path(__file__).resolve().parent
@@ -73,6 +73,9 @@ class Window(QMainWindow):
         home_layout.addWidget(self.search)
         self.catalog = QListWidget()
         self.catalog.setAlternatingRowColors(True)
+        for key, step in ((Qt.Key_Down, 1), (Qt.Key_Up, -1)):
+            shortcut = QShortcut(QKeySequence(key), self.search, activated=lambda step=step: self.step_result(step))
+            shortcut.setContext(Qt.WidgetShortcut)
         self.catalog.itemClicked.connect(self.open_selected)
         for key in ("Return", "Enter"):
             shortcut = QShortcut(QKeySequence(key), self.catalog, activated=self.open_selected)
@@ -114,13 +117,18 @@ class Window(QMainWindow):
             action = ACTIONS[key]
             entry = QListWidgetItem(QIcon.fromTheme(action.icon), action.name)
             entry.setData(Qt.UserRole, key)
-            entry.setToolTip(action.group)
+            entry.setToolTip(tr(SEARCH_HINTS[key]) if key in SEARCH_HINTS else action.group)
             self.catalog.addItem(entry)
         self.catalog.setCurrentRow(0)
         if not self.catalog.count():
             self.status.showMessage("No matching tools. Use Customize to show hidden tools.")
         else:
             self.status.clearMessage()
+
+    def step_result(self, step):
+        if self.catalog.count():
+            row = max(0, min(self.catalog.currentRow() + step, self.catalog.count() - 1))
+            self.catalog.setCurrentRow(row)
 
     def open_selected(self, item=None):
         item = item or self.catalog.currentItem()
@@ -132,8 +140,10 @@ class Window(QMainWindow):
         self.title.setText("Utilities")
         self.back.hide()
         self.stack.setCurrentIndex(0)
-        self.search.clear()
-        self.filter()
+        if self.search.text():
+            self.search.clear()  # textChanged refreshes the list.
+        else:
+            self.filter()
         self.search.setFocus()
 
     def ensure_page(self, key, factory):

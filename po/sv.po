@@ -17964,3 +17964,55 @@ msgstr "Reagera på skrivbordsaktivitet"
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:476
 msgid "Hide between visits and reactions"
 msgstr "Dölj mellan besök och reaktioner"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:440 linux/share/monet/utilities/actions.py:39 linux/share/monet/utilities/command_search.py:222
+msgid "Command Bar"
+msgstr "Kommandofält"
+
+#: linux/share/monet/utilities/actions.py:40
+msgid "Find an emoji"
+msgstr "Hitta en emoji"
+
+#: linux/share/monet/utilities/command_search.py:24
+msgid "snippet"
+msgstr "textsnutt"
+
+#: linux/share/monet/utilities/command_search.py:24
+msgid "clip"
+msgstr "urklipp"
+
+#: linux/share/monet/utilities/command_search.py:66
+msgid "Copy snippet"
+msgstr "Kopiera textsnutt"
+
+#: linux/share/monet/utilities/command_search.py:92
+msgid "Whitespace"
+msgstr "Blanktecken"
+
+#: linux/share/monet/utilities/command_search.py:167
+msgid "Copy emoji"
+msgstr "Kopiera emoji"
+
+#: linux/share/monet/utilities/command_search.py:204
+msgid "This search result is no longer available."
+msgstr "Sökresultatet är inte längre tillgängligt."
+
+#: linux/share/monet/utilities/command_search.py:218
+msgid "Could not copy this search result."
+msgstr "Det gick inte att kopiera sökresultatet."
+
+#: linux/share/monet/utilities/actions.py:101
+msgid "Search apps, windows, files and tools"
+msgstr "Sök efter appar, fönster, filer och verktyg"
+
+#: linux/share/monet/utilities/actions.py:102
+msgid "Type snippet: and a name to copy a saved snippet"
+msgstr "Skriv textsnutt: och ett namn för att kopiera en sparad textsnutt"
+
+#: linux/share/monet/utilities/actions.py:103
+msgid "Type clip: and a few words to find copied text"
+msgstr "Skriv urklipp: och några ord för att hitta kopierad text"
+
+#: linux/share/monet/utilities/actions.py:104
+msgid "Type emoji: and a name to copy an emoji"
+msgstr "Skriv emoji: och ett namn för att kopiera en emoji"

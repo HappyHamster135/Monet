@@ -17944,3 +17944,55 @@ msgstr ""
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:476
 msgid "Hide between visits and reactions"
 msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:440 linux/share/monet/utilities/actions.py:39 linux/share/monet/utilities/command_search.py:222
+msgid "Command Bar"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:40
+msgid "Find an emoji"
+msgstr ""
+
+#: linux/share/monet/utilities/command_search.py:24
+msgid "snippet"
+msgstr ""
+
+#: linux/share/monet/utilities/command_search.py:24
+msgid "clip"
+msgstr ""
+
+#: linux/share/monet/utilities/command_search.py:66
+msgid "Copy snippet"
+msgstr ""
+
+#: linux/share/monet/utilities/command_search.py:92
+msgid "Whitespace"
+msgstr ""
+
+#: linux/share/monet/utilities/command_search.py:167
+msgid "Copy emoji"
+msgstr ""
+
+#: linux/share/monet/utilities/command_search.py:204
+msgid "This search result is no longer available."
+msgstr ""
+
+#: linux/share/monet/utilities/command_search.py:218
+msgid "Could not copy this search result."
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:101
+msgid "Search apps, windows, files and tools"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:102
+msgid "Type snippet: and a name to copy a saved snippet"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:103
+msgid "Type clip: and a few words to find copied text"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:104
+msgid "Type emoji: and a name to copy an emoji"
+msgstr ""

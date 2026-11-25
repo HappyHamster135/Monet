@@ -93,6 +93,31 @@ class DesktopTools(unittest.TestCase):
         from PySide6.QtWidgets import QApplication
         cls.app = QApplication.instance() or QApplication([])
 
+    def test_search_arrows_keep_typing_focus_and_enter_uses_selection_once(self):
+        from PySide6.QtCore import Qt
+        from PySide6.QtTest import QTest
+        from unittest.mock import patch
+        from window import Window
+        window = Window("/usr/libexec")
+        self.addCleanup(window.close)
+        window.show()
+        window.activateWindow()
+        QTest.qWait(50)
+        window.search.setText("sound")
+        self.assertGreater(window.catalog.count(), 1)
+        QTest.keyClick(window.search, Qt.Key_Up)
+        self.assertEqual(window.catalog.currentRow(), 0)
+        QTest.keyClick(window.search, Qt.Key_Down)
+        self.assertEqual(window.catalog.currentRow(), 1)
+        self.assertTrue(window.search.hasFocus())
+        selected = window.catalog.currentItem().data(Qt.UserRole)
+        with patch.object(window, "run_tool") as launch:
+            QTest.keyClick(window.search, Qt.Key_Return)
+            launch.assert_called_once_with(selected)
+        QTest.keyClicks(window.search, " settings")
+        self.assertEqual(window.search.text(), "sound settings")
+        self.assertEqual(window.catalog.currentRow(), 0)
+
     def test_shelf_removal_keeps_the_actual_file(self):
         from PySide6.QtCore import QSettings
         from pages import ShelfList

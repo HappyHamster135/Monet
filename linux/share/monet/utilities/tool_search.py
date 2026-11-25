@@ -8,7 +8,7 @@ from dbus.mainloop.glib import DBusGMainLoop
 from gi.repository import GLib
 from PySide6.QtCore import QSettings
 
-from actions import ACTIONS, find_tools, preferences, tr, words
+from actions import ACTIONS, SEARCH_HINTS, find_tools, preferences, tr, words
 
 INTERFACE = "org.kde.krunner1"
 SERVICE = "org.monet.ToolSearch"
@@ -21,6 +21,7 @@ class ToolSearch(dbus.service.Object):
         self.loop = loop
         self.settings = QSettings("Monet", "Utilities")
         self.tokens = {}
+        self.clip_search = None
         self.prefixes = {"tools", words(tr("tools")), "monet tools", words(tr("Monet Utilities"))}
         self.timeout = 0
         self.touch()
@@ -30,9 +31,15 @@ class ToolSearch(dbus.service.Object):
             GLib.source_remove(self.timeout)
         self.timeout = GLib.timeout_add_seconds(45, self.loop.quit)
 
+    def close_clip_search(self):
+        if self.clip_search:
+            self.clip_search.close()
+            self.clip_search = None
+
     @dbus.service.method(INTERFACE, sender_keyword="sender")
     def Teardown(self, sender=None):
         self.tokens.pop(sender, None)
+        self.close_clip_search()
 
     @dbus.service.method(INTERFACE, out_signature="a(sss)")
     def Actions(self):
@@ -42,16 +49,31 @@ class ToolSearch(dbus.service.Object):
     @dbus.service.method(INTERFACE, in_signature="s", out_signature="a(sssida{sv})")
     def Match(self, query):
         self.touch()
-        query = words(query[:256])
+        raw = str(query[:256]).strip()
+        query = words(raw)
         scoped = False
         for prefix in sorted(self.prefixes, key=len, reverse=True):
             if query == prefix or query.startswith(prefix + " "):
                 scoped, query = True, query[len(prefix):].strip()
                 break
         if not scoped and len(query) < 3:
+            self.close_clip_search()
             return []
         self.settings.sync()
         favorites, hidden = preferences(self.settings)
+        # Preserve punctuation in personal searches, including from the tools shortcut.
+        if ":" in raw:
+            from command_search import command_query, matches as command_matches
+            direct = command_query(raw, self.prefixes)
+            if direct:
+                if direct[0] == "clip" and "clipboard" not in hidden:
+                    if self.clip_search is None:
+                        from command_search import ClipboardSearch
+                        self.clip_search = ClipboardSearch(self.bus)
+                else:
+                    self.close_clip_search()
+                return command_matches(*direct, hidden, self.settings, self.clip_search)
+        self.close_clip_search()
         matches = find_tools(query, favorites, hidden)
         if scoped and not query:
             matches = [(key, score) for key, score in matches if key in favorites]
@@ -59,7 +81,8 @@ class ToolSearch(dbus.service.Object):
                 return [("customize", tr("Choose favorite tools"), "configure", 70, 1.0,
                          {"category": tr("Monet Utilities")})]
         return [(key, ACTIONS[key].name, ACTIONS[key].icon, 70 if scoped or score >= 0.95 else 30,
-                 score, {"category": tr("Monet Utilities")}) for key, score in matches[:8]]
+                 score, {"category": tr("Monet Utilities"), "subtext": tr(SEARCH_HINTS[key]) if key in SEARCH_HINTS else ""})
+                for key, score in matches[:8]]
 
     @dbus.service.method(INTERFACE, in_signature="s", sender_keyword="sender")
     def SetActivationToken(self, token, sender=None):
@@ -72,9 +95,14 @@ class ToolSearch(dbus.service.Object):
     @dbus.service.method(INTERFACE, in_signature="ss", sender_keyword="sender")
     def Run(self, key, action, sender=None):
         self.touch()
+        self.close_clip_search()
         token, expiry = self.tokens.pop(sender, ("", 0))
         self.settings.sync()
         _, hidden = preferences(self.settings)
+        if not action and str(key).startswith(("snippet/", "clip/", "emoji/")):
+            from command_search import copy_result
+            copy_result(str(key), hidden, self.settings, self.bus)
+            return
         if action or (key != "customize" and (key not in ACTIONS or key in hidden)):
             return
         target = self.bus.get_object("org.monet.Utilities", "/Utilities", introspect=False)
