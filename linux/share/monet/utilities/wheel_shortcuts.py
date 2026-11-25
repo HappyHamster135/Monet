@@ -3,8 +3,7 @@ from pathlib import Path
 import re
 
 import dbus
-from gi.repository import GLib
-from PySide6.QtCore import QIODevice, QSaveFile, QStandardPaths, Qt
+from PySide6.QtCore import QKeyCombination, QIODevice, QSaveFile, QStandardPaths, Qt
 from PySide6.QtGui import QKeySequence
 
 from actions import tr
@@ -27,6 +26,7 @@ def action(path, name):
 
 
 def write_launcher(path, ident, name, helpers):
+    from gi.repository import GLib
     # Desktop Entry Exec and string values have separate escaping rules.
     program = str(helpers / "monet-utilities").replace("%", "%%")
     quoted = re.sub(r'(["`$\\])', lambda match: "\\" + match[0], program)
@@ -39,6 +39,23 @@ def write_launcher(path, ident, name, helpers):
     output = QSaveFile(str(path))
     if not output.open(QIODevice.WriteOnly) or output.write(data) != len(data) or not output.commit():
         raise OSError(output.errorString())
+
+
+def activation_modifiers(ident):
+    """Read the modifiers of the final chord, including user-rebound shortcuts."""
+    component = launcher(ident).name if ident else "org.monet.FavoritesWheel.desktop"
+    try:
+        obj = dbus.SessionBus().get_object("org.kde.kglobalaccel", "/kglobalaccel", introspect=False)
+        keys = obj.shortcutKeys([component, "_launch", "", ""], dbus_interface="org.kde.KGlobalAccel", timeout=.25)
+        result = []
+        for sequence, in keys:
+            last = next((int(key) for key in reversed(sequence) if key), 0)
+            if last:
+                modifiers = QKeyCombination.fromCombined(last).keyboardModifiers()
+                result.append(modifiers & (Qt.ShiftModifier | Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))
+        return result
+    except dbus.DBusException:
+        return []
 
 
 def current(ident, name):

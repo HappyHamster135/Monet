@@ -64,6 +64,8 @@ class QuickPanel(QDialog):
         self.setWindowIcon(QIcon.fromTheme("view-grid"))
         self.keys = []
         self.hidden_tools = set()
+        self.dismiss_timer = QTimer(self, singleShot=True)
+        self.dismiss_timer.timeout.connect(self.dismiss_if_inactive)
         layout = QVBoxLayout(self)
         self.stack = QStackedWidget()
         layout.addWidget(self.stack)
@@ -271,12 +273,13 @@ class QuickPanel(QDialog):
         super().changeEvent(event)
         if event.type() == QEvent.ActivationChange and self.isVisible() and not self.isActiveWindow():
             # A combo menu is its own native window. Let Qt finish the focus transfer.
-            QTimer.singleShot(0, self, self.dismiss_if_inactive)
+            self.dismiss_timer.start(0)
 
     def dismiss_if_inactive(self):
         if self.isVisible() and not self.isActiveWindow() and not QApplication.activePopupWidget():
             self.hide()
 
     def hideEvent(self, event):
+        self.dismiss_timer.stop()
         super().hideEvent(event)
         self.dismissed.emit()

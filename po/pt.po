@@ -19697,3 +19697,28 @@ msgstr ""
 #: linux/share/monet/utilities/wheel_editor.py:342
 msgid "Couldn’t remove the wheel shortcut."
 msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:130
+msgid "Shortcut behavior"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:136
+msgid "Tap or hold"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:137
+msgid "Click to choose"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:138
+msgid "Hold to choose"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:139
+msgid ""
+"With Tap or hold, tap the shortcut to browse or hold it and release a modifier over an item to choose it."
+msgstr ""
+
+#: linux/share/monet/utilities/favorites_wheel.py:178
+msgid "Release to choose"
+msgstr ""

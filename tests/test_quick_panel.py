@@ -15,7 +15,7 @@ from actions import ACTIONS, find_tools, preferences
 try:
     from PySide6.QtCore import QEvent, QSettings, Qt, QTimer
     from PySide6.QtTest import QTest
-    from PySide6.QtWidgets import QApplication, QDialogButtonBox, QTreeWidget
+    from PySide6.QtWidgets import QApplication, QDialogButtonBox, QTreeWidget, QWidget
     from quick_panel import QuickPanel
 except ImportError:
     QuickPanel = None
@@ -131,6 +131,23 @@ class Panel(unittest.TestCase):
             self.assertIsNone(window.quick_panel)
             self.assertFalse(window.isVisible())
             self.dispose(window)
+
+    def test_reopen_during_focus_transfer_keeps_the_first_click(self):
+        outside = QWidget()
+        self.addCleanup(self.dispose, outside)
+        outside.show()
+        outside.activateWindow()
+        self.panel.present(["notes"], [])
+        self.app.processEvents()
+        self.panel.hide()
+        self.panel.present(["notes"], [])
+        self.app.processEvents()
+        self.assertTrue(self.panel.isVisible())
+        selected = []
+        self.panel.chosen.connect(selected.append)
+        tile = self.panel.grid.visualItemRect(self.panel.grid.item(0))
+        QTest.mouseClick(self.panel.grid.viewport(), Qt.LeftButton, pos=tile.center())
+        self.assertEqual(selected, ["notes"])
 
     def test_narrow_panel_keeps_last_tile_reachable_by_keyboard(self):
         tools = [key for key in ACTIONS if key != "quick-panel"]

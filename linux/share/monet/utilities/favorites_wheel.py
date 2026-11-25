@@ -20,6 +20,7 @@ class Sector(QAbstractButton):
         self.setIcon(QIcon.fromTheme(entry.icon_name))
         self.setAccessibleName(self.text())
         self.setToolTip("<span>" + escape(self.text()) + "</span>")
+        self.setMouseTracking(True)
         self.setFocusPolicy(Qt.StrongFocus)
         self.setGeometry(wheel.rect())
         bounds = QRectF(self.rect()).adjusted(2, 2, -2, -2)
@@ -53,6 +54,19 @@ class Sector(QAbstractButton):
     def enterEvent(self, event):
         self.wheel.highlight(self)
         super().enterEvent(event)
+
+    def mousePressEvent(self, event):
+        self.wheel.cancel_gesture()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        self.wheel.point_at(self, event.globalPosition().toPoint())
+        super().mouseMoveEvent(event)
+
+    def leaveEvent(self, event):
+        if self.wheel.pointed is self:
+            self.wheel.set_pointed(None)
+        super().leaveEvent(event)
 
     def focusInEvent(self, event):
         self.wheel.highlight(self)
@@ -108,6 +122,7 @@ class FavoritesWheel(QDialog):
         self.hub_layout.addWidget(self.label)
         self.hint = QLabel(self.hub)
         self.hint.setAlignment(Qt.AlignCenter)
+        self.hint.setWordWrap(True)
         self.hint.setAttribute(Qt.WA_TransparentForMouseEvents)
         self.hint.setForegroundRole(QPalette.PlaceholderText)
         self.hub_layout.addWidget(self.hint)
@@ -120,6 +135,77 @@ class FavoritesWheel(QDialog):
         self.editable = True
         self.buttons = []
         self.current = None
+
+        self.dismiss_timer = QTimer(self, singleShot=True)
+        self.dismiss_timer.timeout.connect(self.dismiss_if_inactive)
+        self.bindings = ()
+        self.required = Qt.NoModifier
+        self.pointed = None
+        self.origin = None
+        self.mode = "adaptive"
+
+    def prepare_shortcut(self, mode, bindings):
+        self.cancel_gesture()
+        self.mode = mode
+        self.bindings = bindings
+
+    def start_gesture(self):
+        if not self.bindings or not self.isVisible() or not self.isActiveWindow():
+            return
+        # On Wayland the compositor supplies the held modifiers with keyboard
+        # focus. Qt's cached keyboardModifiers() can still describe the old window.
+        held = QApplication.queryKeyboardModifiers()
+        matches = [mods for mods in self.bindings if mods and held & mods == mods]
+        bare = Qt.NoModifier in self.bindings
+        self.bindings = ()
+        if matches:
+            self.required = max(matches, key=lambda mods: mods.value.bit_count())
+            if self.origin is None:
+                self.origin = QCursor.pos()
+        elif self.mode == "hold" and not bare:
+            self.hide()
+
+    def cancel_gesture(self):
+        self.bindings = ()
+        self.required = Qt.NoModifier
+        self.origin = None
+        self.set_pointed(None)
+
+    def set_pointed(self, button):
+        if self.pointed is button:
+            return
+        self.pointed = button
+        self.hint.setText(tr("Release to choose") if button else self.hub_hint())
+
+    def hub_hint(self):
+        return "‹ " + tr("Back") if self.history else tr("Wheels") + " ▾"
+
+    def enterEvent(self, event):
+        if self.bindings and self.origin is None:
+            self.origin = event.globalPosition().toPoint()
+        super().enterEvent(event)
+
+    def point_at(self, button, position):
+        if self.required and self.origin is not None:
+            # A clamped wheel can open with a sector already under the pointer.
+            if (position - self.origin).manhattanLength() >= QApplication.startDragDistance():
+                self.set_pointed(button)
+                if self.current is not button:
+                    self.highlight(button)
+            else:
+                self.set_pointed(None)
+
+    def keyReleaseEvent(self, event):
+        if self.required and not event.isAutoRepeat() and event.modifiers() & self.required != self.required:
+            target = self.pointed
+            self.cancel_gesture()
+            if target:
+                self.choose(target.entry)
+            elif self.mode == "hold":
+                self.hide()
+            event.accept()
+        else:
+            super().keyReleaseEvent(event)
 
     def contents(self, items, selected=0):
         layout = (self.width(), items)
@@ -139,7 +225,7 @@ class FavoritesWheel(QDialog):
             self.hub_layout.setContentsMargins(inset, 0, inset, 0)
         hint = tr("Back") if self.history else tr("Wheels")
         self.hub.setAccessibleName(hint)
-        self.hint.setText("‹ " + hint if self.history else hint + " ▾")
+        self.hint.setText(self.hub_hint())
         self.hub.raise_()
         if self.buttons:
             button = self.buttons[min(selected, len(self.buttons)-1)]
@@ -203,6 +289,7 @@ class FavoritesWheel(QDialog):
         button.update()
 
     def choose(self, entry):
+        self.cancel_gesture()
         if not self.isVisible():
             return
         if entry.kind == "menu":
@@ -216,6 +303,7 @@ class FavoritesWheel(QDialog):
             self.targetChosen.emit(entry)
 
     def open_hub(self):
+        self.cancel_gesture()
         if self.history:
             self.contents(*self.history.pop())
             return
@@ -243,6 +331,8 @@ class FavoritesWheel(QDialog):
 
     def keyPressEvent(self, event):
         key = event.key()
+        if not event.isAutoRepeat() and key not in (Qt.Key_Control, Qt.Key_Alt, Qt.Key_Meta, Qt.Key_Shift):
+            self.cancel_gesture()
         if key == Qt.Key_Menu or (key == Qt.Key_F10 and event.modifiers() & Qt.ShiftModifier):
             self.open_hub()
         elif key == Qt.Key_Backspace and self.history:
@@ -263,7 +353,12 @@ class FavoritesWheel(QDialog):
         else:
             super().keyPressEvent(event)
 
+    def focusNextPrevChild(self, next):
+        self.cancel_gesture()
+        return super().focusNextPrevChild(next)
+
     def reject(self):
+        self.cancel_gesture()
         if self.history:
             self.contents(*self.history.pop())
         else:
@@ -271,14 +366,20 @@ class FavoritesWheel(QDialog):
 
     def changeEvent(self, event):
         super().changeEvent(event)
-        if event.type() == QEvent.ActivationChange and self.isVisible() and not self.isActiveWindow():
-            QTimer.singleShot(0, self, self.dismiss_if_inactive)
+        if event.type() == QEvent.ActivationChange and self.isVisible():
+            if self.isActiveWindow():
+                self.start_gesture()
+            else:
+                self.cancel_gesture()
+                self.dismiss_timer.start(0)
 
     def dismiss_if_inactive(self):
         if self.isVisible() and self.menu is None and not self.isActiveWindow():
             self.hide()
 
     def hideEvent(self, event):
+        self.dismiss_timer.stop()
+        self.cancel_gesture()
         if self.menu:
             self.menu.close()
         super().hideEvent(event)

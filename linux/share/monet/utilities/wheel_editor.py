@@ -125,6 +125,19 @@ class WheelEditor(QWidget):
         self.options.setPopupMode(QToolButton.InstantPopup)
         header.addWidget(self.options)
         self.selector.currentIndexChanged.connect(self.select_profile)
+        behavior = QHBoxLayout()
+        layout.addLayout(behavior)
+        label = QLabel(tr("Shortcut behavior"))
+        self.activation = QComboBox()
+        label.setBuddy(self.activation)
+        behavior.addWidget(label)
+        behavior.addWidget(self.activation)
+        behavior.addStretch()
+        self.activation.addItem(tr("Tap or hold"), "adaptive")
+        self.activation.addItem(tr("Click to choose"), "click")
+        self.activation.addItem(tr("Hold to choose"), "hold")
+        self.activation.setToolTip(tr("With Tap or hold, tap the shortcut to browse or hold it and release a modifier over an item to choose it."))
+        self.activation.currentIndexChanged.connect(self.save_activation)
         self.hint = QLabel()
         self.hint.setWordWrap(True)
         layout.addWidget(self.hint)
@@ -175,6 +188,9 @@ class WheelEditor(QWidget):
 
     def refresh(self):
         self.settings.sync()
+        self.activation.blockSignals(True)
+        self.activation.setCurrentIndex(max(0, self.activation.findData(self.settings.value("wheelActivation", "adaptive"))))
+        self.activation.blockSignals(False)
         self.profiles = profiles(self.settings)
         self.selector.blockSignals(True)
         self.selector.clear()
@@ -185,6 +201,10 @@ class WheelEditor(QWidget):
         self.selector.setCurrentIndex(max(0, selected))
         self.selector.blockSignals(False)
         self.display()
+
+    def save_activation(self):
+        self.settings.setValue("wheelActivation", self.activation.currentData())
+        self.settings.sync()
 
     def select_profile(self):
         self.settings.setValue("activeWheel", self.selector.currentData())

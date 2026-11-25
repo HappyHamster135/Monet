@@ -31,7 +31,7 @@ class WheelShortcut(unittest.TestCase):
         shortcut = ConfigParser(interpolation=None)
         shortcut.read(directory / "org.monet.FavoritesWheel.desktop")
         entry = shortcut["Desktop Entry"]
-        self.assertEqual(entry["Exec"], desktop["Desktop Action Wheel"]["Exec"])
+        self.assertEqual(entry["Exec"], desktop["Desktop Action Wheel"]["Exec"] + " --shortcut")
         self.assertTrue(entry.getboolean("NoDisplay"))
         self.assertEqual(entry["X-KDE-Shortcuts"], "Meta+Alt+W")
 
@@ -204,6 +204,52 @@ class Wheel(unittest.TestCase):
         self.window.Open(["wheel"])
         self.assertEqual(wheel.active_id, play)
         self.assertEqual(self.settings.value("activeWheel"), play)
+
+    def test_hold_requires_motion_and_chooses_a_submenu_only_once(self):
+        from wheel_profiles import Entry, Profile, save_profile
+        menu = Entry("menu", name="Project", children=(Entry("tool", "shelf"),))
+        ident = save_profile(self.settings, "", Profile("Work", (menu, Entry("tool", "notes"))))
+        self.settings.setValue("activeWheel", ident)
+        mods = Qt.MetaModifier | Qt.AltModifier
+        with patch("wheel_shortcuts.activation_modifiers", return_value=[mods]), patch.object(
+                QApplication, "queryKeyboardModifiers", return_value=mods):
+            self.receiver.OpenTool("wheel", "", "--shortcut")
+            self.app.processEvents()
+            self.app.processEvents()
+            wheel = self.window.favorites_wheel
+            self.assertEqual(wheel.required, mods)
+            button = wheel.buttons[0]
+            wheel.point_at(button, wheel.origin + QPoint(1, 0))
+            self.assertIsNone(wheel.pointed)
+            wheel.point_at(button, wheel.origin + QPoint(0, -80))
+            self.assertIs(wheel.pointed, button)
+            QTest.keyRelease(button, Qt.Key_Alt)
+            QTest.keyRelease(wheel.current, Qt.Key_Meta)
+            self.assertTrue(wheel.isVisible())
+            self.assertEqual([b.key for b in wheel.buttons], ["shelf"])
+            self.assertIsNone(wheel.pointed)
+            self.assertEqual(wheel.required, Qt.NoModifier)
+
+    def test_hold_only_still_supports_bare_shortcuts_and_opening_from_catalog(self):
+        self.favorites(["notes", "shelf"])
+        self.window.Open(["wheel-settings"])
+        editor = self.window.pages["wheel-settings"]
+        editor.activation.setCurrentIndex(editor.activation.findData("hold"))
+        editor.refresh()
+        self.assertEqual(editor.activation.currentData(), "hold")
+        self.assertEqual(self.settings.value("wheelActivation"), "hold")
+        with patch("wheel_shortcuts.activation_modifiers", return_value=[Qt.NoModifier]) as read:
+            self.window.Open(["wheel"])
+            self.app.processEvents()
+            wheel = self.window.favorites_wheel
+            self.assertTrue(wheel.isVisible())
+            read.assert_not_called()
+            wheel.hide()
+            self.window.Open(["wheel", "--shortcut"])
+            self.app.processEvents()
+            self.assertTrue(wheel.isVisible())
+            self.assertEqual(wheel.required, Qt.NoModifier)
+            read.assert_called_once_with("")
 
     def test_editor_persists_profile_targets_order_and_reparenting(self):
         from wheel_profiles import Entry, profiles

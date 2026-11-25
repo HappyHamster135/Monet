@@ -272,7 +272,7 @@ class Window(QMainWindow):
             else:
                 self.Open([key])
 
-    def wheel(self, profile=""):
+    def wheel(self, profile="", *, shortcut=False):
         wheel = self.favorites_wheel
         toggle = not profile or (wheel and profile == wheel.active_id)
         if toggle and wheel and wheel.isVisible():
@@ -324,11 +324,18 @@ class Window(QMainWindow):
         self.favorites_wheel.active_id = active
         self.favorites_wheel.profile_names = {key: profile.name for key, profile in wheels.items()}
         self.favorites_wheel.editable = "wheel-settings" not in self.hidden
+        mode = self.settings.value("wheelActivation", "adaptive")
+        bindings = []
+        if shortcut and mode != "click":
+            from wheel_shortcuts import activation_modifiers
+            bindings = activation_modifiers(profile)
+        self.favorites_wheel.prepare_shortcut(mode, bindings)
         if self.favorites_wheel.isVisible():
             if self.favorites_wheel.menu:
                 self.favorites_wheel.menu.close()
             self.favorites_wheel.history.clear()
             self.favorites_wheel.contents(items)
+            self.favorites_wheel.start_gesture()
             return
         if self.wheel_request is not None:
             token, _ = self.wheel_request
@@ -797,8 +804,10 @@ class Window(QMainWindow):
         if key == "wheel":
             if len(args) == 1:
                 self.wheel()
+            elif args == ["wheel", "--shortcut"]:
+                self.wheel(shortcut=True)
             elif len(args) == 2 and re.fullmatch(r"[0-9a-f]{32}", args[1]):
-                self.wheel(args[1])
+                self.wheel(args[1], shortcut=True)
             else:
                 self.panelDismissed.emit()
             return
@@ -931,7 +940,7 @@ class Receiver(QObject):
     @Slot(str, str)
     @Slot(str, str, str)
     def OpenTool(self, key, token, profile=""):
-        if profile and (key != "wheel" or not re.fullmatch(r"[0-9a-f]{32}", profile)):
+        if profile and (key != "wheel" or (profile != "--shortcut" and not re.fullmatch(r"[0-9a-f]{32}", profile))):
             return
         self.window.settings.sync()
         self.window.favorites, self.window.hidden = preferences(self.window.settings)
