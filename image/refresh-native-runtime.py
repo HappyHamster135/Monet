@@ -7,7 +7,7 @@ import runpy
 import subprocess
 
 BUNDLES = ("notifications", "dock", "editor-recovery", "task-manager", "login", "session",
-           "files-recovery", "archive-recovery", "activity", "launcher", "pdf-recovery", "window-identity")
+           "files-recovery", "archive-recovery", "activity", "launcher", "pdf-recovery", "window-identity", "recording-clicks")
 
 
 def runtime_packages(root):

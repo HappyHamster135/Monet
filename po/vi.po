@@ -16451,3 +16451,23 @@ msgstr ""
 #: linux/share/monet/utilities/recording_zoom_editor.py:117
 msgid "Remove zoom"
 msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:255
+msgid "Zoom to clicks"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:593
+msgid "Clear zooms"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:595
+msgid "Restore zooms from clicks"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:602 linux/share/monet/utilities/recordings.py:865
+msgid "Could not save the zoom edits for this recording."
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:855
+msgid "The video was saved. Click zooms were unavailable for this take."
+msgstr ""

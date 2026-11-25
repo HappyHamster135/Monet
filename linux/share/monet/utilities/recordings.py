@@ -224,6 +224,8 @@ class Recordings(QWidget):
         self.home = home
         self.file = None
         self.duration = 0
+        self.take_zooms = None
+        self.capture_note = ""
         self.awaiting_first_frame = False
         self.recorder = None
         self.exporter = None
@@ -250,6 +252,10 @@ class Recordings(QWidget):
             self.sound_options[key] = action
         menu.aboutToShow.connect(self.refresh_capture_sound)
         menu.addSeparator()
+        self.click_zoom = menu.addAction(tr("Zoom to clicks"))
+        self.click_zoom.setCheckable(True)
+        self.click_zoom.setChecked(home.settings.value("zoomToClicks", False, type=bool))
+        self.click_zoom.toggled.connect(lambda on: home.settings.setValue("zoomToClicks", on))
         self.auto_edit = menu.addAction(tr("Open editor after recording"))
         self.auto_edit.setCheckable(True)
         self.auto_edit.setChecked(home.settings.value("editAfterRecording", True, type=bool))
@@ -266,6 +272,7 @@ class Recordings(QWidget):
         self.picture = Picture()
         self.zoom_history = QUndoStack(self)
         self.zoom_history.setUndoLimit(80)
+        self.zoom_history.indexChanged.connect(self.save_zoom_edits)
         self.picture.changed = self.crop_changed
         layout.addWidget(self.picture, 1)
         self.player = QMediaPlayer(self)
@@ -410,7 +417,16 @@ class Recordings(QWidget):
         self.filename.setToolTip(str(self.file))
         self.duration = 0
         self.picture.set_layers([])
+        self.take_zooms = None
+        self.capture_note = ""
         self.zoom_history.clear()
+        from recording_clicks import TakeZooms
+        try:
+            saved = TakeZooms(self.file)
+            if saved.read():
+                self.take_zooms = saved
+        except OSError:
+            pass
         self.picture.set_zooms([])
         self.picture.reset_crop()
         self.rate.setCurrentIndex(1)
@@ -424,6 +440,10 @@ class Recordings(QWidget):
         if ms <= 0:
             return
         old, self.duration = self.duration, ms
+        if not old and self.take_zooms:
+            from recording_clicks import suggestions
+            edits = self.take_zooms.edited
+            self.picture.set_zooms(suggestions(self.take_zooms.groups, ms) if edits is None else edits)
         self.seek.setRange(0, min(ms, 2147483647))
         with QSignalBlocker(self.begin), QSignalBlocker(self.end):
             at_end = not old or round(self.end.value()*1000) == old
@@ -440,7 +460,7 @@ class Recordings(QWidget):
             if self.awaiting_first_frame and self.player.hasVideo():
                 self.awaiting_first_frame = False
                 QTimer.singleShot(0, self, self.show_first_frame)
-            self.message.setText("" if self.player.hasVideo() else tr("This file has no video track."))
+            self.message.setText(self.capture_note if self.player.hasVideo() else tr("This file has no video track."))
         self.controls()
 
     def show_first_frame(self):
@@ -565,6 +585,21 @@ class Recordings(QWidget):
         self.zoom_menu.addSeparator()
         self.zoom_menu.addAction(tr("Undo zoom edit"), self.zoom_history.undo).setEnabled(self.zoom_history.canUndo())
         self.zoom_menu.addAction(tr("Redo zoom edit"), self.zoom_history.redo).setEnabled(self.zoom_history.canRedo())
+
+        if self.take_zooms:
+            from recording_clicks import suggestions
+            captured = suggestions(self.take_zooms.groups, self.duration)
+            if items:
+                self.zoom_menu.addAction(tr("Clear zooms"), lambda: self.zoom_history.push(ZoomEdit(self.picture, [])))
+            if captured and captured != items:
+                self.zoom_menu.addAction(tr("Restore zooms from clicks"),
+                                         lambda: self.zoom_history.push(ZoomEdit(self.picture, captured)))
+
+    def save_zoom_edits(self):
+        if self.take_zooms:
+            self.take_zooms.edited = list(self.picture.zooms)
+            if not self.take_zooms.save():
+                self.message.setText(tr("Could not save the zoom edits for this recording."))
 
     def zoom_snapshot(self):
         snap = self.picture.video.snapshot(QSize(920, 520))
@@ -796,6 +831,10 @@ class Recordings(QWidget):
         suffix = ".mp4" if preferred in ("MP4_H264", "2") else ".webm"
         target = folder / (tr("Recording") + datetime.now().strftime(" %Y-%m-%d %H.%M.%S ") + uuid4().hex[:12] + suffix)
         job = self.recorder = QProcess(self)
+        clicks = None
+        if self.click_zoom.isChecked():
+            from recording_clicks import ClickReceiver
+            clicks = ClickReceiver(job)
         self.controls()
         self.message.setText(tr("Click the recording indicator in the system tray to finish."))
         self.home.showMinimized()
@@ -805,22 +844,42 @@ class Recordings(QWidget):
             self.recorder = None
             job.deleteLater()
             self.controls()
-            if self.close_after_capture and not self.home.isVisible():
-                self.home.close()
-                return
-            self.close_after_capture = False
             try:
                 saved = success and target.is_file() and target.stat().st_size > 0
             except OSError:
                 saved = False
+            note = ""
+            if clicks:
+                groups = clicks.finish()
+                if saved and groups is None:
+                    note = tr("The video was saved. Click zooms were unavailable for this take.")
+                elif saved and groups:
+                    from recording_clicks import TakeZooms
+                    try:
+                        track = TakeZooms(target)
+                        track.groups = groups
+                        stored = track.save()
+                    except OSError:
+                        stored = False
+                    if not stored:
+                        note = tr("Could not save the zoom edits for this recording.")
+            if self.close_after_capture and not self.home.isVisible():
+                self.home.close()
+                return
+            self.close_after_capture = False
             if not saved or self.auto_edit.isChecked():
                 self.home.setWindowState(self.home.windowState() & ~Qt.WindowMinimized)
             if saved and self.auto_edit.isChecked():
                 self.home.Open(["recordings"])
                 self.open_file(target)
+                self.capture_note = note
+                if note:
+                    self.message.setText(note)
             else:
                 self.message.setText(tr("Saved %1").replace("%1", str(target)) if saved else
                                      tr("Recording cancelled.") if success else tr("Could not record the screen."))
+                if note:
+                    self.message.setText(note)
                 if not saved:
                     self.home.Open(["recordings"])
         job.finished.connect(lambda code, status: finish(code == 0 and status == QProcess.NormalExit))

@@ -16537,3 +16537,24 @@ msgstr "Förstoring"
 #: linux/share/monet/utilities/recording_zoom_editor.py:117
 msgid "Remove zoom"
 msgstr "Ta bort zoomning"
+
+#: linux/share/monet/utilities/recordings.py:255
+msgid "Zoom to clicks"
+msgstr "Zooma till klick"
+
+#: linux/share/monet/utilities/recordings.py:593
+msgid "Clear zooms"
+msgstr "Ta bort alla zoomningar"
+
+#: linux/share/monet/utilities/recordings.py:595
+msgid "Restore zooms from clicks"
+msgstr "Återställ zoomningar från klick"
+
+#: linux/share/monet/utilities/recordings.py:602 linux/share/monet/utilities/recordings.py:865
+msgid "Could not save the zoom edits for this recording."
+msgstr "Det gick inte att spara zoomändringarna för inspelningen."
+
+#: linux/share/monet/utilities/recordings.py:855
+msgid "The video was saved. Click zooms were unavailable for this take."
+msgstr ""
+"Videon sparades. Zoomning från klick var inte tillgänglig för den här inspelningen."

@@ -148,6 +148,11 @@ COPY image/pdf-recovery /src/pdf-recovery
 COPY image/download-source-rpm.py /src/pdf-recovery/download-source-rpm.py
 RUN sh /src/pdf-recovery/build.sh /out
 
+FROM runtime AS recording-clicks
+COPY image/recording-clicks /src/recording-clicks
+COPY image/download-source-rpm.py /src/recording-clicks/download-source-rpm.py
+RUN sh /src/recording-clicks/build.sh /out
+
 FROM runtime AS window-identity
 COPY image/window-identity /src/window-identity
 COPY LICENSE /src/window-identity/LICENSE
@@ -187,6 +192,8 @@ RUN --mount=type=bind,from=launcher,source=/out,target=/tmp/monet-launcher,ro \
     python3 /tmp/monet-launcher/bundle.py install /tmp/monet-launcher
 RUN --mount=type=bind,from=graphics,source=/out,target=/tmp/monet-graphics,ro \
     python3 /tmp/monet-graphics/bundle.py install /tmp/monet-graphics
+RUN --mount=type=bind,from=recording-clicks,source=/out,target=/tmp/monet-recording-clicks,ro \
+    python3 /tmp/monet-recording-clicks/bundle.py install /tmp/monet-recording-clicks
 RUN --mount=type=bind,from=window-identity,source=/out,target=/tmp/monet-window-identity,ro \
     python3 /tmp/monet-window-identity/bundle.py install /tmp/monet-window-identity
 RUN --mount=type=bind,from=editor-recovery,source=/out,target=/tmp/monet-editor-recovery,ro \
