@@ -1,4 +1,5 @@
 """The launcher and its editor share ordered favorites with the wheel and search."""
+from configparser import ConfigParser
 import json
 import os
 from pathlib import Path
@@ -18,6 +19,22 @@ try:
     from quick_panel import QuickPanel
 except ImportError:
     QuickPanel = None
+
+
+class DesktopShortcut(unittest.TestCase):
+    def test_live_shortcut_has_its_own_component_and_opens_the_same_panel(self):
+        apps = MODULES.parents[1] / "applications"
+        catalog = ConfigParser(interpolation=None)
+        catalog.read(apps / "monet-utilities.desktop")
+        shortcut = ConfigParser(interpolation=None)
+        shortcut.read(apps / "org.monet.QuickPanel.desktop")
+        entry = shortcut["Desktop Entry"]
+        action = catalog["Desktop Action QuickPanel"]
+        self.assertIn("QuickPanel", catalog["Desktop Entry"]["Actions"].split(";"))
+        self.assertEqual(entry["Exec"], action["Exec"])
+        self.assertEqual(entry["X-KDE-Shortcuts"], "Meta+Alt+U")
+        self.assertTrue(entry.getboolean("NoDisplay"))
+        self.assertNotIn("X-KDE-Shortcuts", action)
 
 
 @unittest.skipUnless(QuickPanel, "requires Qt widgets")

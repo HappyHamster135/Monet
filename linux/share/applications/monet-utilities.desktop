@@ -19,7 +19,6 @@ Icon=system-search
 Exec=krunner --runner monet-utilities "tools "
 
 [Desktop Action QuickPanel]
-X-KDE-Shortcuts=Meta+Alt+U
 Name=Quick Panel
 Name[sv]=Snabbpanel
 Icon=view-grid

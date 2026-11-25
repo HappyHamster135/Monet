@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Quick Panel
+Name[sv]=Snabbpanel
+Icon=view-grid
+Exec=@LIBEXECDIR@/monet-utilities quick-panel
+NoDisplay=true
+StartupNotify=true
+X-KDE-Shortcuts=Meta+Alt+U
