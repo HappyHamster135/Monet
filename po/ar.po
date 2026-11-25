@@ -18644,3 +18644,161 @@ msgstr ""
 #: linux/share/monet/utilities/monitor_readings.py:86 linux/share/monet/utilities/monitor_readings.py:112
 msgid "Battery"
 msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:19
+msgid "Download and upload history"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:72
+msgid "Network interface"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:75
+msgid "Traffic speed units"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:76
+msgid "Bytes per second"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:77
+msgid "Bits per second"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:88
+msgid "Last minute. Download is solid and upload is dashed."
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:94
+msgid "This session"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:95
+msgid "Since device started"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:96
+msgid "Traffic totals period"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:97
+msgid "Session totals start with the first reading in this login."
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:101
+msgid "Reset totals"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:107
+msgid "Local IP addresses"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:108
+msgid "Copy IP"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:114
+msgid "The Applications page shows download and upload speeds for each app."
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:117
+msgid "Traffic"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:121
+msgid ""
+"Measure this PC’s connection to Cloudflare. The test can transfer up to 100 MB in each direction and uses the system’s network route."
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:126
+msgid "HTTP latency"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:141
+msgid "Speed test"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:163
+msgid "Could not open Task Manager."
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:176
+msgid "IP address copied."
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:215
+msgid "Automatic · {interface}"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:215
+msgid "No active connection"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:218
+msgid "{interface} · disconnected"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:249
+msgid "{down} received · {up} sent"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:252
+msgid "Traffic totals are unavailable."
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:274
+msgid "No local IP address"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:287
+msgid "Measuring latency…"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:287
+msgid "Measuring download speed…"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:288
+msgid "Measuring upload speed…"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:288
+msgid "Test complete."
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:289
+msgid "Test cancelled."
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:291
+msgid "Cancel test"
+msgstr ""
+
+#: linux/share/monet/utilities/network_page.py:291
+msgid "Run speed test"
+msgstr ""
+
+#: linux/share/monet/utilities/speed_test.py:93
+msgid "The test server returned an unexpected response."
+msgstr ""
+
+#: linux/share/monet/utilities/speed_test.py:110
+msgid ""
+"Could not verify the response from the test server. Check the connection and try again."
+msgstr ""
+
+#: linux/share/monet/utilities/speed_test.py:162
+msgid "The test server took too long to respond."
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:95
+msgid "Network activity"
+msgstr ""
+
+#: linux/share/monet/utilities/network_activity.py:88
+msgid "Wi-Fi ({interface})"
+msgstr ""
+
+#: linux/share/monet/utilities/network_activity.py:90
+msgid "Ethernet ({interface})"
+msgstr ""

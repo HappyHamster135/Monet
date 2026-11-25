@@ -622,6 +622,9 @@ class Window(QMainWindow):
         elif key in ("ports", "process-control"):
             from ports import ProcessBrowser
             self.page(key, lambda: ProcessBrowser(self, key == "ports")).refresh()
+        elif key == "network":
+            from network_page import NetworkPage
+            self.page(key, lambda: NetworkPage(self))
         elif key == "monitor-alerts":
             from monitor_page import MonitorPage
             self.page(key, lambda: MonitorPage(self))

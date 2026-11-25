@@ -218,11 +218,11 @@ msgstr ""
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:67 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:36 linux/share/plasma/plasmoids/org.monet.network/contents/ui/main.qml:38
 msgid "Download"
-msgstr ""
+msgstr "Hämtning"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:67 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:36 linux/share/plasma/plasmoids/org.monet.network/contents/ui/main.qml:39
 msgid "Upload"
-msgstr ""
+msgstr "Sändning"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:68 linux/share/monet/settings-app/MonetSettings.qml:4003
 msgid "IPv4 address"
@@ -424,11 +424,11 @@ msgstr ""
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:62
 msgid "Download speed"
-msgstr ""
+msgstr "Hämtningshastighet"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:63
 msgid "Upload speed"
-msgstr ""
+msgstr "Sändningshastighet"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:67
 msgid "Read speed"
@@ -18652,3 +18652,165 @@ msgstr "Systemvarningar"
 #: linux/share/monet/utilities/monitor_readings.py:86 linux/share/monet/utilities/monitor_readings.py:112
 msgid "Battery"
 msgstr "Batteri"
+
+#: linux/share/monet/utilities/network_page.py:19
+msgid "Download and upload history"
+msgstr "Historik för hämtning och sändning"
+
+#: linux/share/monet/utilities/network_page.py:72
+msgid "Network interface"
+msgstr "Nätverksgränssnitt"
+
+#: linux/share/monet/utilities/network_page.py:75
+msgid "Traffic speed units"
+msgstr "Enhet för överföringshastighet"
+
+#: linux/share/monet/utilities/network_page.py:76
+msgid "Bytes per second"
+msgstr "Byte per sekund"
+
+#: linux/share/monet/utilities/network_page.py:77
+msgid "Bits per second"
+msgstr "Bitar per sekund"
+
+#: linux/share/monet/utilities/network_page.py:88
+msgid "Last minute. Download is solid and upload is dashed."
+msgstr ""
+"Den senaste minuten. Heldragen linje visar hämtning och streckad linje visar sändning."
+
+#: linux/share/monet/utilities/network_page.py:94
+msgid "This session"
+msgstr "Den här sessionen"
+
+#: linux/share/monet/utilities/network_page.py:95
+msgid "Since device started"
+msgstr "Sedan enheten startades"
+
+#: linux/share/monet/utilities/network_page.py:96
+msgid "Traffic totals period"
+msgstr "Period för trafikmängd"
+
+#: linux/share/monet/utilities/network_page.py:97
+msgid "Session totals start with the first reading in this login."
+msgstr ""
+"Räknarna för sessionen startar vid den första avläsningen efter inloggning."
+
+#: linux/share/monet/utilities/network_page.py:101
+msgid "Reset totals"
+msgstr "Nollställ räknarna"
+
+#: linux/share/monet/utilities/network_page.py:107
+msgid "Local IP addresses"
+msgstr "Lokala IP-adresser"
+
+#: linux/share/monet/utilities/network_page.py:108
+msgid "Copy IP"
+msgstr "Kopiera IP-adress"
+
+#: linux/share/monet/utilities/network_page.py:114
+msgid "The Applications page shows download and upload speeds for each app."
+msgstr "På sidan Appar visas hämtnings- och sändningshastighet för varje app."
+
+#: linux/share/monet/utilities/network_page.py:117
+msgid "Traffic"
+msgstr "Trafik"
+
+#: linux/share/monet/utilities/network_page.py:121
+msgid ""
+"Measure this PC’s connection to Cloudflare. The test can transfer up to 100 MB in each direction and uses the system’s network route."
+msgstr ""
+"Mät datorns anslutning till Cloudflare. Testet använder systemets nätverksväg och kan överföra upp till 100 MB i vardera riktningen."
+
+#: linux/share/monet/utilities/network_page.py:126
+msgid "HTTP latency"
+msgstr "Svarstid för HTTP"
+
+#: linux/share/monet/utilities/network_page.py:141
+msgid "Speed test"
+msgstr "Hastighetstest"
+
+#: linux/share/monet/utilities/network_page.py:163
+msgid "Could not open Task Manager."
+msgstr "Det gick inte att öppna Aktivitetshanteraren."
+
+#: linux/share/monet/utilities/network_page.py:176
+msgid "IP address copied."
+msgstr "IP-adressen har kopierats."
+
+#: linux/share/monet/utilities/network_page.py:215
+msgid "Automatic · {interface}"
+msgstr "Automatiskt · {interface}"
+
+#: linux/share/monet/utilities/network_page.py:215
+msgid "No active connection"
+msgstr "Ingen aktiv anslutning"
+
+#: linux/share/monet/utilities/network_page.py:218
+msgid "{interface} · disconnected"
+msgstr "{interface} · frånkopplat"
+
+#: linux/share/monet/utilities/network_page.py:249
+msgid "{down} received · {up} sent"
+msgstr "{down} mottaget · {up} skickat"
+
+#: linux/share/monet/utilities/network_page.py:252
+msgid "Traffic totals are unavailable."
+msgstr "Trafikmängden är inte tillgänglig."
+
+#: linux/share/monet/utilities/network_page.py:274
+msgid "No local IP address"
+msgstr "Ingen lokal IP-adress"
+
+#: linux/share/monet/utilities/network_page.py:287
+msgid "Measuring latency…"
+msgstr "Mäter svarstiden…"
+
+#: linux/share/monet/utilities/network_page.py:287
+msgid "Measuring download speed…"
+msgstr "Mäter hämtningshastigheten…"
+
+#: linux/share/monet/utilities/network_page.py:288
+msgid "Measuring upload speed…"
+msgstr "Mäter sändningshastigheten…"
+
+#: linux/share/monet/utilities/network_page.py:288
+msgid "Test complete."
+msgstr "Testet är klart."
+
+#: linux/share/monet/utilities/network_page.py:289
+msgid "Test cancelled."
+msgstr "Testet avbröts."
+
+#: linux/share/monet/utilities/network_page.py:291
+msgid "Cancel test"
+msgstr "Avbryt testet"
+
+#: linux/share/monet/utilities/network_page.py:291
+msgid "Run speed test"
+msgstr "Starta hastighetstest"
+
+#: linux/share/monet/utilities/speed_test.py:93
+msgid "The test server returned an unexpected response."
+msgstr "Testservern gav ett oväntat svar."
+
+#: linux/share/monet/utilities/speed_test.py:110
+msgid ""
+"Could not verify the response from the test server. Check the connection and try again."
+msgstr ""
+"Svaret från testservern kunde inte verifieras. Kontrollera anslutningen och försök igen."
+
+#: linux/share/monet/utilities/speed_test.py:162
+msgid "The test server took too long to respond."
+msgstr "Testservern svarade inte i tid."
+
+#: linux/share/monet/utilities/actions.py:95
+msgid "Network activity"
+msgstr "Nätverksaktivitet"
+
+#: linux/share/monet/utilities/network_activity.py:88
+msgid "Wi-Fi ({interface})"
+msgstr "Wi-Fi ({interface})"
+
+#: linux/share/monet/utilities/network_activity.py:90
+msgid "Ethernet ({interface})"
+msgstr "Ethernet ({interface})"
