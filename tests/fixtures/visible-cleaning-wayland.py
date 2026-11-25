@@ -241,8 +241,13 @@ def exercise(args):
     assert qtbus.registerService("org.monet.Utilities")
     start()
     locker = dbus.Interface(bus.get_object("org.freedesktop.ScreenSaver", "/ScreenSaver"), "org.freedesktop.ScreenSaver")
+    ptr.key(48, True)
+    ptr.button(True)
+    QTest.qWait(100)
     locker.Lock(timeout=8)
     wait(lambda: locker.GetActive() and not cards(), "real lock replaces visible cleaning")
+    ptr.key(48, False)
+    ptr.button(False)
     for _ in range(5):
         key(1)
     assert locker.GetActive() and target.keys == "acdef", "the cleaning exit cannot unlock Plasma"

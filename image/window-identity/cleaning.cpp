@@ -141,11 +141,11 @@ public:
         connect(&timer, &QTimer::timeout, this, &Cleaning::tick);
         connect(&owner, &QDBusServiceWatcher::serviceUnregistered, this, [this] { end(); });
         connect(waylandServer(), &WaylandServer::lockStateChanged, this, [this] {
-            if (waylandServer()->isScreenLocked()) end();
+            if (waylandServer()->isScreenLocked()) leaveSession();
         });
         if (auto session = kwinApp()->session()) {
             connect(session, &Session::activeChanged, this, [this](bool current) {
-                if (!current) end();
+                if (!current) leaveSession();
             });
         }
         connect(qGuiApp, &QGuiApplication::screenAdded, this, [this](QScreen *screen) {
@@ -270,6 +270,17 @@ private:
                                  latched, locked, layoutIndex);
         }
         keymap.reset();
+        updateFilter();
+    }
+
+    void leaveSession()
+    {
+        // Subsequent releases belong to the locker or to another session.
+        // They will never reach this filter, so do not wait for them here.
+        heldKeys.clear();
+        heldButtons.clear();
+        touches.clear();
+        end();
         updateFilter();
     }
 
