@@ -16884,3 +16884,91 @@ msgstr ""
 msgctxt "an app's name in the menu"
 msgid "Quick Panel"
 msgstr "Snabbpanel"
+
+#: linux/libexec/monet-quick:1340
+msgid "Could not read the current appearance."
+msgstr "Kunde inte läsa det aktuella utseendet."
+
+#: linux/libexec/monet-quick:1345
+msgid "Could not change the desktop appearance."
+msgstr "Kunde inte ändra skrivbordets utseende."
+
+#: linux/libexec/monet-quick:1346
+msgid "Following the hours."
+msgstr "Följer dygnets timmar."
+
+#: linux/libexec/monet-quick:1346
+msgid "Mist selected."
+msgstr "Dis har valts."
+
+#: linux/libexec/monet-quick:1346
+msgid "Smoke selected."
+msgstr "Rök har valts."
+
+#: linux/libexec/monet-quick:1352
+msgid "No adjustable keyboard backlight was found."
+msgstr "Ingen justerbar tangentbordsbelysning hittades."
+
+#: linux/libexec/monet-quick:1361
+msgid "Could not change the keyboard backlight."
+msgstr "Kunde inte ändra tangentbordsbelysningen."
+
+#: linux/libexec/monet-quick:1365
+msgid "Keyboard backlight on."
+msgstr "Tangentbordsbelysningen är på."
+
+#: linux/libexec/monet-quick:1365
+msgid "Keyboard backlight off."
+msgstr "Tangentbordsbelysningen är av."
+
+#: linux/libexec/monet-quick:1368
+msgid "The screen locker is unavailable."
+msgstr "Skärmlåset är inte tillgängligt."
+
+#: linux/libexec/monet-quick:1384
+msgid "Could not turn off the displays."
+msgstr "Kunde inte stänga av skärmarna."
+
+#: linux/share/monet/utilities/actions.py:29
+msgid "Switch light or dark appearance"
+msgstr "Växla mellan ljust och mörkt utseende"
+
+#: linux/share/monet/utilities/actions.py:30
+msgid "Follow automatic appearance"
+msgstr "Följ automatiskt utseende"
+
+#: linux/share/monet/utilities/actions.py:31
+msgid "Toggle keyboard backlight"
+msgstr "Växla tangentbordsbelysning"
+
+#: linux/share/monet/utilities/actions.py:32
+msgid "Empty Trash…"
+msgstr "Töm papperskorgen…"
+
+#: linux/share/monet/utilities/actions.py:33
+msgid "Lock screen"
+msgstr "Lås skärmen"
+
+#: linux/share/monet/utilities/actions.py:34
+msgid "Turn off displays"
+msgstr "Stäng av skärmarna"
+
+#: linux/share/monet/utilities/quick_actions.py:33
+msgid "Permanently delete all items in Trash?"
+msgstr "Vill du ta bort allt i papperskorgen permanent?"
+
+#: linux/share/monet/utilities/quick_actions.py:34
+msgid "Items in Trash on connected drives will also be deleted."
+msgstr "Även objekt i papperskorgen på anslutna enheter kommer att tas bort."
+
+#: linux/share/monet/utilities/quick_actions.py:90
+msgid "Trash emptied."
+msgstr "Papperskorgen har tömts."
+
+#: linux/share/monet/utilities/quick_actions.py:98
+msgid "Some items may still be in Trash."
+msgstr "Vissa objekt kan finnas kvar i papperskorgen."
+
+#: linux/share/monet/utilities/quick_actions.py:98
+msgid "The desktop could not complete this action."
+msgstr "Skrivbordet kunde inte slutföra åtgärden."

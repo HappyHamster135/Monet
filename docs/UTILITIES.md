@@ -4,6 +4,8 @@ Open **Monet Utilities** from the application menu. Type in the search field to 
 
 Press **Super+Alt+U** for the **Quick Panel**. Click a favorite, or use the arrow keys and Enter. Select **Edit favorites…** to add or remove a tool. Drag a row or use the arrow buttons to change the order. The first eight favorites appear in the wheel and at the top of tool search. Esc returns from editing, then closes the panel. You can also open it from the Utilities launcher’s right-click menu.
 
+In **Edit favorites…**, you can pin **Switch light or dark appearance**, **Follow automatic appearance**, **Toggle keyboard backlight**, **Lock screen**, **Turn off displays**, or **Empty Trash…**. You can also run them from tool search. Switching appearance picks Mist or Smoke in Settings. **Follow automatic appearance** restores The Hours. The keyboard backlight returns to its previous level when you turn it back on. **Empty Trash…** asks for confirmation before deleting anything.
+
 In **Customize Home Bar → Top-center notch**, select **Compact** or **Wide**. The notch belongs to the screen containing the bar you customized. Moving the Home Bar leaves the notch at the top. Select **Off** to remove it. Music levels, notification previews, the companion and low accessory battery alerts each have a separate control.
 
 - Click the notch to open Music, Activity, Time, Calendar or Notes. Scroll down over the notch to open it and up to close it. A horizontal wheel or trackpad scroll over it skips a track when the player supports that action.

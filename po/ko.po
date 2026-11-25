@@ -16623,3 +16623,91 @@ msgstr ""
 msgctxt "an app's name in the menu"
 msgid "Quick Panel"
 msgstr ""
+
+#: linux/libexec/monet-quick:1340
+msgid "Could not read the current appearance."
+msgstr ""
+
+#: linux/libexec/monet-quick:1345
+msgid "Could not change the desktop appearance."
+msgstr ""
+
+#: linux/libexec/monet-quick:1346
+msgid "Following the hours."
+msgstr ""
+
+#: linux/libexec/monet-quick:1346
+msgid "Mist selected."
+msgstr ""
+
+#: linux/libexec/monet-quick:1346
+msgid "Smoke selected."
+msgstr ""
+
+#: linux/libexec/monet-quick:1352
+msgid "No adjustable keyboard backlight was found."
+msgstr ""
+
+#: linux/libexec/monet-quick:1361
+msgid "Could not change the keyboard backlight."
+msgstr ""
+
+#: linux/libexec/monet-quick:1365
+msgid "Keyboard backlight on."
+msgstr ""
+
+#: linux/libexec/monet-quick:1365
+msgid "Keyboard backlight off."
+msgstr ""
+
+#: linux/libexec/monet-quick:1368
+msgid "The screen locker is unavailable."
+msgstr ""
+
+#: linux/libexec/monet-quick:1384
+msgid "Could not turn off the displays."
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:29
+msgid "Switch light or dark appearance"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:30
+msgid "Follow automatic appearance"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:31
+msgid "Toggle keyboard backlight"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:32
+msgid "Empty Trash…"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:33
+msgid "Lock screen"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:34
+msgid "Turn off displays"
+msgstr ""
+
+#: linux/share/monet/utilities/quick_actions.py:33
+msgid "Permanently delete all items in Trash?"
+msgstr ""
+
+#: linux/share/monet/utilities/quick_actions.py:34
+msgid "Items in Trash on connected drives will also be deleted."
+msgstr ""
+
+#: linux/share/monet/utilities/quick_actions.py:90
+msgid "Trash emptied."
+msgstr ""
+
+#: linux/share/monet/utilities/quick_actions.py:98
+msgid "Some items may still be in Trash."
+msgstr ""
+
+#: linux/share/monet/utilities/quick_actions.py:98
+msgid "The desktop could not complete this action."
+msgstr ""

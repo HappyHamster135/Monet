@@ -1330,6 +1330,61 @@ def set_light(mode):
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+def desktop_action(key):
+    """Actions shared by Utilities, the Quick Panel and desktop search."""
+    if key in ("switch-appearance", "automatic-appearance"):
+        mode = "hours"
+        if key == "switch-appearance":
+            current = (run(f"{LIBEXECDIR}/monet-light", "get") or "").split()
+            if len(current) != 2 or current[0] not in ("hours", "mist", "smoke") or current[1] not in ("mist", "smoke"):
+                return {"ok": False, "message": tr("Could not read the current appearance.")}
+            mode = "smoke" if current[1] == "mist" else "mist"
+        try:
+            set_light(mode)
+        except OSError:
+            return {"ok": False, "message": tr("Could not change the desktop appearance.")}
+        names = {"hours": tr("Following the hours."), "mist": tr("Mist selected."), "smoke": tr("Smoke selected.")}
+        return {"ok": True, "message": names[mode]}
+    if key == "keyboard-light":
+        from PySide6.QtCore import QSettings
+        state = keyboard_light()
+        if not state or not 0 <= state["level"] <= state["levels"]:
+            return {"ok": False, "message": tr("No adjustable keyboard backlight was found.")}
+        settings = QSettings("Monet", "Utilities")
+        maximum, current = state["levels"], state["level"]
+        try:
+            previous = int(settings.value("QuickActions/keyboardLevel", maximum))
+        except (TypeError, ValueError, OverflowError):
+            previous = maximum
+        target = 0 if current else max(1, min(previous, maximum))
+        if busctl("call", *KEYBOARD_LIGHT, "setKeyboardBrightness", "i", str(target)) is None:
+            return {"ok": False, "message": tr("Could not change the keyboard backlight.")}
+        if current:
+            settings.setValue("QuickActions/keyboardLevel", current)
+            settings.sync()
+        return {"ok": True, "message": tr("Keyboard backlight on.") if target else tr("Keyboard backlight off.")}
+    if key == "lock-screen":
+        if busctl("call", "org.freedesktop.ScreenSaver", "/ScreenSaver", "org.freedesktop.ScreenSaver", "Lock") is None:
+            return {"ok": False, "message": tr("The screen locker is unavailable.")}
+        return {"ok": True}
+    if key == "display-off":
+        session = os.environ.get("XDG_SESSION_TYPE", "")
+        if session == "wayland" or (not session and os.environ.get("WAYLAND_DISPLAY")):
+            # KScreen can report an unsupported backend on stderr with a zero exit code.
+            try:
+                reply = subprocess.run(["kscreen-doctor", "--dpms", "off"], capture_output=True,
+                                       env={**os.environ, "QT_QPA_PLATFORM": "wayland"}, timeout=5)
+                changed = reply.returncode == 0 and b"DPMS not supported" not in reply.stderr
+            except (OSError, subprocess.TimeoutExpired):
+                changed = False
+        elif session == "x11":
+            changed = ok("xset", "dpms", "force", "off")
+        else:
+            changed = False
+        return {"ok": True} if changed else {"ok": False, "message": tr("Could not turn off the displays.")}
+    return {"ok": False}
+
+
 def previous_monet(status):
     """From `rpm-ostree status --json`: the Monet to go back to ({version, date}, or {} if
     there's none), and whether it's already chosen for the next restart ("pending")."""
@@ -11142,6 +11197,8 @@ def main(argv):
         emit(storage_recovery(args))
     elif cmd == 'troubleshooting':
         emit(troubleshooting())
+    elif cmd == "desktop-action" and len(args) == 1:
+        emit(desktop_action(args[0]))
     elif cmd == "empty-trash":
         emit({"ok": empty_trash()})
     elif cmd == "defaults":

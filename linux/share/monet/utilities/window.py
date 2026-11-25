@@ -11,7 +11,7 @@ from PySide6.QtGui import QAction, QCursor, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QInputDialog,
     QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMenu, QMessageBox, QPlainTextEdit,
     QPushButton, QStackedWidget, QToolButton, QVBoxLayout, QWidget, QWidgetAction)
-from actions import ACTIONS, clean_url, find_tools, preferences, tr
+from actions import ACTIONS, DIRECT_ACTIONS, clean_url, find_tools, preferences, tr
 from pages import Downloads, Shelf, Snippets, row
 
 MODULES = Path(__file__).resolve().parent
@@ -29,6 +29,7 @@ class Window(QMainWindow):
         self.notch_previews = {}
         self.floating_pads = set()
         self.quick_panel = None
+        self.direct_actions = None
         self.pad_store = None
         self.agent_feed = None
         self.running = set()
@@ -524,6 +525,12 @@ class Window(QMainWindow):
         if not action:
             self.home()
             return
+        if key in DIRECT_ACTIONS:
+            if self.direct_actions is None:
+                from quick_actions import QuickActions
+                self.direct_actions = QuickActions(self)
+            self.direct_actions.trigger(key)
+            return
         if action.command:
             program, *args = action.command
             program = str(self.helpers / program[1:]) if program.startswith("@") else program
@@ -636,6 +643,14 @@ class Window(QMainWindow):
     @Slot("QStringList")
     def Open(self, args):
         key = args[0] if args else "tools"
+        if key in DIRECT_ACTIONS:
+            self.settings.sync()
+            self.favorites, self.hidden = preferences(self.settings)
+            if len(args) == 1 and key not in self.hidden:
+                self.run_tool(key)
+            else:
+                self.panelDismissed.emit()
+            return
         if key == "quick-panel" and len(args) == 1:
             self.toggle_panel()
             return
@@ -702,6 +717,10 @@ class Window(QMainWindow):
         if self.converting and QMessageBox.question(self, "Cancel conversion?", "A conversion is running. Cancel it and close Utilities?") != QMessageBox.Yes:
             event.ignore()
             return
+        if self.direct_actions and self.direct_actions.busy:
+            self.hide()
+            event.ignore()
+            return
         for preview in list(self.notch_previews.values()):
             preview.close()
         for job in list(self.running):
@@ -724,6 +743,9 @@ class Receiver(QObject):
         if self.window.agent_feed and self.window.agent_feed.views:
             return
         if any(w.isVisible() for w in QApplication.topLevelWidgets()) or self.window.notch_previews:
+            return
+        editor = self.window.pages.get("recordings")
+        if editor and (editor.recorder or editor.exporter):
             return
         if self.window.running:
             self.idle.start()

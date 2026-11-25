@@ -25,7 +25,17 @@ class Action:
     def name(self):
         return tr(self.source_name)
 
+DIRECT_ACTIONS = {
+    "switch-appearance": Action(N_("Switch light or dark appearance"), "Desktop theme dark mode light mode Mist Smoke", "preferences-desktop-theme"),
+    "automatic-appearance": Action(N_("Follow automatic appearance"), "Desktop theme follow the hours Mist Smoke schedule", "weather-clear-night"),
+    "keyboard-light": Action(N_("Toggle keyboard backlight"), "Keyboard brightness lighting on off", "input-keyboard"),
+    "empty-trash": Action(N_("Empty Trash…"), "Files permanently delete rubbish bin", "user-trash-full"),
+    "lock-screen": Action(N_("Lock screen"), "Session privacy security", "system-lock-screen"),
+    "display-off": Action(N_("Turn off displays"), "Screen monitor power off", "video-display"),
+}
+
 ACTIONS = {
+    **DIRECT_ACTIONS,
     "calendars": Action(N_("Notch calendars"), "Calendar subscriptions and appointments", "view-calendar"),
     "shelf": Action(N_("File shelf"), "Files", "folder-favorites"),
     "downloads": Action(N_("Watch downloads"), "Files", "folder-download"),
