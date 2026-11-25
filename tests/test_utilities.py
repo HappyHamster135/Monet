@@ -110,6 +110,46 @@ class DesktopTools(unittest.TestCase):
             self.assertEqual(ShelfList(config).paths(), [])
             self.assertEqual(path.read_bytes(), b"fixture")
 
+    def test_notch_and_window_share_one_shelf_without_stealing_focus(self):
+        from PySide6.QtCore import QSettings
+        from window import Receiver, Window
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            photo = base / "Målning %20 #1.png"
+            photo.write_bytes(b"picture")
+            folder = base / "Studies"
+            folder.mkdir()
+            window = Window("/usr/libexec", defer_catalog=True)
+            window.settings = QSettings(str(base / "shelf.ini"), QSettings.IniFormat)
+            receiver = Receiver(window)
+            def request(action, *urls):
+                return json.loads(receiver.shelf_request(json.dumps({"action": action, "urls": urls})))
+            observed = []
+            window.shelfChanged.connect(lambda: observed.append(True))
+            data = request("add", photo.as_uri(), folder.as_uri(), photo.as_uri(), (base / "gone").as_uri())
+            self.assertTrue(data["missing"])
+            self.assertEqual([r["url"] for r in data["rows"]], [photo.as_uri(), folder.as_uri()])
+            self.assertEqual(data["rows"][1]["icon"], "folder")
+            self.assertFalse(window.isVisible())
+            self.assertEqual(window.stack.currentIndex(), 0)
+            self.assertTrue(receiver.AddToShelf(photo.as_uri()))
+            self.assertEqual(len(observed), 1)
+            for invalid in ("file://server/share/item", "file:relative", "file:///tmp/bad%00", "https://example.org"):
+                self.assertEqual(request("remove", photo.as_uri(), invalid), {})
+            self.assertEqual(request("add", *([photo.as_uri()] * 101)), {})
+            self.assertEqual(len(request("view")["rows"]), 2)
+            shelf = window.pages["shelf"].files
+            shelf.setCurrentRow(1)
+            shelf.forget()
+            self.assertEqual([r["name"] for r in request("view")["rows"]], [photo.name])
+            self.assertEqual(request("remove", photo.as_uri())["rows"], [])
+            self.assertEqual(len(observed), 3)
+            self.assertEqual(photo.read_bytes(), b"picture")
+            self.assertTrue(folder.is_dir())
+            self.assertEqual(json.loads(window.settings.value("shelf")), [])
+            receiver.idle.stop()
+            window.close()
+
     def test_migrated_scratchpad_and_named_snippets_survive_reopening(self):
         from PySide6.QtCore import QSettings
         from scratchpads import Pads

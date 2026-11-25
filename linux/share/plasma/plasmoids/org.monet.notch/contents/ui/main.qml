@@ -20,6 +20,19 @@ PlasmoidItem {
     readonly property double watchStart: Number(Plasmoid.configuration.watchStart) || 0
     property double now: Date.now()
     property int tab: 0
+    property bool draggingShelf: false
+    // Wayland destinations can read the URI list after the pointer leaves the popup.
+    hideOnWindowDeactivate: !draggingShelf
+    property bool viewingShelf: false
+    ShelfModel {
+        id: fileShelf
+        shown: root.expanded && root.viewingShelf
+        dragging: root.draggingShelf
+    }
+    function showShelf() {
+        viewingShelf = true
+        expanded = true
+    }
     property int requestedNotice: 0
     Loader {
         id: preview
@@ -46,7 +59,7 @@ PlasmoidItem {
         id: padController
         active: root.padsOpened
         sourceComponent: PadModel {
-            shown: root.expanded && root.tab === 4
+            shown: root.expanded && !root.viewingShelf && root.tab === 4
             onDetached: root.expanded = false
         }
     }
@@ -96,7 +109,7 @@ PlasmoidItem {
     property string downloadPath: ""
     property url downloadFolder: ""
     property bool downloadAvailable: false
-    readonly property bool activityOpen: expanded && tab === 1 && !(viewingWatch && watch.registered)
+    readonly property bool activityOpen: expanded && !viewingShelf && tab === 1 && !(viewingWatch && watch.registered)
     function refreshActivity() {
         if (checkingDownloads) { refreshPending = true; return }
         checkingDownloads = true
@@ -151,9 +164,8 @@ PlasmoidItem {
     function hex(text) {
         return Array.from(unescape(encodeURIComponent(text)), c => c.charCodeAt(0).toString(16).padStart(2, "0")).join("")
     }
-    function openTool(page, urls) {
-        const args = urls ? " " + hex(JSON.stringify(urls.map(u => u.toString()))) : ""
-        runner.connectSource(helper + " utilities " + page + args)
+    function openTool(page) {
+        runner.connectSource(helper + " utilities " + page)
         expanded = false
     }
     function start(minutes, focus) {
@@ -181,10 +193,10 @@ PlasmoidItem {
     }
     Component.onCompleted: refreshTime()
     onExpandedChanged: {
-        if (!root.expanded) { requestedNotice = 0; viewingDownloads = false; return }
+        if (!root.expanded) { requestedNotice = 0; viewingDownloads = false; viewingShelf = false; return }
         agendaDay = new Date()
         refreshTime()
-        if (requestedNotice) return
+        if (requestedNotice || viewingShelf) return
         if (endTime) tab = 2
         else if (watch.registered) { viewingWatch = true; tab = 1 }
     }
@@ -274,10 +286,11 @@ PlasmoidItem {
         DropArea {
             id: shelfDrop
             anchors.fill: parent
-            onEntered: drag => { drag.accepted = drag.hasUrls && drag.urls.length <= 100 && drag.urls.every(u => u.toString().startsWith("file:///")) }
+            onEntered: drag => { drag.accepted = fileShelf.accepts(drag) }
             onDropped: drop => {
-                if (drop.hasUrls) {
-                    root.openTool("shelf", Array.from(drop.urls))
+                if (fileShelf.accepts(drop)) {
+                    fileShelf.change("add", Array.from(drop.urls))
+                    root.showShelf()
                     drop.accept(Qt.CopyAction)
                 }
             }
@@ -289,6 +302,7 @@ PlasmoidItem {
         Layout.preferredHeight: Math.min(370, Math.max(200, Screen.height - 80))
         spacing: Kirigami.Units.smallSpacing
         C.TabBar {
+            visible: !root.viewingShelf
             Layout.fillWidth: true
             currentIndex: root.tab
             onCurrentIndexChanged: root.tab = currentIndex
@@ -300,17 +314,28 @@ PlasmoidItem {
         Loader {
             Layout.fillWidth: true; Layout.fillHeight: true
             active: root.expanded
-            sourceComponent: root.tab === 1 && root.viewingWatch && watch.registered ? watchPage
+            sourceComponent: root.viewingShelf ? shelfPage : root.tab === 1 && root.viewingWatch && watch.registered ? watchPage
                 : root.tab === 1 && root.viewingDownloads ? downloadsPage
                 : root.tab === 3 && root.viewingAgenda ? agendaPage
                 : root.tab === 0 && root.musicView === 3 ? mixerPage
                 : root.tab === 4 ? (padController.item ? padPage : null) : [musicPage, activityPage, timerPage, calendarPage][root.tab]
         }
         RowLayout {
+            visible: !root.viewingShelf
             Layout.fillWidth: true
-            C.Button { text: i18n("File shelf"); icon.name: "folder-open"; onClicked: root.openTool("shelf") }
+            C.Button { text: i18n("File shelf"); icon.name: "folder-open"; onClicked: root.showShelf() }
             Item { Layout.fillWidth: true }
             C.Button { text: i18n("Utilities"); icon.name: "applications-utilities"; onClicked: root.openTool("tools") }
+        }
+    }
+    Component {
+        id: shelfPage
+        FileShelf {
+            shelf: fileShelf
+            onDraggingChanged: root.draggingShelf = dragging
+            Component.onDestruction: root.draggingShelf = false
+            onBackRequested: root.viewingShelf = false
+            onDetachRequested: root.openTool("shelf")
         }
     }
     Component {

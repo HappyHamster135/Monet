@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDia
     QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox, QPlainTextEdit,
     QPushButton, QStackedWidget, QToolButton, QVBoxLayout, QWidget)
 from actions import ACTIONS, DIRECT_ACTIONS, clean_url, find_tools, preferences, tr
-from pages import Downloads, Shelf, Snippets, row
+from pages import Downloads, Shelf, ShelfList, Snippets, row
 
 MODULES = Path(__file__).resolve().parent
 SERVICE = "org.monet.Utilities"
@@ -94,6 +94,13 @@ class Window(QMainWindow):
         if self.catalog_pending and self.stack.currentIndex() == 0:
             self.home()
         super().showEvent(event)
+
+    shelfChanged = Signal()
+
+    def file_shelf(self):
+        page = Shelf(self.settings)
+        page.files.changed.connect(self.shelfChanged)
+        return page
 
     def session_feed(self):
         if self.agent_feed is None:
@@ -591,7 +598,7 @@ class Window(QMainWindow):
         elif key == "lock":
             self.cleaning_dialog()
         elif key == "shelf":
-            self.page(key, lambda: Shelf(self.settings))
+            self.page(key, self.file_shelf)
         elif key == "notes":
             self.page(key, self.pad_page).edit.setFocus()
         elif key == "snippets":
@@ -724,9 +731,9 @@ class Window(QMainWindow):
         if key == "tools":
             self.home()
         elif key == "shelf":
-            shelf = self.page(key, lambda: Shelf(self.settings))
+            shelf = self.page(key, self.file_shelf)
             urls = [QUrl(arg) for arg in args[1:101]]
-            shelf.files.add_paths([u.toLocalFile() for u in urls if u.isLocalFile()])
+            shelf.files.add_paths([shelf.files.local_path(url) for url in urls])
         elif key == "agents" and key in self.hidden:
             self.home()
         elif key == "agents" and len(args) == 2 and args[1] in ("codex", "claude", "session"):
@@ -843,14 +850,17 @@ class Receiver(QObject):
 
     @Slot(str, result=bool)
     def AddToShelf(self, address):
-        url = QUrl(address)
-        path = url.toLocalFile()
-        if not url.isLocalFile() or url.host() or not os.path.isabs(path) or "\0" in path:
+        path = ShelfList.local_path(QUrl(address))
+        if path is None:
             return False
         self.idle.start()
-        shelf = self.window.ensure_page("shelf", lambda: Shelf(self.window.settings))
+        shelf = self.window.ensure_page("shelf", self.window.file_shelf)
         shelf.files.add_paths([path])
         return os.path.normpath(path) in shelf.files.paths()
+
+    def shelf_request(self, payload):
+        shelf = self.window.ensure_page("shelf", self.window.file_shelf)
+        return shelf.files.for_notch(payload)
 
     @Slot(str)
     def Present(self, payload):
@@ -861,43 +871,45 @@ class Receiver(QObject):
         if isinstance(args, list) and len(args) <= 101 and all(isinstance(a, str) for a in args):
             self.window.Open(args)
 
-class NotchPads(QDBusVirtualObject):
-    """Only the desktop shell can read and edit notes over the session bus."""
-    path = "/Scratchpad"
+class NotchPage(QDBusVirtualObject):
+    """Private, on-demand views for the desktop shell."""
     shell = "org.kde.plasmashell"
 
-    def __init__(self, bus, receiver):
+    def __init__(self, bus, receiver, path, method, handler, changes):
         super().__init__(receiver)
+        self.path = path
+        self.method = method
+        self.handler = handler
+        self.signal_name = changes
         self.bus = bus
         self.receiver = receiver
         self.owner = ""
         self.watcher = QDBusServiceWatcher(self.shell, bus, QDBusServiceWatcher.WatchForOwnerChange, self)
         self.watcher.serviceOwnerChanged.connect(self.owner_changed)
-        receiver.window.padsChanged.connect(self.changed)
 
     def owner_changed(self, name, previous, current):
         self.owner = current
 
     def changed(self):
         if self.owner:
-            self.bus.send(QDBusMessage.createTargetedSignal(self.owner, self.path, SERVICE, "PadsChanged"))
+            self.bus.send(QDBusMessage.createTargetedSignal(self.owner, self.path, SERVICE, self.signal_name))
 
     def introspect(self, path):
-        return ('<interface name="org.monet.Utilities"><method name="Pad"><arg type="s" direction="in"/>'
-                '<arg type="s" direction="out"/></method><signal name="PadsChanged"/></interface>')
+        return (f'<interface name="org.monet.Utilities"><method name="{self.method}"><arg type="s" direction="in"/>'
+                f'<arg type="s" direction="out"/></method><signal name="{self.signal_name}"/></interface>')
 
     def handleMessage(self, message, connection):
-        if message.interface() != SERVICE or message.member() != "Pad":
+        if message.interface() != SERVICE or message.member() != self.method:
             return False
         if not self.owner:
             self.owner = self.bus.interface().serviceOwner(self.shell).value() or ""
         if not self.owner or message.service() != self.owner:
-            reply = message.createErrorReply("org.freedesktop.DBus.Error.AccessDenied", "Only the desktop shell can access scratchpads.")
+            reply = message.createErrorReply("org.freedesktop.DBus.Error.AccessDenied", "Desktop shell only.")
         elif message.signature() != "s":
             reply = message.createErrorReply("org.freedesktop.DBus.Error.InvalidArgs", "Expected a string.")
         else:
             self.receiver.idle.start()
-            result = self.receiver.window.pads().for_notch(message.arguments()[0])
+            result = self.handler(message.arguments()[0])
             reply = message.createReply(result)
         connection.send(reply)
         return True
@@ -924,13 +936,16 @@ def main(argv, helpers):
     if bus.isConnected() and bus.interface().isServiceRegistered(SERVICE).value() and forward():
         return 0
     window = Window(helpers if Path(helpers).is_absolute() else "/usr/libexec",
-                    defer_catalog=args in (["wheel"], ["quick-panel"]))
+                    defer_catalog=args in (["wheel"], ["quick-panel"], ["--pad-service"]))
     receiver = Receiver(window)
     if bus.isConnected():
         if not bus.registerObject("/Utilities", SERVICE, receiver, QDBusConnection.ExportAllSlots):
             return 1
-        bridge = NotchPads(bus, receiver)
-        if not bus.registerVirtualObject(bridge.path, bridge):
+        pads = NotchPage(bus, receiver, "/Scratchpad", "Pad", lambda payload: window.pads().for_notch(payload), "PadsChanged")
+        shelf = NotchPage(bus, receiver, "/FileShelf", "Shelf", receiver.shelf_request, "ShelfChanged")
+        window.padsChanged.connect(pads.changed)
+        window.shelfChanged.connect(shelf.changed)
+        if not bus.registerVirtualObject(pads.path, pads) or not bus.registerVirtualObject(shelf.path, shelf):
             return 1
         from session_feed import NotchSession
         sessions = NotchSession(bus, receiver)

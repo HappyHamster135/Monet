@@ -21,6 +21,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 - **Desktop actions.** Pin appearance, keyboard backlight, screen lock, display power and Empty Trash to your Quick Panel, or run them from tool search. Empty Trash asks before permanently deleting files.
 - **Find Utilities from anywhere.** Press Super+Alt+Space for the tool search and your favorites, or search from the Home Bar or Super+R. Select a result to open it directly.
 - **Codex account limits.** Enable them in Utilities → AI session usage to see your remaining allowance and reset times in the notch. The account check runs when you use the feature.
+- **File shelf in the notch.** Drop files or folders onto the notch, then drag them into another app. Select several to drag together. The separate Utilities window shares the same shelf.
 - **Notch downloads.** Open Activity → Downloads to see recent files, recognize partial downloads, show a finished file in Files or add it to the shelf. The folder can be changed from the same view.
 - **Notch notifications.** Read a message from Activity, reply or use the actions its app provides. Customize Home Bar can show a brief preview in the closed notch while the desktop is unlocked and Do Not Disturb is off.
 - **Quit on last window.** In Settings → Default Apps, choose which apps should also leave the tray when their last window closes. Apps keep their usual behavior until selected.

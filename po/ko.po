@@ -16739,3 +16739,27 @@ msgstr ""
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:366
 msgid "Scroll to open the notch or skip tracks"
 msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:30
+msgid "Open shelf in Utilities"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:94
+msgid "Drop files or folders here."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:115
+msgid "Drag a file out, or select several to drag together."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:121
+msgid "Remove from shelf"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/ShelfModel.qml:46
+msgid "Could not update the file shelf."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/ShelfModel.qml:49
+msgid "Some files are no longer available."
+msgstr ""
