@@ -42,6 +42,8 @@ def fixture(queue):
 import org.kde.plasma.private.mpris as Mpris
 import "''' + UI.as_uri() + '''" as Monet
 Item {
+    id: root
+    property string queueOwner: ""
     width: 400; height: 290
     function i18n(text) { return text }
     Mpris.Mpris2Model { id: players }
@@ -49,9 +51,18 @@ Item {
     function choose(owner, track) { action.choose(owner, musicPage.trackId, track, players.currentPlayer) }
     Monet.Music {
         id: musicPage
-        objectName: "music"; anchors.fill: parent
+        objectName: "music"; anchors.fill: parent; visible: !root.queueOwner
         sources: players; player: players.currentPlayer
         playing: false; view: 0; formatDuration: ms => String(ms)
+    }
+    Loader {
+        anchors.fill: parent; active: !!root.queueOwner
+        sourceComponent: Monet.NotchQueue {
+            player: players.currentPlayer
+            playback: action; service: "org.mpris.MediaPlayer2.Music"; track: musicPage.trackId; fresh: true
+            snapshot: ({owner: root.queueOwner, service: service, trackId: track,
+                        queue: [{id:"/missing",title:"First",artist:"",art:""}, {id:"/other",title:"Second",artist:"",art:""}]})
+        }
     }
 }''')
     view = QQuickView()
@@ -86,7 +97,13 @@ Item {
             player = bus.get_object(name, "/org/mpris/MediaPlayer2")
             def calls():
                 return events.read_text().splitlines() if events.exists() else []
-            root.choose(owner, "/other")
+            root.setProperty("queueOwner", owner)
+            queue_list = root.findChild(QQuickItem, "notchQueue")
+            assert queue_list and queue_list.activeFocusOnTab()
+            queue_list.forceActiveFocus(Qt.TabFocusReason)
+            QTest.keyClick(view, Qt.Key_Down)
+            assert queue_list.property("currentIndex") == 1
+            QTest.keyClick(view, Qt.Key_Return)
             wait(lambda: calls() == ["Music GoTo /other"], "skip requested without resuming the old song")
             root.choose(owner, "/missing")
             player.Next(dbus_interface="org.mpris.MediaPlayer2.Player")

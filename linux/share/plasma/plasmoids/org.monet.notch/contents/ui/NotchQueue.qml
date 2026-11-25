@@ -39,17 +39,30 @@ ColumnLayout {
         objectName: "notchQueue"
         Layout.fillWidth: true; Layout.fillHeight: true
         visible: count > 0; clip: true
+        activeFocusOnTab: count > 0
+        keyNavigationEnabled: true
+        Accessible.role: Accessible.List
+        Accessible.name: i18n("Up next")
+        function playCurrent(event) {
+            if (currentItem?.enabled) page.choose(currentItem.modelData)
+            event.accepted = true
+        }
+        Keys.onReturnPressed: event => playCurrent(event)
+        Keys.onEnterPressed: event => playCurrent(event)
+        Keys.onSpacePressed: event => playCurrent(event)
         model: page.snapshot.queue || []
         C.ScrollBar.vertical: C.ScrollBar {}
         delegate: C.ItemDelegate {
             id: row
+            required property int index
             required property var modelData
             readonly property string title: modelData.title || i18n("Untitled")
             width: ListView.view.width - Kirigami.Units.largeSpacing
             enabled: page.canChoose && !page.pending
             Accessible.name: enabled ? i18n("Play %1", title) : title
             Accessible.description: modelData.artist
-            onClicked: page.choose(modelData)
+            highlighted: list.activeFocus && ListView.isCurrentItem
+            onClicked: { list.currentIndex = index; page.choose(modelData) }
             contentItem: RowLayout {
                 spacing: Kirigami.Units.smallSpacing
                 Item {
