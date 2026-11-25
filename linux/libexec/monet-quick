@@ -10964,20 +10964,12 @@ def main(argv):
         if not isinstance(path, str) or not os.path.isabs(path):
             path = QStandardPaths.writableLocation(QStandardPaths.DownloadLocation)
         folder = Path(path)
-        agent = ""
         sys.path.insert(0, str(Path(DATADIR) / "monet/utilities"))
         from actions import stored
         agents_visible = "agents" not in stored(settings, "hidden", [])
-        chosen = settings.value("agentFile", "") if agents_visible else ""
-        if chosen:
-            import sqlite3
-            from agents import format_summary, summary
-            try:
-                agent = format_summary(summary(chosen))
-            except (OSError, ValueError, sqlite3.Error, TypeError):
-                pass
         emit({"folder": QUrl.fromLocalFile(str(folder)).toString(QUrl.FullyEncoded), "path": str(folder),
-              "available": folder.is_dir() and os.access(folder, os.R_OK | os.X_OK), "agent": agent,
+              "available": folder.is_dir() and os.access(folder, os.R_OK | os.X_OK),
+              "sessionSelected": agents_visible and bool(settings.value("agentFile", "")), "agent": "",
               "agentsVisible": agents_visible,
               "codexKey": settings.value("codexLimits", "") if agents_visible else "",
               "claudeKey": settings.value("claudeLimits", "") if agents_visible else ""})
@@ -10992,7 +10984,7 @@ def main(argv):
             tr("%1 has %2% battery remaining.", unhex(args[0]), args[1]))
     elif cmd == "utilities" and args and args[0] in ("tools", "shelf", "notes", "downloads", "notifications", "media", "media-keys", "quit-on-close", "extra-clicks", "wheel-scrolling", "agents", "watch", "wheel", "calendars"):
         extra = []
-        if len(args) == 2 and args[0] == "agents" and args[1] in ("claude", "codex"):
+        if len(args) == 2 and args[0] == "agents" and args[1] in ("claude", "codex", "session"):
             extra = [args[1]]
         elif len(args) == 2 and args[0] == "watch" and re.fullmatch(r"[1-9][0-9]{0,9}", args[1]):
             extra = [args[1]]

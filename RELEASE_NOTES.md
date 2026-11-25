@@ -27,6 +27,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 - **Extra click filter.** If a worn button double-clicks on a single press, open Settings → Mouse & Keyboard to filter rapid repeats for that mouse. The first click still reaches the app immediately. Filtering starts off.
 - **Mouse wheel scrolling.** In Settings → Mouse & Keyboard, choose a fixed distance per wheel step or a smooth glide. You can also hold a modifier to scroll sideways. System default is selected on first use.
 - **Quit and close protection.** Monet Utilities can catch an accidental Ctrl+Q or Ctrl+W. Choose which apps to protect and whether to hold, press twice or add a modifier to confirm. Each shortcut is opt-in.
+- **Live session activity.** Choose a file in Utilities → AI session usage → Session file. The notch follows recorded turn events, token counts and reported costs while Activity is open. Select the row to see the full reading.
 - **Claude Code limits.** In Utilities → AI session usage, choose Claude Code to see your remaining allowance and local reset times. The notch can show Claude Code and Codex together. Both are opt-in.
 - **Text snippets.** Give a saved phrase a typing shortcut in Utilities. With Monet Text Snippets enabled, typing `;hi;` can insert your greeting directly into an editor.
 - **Paste as plain text.** Press Super+Ctrl+V in an editor to paste without the copied formatting. Regular paste still has the original formatting. You can change the keys in Keyboard Shortcuts.

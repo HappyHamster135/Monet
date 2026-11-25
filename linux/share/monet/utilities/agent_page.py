@@ -19,7 +19,7 @@ class AgentUsage(QTabWidget):
         self.home = home
         self.settings = home.settings
         self.pending = set()
-        self.file_request = 0
+        self.feed = home.session_feed()
         self.account = QWidget()
         self.addTab(self.account, tr("Account limits"))
         layout = QVBoxLayout(self.account)
@@ -69,6 +69,7 @@ class AgentUsage(QTabWidget):
         box.addWidget(label)
         self.text = QPlainTextEdit(readOnly=True)
         box.addWidget(self.text)
+        self.feed.changed.connect(self.paint_file)
         row(box, (tr("Choose session…"), self.choose_file), (tr("Refresh"), self.load_file), (tr("Forget"), self.forget_file))
         self.configure_provider()
         self.picker.currentIndexChanged.connect(self.change_provider)
@@ -163,12 +164,13 @@ class AgentUsage(QTabWidget):
 
     def refresh(self, *_):
         self.timer.stop()
+        self.feed.view("utilities", self.isVisible() and self.currentIndex() == 1)
         if self.currentWidget() is self.account:
             self.load_limits()
             if self.isVisible() and self.switch.isChecked():
                 self.timer.start()
         else:
-            self.load_file()
+            self.paint_file(self.feed.text)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -176,6 +178,7 @@ class AgentUsage(QTabWidget):
 
     def hideEvent(self, event):
         self.timer.stop()
+        self.feed.view("utilities", False)
         super().hideEvent(event)
 
     def load_limits(self, force=False):
@@ -206,25 +209,29 @@ class AgentUsage(QTabWidget):
             args.append("--claude")
         self.home.worker([sys.executable, Path(__file__).with_name("codex_limits.py"), *args], loaded, failed)
 
-    def load_file(self):
-        self.file_request += 1
-        request = self.file_request
+    def paint_file(self, text):
         if not self.settings.value("agentFile", ""):
-            self.text.setPlainText(tr("No session selected."))
-            return
-        def received(out):
-            if request == self.file_request:
-                self.text.setPlainText(out.strip() or tr("No usage figures were reported in recent session events."))
-        self.home.worker([sys.executable, Path(__file__).with_name("agents.py")], received)
+            text = tr("No session selected.")
+        self.text.setPlainText(text)
+
+    def load_file(self):
+        self.feed.refresh(force=True)
+        self.paint_file(self.feed.text)
+
+    def file_changed(self):
+        self.settings.sync()
+        self.feed.refresh()
+        self.paint_file(self.feed.text)
+        signal = QDBusMessage.createSignal("/Utilities", "org.monet.Utilities", "AgentFileChanged")
+        signal.setArguments([bool(self.settings.value("agentFile", ""))])
+        QDBusConnection.sessionBus().send(signal)
 
     def choose_file(self):
         path, _ = QFileDialog.getOpenFileName(self, tr("Choose a local session log or database"))
         if path:
             self.settings.setValue("agentFile", path)
-            self.settings.sync()
-            self.load_file()
+            self.file_changed()
 
     def forget_file(self):
         self.settings.remove("agentFile")
-        self.settings.sync()
-        self.load_file()
+        self.file_changed()

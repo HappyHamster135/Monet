@@ -71,7 +71,7 @@ PlasmoidItem {
                 iface: "org.monet.WindowWatch", member: "Stop"})
     }
     property string message: ""
-    property string agentSummary: ""
+    property bool sessionSelected: false
     property string codexKey: ""
     property string claudeKey: ""
     property bool agentsVisible: false
@@ -81,8 +81,12 @@ PlasmoidItem {
         path: "/Utilities"; iface: "org.monet.Utilities"
         function dbusCodexLimitsChanged(key) { root.codexKey = key; if (root.checkingDownloads) root.refreshPending = true }
         function dbusClaudeLimitsChanged(key) { root.claudeKey = key; if (root.checkingDownloads) root.refreshPending = true }
+        function dbusAgentFileChanged(selected) {
+            root.sessionSelected = selected
+            if (root.checkingDownloads) root.refreshPending = true
+        }
         function dbusAgentVisibilityChanged() {
-            root.agentSummary = ""; root.agentsVisible = false
+            root.sessionSelected = false; root.agentsVisible = false
             root.refreshActivity()
         }
     }
@@ -102,7 +106,7 @@ PlasmoidItem {
         if (activityOpen) refreshActivity()
         else {
             downloadAvailable = false; downloadPath = ""; downloadFolder = ""
-            codexKey = ""; claudeKey = ""; agentsVisible = false
+            codexKey = ""; claudeKey = ""; agentsVisible = false; sessionSelected = false
         }
     }
     Loader {
@@ -203,7 +207,7 @@ PlasmoidItem {
                 if (!root.activityOpen) return
                 try {
                     const state = JSON.parse(data.stdout)
-                    root.agentSummary = state.agent
+                    root.sessionSelected = !!state.sessionSelected
                     root.agentsVisible = state.agentsVisible !== false
                     root.codexKey = state.codexKey || ""
                     root.claudeKey = state.claudeKey || ""
@@ -386,9 +390,15 @@ PlasmoidItem {
                 onPreviewFinished: root.requestedNotice = 0
                 onActivated: root.expanded = false
             }
-            C.Label {
-                Layout.fillWidth: true; visible: !notices.inDetail && text.length > 0; textFormat: Text.PlainText
-                elide: Text.ElideRight; text: root.agentSummary; Accessible.name: root.agentSummary
+            SessionButton {
+                Layout.fillWidth: true
+                widgetId: String(Plasmoid.id)
+                active: root.agentsVisible && root.sessionSelected && root.activityOpen && power.active
+                        && !root.viewingDownloads && !notices.inDetail
+                onClicked: {
+                    runner.connectSource(root.helper + " utilities agents session")
+                    root.expanded = false
+                }
             }
             Repeater {
                 model: ["codex", "claude"]

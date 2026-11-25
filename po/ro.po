@@ -16752,3 +16752,91 @@ msgstr ""
 #: linux/share/monet/utilities/codex_limits.py:238
 msgid "Read from Claude Code at %1"
 msgstr ""
+
+#: linux/share/monet/utilities/agents.py:18
+msgid "Input"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:18
+msgid "Output"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:18
+msgid "Cached input"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:19
+msgid "Reasoning"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:19
+msgid "Total"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:19
+msgid "Reported cost (USD)"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:20
+msgid "Primary limit used (%)"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:20
+msgid "Secondary limit used (%)"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:23
+msgid "Last event · Turn started"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:23
+msgid "Last event · Turn finished"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:24
+msgid "Last event · Turn interrupted"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:24
+msgid "Last event · Tool requested"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:25
+msgid "Last event · Session idle"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:25
+msgid "Last event · Turn failed"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:27
+msgid "Session totals"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:27
+msgid "Run totals"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:27
+msgid "Latest request"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:28
+msgid "Latest assistant message in this database"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:172 linux/share/monet/utilities/session_feed.py:67
+msgid "Could not read the selected session file."
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:19
+msgid "AI credits"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:20
+msgid "Premium requests"
+msgstr ""
+
+#: linux/share/monet/utilities/agents.py:26
+msgid "Last event · Session ended"
+msgstr ""

@@ -27,6 +27,7 @@ class Window(QMainWindow):
         self.notch_previews = {}
         self.floating_pads = set()
         self.pad_store = None
+        self.agent_feed = None
         self.running = set()
         self.converting = False
         self.setWindowIcon(QIcon.fromTheme("applications-utilities"))
@@ -77,6 +78,12 @@ class Window(QMainWindow):
         QShortcut(QKeySequence("Ctrl+K"), self, activated=self.home)
         QShortcut(QKeySequence("Alt+Left"), self, activated=self.home)
         self.home()
+
+    def session_feed(self):
+        if self.agent_feed is None:
+            from session_feed import SessionFeed
+            self.agent_feed = SessionFeed(self)
+        return self.agent_feed
 
     def filter(self):
         self.catalog.clear()
@@ -154,6 +161,8 @@ class Window(QMainWindow):
             self.settings.setValue("hidden", json.dumps(hidden))
             self.settings.sync()
             if agent_visibility_changed:
+                if self.agent_feed:
+                    self.agent_feed.refresh()
                 if "agents" in self.pages:
                     self.pages["agents"].configure_provider()
                 signal = QDBusMessage.createSignal("/Utilities", "org.monet.Utilities", "AgentVisibilityChanged")
@@ -610,10 +619,13 @@ class Window(QMainWindow):
             shelf.files.add_paths([u.toLocalFile() for u in urls if u.isLocalFile()])
         elif key == "agents" and key in self.hidden:
             self.home()
-        elif key == "agents" and len(args) == 2 and args[1] in ("codex", "claude"):
+        elif key == "agents" and len(args) == 2 and args[1] in ("codex", "claude", "session"):
             from agent_page import AgentUsage
             page = self.ensure_page(key, lambda: AgentUsage(self))
-            page.open_provider(args[1])
+            if args[1] == "session":
+                page.setCurrentIndex(1)
+            else:
+                page.open_provider(args[1])
             self.page(key, lambda: page)
         elif key in ACTIONS:
             self.run_tool(key)
@@ -664,6 +676,8 @@ class Receiver(QObject):
         self.idle.timeout.connect(self.release_if_unused)
 
     def release_if_unused(self):
+        if self.window.agent_feed and self.window.agent_feed.views:
+            return
         if not any(w.isVisible() for w in QApplication.topLevelWidgets()) and not self.window.running and not self.window.notch_previews:
             QApplication.quit()
 
@@ -777,6 +791,10 @@ def main(argv, helpers):
             return 1
         bridge = NotchPads(bus, receiver)
         if not bus.registerVirtualObject(bridge.path, bridge):
+            return 1
+        from session_feed import NotchSession
+        sessions = NotchSession(bus, receiver)
+        if not bus.registerVirtualObject(sessions.path, sessions):
             return 1
         if not bus.registerService(SERVICE):
             return int(not forward())
