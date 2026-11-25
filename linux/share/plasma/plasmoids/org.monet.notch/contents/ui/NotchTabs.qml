@@ -34,6 +34,7 @@ C.TabBar {
             required property int modelData
             text: strip.labels[modelData]
             onClicked: strip.chosen(modelData)
+            Accessible.onPressAction: click()
         }
     }
 }
