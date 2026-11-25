@@ -17104,3 +17104,8 @@ msgstr "Redo för fokus"
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:264
 msgid "Could not restore the previous notification setting."
 msgstr "Det gick inte att återställa den tidigare aviseringsinställningen."
+
+#: linux/share/monet/utilities/window.py:159
+msgid "Hiding a tool also removes its controls from the notch."
+msgstr ""
+"Om du döljer ett verktyg tas också dess kontroller bort från panelen högst upp på skärmen."

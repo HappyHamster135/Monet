@@ -25,6 +25,7 @@ QtObject {
         function onFinished() { model.finish() }
     }
     readonly property var changes: DBus.SignalWatcher {
+        enabled: model.shown
         busType: DBus.BusType.Session; service: "org.monet.Utilities"
         path: "/Scratchpad"; iface: "org.monet.Utilities"
         function dbusPadsChanged() {

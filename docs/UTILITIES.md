@@ -10,6 +10,8 @@ In **Edit favorites…**, you can pin **Switch light or dark appearance**, **Fol
 
 For an individual monitor, open **Settings → Display**. Each screen that reports brightness has its own slider. Under **Display power**, choose **Sleep display** or **Wake display** for a supported output. Quick Settings shows a monitor selector when several screens have brightness controls.
 
+In **Utilities → Customize**, clear **Show** to hide a tool from the catalogue and its notch controls on every display. Showing it again brings back its saved content and its place in your tab order. Hiding **Watch a window** ends any window preview pinned to the notch.
+
 In **Customize Home Bar → Top-center notch**, select **Compact** or **Wide**. The notch belongs to the screen containing the bar you customized. Moving the Home Bar leaves the notch at the top. Select **Edit notch tabs** to show, hide or reorder Music, Activity, Time, Calendar and Notes. If you hide every tab, clicking the notch opens the file shelf. Utilities is available below it. A running timer keeps its deadline when its tab is hidden. Select **Off** to remove the notch. Your Home Bar remembers its tabs and options for the next time you enable it. Music levels, notification previews, the companion and low accessory battery alerts each have a separate control.
 
 - Click the notch to open Music, Activity, Time, Calendar or Notes. Scroll down over the notch to open it. Scroll up over the notch, song title or album art to close it. Swipe left over those surfaces for the next track or right for the previous track when your player supports it. One continuous swipe changes one track. Turn these gestures off in **Customize Home Bar → Top-center notch**.

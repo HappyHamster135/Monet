@@ -9,6 +9,8 @@ ColumnLayout {
     id: page
     required property var media
     property var gestures: null
+    property bool offerDetails: true
+    property bool offerMixer: true
     required property bool playing
     required property int view // 0: now playing, 1: lyrics, 2: upcoming tracks
     signal viewRequested(int index)
@@ -189,9 +191,9 @@ ColumnLayout {
     RowLayout {
         Layout.alignment: Qt.AlignHCenter
         C.ToolButton { visible: page.view !== 0; icon.name: "go-previous"; Accessible.name: i18n("Now playing"); onClicked: page.viewRequested(0) }
-        C.Button { visible: !!page.media || page.view !== 0; text: i18n("Lyrics"); checked: page.view === 1; onClicked: page.viewRequested(1) }
-        C.Button { visible: !!page.media || page.view !== 0; text: i18n("Up next"); checked: page.view === 2; onClicked: page.viewRequested(2) }
-        C.Button { visible: page.view === 0; text: i18n("Mixer"); icon.name: "audio-volume-high"; onClicked: page.viewRequested(3) }
+        C.Button { visible: page.offerDetails && (!!page.media || page.view !== 0); text: i18n("Lyrics"); checked: page.view === 1; onClicked: page.viewRequested(1) }
+        C.Button { visible: page.offerDetails && (!!page.media || page.view !== 0); text: i18n("Up next"); checked: page.view === 2; onClicked: page.viewRequested(2) }
+        C.Button { visible: page.offerMixer && page.view === 0; text: i18n("Mixer"); icon.name: "audio-volume-high"; onClicked: page.viewRequested(3) }
         C.ToolButton {
             visible: page.view === 1 && page.lines.length > 0 && !page.follow
             icon.name: "view-restore"; Accessible.name: i18n("Follow lyrics")

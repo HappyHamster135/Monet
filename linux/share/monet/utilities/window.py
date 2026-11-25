@@ -156,6 +156,7 @@ class Window(QMainWindow):
         dialog.setWindowTitle("Customize Utilities")
         layout = QVBoxLayout(dialog)
         hint = QLabel(tr("Choose which tools appear. Favorites open from the Quick Panel, and the first eight also appear in the wheel."))
+        hint.setText(hint.text() + " " + tr("Hiding a tool also removes its controls from the notch."))
         hint.setWordWrap(True)
         layout.addWidget(hint)
         from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem
@@ -179,12 +180,22 @@ class Window(QMainWindow):
                     hidden.append(key)
                 elif item.checkState(2) == Qt.Checked:
                     favorites.append(key)
+            visibility_changed = set(self.hidden) != set(hidden)
             agent_visibility_changed = ("agents" in self.hidden) != ("agents" in hidden)
             self.hidden = hidden
             ordered = [key for key in self.favorites if key in favorites]
             self.save_favorites(ordered + [key for key in favorites if key not in ordered])
             self.settings.setValue("hidden", json.dumps(hidden))
             self.settings.sync()
+            if visibility_changed:
+                if "downloads" in hidden and "downloads" in self.pages:
+                    downloads = self.pages.pop("downloads")
+                    self.stack.removeWidget(downloads)
+                    downloads.deleteLater()
+                if "watch" in hidden:
+                    for preview in list(self.notch_previews.values()):
+                        preview.close()
+                QDBusConnection.sessionBus().send(QDBusMessage.createSignal("/Utilities", SERVICE, "ToolVisibilityChanged"))
             if agent_visibility_changed:
                 if self.agent_feed:
                     self.agent_feed.refresh()
@@ -698,10 +709,13 @@ class Window(QMainWindow):
     @Slot("QStringList")
     def Open(self, args):
         key = args[0] if args else "tools"
+        self.settings.sync()
+        self.favorites, self.hidden = preferences(self.settings)
+        if ("notes" if key == "floating-pad" else key) in self.hidden:
+            self.panelDismissed.emit()
+            return
         if key in DIRECT_ACTIONS:
-            self.settings.sync()
-            self.favorites, self.hidden = preferences(self.settings)
-            if len(args) == 1 and key not in self.hidden:
+            if len(args) == 1:
                 self.run_tool(key)
             else:
                 self.panelDismissed.emit()
@@ -734,8 +748,6 @@ class Window(QMainWindow):
             shelf = self.page(key, self.file_shelf)
             urls = [QUrl(arg) for arg in args[1:101]]
             shelf.files.add_paths([shelf.files.local_path(url) for url in urls])
-        elif key == "agents" and key in self.hidden:
-            self.home()
         elif key == "agents" and len(args) == 2 and args[1] in ("codex", "claude", "session"):
             from agent_page import AgentUsage
             page = self.ensure_page(key, lambda: AgentUsage(self))
@@ -850,6 +862,8 @@ class Receiver(QObject):
 
     @Slot(str, result=bool)
     def AddToShelf(self, address):
+        if "shelf" in self.window.hidden:
+            return False
         path = ShelfList.local_path(QUrl(address))
         if path is None:
             return False
@@ -859,8 +873,21 @@ class Receiver(QObject):
         return os.path.normpath(path) in shelf.files.paths()
 
     def shelf_request(self, payload):
+        if "shelf" in self.window.hidden:
+            return "{}"
         shelf = self.window.ensure_page("shelf", self.window.file_shelf)
         return shelf.files.for_notch(payload)
+
+    def pad_request(self, payload):
+        if "notes" in self.window.hidden:
+            # A keystroke can still be waiting for autosave when the tab disappears.
+            try:
+                request = json.loads(payload)
+            except ValueError:
+                return '{"ok":false}'
+            if not isinstance(request, dict) or request.get("action") != "save":
+                return '{"ok":false}'
+        return self.window.pads().for_notch(payload)
 
     @Slot(str)
     def Present(self, payload):
@@ -941,7 +968,7 @@ def main(argv, helpers):
     if bus.isConnected():
         if not bus.registerObject("/Utilities", SERVICE, receiver, QDBusConnection.ExportAllSlots):
             return 1
-        pads = NotchPage(bus, receiver, "/Scratchpad", "Pad", lambda payload: window.pads().for_notch(payload), "PadsChanged")
+        pads = NotchPage(bus, receiver, "/Scratchpad", "Pad", receiver.pad_request, "PadsChanged")
         shelf = NotchPage(bus, receiver, "/FileShelf", "Shelf", receiver.shelf_request, "ShelfChanged")
         window.padsChanged.connect(pads.changed)
         window.shelfChanged.connect(shelf.changed)

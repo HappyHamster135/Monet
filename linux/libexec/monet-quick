@@ -11043,15 +11043,19 @@ def main(argv):
     elif cmd == "notch-activity" and not args:
         from PySide6.QtCore import QSettings, QStandardPaths, QUrl
         settings = QSettings("Monet", "Utilities")
-        path = settings.value("downloads", "")
-        if not isinstance(path, str) or not os.path.isabs(path):
-            path = QStandardPaths.writableLocation(QStandardPaths.DownloadLocation)
-        folder = Path(path)
         sys.path.insert(0, str(Path(DATADIR) / "monet/utilities"))
         from actions import stored
-        agents_visible = "agents" not in stored(settings, "hidden", [])
-        emit({"folder": QUrl.fromLocalFile(str(folder)).toString(QUrl.FullyEncoded), "path": str(folder),
-              "available": folder.is_dir() and os.access(folder, os.R_OK | os.X_OK),
+        hidden = stored(settings, "hidden", [])
+        agents_visible = "agents" not in hidden
+        folder_url = path = ""
+        available = False
+        if "downloads" not in hidden:
+            path = settings.value("downloads", "")
+            if not isinstance(path, str) or not os.path.isabs(path):
+                path = QStandardPaths.writableLocation(QStandardPaths.DownloadLocation)
+            folder_url = QUrl.fromLocalFile(path).toString(QUrl.FullyEncoded)
+            available = os.path.isdir(path) and os.access(path, os.R_OK | os.X_OK)
+        emit({"folder": folder_url, "path": path, "available": available,
               "sessionSelected": agents_visible and bool(settings.value("agentFile", "")), "agent": "",
               "agentsVisible": agents_visible,
               "codexKey": settings.value("codexLimits", "") if agents_visible else "",

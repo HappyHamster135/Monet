@@ -17038,3 +17038,7 @@ msgstr ""
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:264
 msgid "Could not restore the previous notification setting."
 msgstr ""
+
+#: linux/share/monet/utilities/window.py:159
+msgid "Hiding a tool also removes its controls from the notch."
+msgstr ""

@@ -8,6 +8,7 @@ import org.kde.plasma.workspace.dbus as DBus
 ColumnLayout {
     id: page
     required property var feed
+    property bool offerShelf: true
     required property bool checking
     required property string localPath
     required property url directory
@@ -124,7 +125,7 @@ ColumnLayout {
                         onClicked: page.opener.open(modelData.url, false, this)
                     }
                     C.ToolButton {
-                        visible: !modelData.partial; enabled: !page.shelfReply; icon.name: "folder-add"
+                        visible: page.offerShelf && !modelData.partial; enabled: !page.shelfReply; icon.name: "folder-add"
                         Accessible.name: i18n("Add %1 to file shelf", modelData.name)
                         C.ToolTip.text: i18n("Add to file shelf"); C.ToolTip.visible: hovered
                         onClicked: page.addToShelf(modelData)

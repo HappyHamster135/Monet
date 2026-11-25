@@ -21,11 +21,32 @@ PlasmoidItem {
     property double now: Date.now()
     readonly property var tabNames: ["music", "activity", "time", "calendar", "notes"]
     readonly property var tabLabels: [i18n("Music"), i18n("Activity"), i18n("Time"), i18n("Calendar"), i18n("Notes")]
+    ToolVisibility { id: tools }
+    readonly property bool offerShelf: tools.offers("shelf")
+    readonly property bool offerDownloads: tools.offers("downloads")
+    readonly property bool offerAgents: tools.offers("agents")
+    readonly property bool offerWatch: tools.offers("watch")
+    onOfferShelfChanged: if (!offerShelf) viewingShelf = false
+    onOfferDownloadsChanged: {
+        if (!offerDownloads) { viewingDownloads = false; downloadAvailable = false }
+        if (activityOpen) Qt.callLater(refreshActivity)
+    }
+    onOfferAgentsChanged: {
+        if (!offerAgents) { agentsVisible = false; sessionSelected = false; codexKey = ""; claudeKey = "" }
+        if (activityOpen) Qt.callLater(refreshActivity)
+    }
+    readonly property bool offerAgenda: tools.offers("calendars")
+    readonly property bool offerMediaDetails: tools.offers("media")
+    readonly property bool offerMixer: tools.offers("mixer")
+    onOfferAgendaChanged: if (!offerAgenda) viewingAgenda = false
+    onOfferMediaDetailsChanged: if (!offerMediaDetails && (musicView === 1 || musicView === 2)) musicView = 0
+    onOfferMixerChanged: if (!offerMixer && musicView === 3) musicView = 0
     readonly property var visibleTabs: {
         const value = Plasmoid.configuration.tabs || ""
         if (value === "none") return []
         const ids = value.split(",").map(key => tabNames.indexOf(key))
-        return ids.every((id, index) => id >= 0 && ids.indexOf(id) === index) ? ids : [0, 1, 2, 3, 4]
+        const ordered = ids.every((id, index) => id >= 0 && ids.indexOf(id) === index) ? ids : [0, 1, 2, 3, 4]
+        return ordered.filter(id => id !== 4 || tools.offers("notes"))
     }
     readonly property bool hasActivity: visibleTabs.includes(1)
     property int tab: 0
@@ -37,13 +58,14 @@ PlasmoidItem {
     // Wayland destinations can read the URI list after the pointer leaves the popup.
     hideOnWindowDeactivate: !draggingShelf
     property bool viewingShelf: false
-    readonly property bool displayShelf: viewingShelf || (!visibleTabs.length && !showingWatch)
+    readonly property bool displayShelf: offerShelf && (viewingShelf || (!visibleTabs.length && !showingWatch))
     ShelfModel {
         id: fileShelf
         shown: root.expanded && root.displayShelf
         dragging: root.draggingShelf
     }
     function showShelf() {
+        if (!offerShelf) return
         viewingShelf = true
         expanded = true
     }
@@ -86,7 +108,7 @@ PlasmoidItem {
     DBus.DBusServiceWatcher {
         id: watch
         busType: DBus.BusType.Session
-        watchedService: "org.monet.WindowWatch.n" + Plasmoid.id
+        watchedService: root.offerWatch ? "org.monet.WindowWatch.n" + Plasmoid.id : ""
         onRegisteredChanged: {
             root.viewingWatch = registered
             if (registered && root.hasActivity) root.tab = 1
@@ -103,7 +125,7 @@ PlasmoidItem {
     property string claudeKey: ""
     property bool agentsVisible: false
     DBus.SignalWatcher {
-        enabled: root.activityOpen
+        enabled: root.activityOpen && root.offerAgents
         busType: DBus.BusType.Session; service: "org.monet.Utilities"
         path: "/Utilities"; iface: "org.monet.Utilities"
         function dbusCodexLimitsChanged(key) { root.codexKey = key; if (root.checkingDownloads) root.refreshPending = true }
@@ -125,6 +147,7 @@ PlasmoidItem {
     property bool downloadAvailable: false
     readonly property bool activityOpen: expanded && !viewingShelf && tab === 1 && !(viewingWatch && watch.registered)
     function refreshActivity() {
+        if (!activityOpen || !(offerDownloads || offerAgents)) return
         if (checkingDownloads) { refreshPending = true; return }
         checkingDownloads = true
         runner.connectSource(helper + " notch-activity")
@@ -138,7 +161,7 @@ PlasmoidItem {
     }
     Loader {
         id: downloadFeed
-        active: root.activityOpen && root.downloadAvailable
+        active: root.activityOpen && root.offerDownloads && root.downloadAvailable
         sourceComponent: DownloadFeed { directory: root.downloadFolder }
     }
     toolTipMainText: i18n("Monet Notch")
@@ -216,6 +239,7 @@ PlasmoidItem {
     Component.onCompleted: { selectVisibleTab(); refreshTime() }
     onExpandedChanged: {
         if (!root.expanded) { requestedNotice = 0; viewingDownloads = false; viewingShelf = false; return }
+        tools.reload()
         agendaDay = new Date()
         refreshTime()
         if (requestedNotice || viewingShelf) return
@@ -244,13 +268,13 @@ PlasmoidItem {
                 if (!root.activityOpen) return
                 try {
                     const state = JSON.parse(data.stdout)
-                    root.sessionSelected = !!state.sessionSelected
-                    root.agentsVisible = state.agentsVisible !== false
+                    root.sessionSelected = root.offerAgents && !!state.sessionSelected
+                    root.agentsVisible = root.offerAgents && state.agentsVisible !== false
                     root.codexKey = state.codexKey || ""
                     root.claudeKey = state.claudeKey || ""
                     root.downloadPath = state.path
                     root.downloadFolder = state.folder
-                    root.downloadAvailable = state.available && state.folder.startsWith("file:///")
+                    root.downloadAvailable = root.offerDownloads && state.available && state.folder.startsWith("file:///")
                 } catch (_) { root.downloadAvailable = false }
             }
             if (source === root.quietCommand) {
@@ -316,6 +340,7 @@ PlasmoidItem {
         NotchGestureSurface { gestures: notchGestures }
         DropArea {
             id: shelfDrop
+            enabled: root.offerShelf
             anchors.fill: parent
             onEntered: drag => { drag.accepted = fileShelf.accepts(drag) }
             onDropped: drop => {
@@ -330,7 +355,8 @@ PlasmoidItem {
 
     fullRepresentation: ColumnLayout {
         Layout.preferredWidth: Math.min(422, Math.max(250, Screen.width - 32))
-        Layout.preferredHeight: Math.min(370, Math.max(200, Screen.height - 80))
+        Layout.preferredHeight: root.visibleTabs.length || root.displayShelf || root.showingWatch
+            ? Math.min(370, Math.max(200, Screen.height - 80)) : implicitHeight
         spacing: Kirigami.Units.smallSpacing
         NotchTabs {
             visible: !root.viewingShelf && tabs.length > 0
@@ -340,7 +366,8 @@ PlasmoidItem {
         }
         Loader {
             Layout.fillWidth: true; Layout.fillHeight: true
-            active: root.expanded
+            visible: root.visibleTabs.length > 0 || root.displayShelf || root.showingWatch
+            active: root.expanded && visible
             sourceComponent: root.displayShelf ? shelfPage : root.showingWatch ? watchPage
                 : root.tab === 1 && root.viewingDownloads ? downloadsPage
                 : root.tab === 3 && root.viewingAgenda ? agendaPage
@@ -350,7 +377,7 @@ PlasmoidItem {
         RowLayout {
             visible: !root.viewingShelf || !root.visibleTabs.length
             Layout.fillWidth: true
-            C.Button { visible: root.visibleTabs.length > 0; text: i18n("File shelf"); icon.name: "folder-open"; onClicked: root.showShelf() }
+            C.Button { visible: root.offerShelf && root.visibleTabs.length > 0; text: i18n("File shelf"); icon.name: "folder-open"; onClicked: root.showShelf() }
             Item { Layout.fillWidth: true }
             C.Button { text: i18n("Utilities"); icon.name: "applications-utilities"; onClicked: root.openTool("tools") }
         }
@@ -400,6 +427,7 @@ PlasmoidItem {
         Music {
             media: root.media; playing: root.playing; view: root.musicView
             gestures: notchGestures
+            offerDetails: root.offerMediaDetails; offerMixer: root.offerMixer
             onViewRequested: index => root.musicView = index
         }
     }
@@ -414,6 +442,7 @@ PlasmoidItem {
     Component {
         id: downloadsPage
         Downloads {
+            offerShelf: root.offerShelf
             feed: downloadFeed.item
             localPath: root.downloadPath
             directory: root.downloadFolder
@@ -478,9 +507,10 @@ PlasmoidItem {
             }
             RowLayout {
                 visible: !notices.inDetail
-                C.Button { text: i18n("Downloads"); onClicked: root.viewingDownloads = true }
+                C.Button { visible: root.offerDownloads; text: i18n("Downloads"); onClicked: root.viewingDownloads = true }
                 C.Button { visible: root.agentsVisible && !root.codexKey && !root.claudeKey; text: i18n("Agent usage"); onClicked: root.openTool("agents") }
                 C.Button {
+                    visible: root.offerWatch
                     text: i18n("Watch")
                     onClicked: {
                         if (watch.registered) root.viewingWatch = true
@@ -520,6 +550,7 @@ PlasmoidItem {
             }
             C.Button {
                 Layout.alignment: Qt.AlignHCenter
+                visible: root.offerAgenda
                 text: i18n("Upcoming appointments")
                 icon.name: "view-calendar-agenda"
                 onClicked: { root.agendaDay = month.chosen; root.viewingAgenda = true }
