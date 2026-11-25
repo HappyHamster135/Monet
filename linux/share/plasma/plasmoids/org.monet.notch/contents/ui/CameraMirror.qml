@@ -2,20 +2,31 @@ import QtQuick
 import QtQuick.Controls as C
 import QtQuick.Layouts
 import org.kde.ki18n as I18n
-import org.monet.activity 1.0 as Monet
 
 ColumnLayout {
     id: mirror
     objectName: "cameraMirror"
     property bool presented: true
     property bool startOnOpen: false
-    readonly property bool available: presented && session.lockKnown && !session.locked && session.active
-    Monet.Activity {
-        id: session
-        enabled: mirror.presented
-        outputName: mirror.Screen.name
-        onContextChanged: if (lockKnown && locked) mirror.startOnOpen = false
+    property var session: null
+    readonly property bool available: presented && !!session?.lockKnown && !session.locked && session.active
+    Component.onCompleted: {
+        // The Home Bar supplies its existing session observer. A floating mirror
+        // uses the same native monitor when it is installed on this desktop.
+        if (!session) {
+            try {
+                session = Qt.createQmlObject('import org.monet.activity 1.0; Activity {}', mirror)
+                session.enabled = Qt.binding(() => mirror.presented)
+                session.outputName = Qt.binding(() => mirror.Screen.name)
+            } catch (error) {
+                session = portableLock.createObject(mirror)
+            }
+        }
+        if (session.lockKnown && session.locked) startOnOpen = false
     }
+    Component { id: portableLock; CameraLock {} }
+    readonly property bool locked: !!session?.lockKnown && session.locked
+    onLockedChanged: if (locked) startOnOpen = false
     property bool requested: false
     onPresentedChanged: if (!presented) { requested = false; startOnOpen = false }
     onAvailableChanged: {

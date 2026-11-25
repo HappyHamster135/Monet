@@ -8,8 +8,9 @@ import dbus
 import gi
 gi.require_version('Gst', '1.0')
 from gi.repository import Gst, GObject
-from PySide6.QtCore import QEventLoop, QObject, Qt, QTimer
+from PySide6.QtCore import QEventLoop, QObject, Qt, QTimer, QUrl
 from PySide6.QtMultimedia import QMediaDevices
+from PySide6.QtQml import QQmlComponent, QQmlEngine
 from PySide6.QtQuick import QQuickItem
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
@@ -21,11 +22,14 @@ for factory in Gst.DeviceProviderFactory.list_get_device_providers(Gst.Rank.NONE
 
 
 class Pattern(Gst.Device):
+    sources = []
+
     def do_create_element(self, name):
         src = Gst.ElementFactory.make("videotestsrc", name)
         src.set_property("is-live", True)
         src.set_property("pattern", 0 if self.get_display_name() == "Colour bars" else 18)
         # GStreamer's create_element vfunc transfers a floating reference.
+        self.sources.append(src.weak_ref())
         src._force_floating()
         return src
 
@@ -137,6 +141,13 @@ def exercise():
     locker = dbus.Interface(dbus.SessionBus().get_object("org.freedesktop.ScreenSaver", "/ScreenSaver"), "org.monet.Test")
     locker.SetActive(True)
     until(lambda: not root.property("available") and feed() is None, "release on lock")
+    def released():
+        for weak_source in Pattern.sources:
+            source = weak_source()
+            if source and source.get_state(0).state != Gst.State.NULL:
+                return False
+        return True
+    until(released, "camera pipelines returned to NULL after lock")
     locker.SetActive(False)
     until(lambda: root.property("available"), "unlock")
     assert not loader.property("active")
@@ -160,6 +171,24 @@ def exercise():
     print("Verified preview pixels, launcher reuse, selection, hotplug, locking and release.", flush=True)
 
 
+def portable_lock(share):
+    # The standalone desktop package also runs on KDE without the native activity plugin.
+    engine = QQmlEngine()
+    source = share / "plasma/plasmoids/org.monet.notch/contents/ui/CameraLock.qml"
+    component = QQmlComponent(engine, QUrl.fromLocalFile(str(source)))
+    gate = component.create()
+    assert gate, component.errorString()
+    gate.setParent(engine)
+    until(lambda: gate.property("active"), "read the portable desktop lock state")
+    locker = dbus.Interface(dbus.SessionBus().get_object("org.freedesktop.ScreenSaver", "/ScreenSaver"), "org.monet.Test")
+    locker.SetActive(True)
+    until(lambda: gate.property("locked") and not gate.property("active"), "portable desktop locks")
+    locker.SetActive(False)
+    until(lambda: gate.property("active"), "portable desktop unlocks")
+    gate.deleteLater()
+    pump(20)
+
+
 if __name__ == "__main__":
     root_path = Path(__file__).resolve().parents[2]
     share = Path(os.environ.get("MONET_CAMERA_TEST_SHARE", root_path / "linux/share"))
@@ -168,4 +197,5 @@ if __name__ == "__main__":
     app.setQuitOnLastWindowClosed(False)
     inputs = QMediaDevices()
     assert [d.description() for d in inputs.videoInputs()] == ["Colour bars", "Moving ball"]
+    portable_lock(share)
     exercise()

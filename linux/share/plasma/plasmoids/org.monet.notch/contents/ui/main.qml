@@ -427,7 +427,8 @@ PlasmoidItem {
     Component {
         id: cameraPage
         CameraMirror {
-            presented: root.expanded
+            presented: root.expanded && power.active
+            session: power.nativeState
         }
     }
     Component { id: padPage; Scratchpad { pads: padController.item } }
