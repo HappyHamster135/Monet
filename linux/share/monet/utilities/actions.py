@@ -82,6 +82,7 @@ ACTIONS = {
     "fans": Action(N_("Fan speeds and supported controllers"), "System", "preferences-system-power-management"),
     "devices": Action(N_("USB devices and fan sensors"), "System", "computer"),
     "bluetooth": Action(N_("Bluetooth accessories"), "System", "preferences-system-bluetooth", ("@monet-settings", "bluetooth")),
+    "quick-panel": Action(N_("Quick Panel"), "Favorite tools floating launcher grid", "view-grid"),
     "wheel": Action(N_("Favorite actions wheel"), "Desktop", "view-more"),
 }
 DEFAULT_FAVORITES = ["shelf", "notes", "screenshot", "color", "awake", "sound"]

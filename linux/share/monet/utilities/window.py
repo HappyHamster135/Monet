@@ -18,6 +18,8 @@ MODULES = Path(__file__).resolve().parent
 SERVICE = "org.monet.Utilities"
 
 class Window(QMainWindow):
+    panelDismissed = Signal()
+
     def __init__(self, helpers):
         super().__init__()
         self.helpers = Path(helpers)
@@ -26,6 +28,7 @@ class Window(QMainWindow):
         self.pages = {}
         self.notch_previews = {}
         self.floating_pads = set()
+        self.quick_panel = None
         self.pad_store = None
         self.agent_feed = None
         self.running = set()
@@ -131,7 +134,9 @@ class Window(QMainWindow):
         dialog = QDialog(self)
         dialog.setWindowTitle("Customize Utilities")
         layout = QVBoxLayout(dialog)
-        layout.addWidget(QLabel("Choose which tools appear. Star up to eight for the favorites wheel."))
+        hint = QLabel(tr("Choose which tools appear. Favorites open from the Quick Panel, and the first eight also appear in the wheel."))
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
         from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem
         tree = QTreeWidget()
         tree.setHeaderLabels(["Tool", "Show", "Favorite"])
@@ -139,7 +144,8 @@ class Window(QMainWindow):
             item = QTreeWidgetItem(tree, [action.name])
             item.setData(0, Qt.UserRole, key)
             item.setCheckState(1, Qt.Unchecked if key in self.hidden else Qt.Checked)
-            item.setCheckState(2, Qt.Checked if key in self.favorites else Qt.Unchecked)
+            if key != "quick-panel":
+                item.setCheckState(2, Qt.Checked if key in self.favorites else Qt.Unchecked)
         tree.resizeColumnToContents(0)
         layout.addWidget(tree)
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -152,12 +158,10 @@ class Window(QMainWindow):
                     hidden.append(key)
                 elif item.checkState(2) == Qt.Checked:
                     favorites.append(key)
-            if len(favorites) > 8:
-                QMessageBox.information(dialog, "Favorites", "Choose up to eight favorites.")
-                return
             agent_visibility_changed = ("agents" in self.hidden) != ("agents" in hidden)
-            self.hidden, self.favorites = hidden, favorites
-            self.settings.setValue("favorites", json.dumps(favorites))
+            self.hidden = hidden
+            ordered = [key for key in self.favorites if key in favorites]
+            self.save_favorites(ordered + [key for key in favorites if key not in ordered])
             self.settings.setValue("hidden", json.dumps(hidden))
             self.settings.sync()
             if agent_visibility_changed:
@@ -174,6 +178,41 @@ class Window(QMainWindow):
         dialog.resize(560, 420)
         if dialog.exec():
             self.home()
+
+    def save_favorites(self, keys):
+        self.favorites = list(dict.fromkeys(k for k in keys if k in ACTIONS and k != "quick-panel" and k not in self.hidden))
+        self.settings.setValue("favorites", json.dumps(self.favorites))
+        self.settings.sync()
+        self.filter()
+
+    def toggle_panel(self):
+        if self.quick_panel and self.quick_panel.isVisible():
+            self.quick_panel.hide()
+            return
+        self.settings.sync()
+        self.favorites, self.hidden = preferences(self.settings)
+        if "quick-panel" in self.hidden:
+            self.panelDismissed.emit()
+            return
+        modal = QApplication.activeModalWidget()
+        if modal:
+            modal.raise_()
+            modal.activateWindow()
+            return
+        if self.quick_panel is None:
+            from quick_panel import QuickPanel
+            self.quick_panel = QuickPanel()
+            self.quick_panel.dismissed.connect(self.panelDismissed)
+            self.quick_panel.reordered.connect(self.save_favorites)
+            self.quick_panel.chosen.connect(self.open_favorite)
+        self.quick_panel.present(self.favorites, self.hidden)
+
+    def open_favorite(self, key):
+        if key not in self.hidden and key in ACTIONS:
+            if ACTIONS[key].command or key in ("color", "output"):
+                self.run_tool(key)
+            else:
+                self.Open([key])
 
     def wheel(self):
         keys = [k for k in self.favorites if k in ACTIONS and k not in self.hidden and k != "wheel"][:8]
@@ -507,6 +546,8 @@ class Window(QMainWindow):
             self.page(key, Calendars).reload()
         elif key == "downloads":
             self.page(key, lambda: Downloads(self.settings))
+        elif key == "quick-panel":
+            self.toggle_panel()
         elif key == "wheel":
             self.wheel()
         elif key == "media-keys":
@@ -595,6 +636,9 @@ class Window(QMainWindow):
     @Slot("QStringList")
     def Open(self, args):
         key = args[0] if args else "tools"
+        if key == "quick-panel" and len(args) == 1:
+            self.toggle_panel()
+            return
         if key == "floating-pad" and len(args) == 2 and re.fullmatch(r"[a-f0-9]{32}", args[1]):
             self.floating_pad(args[1])
             return
@@ -674,11 +718,16 @@ class Receiver(QObject):
         self.idle.setSingleShot(True)
         self.idle.setInterval(45000)
         self.idle.timeout.connect(self.release_if_unused)
+        window.panelDismissed.connect(self.idle.start)
 
     def release_if_unused(self):
         if self.window.agent_feed and self.window.agent_feed.views:
             return
-        if not any(w.isVisible() for w in QApplication.topLevelWidgets()) and not self.window.running and not self.window.notch_previews:
+        if any(w.isVisible() for w in QApplication.topLevelWidgets()) or self.window.notch_previews:
+            return
+        if self.window.running:
+            self.idle.start()
+        else:
             QApplication.quit()
 
     @Slot(str, str)
@@ -770,6 +819,7 @@ class NotchPads(QDBusVirtualObject):
 
 
 def main(argv, helpers):
+    activation_token = os.environ.get("XDG_ACTIVATION_TOKEN", "")
     app = QApplication(argv[:1])
     app.setApplicationName("Monet Utilities")
     app.setDesktopFileName("monet-utilities")
@@ -779,8 +829,12 @@ def main(argv, helpers):
         if args == ["--pad-service"]:
             return True
         from PySide6.QtDBus import QDBus
-        msg = QDBusMessage.createMethodCall(SERVICE, "/Utilities", SERVICE, "Present")
-        msg.setArguments([json.dumps(args)])
+        if args == ["quick-panel"] and activation_token:
+            msg = QDBusMessage.createMethodCall(SERVICE, "/Utilities", SERVICE, "OpenTool")
+            msg.setArguments(["quick-panel", activation_token])
+        else:
+            msg = QDBusMessage.createMethodCall(SERVICE, "/Utilities", SERVICE, "Present")
+            msg.setArguments([json.dumps(args)])
         return bus.call(msg, QDBus.Block, 3000).type() != QDBusMessage.ErrorMessage
     if bus.isConnected() and bus.interface().isServiceRegistered(SERVICE).value() and forward():
         return 0

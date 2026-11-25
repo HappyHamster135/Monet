@@ -16848,3 +16848,39 @@ msgstr "Premiumbegäranden"
 #: linux/share/monet/utilities/agents.py:26
 msgid "Last event · Session ended"
 msgstr "Senaste händelse · Sessionen avslutades"
+
+#: linux/share/monet/utilities/actions.py:85 linux/share/monet/utilities/quick_panel.py:21
+msgid "Quick Panel"
+msgstr "Snabbpanel"
+
+#: linux/share/monet/utilities/quick_panel.py:32 linux/share/monet/utilities/quick_panel.py:63
+msgid "Favorite tools"
+msgstr "Favoritverktyg"
+
+#: linux/share/monet/utilities/quick_panel.py:47
+msgid "Add a favorite to use it from the Quick Panel."
+msgstr "Lägg till en favorit för att använda den från snabbpanelen."
+
+#: linux/share/monet/utilities/quick_panel.py:51
+msgid "Edit favorites…"
+msgstr "Redigera favoriter…"
+
+#: linux/share/monet/utilities/quick_panel.py:59
+msgid "Drag to reorder. The first eight favorites appear in the wheel."
+msgstr ""
+"Dra för att ändra ordningen. De första åtta favoriterna visas i hjulet."
+
+#: linux/share/monet/utilities/quick_panel.py:82
+msgid "Available tools"
+msgstr "Tillgängliga verktyg"
+
+#: linux/share/monet/utilities/window.py:137
+msgid ""
+"Choose which tools appear. Favorites open from the Quick Panel, and the first eight also appear in the wheel."
+msgstr ""
+"Välj vilka verktyg som visas. Favoriter öppnas från snabbpanelen och de första åtta visas även i hjulet."
+
+#: linux/share/applications/monet-utilities.desktop:23
+msgctxt "an app's name in the menu"
+msgid "Quick Panel"
+msgstr "Snabbpanel"

@@ -9,7 +9,7 @@ Keywords=toolbox;toolkit;notch;
 Keywords[sv]=verktygslåda;verktyg;notch;
 StartupNotify=true
 SingleMainWindow=true
-Actions=Search;Shelf;Scratchpad;Wheel;Microphone;Output;Color;
+Actions=Search;QuickPanel;Shelf;Scratchpad;Wheel;Microphone;Output;Color;
 
 [Desktop Action Search]
 X-KDE-Shortcuts=Meta+Alt+Space
@@ -17,6 +17,13 @@ Name=Find a tool
 Name[sv]=Hitta ett verktyg
 Icon=system-search
 Exec=krunner --runner monet-utilities "tools "
+
+[Desktop Action QuickPanel]
+X-KDE-Shortcuts=Meta+Alt+U
+Name=Quick Panel
+Name[sv]=Snabbpanel
+Icon=view-grid
+Exec=@LIBEXECDIR@/monet-utilities quick-panel
 
 [Desktop Action Shelf]
 Name=File shelf
