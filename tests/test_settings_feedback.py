@@ -1412,7 +1412,9 @@ class LookFeedback(unittest.TestCase):
         self.helper.replies.update({"phones": "[]", "apps-sound": "[]",
             "backup": '{"copying":true,"drives":[]}', "paint-state": '{"state":"painting"}',
             "return-status": '{"items":[],"busy":false,"available":false}'})
-        for page, command in (("sound", "apps-sound"), ("phone", "phones"),
+        # The native volume mixer receives stream events. Microphone discovery is
+        # the sound-page timer shared by the native and fallback mixer paths.
+        for page, command in (("sound", "microphones"), ("phone", "phones"),
                                ("windows", "return-status"), ("light", "paint-state"), ("backups", "backup")):
             with self.subTest(page=page):
                 select_settings_page(self.window, page); QTest.qWait(100)
