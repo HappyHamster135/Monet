@@ -296,8 +296,8 @@ QtObject {
                 color: row.tone.ink
                 font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
                 font.weight: row.strong ? Font.DemiBold : Font.Medium
-                wrapMode: row.stacked ? Text.Wrap : Text.NoWrap
-                elide: row.stacked ? Text.ElideNone : Text.ElideRight
+                wrapMode: row.stacked || row.checkable ? Text.Wrap : Text.NoWrap
+                elide: wrapMode === Text.Wrap ? Text.ElideNone : Text.ElideRight
             }
             Text {
                 horizontalAlignment: Text.AlignLeft
