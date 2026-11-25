@@ -255,7 +255,7 @@ def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None, native_bundle
                                ('PowerMark.qml', 'PowerMark.qml'), ('timer.js', 'timer.js'), ('monet.svg', 'monet.svg')):
             add(DATA / logout / target, (ROOT / 'linux/share/monet/logout' / source).read_bytes())
     add(DATA / shell / 'contents/explorer/MonetWidgetExplorer.qml',
-        (ROOT / 'linux/share/monet/explorer/MonetWidgetExplorer.qml').read_bytes())
+        render(ROOT / 'linux/share/monet/explorer/MonetWidgetExplorer.qml', bindir=BIN))
     for name in ('MonetLockScreen.qml', 'LockScreen.qml'):
         add(DATA / shell / 'contents/lockscreen' / name,
             (ROOT / 'linux/share/monet/lockscreen' / name).read_bytes())

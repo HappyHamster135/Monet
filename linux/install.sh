@@ -735,7 +735,7 @@ TMP
     explorer=/usr/share/plasma/shells/org.kde.plasma.desktop/contents/explorer
     if [ -f "$explorer/WidgetExplorer.qml" ] && [ -f "$explorer/AppletDelegate.qml" ]; then
         [ -f "$explorer/KdeWidgetExplorer.qml" ] || mv "$explorer/WidgetExplorer.qml" "$explorer/KdeWidgetExplorer.qml"
-        install -m 644 "$SRC/share/monet/explorer/MonetWidgetExplorer.qml" "$explorer/MonetWidgetExplorer.qml"
+        put 644 "$SRC/share/monet/explorer/MonetWidgetExplorer.qml" "$explorer/MonetWidgetExplorer.qml"
         install -m 644 "$SRC/share/monet/explorer/WidgetExplorer.qml" "$explorer/WidgetExplorer.qml"
     fi
     # And edit mode, around the shrunken desktop while widgets are added or

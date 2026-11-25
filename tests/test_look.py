@@ -2678,6 +2678,7 @@ class EverydayScreens(unittest.TestCase):
         install = (ROOT / "linux/install.sh").read_text()
         self.assertIn("explorer=/usr/share/plasma/shells/org.kde.plasma.desktop/contents/explorer", install)
         self.assertIn('mv "$explorer/WidgetExplorer.qml" "$explorer/KdeWidgetExplorer.qml"', install)
+        self.assertIn('put 644 "$SRC/share/monet/explorer/MonetWidgetExplorer.qml"', install)
         for name in ("MonetWidgetExplorer.qml", "WidgetExplorer.qml"):
             self.assertIn(f'"$SRC/share/monet/explorer/{name}" "$explorer/{name}"', install)
 
