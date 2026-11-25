@@ -66,6 +66,8 @@ ACTIONS = {
     "rename-shortcut": Action(N_("Rename shortcut in Files"), "Files keyboard shortcut key binding F2 rename selected item file folder", "preferences-desktop-keyboard", ("monet-files", "rename-shortcut")),
     "files": Action(N_("Browse and rename files"), "Files", "system-file-manager", ("dolphin",)),
     "storage": Action(N_("Review storage and unused files"), "Files", "drive-harddisk", ("@monet-settings", "storage")),
+    "appimage": Action(N_("Install AppImage"), "Files downloaded application installer portable app", "system-software-install",
+                      ("@monet-files-tools", "install-appimage")),
     "apps": Action(N_("Manage and uninstall apps"), "Files", "applications-all", ("@monet-games", "--apps")),
     "updates": Action(N_("System updates"), "System", "system-software-update", ("@monet-settings", "updates")),
     "homebrew": Action(N_("Homebrew packages"), "System brew formulae casks install uninstall upgrade updates package manager", "applications-other"),

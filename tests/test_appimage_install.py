@@ -114,6 +114,30 @@ class AppImageInstall(unittest.TestCase):
         self.assertFalse(self.f.can_trash_download(self.q, link))
 
     @unittest.skipUnless(QApplication, "native Qt installer")
+    def test_utilities_picker_cancel_and_appimage_validation(self):
+        from PySide6.QtWidgets import QFileDialog, QMessageBox
+        import sys
+        utilities = str(ROOT / 'linux/share/monet/utilities')
+        with patch.object(sys, 'path', [utilities, *sys.path]):
+            from actions import ACTIONS, find_tools
+            self.assertEqual(find_tools('install appimage', [], [])[0][0], 'appimage')
+            self.assertEqual(ACTIONS['appimage'].command, ('@monet-files-tools', 'install-appimage'))
+        self.path.write_text('#!/bin/sh\n')
+        self.path.chmod(0o700)
+        with patch.object(self.f, 'quick_helper', return_value=self.q), \
+                patch.object(sys, 'argv', ['monet-files-tools', 'install-appimage']), \
+                patch('PySide6.QtWidgets.QApplication'), patch.object(QFileDialog, 'getOpenFileName') as pick, \
+                patch.object(QMessageBox, 'warning') as warning:
+            pick.return_value = '', ''
+            self.assertEqual(self.f.main(), 0)
+            warning.assert_not_called()
+            self.assertEqual(pick.call_args.args[2], str(self.downloads))
+            pick.return_value = str(self.path), ''
+            self.assertEqual(self.f.main(), 1)
+            self.assertIn('AppImage', warning.call_args.args[2])
+        self.assertFalse(self.q.DATA_HOME.exists())
+
+    @unittest.skipUnless(QApplication, "native Qt installer")
     def test_dialog_cancel_and_keyboard_install(self):
         from PySide6.QtCore import Qt
         from PySide6.QtWidgets import QApplication, QCheckBox, QDialog, QLineEdit

@@ -91,7 +91,7 @@ Open **System alerts** in Utilities to choose limits for CPU usage, CPU or batte
 
 Open **Fan speeds and supported controllers** for live fan readings. Speed and target RPM appear when the driver reports them. On a PC with a local CoolerControl service, choose a fan and apply a fixed speed, a saved profile or the hardware default. **New curve…** lets you choose a temperature sensor and drag points or enter exact values. Save the curve, then choose **Apply**. Editing an existing curve updates the fans already using it. If the service requires access, enter a CoolerControl access token. Utilities keeps it in memory for the current session.
 
-In Files, right-click a downloaded AppImage and choose **Add to apps… → Install**. It stays in the application menu when you move or delete the download. To clean up immediately, select **Move original download to Trash after installation**. The installed copy keeps existing portable settings stored beside the download. Use **Settings → Apps** to review and remove it.
+Open **Monet Utilities → Install AppImage** and choose your download, or in Files, right-click a downloaded AppImage and choose **Add to apps… → Install**. It stays in the application menu when you move or delete the download. To clean up immediately, select **Move original download to Trash after installation**. The installed copy keeps existing portable settings stored beside the download. Open **Apps** in the application menu to review and remove it.
 
 ## Coverage of the reference app
 

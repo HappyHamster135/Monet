@@ -19856,3 +19856,7 @@ msgstr ""
 msgid ""
 "Your app is installed. The original download could not be moved to Trash."
 msgstr ""
+
+#: linux/libexec/monet-files-tools:1030
+msgid "AppImage (*.AppImage *.appimage);;All files (*)"
+msgstr ""

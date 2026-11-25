@@ -650,7 +650,7 @@ def make_extract_dialog(path, find_apps=True, background=False):
     return dialog
 
 
-def make_shortcut_dialog(path, name=None, parent=None):
+def make_shortcut_dialog(path, name=None, parent=None, *, appimage_only=False):
     from PySide6.QtCore import Qt, QThread
     from PySide6.QtGui import QIcon
     from PySide6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox, QFormLayout,
@@ -662,6 +662,8 @@ def make_shortcut_dialog(path, name=None, parent=None):
     with open(path, "rb", opener=lambda p, flags: os.open(p, flags | os.O_NONBLOCK)) as stream:
         image = appimage_header(stream.read(11))
     if not image:
+        if appimage_only:
+            raise ValueError(tr("Choose an AppImage file."))
         path = quick.native_executable(path)
 
     class InstallDialog(QDialog):
@@ -975,9 +977,12 @@ def main():
         except (OSError, ValueError, RuntimeError) as error:
             emit(dict(state='failed', error=str(error)[:8192]))
         return 0
-    if len(sys.argv) != 3 or sys.argv[1] not in {"space", "apps", "add", "extract", "unpack", "downloads", "--scan", "--space"}:
+    if sys.argv[1:] == ["install-appimage"]:
+        mode, path = "install-appimage", None
+    elif len(sys.argv) == 3 and sys.argv[1] in {"space", "apps", "add", "extract", "unpack", "downloads", "--scan", "--space"}:
+        mode, path = sys.argv[1:]
+    else:
         return 2
-    mode, path = sys.argv[1:]
     if mode in {"--scan", "--space"}:
         try:
             print(json.dumps(drive_space(path) if mode == "--space" else scan_apps(path), ensure_ascii=False))
@@ -1018,14 +1023,23 @@ def main():
             return 0
         path, mode = dialog.extracted, "apps"
         dialog.deleteLater()
-    if mode == "add":
+    if mode in {"add", "install-appimage"}:
+        if mode == "install-appimage":
+            from PySide6.QtWidgets import QFileDialog
+            path, _ = QFileDialog.getOpenFileName(None, tr("Install AppImage"), str(quick_helper().downloads_dir()),
+                tr("AppImage (*.AppImage *.appimage);;All files (*)"))
+            if not path:
+                return 0
         try:
-            dialog = make_shortcut_dialog(path)
+            dialog = make_shortcut_dialog(path, appimage_only=mode == "install-appimage")
         except (OSError, ValueError) as error:
             from PySide6.QtWidgets import QMessageBox
             QMessageBox.warning(None, tr("Couldn't add application"), str(error))
             return 1
         if dialog.exec():
+            if mode == "install-appimage":
+                quick_helper().run("notify-send", "--app-name=Monet", "--icon=application-x-executable",
+                                   tr("App installed"), dialog.saved_name)
             print(dialog.saved_name)
             return 0
         return 1
