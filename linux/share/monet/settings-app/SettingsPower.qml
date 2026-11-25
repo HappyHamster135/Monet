@@ -7,6 +7,7 @@ import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Templates as T
 import QtQuick.Window
+import org.kde.plasma.workspace.dbus as DBus
 import org.kde.kirigami as Kirigami
 import "../games" as Shared
 import "FocusNavigation.js" as FocusNavigation
@@ -20,6 +21,27 @@ ColumnLayout {
     // (the shortest this offered before, so a time chosen then still shows).
     readonly property var batterySleepTimes: [300, 600, 900, 1800, 3600, 0].map(s => [s, sheet.span(s)])
     spacing: 20
+    DBus.SignalWatcher {
+        enabled: sheet.pollingActive
+        busType: DBus.BusType.Session; service: "org.monet.KeepAwake"
+        path: "/org/monet/KeepAwake"; iface: "org.monet.KeepAwake"
+        function dbusStatusChanged(value) {
+            const state = sheet.json(value, {})
+            if (typeof state.active !== "boolean") return
+            sheet.keepAwakeRevision++
+            sheet.keepAwakeProblem = ""
+            sheet.keepAwakeInfo = state
+            sheet.keepAwakeTick++
+        }
+    }
+    DBus.DBusServiceWatcher {
+        watchedService: "org.monet.KeepAwake"; busType: DBus.BusType.Session
+        onRegisteredChanged: if (!registered && sheet.pollingActive) {
+            const interrupted = sheet.keepAwakeInfo.active || sheet.keepAwakeInfo.pending
+            sheet.keepAwakeRevision++
+            sheet.keepAwakeInfo = {active: false, duration: 0, error: interrupted ? "interrupted" : ""}
+        }
+    }
     SettingsControls.PageTitle {
         tone: look
         entry: sheet.entry("power")

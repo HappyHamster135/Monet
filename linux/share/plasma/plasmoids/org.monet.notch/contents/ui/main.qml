@@ -28,6 +28,16 @@ PlasmoidItem {
     readonly property bool offerShelf: tools.offers("shelf")
     readonly property bool offerDownloads: tools.offers("downloads")
     readonly property bool offerAgents: tools.offers("agents")
+    readonly property bool offerAwake: tools.offers("awake") && visibleTabs.includes(2)
+    property bool viewingAwake: false
+    readonly property bool awakeStrip: !!(Plasmoid.configuration.awake && awakeModel.item?.active
+        && !countdown.active && !watch.registered && (awakeModel.item.state.duration || !playing))
+    onOfferAwakeChanged: if (!offerAwake) viewingAwake = false
+    Loader {
+        id: awakeModel
+        active: root.offerAwake && power.active && (Plasmoid.configuration.awake || root.viewingAwake)
+        source: "NotchAwake.qml"
+    }
     readonly property bool offerWatch: tools.offers("watch")
     onOfferShelfChanged: if (!offerShelf) viewingShelf = false
     onOfferDownloadsChanged: {
@@ -91,13 +101,19 @@ PlasmoidItem {
             viewingWatch = false
             viewingDownloads = false
             tab = 1
+        } else if (!expanded && awakeStrip) {
+            viewingAwake = true
+            tab = 2
         }
         expanded = !expanded
     }
     property bool padsOpened: false
     readonly property bool padShown: expanded && !viewingShelf && !showingWatch && tab === 4
     onPadShownChanged: if (padShown) padsOpened = true
-    onTabChanged: if (tab !== 1) requestedNotice = 0
+    onTabChanged: {
+        if (tab !== 1) requestedNotice = 0
+        if (tab !== 2) viewingAwake = false
+    }
     Loader {
         id: padController
         active: root.padsOpened
@@ -177,7 +193,9 @@ PlasmoidItem {
         }
     }
     toolTipMainText: i18n("Monet Notch")
-    toolTipSubText: preview.item?.title ? [preview.item.sender, preview.item.title].filter(Boolean).join(" · ") : countdown.active ? timerSummary : watch.registered ? i18n("Watching a window") : media?.track || i18n("Music, activity and tools")
+    toolTipSubText: preview.item?.title ? [preview.item.sender, preview.item.title].filter(Boolean).join(" · ")
+        : countdown.active ? timerSummary : watch.registered ? i18n("Watching a window")
+        : awakeStrip ? i18n("Keep awake") + " · " + awakeModel.item.statusText : media?.track || i18n("Music, activity and tools")
     Repeater {
         id: players
         model: Mpris.MultiplexerModel {}
@@ -268,7 +286,7 @@ PlasmoidItem {
     }
     Component.onCompleted: { selectVisibleTab(); refreshTime() }
     onExpandedChanged: {
-        if (!root.expanded) { searching = false; requestedNotice = 0; viewingDownloads = false; viewingShelf = false; return }
+        if (!root.expanded) { viewingAwake = false; searching = false; requestedNotice = 0; viewingDownloads = false; viewingShelf = false; return }
         tools.reload()
         agendaDay = new Date()
         refreshTime()
@@ -354,7 +372,9 @@ PlasmoidItem {
             Kirigami.Icon {
                 visible: !companionLoader.item?.showing
                 Layout.preferredHeight: 17; Layout.preferredWidth: 17
-                source: shelfDrop.containsDrag ? "folder-add" : preview.item?.noticeId ? "notifications" : countdown.paused ? "media-playback-pause" : countdown.active ? "chronometer" : watch.registered ? "view-visible" : root.media ? "audio-x-generic" : "applications-utilities"
+                source: shelfDrop.containsDrag ? "folder-add" : preview.item?.noticeId ? "notifications"
+                    : countdown.paused ? "media-playback-pause" : countdown.active ? "chronometer" : watch.registered ? "view-visible"
+                    : root.awakeStrip ? "system-suspend-inhibited" : root.media ? "audio-x-generic" : "applications-utilities"
                 color: "#9dd9c9"; isMask: true
             }
             Item {
@@ -364,7 +384,8 @@ PlasmoidItem {
             }
             C.Label {
                 Layout.fillWidth: true; color: "#f6f3e9"; textFormat: Text.PlainText; elide: Text.ElideRight
-                text: shelfDrop.containsDrag ? i18n("Shelf") : preview.item?.title || (countdown.active ? root.timerSummary : watch.registered ? i18n("Watching") : root.media?.track || i18n("Tools"))
+                text: shelfDrop.containsDrag ? i18n("Shelf") : preview.item?.title || (countdown.active ? root.timerSummary
+                    : watch.registered ? i18n("Watching") : root.awakeStrip ? awakeModel.item.compactText : root.media?.track || i18n("Tools"))
             }
             Item {
                 id: rightCompanion
@@ -410,7 +431,7 @@ PlasmoidItem {
         readonly property bool canNavigate: root.expanded && !root.searching && !root.draggingShelf
         readonly property bool canGoBack: root.displayShelf ? root.visibleTabs.length > 0
             : root.showingWatch ? root.visibleTabs.length > 0 || root.offerShelf
-            : (root.tab === 0 && root.musicView !== 0) || (root.tab === 1 && root.viewingDownloads)
+            : root.viewingAwake || (root.tab === 0 && root.musicView !== 0) || (root.tab === 1 && root.viewingDownloads)
               || (root.tab === 3 && root.viewingAgenda) || !!body.item?.notificationOpen
 
         function back() {
@@ -420,6 +441,9 @@ PlasmoidItem {
             } else if (root.showingWatch) {
                 root.viewingWatch = false
                 strip.currentItem?.forceActiveFocus(Qt.BacktabFocusReason)
+            } else if (root.viewingAwake) {
+                root.viewingAwake = false
+                Qt.callLater(() => body.item?.focusAwake?.())
             } else if (body.item?.notificationOpen) {
                 body.item.backFromNotification()
             } else {
@@ -557,6 +581,7 @@ PlasmoidItem {
             visible: hasPage && !root.searching
             active: root.expanded && hasPage
             sourceComponent: root.displayShelf ? shelfPage : root.showingWatch ? watchPage
+                : root.tab === 2 && root.viewingAwake && awakeModel.item ? awakePage
                 : root.tab === 1 && root.viewingDownloads ? downloadsPage
                 : root.tab === 3 && root.viewingAgenda ? agendaPage
                 : root.tab === 0 && root.musicView === 3 ? mixerPage
@@ -771,7 +796,19 @@ PlasmoidItem {
     }
     Component {
         id: timerPage
-        TimePage { timer: countdown; now: root.now; message: root.message; formatDuration: root.duration }
+        TimePage {
+            timer: countdown; now: root.now; message: root.message; formatDuration: root.duration
+            offerAwake: root.offerAwake
+            onAwakeRequested: root.viewingAwake = true
+        }
+    }
+    Component {
+        id: awakePage
+        AwakeControls {
+            awake: awakeModel.item
+            onBackRequested: root.fullRepresentationItem.back()
+            Component.onCompleted: focusBack()
+        }
     }
     Component {
         id: agendaPage

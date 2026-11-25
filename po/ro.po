@@ -19254,3 +19254,47 @@ msgstr ""
 #: linux/share/monet/utilities/command_search.py:80
 msgid "Copy result and use it as ans"
 msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:399
+msgid "Show Keep awake in the closed notch"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AwakeControls.qml:29
+msgid "Back to Time"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AwakeControls.qml:54
+msgid "End at…"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AwakeControls.qml:68
+msgid "Hour (24-hour clock)"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AwakeControls.qml:93
+msgid "Choose a time within 24 hours"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AwakeControls.qml:95
+msgid "Until %1 today"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AwakeControls.qml:96
+msgid "Until %1 tomorrow"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AwakeControls.qml:107
+msgid "Stop manual timer"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NotchAwake.qml:15
+msgid "Awake"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NotchAwake.qml:19
+msgid "%1 min remaining"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:29
+msgid "Custom end time"
+msgstr ""

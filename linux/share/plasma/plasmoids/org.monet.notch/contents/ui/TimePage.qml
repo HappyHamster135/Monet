@@ -3,7 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls as C
 import org.kde.kirigami as Kirigami
 
-C.ScrollView {
+TimeScrollView {
     id: page
     required property NotchTimer timer
     required property double now
@@ -11,23 +11,9 @@ C.ScrollView {
     required property var formatDuration
     readonly property QtObject settings: timer.settings
     readonly property double watchStart: Number(settings.watchStart) || 0
-    contentWidth: availableWidth
-    clip: true
-
-    function revealFocus() {
-        const item = page.Window.window?.activeFocusItem
-        let ancestor = item
-        while (ancestor && ancestor !== content) ancestor = ancestor.parent
-        if (!ancestor) return
-        const view = page.contentItem
-        const bounds = item.mapToItem(view, 0, 0, item.width, item.height)
-        const delta = bounds.y < 0 ? bounds.y : Math.max(0, bounds.y + bounds.height - view.height)
-        view.contentY = Math.max(0, Math.min(view.contentHeight - view.height, view.contentY + delta))
-    }
-    Connections {
-        target: page.Window.window
-        function onActiveFocusItemChanged() { Qt.callLater(page.revealFocus) }
-    }
+    property bool offerAwake: false
+    signal awakeRequested()
+    function focusAwake() { awakeButton.forceActiveFocus(Qt.BacktabFocusReason) }
 
     component MinutesBox: C.SpinBox {
         from: 1
@@ -123,6 +109,14 @@ C.ScrollView {
                 Accessible.name: i18n("Sessions per long break")
                 onValueModified: page.settings.longBreakEvery = value
             }
+        }
+        C.Button {
+            id: awakeButton
+            Layout.alignment: Qt.AlignHCenter
+            visible: page.offerAwake
+            text: i18n("Keep awake")
+            icon.name: "system-suspend-inhibited"
+            onClicked: page.awakeRequested()
         }
         Kirigami.Separator { Layout.fillWidth: true }
         RowLayout {

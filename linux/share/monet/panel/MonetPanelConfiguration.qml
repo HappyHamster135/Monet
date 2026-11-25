@@ -396,6 +396,7 @@ Item {
                         model: [{key:"gestures", label:i18nd("monet", "Scroll to open the notch or skip tracks")},
                                 {key:"levels", label:i18nd("monet", "Show music level")},
                                 {key:"previews", label:i18nd("monet", "Preview notifications in the notch")},
+                                {key:"awake", label:i18nd("monet", "Show Keep awake in the closed notch")},
                                 {key:"alerts", label:i18nd("monet", "Low accessory battery alerts")},
                                 {key:"companion", label:i18nd("monet", "Show notch companion")}]
                         C.CheckBox {

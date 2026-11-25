@@ -15,6 +15,7 @@
         <entry name="companionVisits" type="String"><default>normal</default></entry>
         <entry name="companionReactions" type="String"><default>on</default></entry>
         <entry name="companionRest" type="String"><default>show</default></entry>
+        <entry name="awake" type="Bool"><default>true</default></entry>
         <entry name="alerts" type="Bool"><default>true</default></entry>
         <entry name="warnedDevices" type="String"><default>{}</default></entry>
         <entry name="deadline" type="String"><default></default></entry>

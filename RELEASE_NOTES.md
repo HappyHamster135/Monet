@@ -4,6 +4,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 ### New in 0.9.8-9: Startup and Settings polish (in development)
 
+- **Keep awake from the notch.** Under Time, choose a duration or a local end time today or tomorrow. Click the remaining minutes in the closed notch to change or stop the session. Settings and Utilities follow the same timer.
 - **Calculate with measurements.** The desktop and notch Command Bars handle rates, mixed units and area. Enter copies the result, and `ans` reuses it in your next calculation.
 - **Keep awake through a dock reconnect.** In Utilities → Keep awake, choose how long to wait for the charger to return. Automatic rules can now require all selected conditions, such as power and an external display.
 - **Search inside the notch.** Click the search button or press Ctrl+K in the open notch. Search apps, files and commands, or press Escape to return to your previous tab. Ctrl+Tab and Ctrl+Shift+Tab cycle through your chosen tabs. Escape backs out of a detail page before closing the notch.

@@ -12,7 +12,7 @@
     var removedWidget = 0;
     var defaultTabs = ["music", "activity", "time", "calendar", "notes"];
     var names = defaultTabs.concat("camera", "clipboard");
-    var defaults = {levels:false, companion:false, alerts:true, previews:false, gestures:true};
+    var defaults = {levels:false, companion:false, alerts:true, previews:false, gestures:true, awake:true};
     var companionFields = {style:["soft","robot"], shape:["round","egg","square","pill"],
         color:["mint","pearl","lemon","peach","rose","lilac","sky"], side:["left","right"],
         visits:["normal","rare","frequent","off"], reactions:["on","off"], rest:["show","hide"]};
@@ -52,7 +52,7 @@
         if (host) host.currentConfigGroup = ["MonetNotchPreferences"];
         return host;
     }
-    var setting = /^(levels|companion|alerts|previews|gestures)-(on|off)$/.exec(choice || "");
+    var setting = /^(levels|companion|alerts|previews|gestures|awake)-(on|off)$/.exec(choice || "");
     var tab = /^tab-(music|activity|time|calendar|notes|camera|clipboard)-(show|hide|earlier|later)$/.exec(choice || "");
     var companion = /^companion-([a-z]+)-([a-z]+)$/.exec(choice || "");
     if (companion && (!Object.prototype.hasOwnProperty.call(companionFields, companion[1]) ||

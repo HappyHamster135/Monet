@@ -368,12 +368,6 @@ Shared.MonetWindow {
             && sheet.keepAwakeInfo.duration > 0
         onTriggered: sheet.keepAwakeTick++
     }
-    Timer {
-        interval: 10000
-        repeat: true
-        running: sheet.pollingActive && sheet.page === "power"
-        onTriggered: sheet.loadKeepAwake()
-    }
     // This PC's own Wi-Fi network for phones and tablets.
     property var hotspot: ({ on: false, possible: false })
     // Ready when you come back: after Windows, the desktop starts behind the lock screen.
@@ -1730,10 +1724,11 @@ Shared.MonetWindow {
         if (keepAwakeBusy || ![-1, 0, 1800, 3600].includes(seconds)) return
         keepAwakeBusy = true
         keepAwakeProblem = ""
-        keepAwakeRevision++
+        const revision = ++keepAwakeRevision
         const mode = seconds === -1 ? "on" : seconds === 0 ? "off" : seconds === 1800 ? "30" : "60"
         ask("keep-awake " + mode, (out, code) => {
             sheet.keepAwakeBusy = false
+            if (revision !== sheet.keepAwakeRevision) return
             const result = sheet.json(out, {})
             if (result.state && typeof result.state.active === "boolean") sheet.keepAwakeInfo = result.state
             sheet.keepAwakeTick++

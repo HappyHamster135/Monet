@@ -26,6 +26,7 @@ class AwakePage(QWidget):
         layout = QVBoxLayout(self)
         self.timer = QComboBox()
         self.timer.setAccessibleName(tr('Manual timer'))
+        self.timer.setPlaceholderText(tr('Custom end time'))
         for title, mode in [(tr('Off'), 'off'), (tr('30 minutes'), '30'),
                             (tr('1 hour'), '60'), (tr('Until turned off'), 'on')]:
             self.timer.addItem(title, mode)
@@ -140,7 +141,7 @@ class AwakePage(QWidget):
         self.revision += 1
         state = json.loads(text)
         seconds = state.get('duration', 0)
-        self.timer.setCurrentIndex(self.timer.findData({1800:'30', 3600:'60', -1:'on'}.get(seconds, 'off')))
+        self.timer.setCurrentIndex(self.timer.findData({0:'off', 1800:'30', 3600:'60', -1:'on'}.get(seconds)))
         matches = state.get('reasons', [])
         labels = {'power': tr('power connected'), 'external': tr('external display')}
         reasons = [labels.get(key) or self.app_name(key) for key in matches if key != 'power-delay']
@@ -160,9 +161,11 @@ class AwakePage(QWidget):
 
     def set_timer(self, index):
         self.timer.setEnabled(False)
+        revision = self.revision
         def done(out):
             self.timer.setEnabled(True)
-            self.receive(json.dumps(json.loads(out)['state']))
+            if revision == self.revision:
+                self.receive(json.dumps(json.loads(out)['state']))
         def failed(message):
             self.timer.setEnabled(True)
             self.refresh()
