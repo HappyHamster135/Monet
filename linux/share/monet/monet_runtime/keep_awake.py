@@ -245,7 +245,10 @@ def main():
             os.timerfd_settime(deadline_fd, flags=os.TFD_TIMER_ABSTIME, initial=deadline)
         if deadline:
             if deadline_fd is None:
-                timer = GLib.timeout_add_seconds(1, tick)
+                # A whole-second GLib timer may coalesce two nearby deadlines.
+                # Still recheck boottime after a resume on older Python versions.
+                remaining_ms = math.ceil((deadline - controller.clock()) * 1000)
+                timer = GLib.timeout_add(max(1, min(1000, remaining_ms)), tick)
             else:
                 timer = GLib.io_add_watch(deadline_fd, GLib.PRIORITY_DEFAULT, GLib.IO_IN, tick)
 
