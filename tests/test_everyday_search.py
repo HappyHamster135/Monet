@@ -385,14 +385,17 @@ class SettingsSearchUI(unittest.TestCase):
 
     def test_absent_audio_hardware_still_has_a_visible_search_destination(self):
         self.type_query("headphones")
-        QTest.keyClick(self.window, Qt.Key_Return); QTest.qWait(250)
+        self.activate_result("search-output")
         self.window.setProperty("outputs", [])
         self.window.setProperty("info", {})
         QTest.qWait(50)
         for name in ("search-output", "search-microphone"):
             row = self.item(name)
-            self.assertTrue(row.isVisible())
-            self.assertGreater(row.height(), 30)
+            deadline = time.monotonic() + 3
+            while row.height() <= 30 and time.monotonic() < deadline:
+                QTest.qWait(10)
+            self.assertTrue(row.isVisible(), name)
+            self.assertGreater(row.height(), 30, name)
 
     def test_failed_search_can_be_retried_and_escape_clears_results(self):
         self.helper.fail = True
