@@ -178,6 +178,29 @@ class SettingsNavigation(unittest.TestCase):
         self.assertEqual(first.property("current"), "custom")
         self.assertIn(["helper", "window-focus", "policy", "click"], self.helper.commands)
 
+    def test_window_focus_link_waits_for_device_rows_before_scrolling(self):
+        from PySide6.QtQuick import QQuickItem
+        self.helper.held_commands.add("input")
+        self.open("input#window-focus")
+        self.wait_for(lambda: self.helper.pending_commands)
+        QTest.qWait(1050)
+        self.assertEqual(self.window.property("pendingAnchor"), "window-focus")
+        devices = dict(mouse=dict(speed=40, natural=False, left=False), touchpad=dict(speed=50, tap=True, typing=True),
+                       touchpads=[dict(name="Built-in touchpad", id="a" * 64, tap=True, fingers=3)],
+                       windowFocus=dict(policy="ClickToFocus", first="pass", delay=300))
+        self.helper.replies["input"] = json.dumps(devices)
+        self.helper.held_commands.remove("input")
+        self.helper.done.emit(self.helper.pending_commands.pop(), json.dumps(devices), 0, "")
+        self.wait_for(lambda: not self.window.property("pendingAnchor"))
+        scroller = self.window.findChild(QQuickItem, "settingsScroller")
+        heading = self.window.findChild(QQuickItem, "search-window-focus").mapToItem(scroller, QPointF(0, 0))
+        control = self.window.findChild(QQuickItem, "windowFirstClick").mapToItem(scroller, QPointF(0, 0))
+        self.assertLessEqual(0, heading.y())
+        self.assertLess(heading.y(), 65)
+        self.assertLess(control.y(), scroller.height())
+        first = self.window.findChild(QQuickItem, "windowFirstClick")
+        self.assertLessEqual(first.mapToItem(scroller, QPointF(first.width(), 0)).x(), scroller.width() - 32)
+
     def test_visible_touchpad_list_follows_native_hotplug_signals(self):
         from PySide6.QtDBus import QDBusConnection, QDBusMessage
 

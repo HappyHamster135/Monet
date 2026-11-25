@@ -128,6 +128,8 @@ Shared.MonetWindow {
         repeat: true
         running: sheet.pageReady && sheet.pendingAnchor !== "" && sheet.anchorAttempts < 20
             && !(sheet.page === "apps" && sheet.loadingDefaults)
+            // The device list changes the position of every input section below it.
+            && !(sheet.page === "input" && (!sheet.inputLoaded || sheet.inputReading))
         onTriggered: { sheet.anchorAttempts++; sheet.revealSearchTarget() }
     }
 
@@ -397,6 +399,7 @@ Shared.MonetWindow {
     onBatteryPowerZoneChanged: Qt.callLater(() => { if (pollingActive && page === "power") powerStateRefresh.restart() })
     Timer { id: powerStateRefresh; interval: 150; onTriggered: if (sheet.pollingActive && sheet.page === "power" && !sheet.powerBusy) sheet.reloadPower() }
     property var inputInfo: ({})
+    property bool inputLoaded: false
     property bool inputReading: false
     property bool inputReadAgain: false
     property int inputRevision: 0
@@ -1804,7 +1807,10 @@ Shared.MonetWindow {
         const revision = inputRevision
         ask("input", out => {
             sheet.inputReading = false
-            if (revision === sheet.inputRevision) sheet.inputInfo = sheet.json(out, sheet.inputInfo)
+            if (revision === sheet.inputRevision) {
+                sheet.inputInfo = sheet.json(out, sheet.inputInfo)
+                sheet.inputLoaded = true
+            }
             if (sheet.inputReadAgain) sheet.loadInputDevices()
         })
     }

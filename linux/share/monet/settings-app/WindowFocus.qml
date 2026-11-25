@@ -10,6 +10,8 @@ ColumnLayout {
     readonly property string policy: settings.policy || ""
     readonly property bool hovering: ["FocusFollowsMouse", "FocusUnderMouse", "FocusStrictlyUnderMouse"].includes(policy)
     Layout.fillWidth: true
+    Layout.minimumWidth: 0
+    Layout.maximumWidth: parent.width
     spacing: 12
 
     SettingsControls.Caption {
@@ -40,7 +42,6 @@ ColumnLayout {
             title: i18n("Hover delay")
             detail: i18n("How long the pointer rests on a window before it gets focus.")
             C.ComboBox {
-                id: delayPicker
                 objectName: "windowFocusDelay"
                 enabled: !panel.host.focusChanging
                 Accessible.name: i18n("Hover delay")
