@@ -17293,3 +17293,31 @@ msgstr ""
 msgid ""
 "focus follows mouse; focus follows pointer; click to focus; hover delay; first click; inactive window"
 msgstr ""
+
+#: linux/share/monet/utilities/screen_colors.py:40
+msgid "HEX without #"
+msgstr ""
+
+#: linux/share/monet/utilities/screen_colors.py:44 linux/share/monet/utilities/screen_colors.py:45
+msgid "Copy colors as"
+msgstr ""
+
+#: linux/share/monet/utilities/screen_colors.py:54
+msgid "Sampled color"
+msgstr ""
+
+#: linux/share/monet/utilities/screen_colors.py:101
+msgid "Couldn’t read that screen color."
+msgstr ""
+
+#: linux/share/monet/utilities/screen_colors.py:109
+msgid "Screen color picking is unavailable."
+msgstr ""
+
+#: linux/share/monet/utilities/screen_colors.py:122
+msgid "Copied %1"
+msgstr ""
+
+#: linux/share/monet/utilities/screen_colors.py:132
+msgid "Couldn’t copy the color."
+msgstr ""

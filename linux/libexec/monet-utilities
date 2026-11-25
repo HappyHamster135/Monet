@@ -9,7 +9,7 @@ if not modules.is_absolute():
     modules = Path(__file__).resolve().parents[1] / "share/monet/utilities"
 sys.path.insert(0, str(modules))
 
-def activate_panel(key):
+def activate_tool(key):
     """Forward a shortcut to a running receiver without starting a second Qt GUI."""
     try:
         import dbus
@@ -35,8 +35,8 @@ if __name__ == "__main__":
         if len(sys.argv) == 4 and sys.argv[2].isdecimal() and sys.argv[3] in ("commit", "edit"):
             sys.exit(main(int(sys.argv[2]), sys.argv[3]))
         sys.exit(2)
-    if sys.argv[1:] in (["quick-panel"], ["wheel"]):
-        status = activate_panel(sys.argv[1])
+    if sys.argv[1:] in (["quick-panel"], ["wheel"], ["color"]):
+        status = activate_tool(sys.argv[1])
         if status is not None:
             sys.exit(status)
     from window import main

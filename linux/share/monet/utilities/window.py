@@ -245,7 +245,7 @@ class Window(QMainWindow):
 
     def open_favorite(self, key):
         if key not in self.hidden and key in ACTIONS:
-            if ACTIONS[key].command or key in ("color", "output"):
+            if ACTIONS[key].command or key == "output":
                 self.run_tool(key)
             else:
                 self.Open([key])
@@ -590,6 +590,10 @@ class Window(QMainWindow):
         page.openPad.connect(self.floating_pad)
         return page
 
+    def pick_color(self, from_catalog=False):
+        from screen_colors import ScreenColors
+        self.ensure_page("color", lambda: ScreenColors(self)).pick(from_catalog)
+
     def camera_closed(self):
         self.mirror = None
         self.panelDismissed.emit()
@@ -681,16 +685,7 @@ class Window(QMainWindow):
         elif key == "output":
             self.cycle_output()
         elif key == "color":
-            def color(out):
-                value = re.search(r"uint32 (\d+)", out)
-                if value:
-                    glyph = "#{:06X}".format(int(value[1]) & 0xffffff)
-                    QApplication.clipboard().setText(glyph)
-                    self.issue("Copied " + glyph)
-                else:
-                    self.issue("No color selected.")
-            self.worker(["gdbus", "call", "--session", "--timeout", "120", "--dest", "org.kde.KWin", "--object-path",
-                         "/ColorPicker", "--method", "org.kde.kwin.ColorPicker.pick"], color)
+            self.pick_color(from_catalog=True)
         elif key == "wallpaper":
             path, _ = QFileDialog.getOpenFileName(self, "Choose wallpaper", "", "Images (*.jpg *.jpeg *.png *.webp *.avif)")
             if path:
@@ -729,6 +724,12 @@ class Window(QMainWindow):
         self.favorites, self.hidden = preferences(self.settings)
         if ("notes" if key == "floating-pad" else key) in self.hidden:
             self.panelDismissed.emit()
+            return
+        if key == "color":
+            if len(args) == 1:
+                self.pick_color()
+            else:
+                self.panelDismissed.emit()
             return
         if key == "camera" and len(args) == 1:
             self.run_tool(key)
@@ -814,6 +815,8 @@ class Window(QMainWindow):
             self.mirror.close()
         for preview in list(self.notch_previews.values()):
             preview.close()
+        if "color" in self.pages:
+            self.pages["color"].closing = True
         for job in list(self.running):
             job.kill()
             job.waitForFinished(1000)
@@ -838,7 +841,8 @@ class Receiver(QObject):
         editor = self.window.pages.get("recordings")
         if editor and (editor.recorder or editor.exporter):
             return
-        if self.window.running:
+        colors = self.window.pages.get("color")
+        if self.window.running or (colors and colors.busy):
             self.idle.start()
         else:
             QApplication.quit()
@@ -984,7 +988,7 @@ def main(argv, helpers):
     if bus.isConnected() and bus.interface().isServiceRegistered(SERVICE).value() and forward():
         return 0
     window = Window(helpers if Path(helpers).is_absolute() else "/usr/libexec",
-                    defer_catalog=args in (["wheel"], ["quick-panel"], ["--pad-service"]))
+                    defer_catalog=args in (["wheel"], ["quick-panel"], ["color"], ["--pad-service"]))
     receiver = Receiver(window)
     if bus.isConnected():
         if not bus.registerObject("/Utilities", SERVICE, receiver, QDBusConnection.ExportAllSlots):
