@@ -7,11 +7,12 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'linux/share/monet'))
-from monet_runtime.keep_awake import Controller, DesktopBackend
+from monet_runtime import awake_session
+from monet_runtime.keep_awake import Controller, DesktopBackend, timer_session
 from tests.test_look import quick_helper
 
 
@@ -60,6 +61,59 @@ class KeepAwake(unittest.TestCase):
             self.assertEqual(backend.held, 1)
         c.stop()
 
+    def test_record_is_private_atomic_and_bound_to_the_login_and_deadline(self):
+        scope = ['test-bus', 'first-login']
+        with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ, XDG_RUNTIME_DIR=folder):
+            path = awake_session.timer_path()
+            awake_session.save_timer(scope, 60, 150.)
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(awake_session.saved_timer(scope, 109.9), (60, 150.))
+            with patch('os.replace', side_effect=OSError('no space')), self.assertRaises(OSError):
+                awake_session.save_timer(scope, -1, 0.)
+            self.assertEqual(list(path.parent.iterdir()), [path])
+            self.assertEqual(awake_session.saved_timer(scope, 110.), (60, 150.))
+            self.assertIsNone(awake_session.saved_timer(scope, 150.))
+            self.assertFalse(path.exists())
+            for contents in ('{', '[]', 'x' * 3000,
+                             json.dumps(dict(session=scope, duration=True, end=130)),
+                             json.dumps(dict(session=scope, duration=-1, end=5.)),
+                             json.dumps(dict(session=scope, duration=86401, end=200)),
+                             json.dumps(dict(session=scope, duration=5, end=1000))):
+                path.write_text(contents)
+                self.assertIsNone(awake_session.saved_timer(scope, 120.))
+                self.assertFalse(path.exists())
+            for other in (['new-bus', 'first-login'], ['test-bus', 'second-login']):
+                awake_session.save_timer(scope, -1, 0.)
+                self.assertIsNone(awake_session.saved_timer(other, 100.))
+                self.assertFalse(path.exists())
+
+    def test_an_unidentified_desktop_cannot_reuse_a_previous_workers_hold(self):
+        backend = Mock()
+        backend.connection.get_guid.return_value = 'shared-bus'
+        backend.connection.get_unique_name.side_effect = [':1.1', ':1.2']
+        backend.owner.side_effect = RuntimeError('no compositor')
+        with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ, XDG_RUNTIME_DIR=folder,
+                                                                  XDG_SESSION_ID='', RUNTIME_DIRECTORY=''):
+            self.assertNotEqual(timer_session(backend), timer_session(backend))
+            with patch.dict(os.environ, XDG_SESSION_ID='9'):
+                self.assertEqual(timer_session(backend), ['shared-bus', 'login:9'])
+            with patch.dict(os.environ, RUNTIME_DIRECTORY=str(awake_session.timer_path().parent)):
+                self.assertEqual(timer_session(backend), ['shared-bus', 'managed'])
+
+    def test_write_failure_preserves_the_last_choice_and_expiry_still_releases(self):
+        now = [40.]
+        backend = Backend()
+        c = Controller(backend, lambda: now[0])
+        c.set_duration(2)
+        def fail(*_):
+            raise OSError('storage unavailable')
+        c.remember = fail
+        self.assertFalse(c.set_duration(-1)['ok'])
+        self.assertEqual(c.end, 42.)
+        now[0] = 43.
+        self.assertTrue(c.expired())
+        self.assertEqual(backend.held, 0)
+
     def test_partial_acquire_rolls_back_against_the_exact_unique_owner(self):
         backend = DesktopBackend(None, None, None)
         with patch.object(backend, 'owner', return_value=':1.44'), \
@@ -87,7 +141,12 @@ class KeepAwake(unittest.TestCase):
             marker.write_text('{"owner":":1.42"}')
             bus.return_value = None
             self.assertEqual(q.keep_awake_status()['error'], 'interrupted')
+            awake_session.save_timer(['test-bus', 'login'], -1, 0.)
+            self.assertFalse(q.set_keep_awake('off')['ok'])
+            self.assertTrue(awake_session.timer_path().exists())
+            bus.return_value = [False]
             self.assertTrue(q.set_keep_awake('off')['ok']); self.assertFalse(marker.exists())
+            self.assertFalse(awake_session.timer_path().exists())
             write.assert_not_called()
 
 
@@ -96,7 +155,7 @@ class NativeKeepAwake(unittest.TestCase):
     def test_native_owned_inhibitions_expiry_backend_restart_and_crash(self):
         from tools.test import private_session
         with private_session() as env:
-            env['MONET_KEEP_AWAKE_PRIVATE_BUS'] = '1'
+            env.update(MONET_KEEP_AWAKE_PRIVATE_BUS='1', XDG_SESSION_ID='test-keep-awake')
             result = subprocess.run([sys.executable, str(ROOT/'tests/fixtures/keep-awake-native.py'), 'exercise'],
                                     env=env, capture_output=True, text=True, timeout=45)
             self.assertEqual(result.returncode, 0, result.stdout+result.stderr)

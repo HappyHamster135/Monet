@@ -21,8 +21,8 @@ class AwakePage(QWidget):
         self.bus = QDBusConnection.sessionBus()
         self.subscription = ('org.monet.KeepAwake', '/org/monet/KeepAwake',
                              'org.monet.KeepAwake', 'StatusChanged', self, SLOT('receive(QString)'))
-        self.watcher = QDBusServiceWatcher('org.monet.KeepAwake', self.bus, QDBusServiceWatcher.WatchForUnregistration, self)
-        self.watcher.serviceUnregistered.connect(lambda _: self.refresh() if self.isVisible() else None)
+        self.watcher = QDBusServiceWatcher('org.monet.KeepAwake', self.bus, QDBusServiceWatcher.WatchForOwnerChange, self)
+        self.watcher.serviceOwnerChanged.connect(lambda *_: self.refresh() if self.isVisible() else None)
         layout = QVBoxLayout(self)
         self.timer = QComboBox()
         self.timer.setAccessibleName(tr('Manual timer'))

@@ -18,7 +18,7 @@ NATIVE = (all(importlib.util.find_spec(name) for name in ("PySide6", "gi", "dbus
 class NotchAwake(unittest.TestCase):
     def test_shared_timer_and_local_end_times(self):
         with private_session() as env:
-            env.update(MONET_KEEP_AWAKE_PRIVATE_BUS="1", TZ="Europe/Stockholm")
+            env.update(MONET_KEEP_AWAKE_PRIVATE_BUS="1", TZ="Europe/Stockholm", XDG_SESSION_ID="test-notch-awake")
             child = subprocess.run([sys.executable, "-m", "tests.test_notch_awake", "--fixture"],
                                    cwd=ROOT, env=env, text=True, capture_output=True, timeout=30)
         self.assertEqual(child.returncode, 0, child.stdout + child.stderr)
@@ -82,6 +82,16 @@ Item {
         assert not bus.name_has_owner(name)
         one.setDuration(1800)
         wait(lambda: one.property("active") and state().get("duration") == 1800)
+        assert two.property("compactText") == "30 min"
+        deadline = state()["end"]
+        # The fixture owns an isolated bus. Re-activate its killed worker
+        # without a new SetDuration and check both existing notch observers.
+        import signal
+        pid = manager.GetConnectionUnixProcessID(name)
+        os.kill(pid, signal.SIGKILL)
+        wait(lambda: not bus.name_has_owner(name) and not two.property("active"))
+        manager.StartServiceByName(name, 0)
+        wait(lambda: one.property("active") and state().get("end") == deadline)
         assert two.property("compactText") == "30 min"
         two.setDuration(-1)
         wait(lambda: one.property("statusText") == "Until turned off or you sign out")

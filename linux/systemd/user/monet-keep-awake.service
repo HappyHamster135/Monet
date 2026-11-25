@@ -9,6 +9,13 @@ BusName=org.monet.KeepAwake
 ExecStart=@LIBEXECDIR@/monet-keep-awake
 Slice=background.slice
 TimeoutStopSec=5
+RuntimeDirectory=monet-keep-awake
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=restart
+Restart=on-failure
+RestartSec=1s
+RestartSteps=5
+RestartMaxDelaySec=30s
 
 [Install]
 WantedBy=graphical-session.target

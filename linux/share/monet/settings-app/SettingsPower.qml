@@ -36,7 +36,9 @@ ColumnLayout {
     }
     DBus.DBusServiceWatcher {
         watchedService: "org.monet.KeepAwake"; busType: DBus.BusType.Session
-        onRegisteredChanged: if (!registered && sheet.pollingActive) {
+        onRegisteredChanged: {
+            if (!sheet.pollingActive) return
+            if (registered) { sheet.loadKeepAwake(); return }
             const interrupted = sheet.keepAwakeInfo.active || sheet.keepAwakeInfo.pending
             sheet.keepAwakeRevision++
             sheet.keepAwakeInfo = {active: false, duration: 0, error: interrupted ? "interrupted" : ""}

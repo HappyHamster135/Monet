@@ -2,13 +2,12 @@
 import json
 import math
 import os
-from pathlib import Path
 import signal
-import tempfile
 import time
 
 from .awake_apps import SYSTEMD
 from .awake_rules import KWIN, RuleMonitor
+from . import awake_session
 
 NAME = 'org.monet.KeepAwake'
 PATH = '/org/monet/KeepAwake'
@@ -30,13 +29,10 @@ def boottime():
     return time.clock_gettime(time.CLOCK_BOOTTIME) if hasattr(time, 'CLOCK_BOOTTIME') else time.monotonic()
 
 
-def marker_path():
-    return Path(os.environ.get('XDG_RUNTIME_DIR', '/run/user/' + str(os.getuid()))) / 'monet/keep-awake.json'
-
-
 class Controller:
-    def __init__(self, backend, clock=boottime):
+    def __init__(self, backend, clock=boottime, remember=None):
         self.backend, self.clock = backend, clock
+        self.remember = remember
         self.duration, self.end, self.cookies, self.error = 0, 0., None, ''
         self.changed = lambda: None
         self.reasons = []
@@ -53,10 +49,19 @@ class Controller:
     def set_duration(self, seconds):
         if type(seconds) is not int or seconds not in (-1, 0) and not 1 <= seconds <= 86400:
             return dict(ok=False, state=self.status(), error='request')
-        self.duration, self.end = seconds, self.clock()+seconds if seconds > 0 else 0.
+        end = self.clock() + seconds if seconds > 0 else 0.
+        if self.remember:
+            try:
+                self.remember(seconds, end)
+            except OSError:
+                return dict(ok=False, state=self.status(), error='timer-storage')
+        self.apply_manual(seconds, end)
+        return dict(ok=not self.error, state=self.status(), error=self.error)
+
+    def apply_manual(self, duration, end):
+        self.duration, self.end = duration, end
         self.acquire()
         self.changed()
-        return dict(ok=not self.error, state=self.status(), error=self.error)
 
     def set_rules(self, reasons, display):
         if reasons == self.reasons and display == self.rule_display and not self.error:
@@ -93,7 +98,13 @@ class Controller:
 
     def expired(self):
         if self.duration > 0 and self.clock() >= self.end:
-            self.set_duration(0)
+            # Release on time even when the expired record cannot be deleted.
+            if self.remember:
+                try:
+                    self.remember(0, 0.)
+                except OSError:
+                    pass
+            self.apply_manual(0, 0.)
             return True
         return False
 
@@ -151,6 +162,23 @@ class DesktopBackend:
                 pass  # Owner death itself releases the connection-owned inhibition.
 
 
+def timer_session(backend):
+    # The unit removes its private directory on sign-out or an explicit stop.
+    # A fallback worker on a lingering per-user bus needs a desktop identity.
+    if str(awake_session.timer_path().parent) in os.environ.get('RUNTIME_DIRECTORY', '').split(':'):
+        scope = 'managed'
+    elif os.environ.get('XDG_SESSION_ID'):
+        scope = 'login:' + os.environ['XDG_SESSION_ID']
+    else:
+        try:
+            scope = 'compositor:' + backend.owner(KWIN)
+        except RuntimeError:
+            # Without a desktop identity, a later worker cannot prove this is
+            # the same login. A manual timer still works for this process.
+            scope = 'worker:' + backend.connection.get_unique_name()
+    return [backend.connection.get_guid(), scope]
+
+
 def main():
     import gi
     gi.require_version('Gio', '2.0')
@@ -158,7 +186,8 @@ def main():
     connection = Gio.bus_get_sync(Gio.BusType.SESSION, None)
     backend = DesktopBackend(connection, Gio, GLib)
     loop = GLib.MainLoop()
-    controller = Controller(backend)
+    session = timer_session(backend)
+    controller = Controller(backend, remember=lambda duration, end: awake_session.save_timer(session, duration, end))
 
     def publish():
         connection.emit_signal(None, PATH, NAME, 'StatusChanged',
@@ -262,18 +291,20 @@ def main():
         GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signum, quit_later)
 
     # D-Bus can forward a waiting SetDuration request as soon as the name is owned.
-    owned = backend.call(('org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus'),
-                         'RequestName', '(su)', (NAME, 4))[0]
-    if owned not in (1, 4):
-        return 1
-    marker = marker_path()
-    marker.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    fd, temporary = tempfile.mkstemp(prefix='awake-', dir=marker.parent)
-    with os.fdopen(fd, 'w') as output:
-        json.dump(dict(owner=connection.get_unique_name()), output)
-    os.replace(temporary, marker)
+    marker = awake_session.marker_path()
+    with awake_session.startup_lock():
+        owned = backend.call(('org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus'),
+                             'RequestName', '(su)', (NAME, 4))[0]
+        if owned not in (1, 4):
+            return 1
+        previous = awake_session.saved_timer(session, controller.clock())
+        awake_session.write_record(marker, dict(owner=connection.get_unique_name()))
     try:
+        if previous:
+            controller.apply_manual(*previous)
         monitor.reload()
+        controller.expired()
+        arm_expiry()
         # Activation can precede its requesting D-Bus method. An empty service
         # left after a crash or an abandoned request should exit on its own.
         GLib.timeout_add_seconds(5, quit_if_idle)

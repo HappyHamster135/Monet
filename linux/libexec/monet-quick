@@ -3162,8 +3162,16 @@ PROFILE_SERVICES = (("org.freedesktop.UPower.PowerProfiles", "/org/freedesktop/U
 AWAKE_BUS = ("org.monet.KeepAwake", "/org/monet/KeepAwake", "org.monet.KeepAwake")
 
 
+def awake_files():
+    shared = Path(DATADIR) / "monet" if Path(DATADIR).is_absolute() else Path(__file__).resolve().parents[1] / "share/monet"
+    if str(shared) not in sys.path:
+        sys.path.insert(0, str(shared))
+    from monet_runtime import awake_session
+    return awake_session
+
+
 def awake_marker():
-    return Path(os.environ.get("XDG_RUNTIME_DIR", "/run/user/" + str(os.getuid()))) / "monet/keep-awake.json"
+    return awake_files().marker_path()
 
 
 def awake_off(error=""):
@@ -3199,17 +3207,18 @@ def keep_awake_status():
     marker = awake_marker()
     try:
         saved = json.loads(marker.read_text())
+        if not isinstance(saved, dict) or not isinstance(saved.get("owner"), str) or not saved["owner"].startswith(":"):
+            return awake_off("unavailable")
     except FileNotFoundError:
-        return awake_off()
+        if not awake_files().timer_path().is_file():
+            return awake_off()
     except (OSError, ValueError):
-        return awake_off("unavailable")
-    if not isinstance(saved, dict) or not isinstance(saved.get("owner"), str) or not saved["owner"].startswith(":"):
         return awake_off("unavailable")
     owner = busjson("--user", "call", "org.freedesktop.DBus", "/org/freedesktop/DBus",
                     "org.freedesktop.DBus", "GetNameOwner", "s", AWAKE_BUS[0])
-    if not owner or owner[0] != saved.get("owner"):
+    if not owner:
         return awake_off("interrupted")
-    result = awake_reply(busjson("--user", "call", *AWAKE_BUS, "GetStatus"))
+    result = awake_reply(busjson("--user", "call", owner[0], *AWAKE_BUS[1:], "GetStatus"))
     return result.get("state", result)
 
 
@@ -3218,11 +3227,19 @@ def set_keep_awake(mode):
     if mode not in durations:
         return dict(ok=False, state=awake_off("request"), error="request")
     if mode == "off":
-        owner = busjson("--user", "call", "org.freedesktop.DBus", "/org/freedesktop/DBus",
-                        "org.freedesktop.DBus", "GetNameOwner", "s", AWAKE_BUS[0])
-        if not owner:
-            awake_marker().unlink(missing_ok=True)
-            return dict(ok=True, state=awake_off())
+        files = awake_files()
+        try:
+            with files.startup_lock():
+                owned = busjson("--user", "call", "org.freedesktop.DBus", "/org/freedesktop/DBus",
+                                "org.freedesktop.DBus", "NameHasOwner", "s", AWAKE_BUS[0])
+                if owned != [True] and owned != [False]:
+                    return dict(ok=False, state=awake_off("unavailable"), error="unavailable")
+                if not owned[0]:
+                    files.save_timer(None, 0, 0.)
+                    files.marker_path().unlink(missing_ok=True)
+                    return dict(ok=True, state=awake_off())
+        except OSError:
+            return dict(ok=False, state=awake_off("timer-storage"), error="timer-storage")
     return awake_reply(busjson("--user", "--", "call", *AWAKE_BUS, "SetDuration", "i", str(durations[mode])))
 
 

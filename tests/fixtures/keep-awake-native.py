@@ -122,11 +122,36 @@ else:
         assert set_duration(2)['ok']
         worker.wait(timeout=6); assert worker.returncode==0
         wait(lambda: not snapshot())
+        worker=start()
+        deadline = set_duration(5)['state']['end']
+        worker.terminate(); worker.wait(timeout=3)
+        wait(lambda: not snapshot())
+        worker=start()
+        resumed = status()
+        assert resumed['active'] and resumed['end'] == deadline, ('timer after restart', resumed)
+        # The service must release the inhibitors at the original deadline,
+        # without a settings window polling for expiry.
+        wait(lambda: not snapshot())
+        worker.wait(timeout=5)
         worker=start(); assert set_duration(-1)['ok']; assert len(snapshot())==2
+        worker.kill(); worker.wait(timeout=3)
+        wait(lambda: not owner(NAME)); wait(lambda: not snapshot())
+        worker=start()
+        assert status()['indefinite'] and len(snapshot())==2
         worker.kill(); worker.wait(timeout=3)
         wait(lambda: not owner(NAME)); wait(lambda: not snapshot())
         q=quick_helper(); assert q.keep_awake_status()['error']=='interrupted'
         assert q.set_keep_awake('off')['ok']
+        worker=start()
+        assert not status()['active'] and not snapshot()
+        # No restored hold when the timer ran out while the service was down.
+        assert set_duration(1)['ok']
+        worker.kill(); worker.wait(timeout=3)
+        wait(lambda: not owner(NAME)); wait(lambda: not snapshot())
+        time.sleep(1.05)
+        worker=start()
+        assert not status()['active'] and not snapshot()
+        assert set_duration(0)['ok']; worker.wait(timeout=5)
         from PySide6.QtCore import QSettings
         settings=QSettings('Monet','Utilities')
         settings.setValue('awakeRules', json.dumps(dict(enabled=True, power=True)))
@@ -137,7 +162,11 @@ else:
         test_call('SetBattery','(b)',(False,))
         wait(lambda: status()['reasons']==['power'])
         assert q.keep_awake_status()['active'] and len(snapshot())==1
-        assert set_duration(2)['ok'] and len(snapshot())==2
+        mixed = set_duration(3)['state']
+        worker.terminate(); worker.wait(timeout=3)
+        worker=start()
+        assert status()['end']==mixed['end'] and status()['reasons']==['power']
+        assert len(snapshot())==2
         wait(lambda: status()['duration']==0)
         assert status()['reasons']==['power'] and len(snapshot())==1
         assert set_duration(-1)['ok']
