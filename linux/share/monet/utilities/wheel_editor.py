@@ -3,7 +3,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QKeySequence
 from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFileDialog,
     QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMenu, QMessageBox,
     QPushButton, QStyle, QToolButton, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
@@ -118,6 +118,7 @@ class WheelEditor(QWidget):
         self.options.setAccessibleName(tr("Wheel options"))
         self.options.setToolTip(tr("Wheel options"))
         menu = QMenu(self.options)
+        menu.addAction(tr("Keyboard shortcut…"), self.edit_shortcut)
         self.rename_wheel = menu.addAction(tr("Rename wheel…"), self.rename_profile)
         self.delete_wheel = menu.addAction(tr("Delete wheel…"), self.delete_profile)
         self.options.setMenu(menu)
@@ -259,9 +260,85 @@ class WheelEditor(QWidget):
             self.settings.setValue("activeWheel", key)
             self.refresh()
 
+    def edit_shortcut(self):
+        from PySide6.QtQuickWidgets import QQuickWidget
+        from wheel_shortcuts import assign, current
+        import dbus
+        key = self.selector.currentData()
+        name = self.selector.currentText()
+        dialog = QDialog(self)
+        dialog.setWindowTitle(tr("Keyboard shortcut"))
+        layout = QVBoxLayout(dialog)
+        label = QLabel(tr("Open wheel “%1”").replace("%1", name))
+        label.setTextFormat(Qt.PlainText)
+        label.setWordWrap(True)
+        layout.addWidget(label)
+        recorder = QQuickWidget(dialog)
+        # KDE inhibits existing desktop shortcuts only while recording keys.
+        # We check conflicts on Save so another app never loses its binding.
+        recorder.setInitialProperties({"checkForConflictsAgainst": 0, "multiKeyShortcutsAllowed": False,
+                                       "showClearButton": False, "showCancelButton": False})
+        recorder.setResizeMode(QQuickWidget.SizeRootObjectToView)
+        recorder.loadFromModule("org.kde.kquickcontrols", "KeySequenceItem")
+        item = recorder.rootObject()
+        if not item:
+            self.owner.issue(tr("The desktop shortcut recorder is unavailable."))
+            dialog.deleteLater()
+            return
+        try:
+            item.setProperty("keySequence", current(key, name))
+        except dbus.DBusException:
+            self.owner.issue(tr("Couldn’t reach the desktop shortcut service."))
+            dialog.deleteLater()
+            return
+        recorder.setFixedHeight(max(32, round(item.implicitHeight())))
+        recorder.setMinimumWidth(recorder.fontMetrics().horizontalAdvance("Meta+Ctrl+Shift+F12") + 48)
+        recorder.setClearColor(dialog.palette().window().color())
+        row = QHBoxLayout()
+        layout.addLayout(row)
+        row.addWidget(recorder, 1)
+        clear = QPushButton(tr("Clear"))
+        clear.clicked.connect(lambda: item.setProperty("keySequence", QKeySequence()))
+        def update_clear():
+            clear.setEnabled(not item.property("keySequence").isEmpty())
+        item.keySequenceChanged.connect(update_clear)
+        update_clear()
+        row.addWidget(clear)
+        status = QLabel()
+        status.setTextFormat(Qt.PlainText)
+        status.setWordWrap(True)
+        status.hide()
+        layout.addWidget(status)
+        buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        layout.addWidget(buttons)
+
+        def save():
+            try:
+                assign(key, name, self.owner.helpers, item.property("keySequence"))
+            except (OSError, ValueError) as error:
+                status.setText(str(error))
+            except dbus.DBusException:
+                status.setText(tr("Couldn’t reach the desktop shortcut service."))
+            else:
+                dialog.accept()
+                return
+            status.show()
+
+        buttons.accepted.connect(save)
+        buttons.rejected.connect(dialog.reject)
+        dialog.exec()
+        dialog.deleteLater()
+
     def rename_profile(self):
         if name := self.profile_name(self.selector.currentText()):
             key = self.selector.currentData()
+            from wheel_shortcuts import rename
+            import dbus
+            try:
+                rename(key, name, self.owner.helpers)
+            except (OSError, dbus.DBusException):
+                self.owner.issue(tr("Couldn’t update the wheel shortcut."))
+                return
             save_profile(self.settings, key, replace(self.profiles[key], name=name))
             self.refresh()
 
@@ -269,6 +346,13 @@ class WheelEditor(QWidget):
         key = self.selector.currentData()
         if key and QMessageBox.question(self, tr("Delete wheel?"),
                 tr("Remove the wheel “%1” and its items?").replace("%1", self.selector.currentText())) == QMessageBox.Yes:
+            from wheel_shortcuts import remove
+            import dbus
+            try:
+                remove(key)
+            except (OSError, dbus.DBusException):
+                self.owner.issue(tr("Couldn’t remove the wheel shortcut."))
+                return
             self.settings.remove("wheelProfiles/" + key)
             self.settings.setValue("activeWheel", "")
             self.refresh()

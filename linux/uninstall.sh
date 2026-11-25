@@ -8,6 +8,13 @@ if [ "$(id -u)" -ne 0 ]; then
     # Retire this account's optional last-window listener and startup choice.
     busctl --user --auto-start=no call org.kde.KWin /Scripting org.kde.kwin.Scripting unloadScript s monet-quit-on-close >/dev/null 2>&1 || true
     kwriteconfig6 --file kwinrc --group Plugins --key monet-quit-on-closeEnabled --delete >/dev/null 2>&1 || true
+    # Release the global keys owned by this account's custom wheels.
+    for wheel in "${XDG_DATA_HOME:-$HOME/.local/share}"/kglobalaccel/org.monet.Wheel.*.desktop; do
+        component=${wheel##*/}
+        [[ -f "$wheel" && "$component" =~ ^org\.monet\.Wheel\.[0-9a-f]{32}\.desktop$ ]] || continue
+        busctl --user --auto-start=no call org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel unregister ss "$component" _launch >/dev/null 2>&1 || true
+        rm -f -- "$wheel"
+    done
     # Remove this user's game shortcuts and settings, then the system part.
     rm -f "$HOME"/.local/share/applications/monet-game-*.desktop
     # The app menu's Windows apps (monet-quick windows-apps), with their icons.

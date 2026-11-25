@@ -178,6 +178,33 @@ class Wheel(unittest.TestCase):
         QTest.keyClick(wheel.current, Qt.Key_Escape)
         self.assertFalse(wheel.isVisible())
 
+    def test_named_shortcuts_switch_in_place_and_keep_the_shared_shortcut_selection(self):
+        from wheel_profiles import Entry, Profile, save_profile
+        self.favorites(["shelf"])
+        work = save_profile(self.settings, "", Profile("Work", (Entry("tool", "ports"),)))
+        play = save_profile(self.settings, "", Profile("Play", (Entry("tool", "notes"),)))
+        self.settings.setValue("activeWheel", play)
+        self.receiver.OpenTool("wheel", "", work)
+        self.app.processEvents()
+        wheel = self.window.favorites_wheel
+        self.assertTrue(wheel.isVisible())
+        self.assertEqual(wheel.current.key, "ports")
+        self.window.Open(["wheel", "0" * 32])
+        self.assertTrue(wheel.isVisible())
+        self.assertEqual(wheel.active_id, work)
+        self.window.Open(["wheel", play])
+        self.assertIs(self.window.favorites_wheel, wheel)
+        self.assertTrue(wheel.isVisible())
+        self.assertEqual(wheel.current.key, "notes")
+        self.window.Open(["wheel", play])
+        self.assertFalse(wheel.isVisible())
+        self.window.Open(["wheel", work])
+        self.window.Open(["wheel"])
+        self.assertFalse(wheel.isVisible())
+        self.window.Open(["wheel"])
+        self.assertEqual(wheel.active_id, play)
+        self.assertEqual(self.settings.value("activeWheel"), play)
+
     def test_editor_persists_profile_targets_order_and_reparenting(self):
         from wheel_profiles import Entry, profiles
         self.favorites(["notes"], ["shelf"])

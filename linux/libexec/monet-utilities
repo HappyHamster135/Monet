@@ -9,7 +9,7 @@ if not modules.is_absolute():
     modules = Path(__file__).resolve().parents[1] / "share/monet/utilities"
 sys.path.insert(0, str(modules))
 
-def activate_tool(key):
+def activate_tool(key, profile=None):
     """Forward a shortcut to a running receiver without starting a second Qt GUI."""
     try:
         import dbus
@@ -18,7 +18,10 @@ def activate_tool(key):
     service = "org.monet.Utilities"
     request = dbus.lowlevel.MethodCallMessage(service, "/Utilities", service, "OpenTool")
     request.set_auto_start(False)
-    request.append(key, os.environ.get("XDG_ACTIVATION_TOKEN", ""), signature="ss")
+    args = [key, os.environ.get("XDG_ACTIVATION_TOKEN", "")]
+    if profile is not None:
+        args.append(profile)
+    request.append(*args, signature="s" * len(args))
     try:
         dbus.SessionBus().send_message_with_reply_and_block(request, 2)
     except dbus.DBusException as error:
@@ -35,8 +38,9 @@ if __name__ == "__main__":
         if len(sys.argv) == 4 and sys.argv[2].isdecimal() and sys.argv[3] in ("commit", "edit"):
             sys.exit(main(int(sys.argv[2]), sys.argv[3]))
         sys.exit(2)
-    if sys.argv[1:] in (["quick-panel"], ["wheel"], ["color"], ["ocr"]):
-        status = activate_tool(sys.argv[1])
+    args = sys.argv[1:]
+    if args in (["quick-panel"], ["wheel"], ["color"], ["ocr"]) or (len(args) == 2 and args[0] == "wheel"):
+        status = activate_tool(*args)
         if status is not None:
             sys.exit(status)
     from window import main

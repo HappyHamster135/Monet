@@ -19659,3 +19659,47 @@ msgstr ""
 #: linux/share/monet/utilities/window.py:354
 msgid "Couldn’t open %1."
 msgstr ""
+
+#: linux/share/monet/utilities/wheel_shortcuts.py:26 linux/share/monet/utilities/wheel_editor.py:272
+msgid "Open wheel “%1”"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_shortcuts.py:26
+msgid "Open wheel"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_shortcuts.py:73
+msgid "Include Ctrl, Alt or Super with a typing key."
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_shortcuts.py:85
+msgid "That shortcut is already in use. Choose another."
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_shortcuts.py:96
+msgid "The desktop couldn’t assign that shortcut. Choose another."
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:121
+msgid "Keyboard shortcut…"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:270
+msgid "Keyboard shortcut"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:284
+msgid "The desktop shortcut recorder is unavailable."
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:290 linux/share/monet/utilities/wheel_editor.py:309
+msgid "Couldn’t reach the desktop shortcut service."
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:328
+msgid "Couldn’t update the wheel shortcut."
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:342
+msgid "Couldn’t remove the wheel shortcut."
+msgstr ""

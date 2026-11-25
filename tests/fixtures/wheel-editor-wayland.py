@@ -65,6 +65,46 @@ def exercise(installed):
     ident = editor.selector.currentData()
     assert ident
     print("Created a named wheel.", flush=True)
+    from PySide6.QtGui import QKeySequence
+    from PySide6.QtQuickWidgets import QQuickWidget
+    from PySide6.QtWidgets import QDialogButtonBox, QPushButton
+    from wheel_shortcuts import current
+    keyboard = Pointer(Path(os.environ["XDG_RUNTIME_DIR"]) / os.environ["WAYLAND_DISPLAY"], version=4)
+    hotkey = QKeySequence("Meta+Alt+F9")
+
+    def record(dialog, code=67, expected=hotkey):
+        recorder = dialog.findChild(QQuickWidget).rootObject()
+        recorder.startCapturing()
+        QTest.qWait(150)
+        for keycode in (125, 56, code):
+            keyboard.key(keycode, True)
+        for keycode in (code, 56, 125):
+            keyboard.key(keycode, False)
+        wait(lambda: recorder.property("keySequence") == expected, "recording physical shortcut")
+        dialog.findChild(QDialogButtonBox).button(QDialogButtonBox.Save).click()
+
+    dialog_input(record, QDialog)
+    editor.edit_shortcut()
+    assert not errors, errors
+    assert current(ident, "Studio") == hotkey
+    from wheel_shortcuts import assign, remove
+    from wheel_profiles import Profile, save_profile
+    other = save_profile(window.settings, "", Profile("Other wheel", (Entry("tool", "notes"),)))
+    occupied = QKeySequence("Meta+Alt+F10")
+    assign(other, "Other wheel", window.helpers, occupied)
+    def conflict(dialog):
+        record(dialog, 68, occupied)
+        assert dialog.isVisible() and current(ident, "Studio") == hotkey
+        assert current(other, "Other wheel") == occupied
+        dialog.reject()
+
+    dialog_input(conflict, QDialog)
+    editor.edit_shortcut()
+    assert not errors, errors
+    remove(other)
+    window.settings.remove("wheelProfiles/" + other)
+    print("Recorded a native desktop shortcut and kept both bindings when a combination was taken.", flush=True)
+
     text("Reading")
     editor.add_item("menu")
     editor.tree.setCurrentItem(editor.root)
@@ -165,6 +205,25 @@ def exercise(installed):
     QTest.qWait(150)
     assert folder.childCount() == 8 and editor.root.childCount() == 4
     assert profiles(window.settings)[ident] == before
+    from PySide6.QtWidgets import QMessageBox
+    from wheel_shortcuts import launcher
+    text("Studio renamed")
+    editor.rename_profile()
+    assert current(ident, "Studio renamed") == hotkey and "Studio renamed" in launcher(ident).read_text()
+    def clear(dialog):
+        recorder = dialog.findChild(QQuickWidget).rootObject()
+        assert recorder.property("keySequence") == hotkey
+        from actions import tr
+        next(button for button in dialog.findChildren(QPushButton) if button.text() == tr("Clear")).click()
+        assert recorder.property("keySequence").isEmpty()
+        dialog.findChild(QDialogButtonBox).button(QDialogButtonBox.Save).click()
+    dialog_input(clear, QDialog)
+    editor.edit_shortcut()
+    assert not errors and current(ident, "Studio renamed").isEmpty() and not launcher(ident).exists()
+    assign(ident, "Studio renamed", window.helpers, hotkey)
+    dialog_input(lambda box: box.button(QMessageBox.Yes).click(), QMessageBox)
+    editor.delete_profile()
+    assert not errors and ident not in profiles(window.settings) and not launcher(ident).exists()
     (home / "passed").touch()
     print("Verified the native chooser, file and link handlers, pointer drag into a submenu and saved ordering.", flush=True)
 

@@ -272,11 +272,13 @@ class Window(QMainWindow):
             else:
                 self.Open([key])
 
-    def wheel(self):
-        if self.favorites_wheel and self.favorites_wheel.isVisible():
+    def wheel(self, profile=""):
+        wheel = self.favorites_wheel
+        toggle = not profile or (wheel and profile == wheel.active_id)
+        if toggle and wheel and wheel.isVisible():
             self.favorites_wheel.hide()
             return
-        if self.wheel_request is not None:
+        if toggle and self.wheel_request is not None:
             self.wheel_request = None
             if self.wheel_placement:
                 self.wheel_placement.stop()
@@ -295,7 +297,10 @@ class Window(QMainWindow):
         from wheel_profiles import favorites_profile, profiles, visible
         default = favorites_profile([k for k in self.favorites if k not in self.hidden])
         wheels = {"": default, **profiles(self.settings)}
-        active = self.settings.value("activeWheel", "")
+        if profile and profile not in wheels:
+            self.panelDismissed.emit()
+            return
+        active = profile or self.settings.value("activeWheel", "")
         if active not in wheels:
             active = ""
         items = visible(wheels[active].items, self.hidden)
@@ -319,6 +324,16 @@ class Window(QMainWindow):
         self.favorites_wheel.active_id = active
         self.favorites_wheel.profile_names = {key: profile.name for key, profile in wheels.items()}
         self.favorites_wheel.editable = "wheel-settings" not in self.hidden
+        if self.favorites_wheel.isVisible():
+            if self.favorites_wheel.menu:
+                self.favorites_wheel.menu.close()
+            self.favorites_wheel.history.clear()
+            self.favorites_wheel.contents(items)
+            return
+        if self.wheel_request is not None:
+            token, _ = self.wheel_request
+            self.wheel_request = (token, items)
+            return
         self.wheel_serial += 1
         token = str(self.wheel_serial)
         self.wheel_request = (token, items)
@@ -779,8 +794,13 @@ class Window(QMainWindow):
             else:
                 self.panelDismissed.emit()
             return
-        if key == "wheel" and len(args) == 1:
-            self.wheel()
+        if key == "wheel":
+            if len(args) == 1:
+                self.wheel()
+            elif len(args) == 2 and re.fullmatch(r"[0-9a-f]{32}", args[1]):
+                self.wheel(args[1])
+            else:
+                self.panelDismissed.emit()
             return
         if key == "quick-panel" and len(args) == 1:
             self.toggle_panel()
@@ -909,7 +929,10 @@ class Receiver(QObject):
         return self.window.show_wheel(token, int(available))
 
     @Slot(str, str)
-    def OpenTool(self, key, token):
+    @Slot(str, str, str)
+    def OpenTool(self, key, token, profile=""):
+        if profile and (key != "wheel" or not re.fullmatch(r"[0-9a-f]{32}", profile)):
+            return
         self.window.settings.sync()
         self.window.favorites, self.window.hidden = preferences(self.window.settings)
         if key != "customize" and (key not in ACTIONS or key in self.window.hidden):
@@ -927,7 +950,7 @@ class Receiver(QObject):
                     self.window.run_tool(key)
                     self.idle.start()
                 else:
-                    self.window.Open([key])
+                    self.window.Open([key, profile] if profile else [key])
             finally:
                 if token:
                     os.environ.pop("XDG_ACTIVATION_TOKEN", None)
@@ -1027,9 +1050,9 @@ def main(argv, helpers):
         if args == ["--pad-service"]:
             return True
         from PySide6.QtDBus import QDBus
-        if args in (["quick-panel"], ["wheel"]) and activation_token:
+        if activation_token and (args == ["quick-panel"] or args[:1] == ["wheel"] and len(args) <= 2):
             msg = QDBusMessage.createMethodCall(SERVICE, "/Utilities", SERVICE, "OpenTool")
-            msg.setArguments([args[0], activation_token])
+            msg.setArguments([args[0], activation_token, *args[1:]])
         else:
             msg = QDBusMessage.createMethodCall(SERVICE, "/Utilities", SERVICE, "Present")
             msg.setArguments([json.dumps(args)])
@@ -1037,7 +1060,7 @@ def main(argv, helpers):
     if bus.isConnected() and bus.interface().isServiceRegistered(SERVICE).value() and forward():
         return 0
     window = Window(helpers if Path(helpers).is_absolute() else "/usr/libexec",
-                    defer_catalog=args in (["wheel"], ["quick-panel"], ["color"], ["ocr"], ["rename-shortcut"], ["--pad-service"]))
+                    defer_catalog=args[:1] == ["wheel"] or args in (["quick-panel"], ["color"], ["ocr"], ["rename-shortcut"], ["--pad-service"]))
     receiver = Receiver(window)
     if bus.isConnected():
         if not bus.registerObject("/Utilities", SERVICE, receiver, QDBusConnection.ExportAllSlots):

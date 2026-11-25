@@ -4,7 +4,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 ### New in 0.9.8-9: Startup and Settings polish (in development)
 
-- **Build a wheel for each task.** In Utilities → Customize wheels, arrange apps, files, links, desktop shortcuts and tools into submenus. Press Super+Alt+W and click the center to switch wheels. A stationary pointer can use the center on the first click.
+- **Build a wheel for each task.** In Utilities → Customize wheels, arrange apps, files, links, desktop shortcuts and tools into submenus. Press Super+Alt+W and click the center to switch wheels. A stationary pointer can use the center on the first click. Under Wheel options you can also assign each wheel its own keyboard shortcut.
 - **Choose when Paste forgets a copy.** Utilities can clear the current clipboard after a delay, when you lock the screen, or when the computer sleeps. Saved clipboard history stays available.
 - **Clean shared links by website.** In Utilities → Copied link settings, preview a link, choose which parameters to remove, or add rules for a website. YouTube share links keep their start time. Manual and automatic cleanup use the same rules.
 - **Boost a quiet app.** In the volume mixer, drag past the 100% mark or enter a percentage up to 200%. The Home Bar also remembers boosted levels between tracks.
