@@ -19259,3 +19259,7 @@ msgstr ""
 #: linux/share/monet/utilities/awake_page.py:78
 msgid "This also delays automatic locking."
 msgstr ""
+
+#: linux/share/monet/utilities/command_search.py:80
+msgid "Copy result and use it as ans"
+msgstr ""

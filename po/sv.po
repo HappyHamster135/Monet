@@ -19290,3 +19290,7 @@ msgstr "Låt även skärmen vara på"
 #: linux/share/monet/utilities/awake_page.py:78
 msgid "This also delays automatic locking."
 msgstr "Detta skjuter även upp den automatiska låsningen."
+
+#: linux/share/monet/utilities/command_search.py:80
+msgid "Copy result and use it as ans"
+msgstr "Kopiera resultatet och använd det som ans"

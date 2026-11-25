@@ -102,6 +102,7 @@ fill() {
 }
 
 install -D -m 755 "$SRC/monet" "$BINDIR/monet"
+install -D -m 755 "$SRC/libexec/monet-measure" "$LIBEXECDIR/monet-measure"
 put 755 "$SRC/libexec/monet-switch" "$LIBEXECDIR/monet-switch"
 regional="$SRC/libexec/monet_region.py"
 [ -f "$regional" ] || regional="$SRC/../setup/monet_setup/region.py"

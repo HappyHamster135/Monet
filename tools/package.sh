@@ -19,6 +19,10 @@ fi
 # Refuse stale source or a missing/altered signed connector before replacing output.
 if [ "$KIND" = linux ]; then
     python3 "$ROOT/browser/monet-passwords/package.py"
+    if [ ! -x "$(dirname "$BIN")/monet-measure" ]; then
+        echo "Build the monet package to include its measurement calculator." >&2
+        exit 1
+    fi
 fi
 
 rm -rf "$OUT"
@@ -28,6 +32,7 @@ cp "$ROOT/LICENSE" "$OUT/LICENSE.txt"
 case "$KIND" in
     linux)
         cp -r "$ROOT/linux/." "$OUT/"
+        install -m 755 "$(dirname "$BIN")/monet-measure" "$OUT/libexec/monet-measure"
         # The same offline calendar reader ships in both the image and the portable package.
         python3 -m pip download --disable-pip-version-check --no-deps --only-binary=:all: \
             --require-hashes --dest "$OUT/share/monet/agenda-wheels" -r "$ROOT/tools/agenda-requirements.txt"

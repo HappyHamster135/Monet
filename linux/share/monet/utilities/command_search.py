@@ -1,5 +1,6 @@
 """Text results for the desktop command bar. Read each source only in its own search."""
 import hashlib
+import json
 from functools import lru_cache
 from io import BytesIO
 from struct import Struct, error as StructError
@@ -60,6 +61,41 @@ def color_match(query):
     color, text = converted
     return ("convert-color/" + query, text, "color-picker", 100, 1.0,
             {"category": tr("Color conversion"), "subtext": tr("Copy converted color"), "icon-data": color_swatch(color)})
+
+
+def measurement_match(query, scoped):
+    from PySide6.QtCore import QLocale
+    import measurements
+    decimal = QLocale().decimalPoint()
+    previous = measurements.session_answer() if measurements.ANSWER.search(query) else ''
+    formula = measurements.expression(query, scoped=scoped, answer=previous, decimal=decimal)
+    value = measurements.evaluate(formula, measurements.HELPER) if formula else ''
+    if not value:
+        return None
+    # Capture the previous answer so selecting an old result still copies exactly
+    # what it showed, even after another launcher updates ans or this runner exits.
+    key = json.dumps([query, previous, decimal], ensure_ascii=False, separators=(',', ':'))
+    label = measurements.localized(value, decimal).replace('approx. ', '≈ ', 1)
+    return result('measure/' + key, label, 'accessories-calculator', tr('Calculator'),
+                  tr('Copy result and use it as ans'))
+
+
+def copy_measurement(ref, bus):
+    import measurements
+    try:
+        query, previous, decimal = json.loads(ref)
+        if not (isinstance(query, str) and isinstance(previous, str) and len(previous) <= 160 and decimal in ('.', ',', '٫')):
+            return
+    except (ValueError, TypeError):
+        return
+    formula = measurements.expression(query, scoped=True, answer=previous, decimal=decimal)
+    value = measurements.evaluate(formula, measurements.HELPER) if formula else ''
+    if not value:
+        notify(bus, tr("This search result is no longer available."))
+    elif copy_text(bus, measurements.localized(value.removeprefix('approx. '), decimal)):
+        measurements.session_answer(value)
+    else:
+        notify(bus, tr("Could not copy this search result."))
 
 
 def clipboard(bus):
@@ -233,6 +269,10 @@ def matches(scope, query, hidden, settings, clip_search):
 def copy_result(key, hidden, settings, bus):
     scope, _, ref = key.partition("/")
     if SCOPES.get(scope) in hidden:
+        return
+    if scope == "measure":
+        if "command-bar" not in hidden and len(ref) <= 900:
+            copy_measurement(ref, bus)
         return
     value = ""
     if scope == "convert-color":

@@ -141,6 +141,12 @@ class ToolSearch(dbus.service.Object):
             match = color_match(expression)
             if match is not None:
                 return [match]
+        if (complete and "command-bar" not in hidden and expression
+                and (expression[0].isdecimal() or expression[0] in ".,٫=(+-−" or expression.casefold().startswith("ans"))):
+            from command_search import measurement_match
+            match = measurement_match(expression, scoped)
+            if match:
+                return [match]
         matches = find_tools(query, favorites, hidden)
         if scoped and not query:
             matches = [(key, score) for key, score in matches if key in favorites]
@@ -206,7 +212,7 @@ class ToolSearch(dbus.service.Object):
             finally:
                 self.finish_menu(sender, key)
             return
-        if not action and str(key).startswith(("snippet/", "clip/", "emoji/", "convert-color/")):
+        if not action and str(key).startswith(("snippet/", "clip/", "emoji/", "convert-color/", "measure/")):
             from command_search import copy_result
             copy_result(str(key), hidden, self.settings, self.bus)
             return

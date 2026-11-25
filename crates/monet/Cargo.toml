@@ -1,5 +1,6 @@
 [package]
 name = "monet"
+default-run = "monet"
 description = "Monet Switch: play Windows games from Monet with one click"
 version.workspace = true
 edition.workspace = true
@@ -10,3 +11,4 @@ monet-core = { path = "../monet-core" }
 serde.workspace = true
 serde_json.workspace = true
 libc = "0.2"
+fend-core = "1.5.9"

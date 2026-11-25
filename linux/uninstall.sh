@@ -164,6 +164,7 @@ rm -f /etc/firewalld/zones/monet.xml /etc/firewalld/zones/monet-shared.xml /var/
 rm -f /etc/firewalld/policies/monet-allowed.xml /var/lib/monet/firewall-allowed.json /var/lib/monet/firewall-allowed-ports.json
 # The battery charges to full again, as before battery care.
 [ -e /var/lib/monet/charge-limit ] && "$PREFIX/libexec/monet-charge" 100 >/dev/null 2>&1 || true
+rm -f "$PREFIX/libexec/monet-measure"
 rm -f "$PREFIX/bin/monet" "$PREFIX/libexec/monet-switch"
 rm -f "$PREFIX/bin/monet-files" "$PREFIX/libexec/monet-file-jobs"
 rm -f "$PREFIX/libexec/monet_quick.py" "$PREFIX/libexec/__pycache__"/monet_quick.*.pyc
