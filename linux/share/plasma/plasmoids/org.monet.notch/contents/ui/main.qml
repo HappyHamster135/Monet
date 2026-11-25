@@ -466,13 +466,10 @@ PlasmoidItem {
         Layout.preferredWidth: Math.min(422, Math.max(250, (root.Screen.width || 454) - 32))
         Layout.preferredHeight: root.searching || root.visibleTabs.length || root.displayShelf || root.showingWatch
             ? Math.min(370, Math.max(200, Screen.height - 80)) : implicitHeight
+        // Plasma can size its transient window before the first page is loaded.
+        // Keep the selected reading height even while switching to or from search.
+        Layout.minimumHeight: Layout.preferredHeight
         spacing: Kirigami.Units.smallSpacing
-        // The overlay is outside the layout. Keep the full reading area while its tabs are hidden.
-        Item {
-            visible: root.searching
-            Layout.fillWidth: true; Layout.fillHeight: true
-            Layout.minimumHeight: pages.Layout.preferredHeight
-        }
         RowLayout {
             id: navigation
             visible: !root.searching && !root.viewingShelf && root.visibleTabs.length > 0
@@ -518,8 +515,9 @@ PlasmoidItem {
         }
         Loader {
             Layout.fillWidth: true; Layout.fillHeight: true
-            visible: active && !root.searching
-            active: root.expanded && (root.visibleTabs.length > 0 || root.displayShelf || root.showingWatch)
+            readonly property bool hasPage: root.visibleTabs.length > 0 || root.displayShelf || root.showingWatch
+            visible: hasPage && !root.searching
+            active: root.expanded && hasPage
             sourceComponent: root.displayShelf ? shelfPage : root.showingWatch ? watchPage
                 : root.tab === 1 && root.viewingDownloads ? downloadsPage
                 : root.tab === 3 && root.viewingAgenda ? agendaPage
