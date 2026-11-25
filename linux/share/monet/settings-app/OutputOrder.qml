@@ -7,6 +7,8 @@ SettingsControls.Card {
     required property var host
     property bool editing: false
     property bool busy: false
+    property bool limitEnabled: false
+    property int speakerLimit: 20
     property bool automatic: false
     property string version: ""
     property string issue: ""
@@ -14,13 +16,16 @@ SettingsControls.Card {
     property var connected: []
     property var original: ({})
     readonly property bool dirty: !!version && (automatic !== original.enabled
+        || limitEnabled !== original.limitEnabled || speakerLimit !== original.limit
         || JSON.stringify(ranked) !== JSON.stringify(original.devices))
     readonly property var unranked: connected.filter(d => !ranked.some(r => same(r, d)))
     function same(a, b) { return a.key === b.key && a.port === b.port }
     function entry(d) { return connected.find(c => same(c, d)) }
     function applyState(data) {
         connected = data.connected
-        original = {enabled: data.enabled, devices: data.devices}
+        limitEnabled = data.headphoneLimitEnabled === true
+        speakerLimit = data.headphoneLimit ?? 20
+        original = {enabled: data.enabled, devices: data.devices, limitEnabled, limit: speakerLimit}
         automatic = data.enabled
         ranked = data.devices
         version = data.revision
@@ -60,7 +65,8 @@ SettingsControls.Card {
     function save() {
         busy = true
         const devices = ranked.map(d => entry(d) || d)
-        const data = host.hex(JSON.stringify({enabled: automatic, devices: devices, revision: version}))
+        const data = host.hex(JSON.stringify({enabled: automatic, devices,
+            headphoneLimitEnabled: limitEnabled, headphoneLimit: speakerLimit, revision: version}))
         host.call(["helper", "output-order", "save", data], out => {
             busy = false
             const answer = host.json(out, {})
@@ -88,6 +94,21 @@ SettingsControls.Card {
         tappable: !card.busy && card.ranked.length > 0; checkable: true; checked: card.automatic
         onTapped: card.automatic = !card.automatic
         SettingsControls.Switch { tone: card.tone; active: card.automatic }
+    }
+    SettingsControls.SettingRow {
+        tone: card.tone; visible: card.editing && !!card.version
+        title: i18n("Lower speakers when headphones disconnect")
+        detail: i18n("If playback moves to speakers, lower their volume to your limit. You can adjust it again afterward.")
+        tappable: !card.busy; checkable: true; checked: card.limitEnabled
+        onTapped: card.limitEnabled = !card.limitEnabled
+        SettingsControls.Switch { tone: card.tone; active: card.limitEnabled }
+    }
+    SettingsControls.SliderRow {
+        tone: card.tone; visible: card.editing && card.limitEnabled && !!card.version
+        enabled: !card.busy
+        title: i18n("Speaker limit (%1%)", card.speakerLimit)
+        value: card.speakerLimit
+        onMoved: value => card.speakerLimit = Math.round(value)
     }
     Repeater {
         model: card.editing ? card.ranked : []

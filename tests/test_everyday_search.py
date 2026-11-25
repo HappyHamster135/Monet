@@ -24,7 +24,7 @@ class EverydaySearch(unittest.TestCase):
     def test_everyday_phrases_reach_the_intended_destinations(self):
         for query, target in (("make text bigger", "accessibility#size"),
                               ("headphones", "sound#output"), ("volume mixer", "sound#mixer"),
-                              ("birthday", "calendar"),
+                              ("speaker limit", "sound#output-order"), ("birthday", "calendar"),
                               ("Windows files", "storage#shared-files"),
                               ("how can I make bigger text?", "accessibility#size"),
                               ("pair headphones", "bluetooth"), ("Wi-Fi", "wifi"),
@@ -636,11 +636,13 @@ Window {
 
     def test_focus_returns_to_visible_suggestions_after_scrolling_native_results(self):
         source = self.query()
-        self.deliver(source, quick_helper().everyday_search("headphones"))
-        QTest.keyClick(self.window, Qt.Key_Down)
-        self.assertTrue(self.item("menuSearchResult-headphones").hasActiveFocus())
-        QTest.keyClick(self.window, Qt.Key_Down)
-        self.assertTrue(self.item("menuSearchResult-bluetooth").hasActiveFocus())
+        suggestions = quick_helper().everyday_search("headphones")
+        self.deliver(source, suggestions)
+        self.assertEqual(suggestions[0]["id"], "headphones")
+        self.assertIn("bluetooth", [s["id"] for s in suggestions])
+        for suggestion in suggestions:
+            QTest.keyClick(self.window, Qt.Key_Down)
+            self.assertTrue(self.item("menuSearchResult-" + suggestion["id"]).hasActiveFocus())
         QTest.keyClick(self.window, Qt.Key_Down)
         self.assertTrue(self.results.hasActiveFocus())
         for _ in range(12): QTest.keyClick(self.window, Qt.Key_Down)
@@ -651,13 +653,15 @@ Window {
             QTest.keyClick(self.window, Qt.Key_Up)
             steps.append((self.results.property("currentIndex"), self.window.activeFocusItem().objectName()))
         QTest.qWait(30)
-        row = self.item("menuSearchResult-bluetooth")
-        self.assertTrue(row.hasActiveFocus(), steps)
-        y = row.mapToItem(self.results, 0, 0).y()
-        self.assertGreaterEqual(y, 0)
-        self.assertLessEqual(y + row.height(), self.results.height())
-        QTest.keyClick(self.window, Qt.Key_Up)
-        self.assertTrue(self.item("menuSearchResult-headphones").hasActiveFocus())
+        for suggestion in reversed(suggestions):
+            row = self.item("menuSearchResult-" + suggestion["id"])
+            self.assertTrue(row.hasActiveFocus(), steps)
+            y = row.mapToItem(self.results, 0, 0).y()
+            self.assertGreaterEqual(y, 0)
+            self.assertLessEqual(y + row.height(), self.results.height())
+            if suggestion is not suggestions[0]:
+                QTest.keyClick(self.window, Qt.Key_Up)
+                QTest.qWait(30)
         QTest.keyClick(self.window, Qt.Key_Return)
         self.assertTrue(self.root.property("openingResult").endswith("search-open headphones"))
 

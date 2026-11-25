@@ -19280,3 +19280,20 @@ msgstr ""
 #: linux/share/monet/utilities/snippet_format.py:16
 msgid "Date and time format"
 msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:100
+msgid "Lower speakers when headphones disconnect"
+msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:101
+msgid ""
+"If playback moves to speakers, lower their volume to your limit. You can adjust it again afterward."
+msgstr ""
+
+#: linux/share/monet/settings-app/OutputOrder.qml:109
+msgid "Speaker limit (%1%)"
+msgstr ""
+
+#: linux/libexec/monet-quick:9357
+msgid "speaker limit; unplug headphones; headphone disconnect volume"
+msgstr ""

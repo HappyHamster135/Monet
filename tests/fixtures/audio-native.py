@@ -863,6 +863,67 @@ def output_priority():
         expect("monet_two")
 
 
+def headphone_volume():
+    """Exercise native device removal, delayed defaults and user volume changes."""
+    from contextlib import ExitStack
+    import pulsectl
+    sys.path.insert(0, str(ROOT / "linux/share/monet"))
+    from monet_runtime import output_order
+    start_server()
+    for module_id in module_ids.values():
+        pactl("unload-module", module_id)
+    quick = str(ROOT / "linux/libexec/monet-quick")
+    with ExitStack() as stack:
+        def launch(args):
+            proc = subprocess.Popen(args, stdout=log, stderr=log)
+            stack.callback(lambda: (proc.terminate(), proc.wait(timeout=5)))
+        launch(["wireplumber", "--profile=policy"])
+        wait_for(lambda: "route-settings" in subprocess.check_output(["pw-metadata", "-l"], text=True), "policy")
+        def plug(name, kind):
+            return pactl("load-module", "module-null-sink", "sink_name=" + name,
+                         "sink_properties=device.form_factor=" + kind)
+        def expect(name):
+            wait_for(lambda: pactl("get-default-sink") == name, "default " + name)
+        plug("desk", "speaker")
+        headset = plug("phones", "headphone")
+        monitor = stack.enter_context(pulsectl.Pulse("speaker limit test"))
+        def speaker():
+            return next(s for s in monitor.sink_list() if s.name == "desk")
+        def levels():
+            return [round(v * 100) for v in speaker().volume.values]
+        path = output_order.settings_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        output_order.write(path, dict(enabled=False, devices=[], headphoneLimitEnabled=True, headphoneLimit=20))
+        pactl("set-default-sink", "desk")
+        pactl("set-sink-volume", "desk", "76%", "38%")
+        pactl("set-sink-mute", "desk", "1")
+        launch([quick, "output-order", "watch"])
+        wait_for(lambda: any(c.proplist.get("application.name") == "Monet output preferences"
+                             for c in monitor.client_list()), "volume listener")
+        QTest.qWait(260)
+        assert levels() == [76, 38]
+        def select(name):
+            pactl("set-default-sink", name)
+            expect(name)
+            QTest.qWait(300)  # Let independent server and card changes settle.
+        select("phones")
+        select("desk")
+        assert levels() == [76, 38], "manual output change lowered the speakers"
+        for override in (False, True):
+            select("phones")
+            pactl("unload-module", headset)
+            expect("desk")
+            wait_for(lambda: levels() == [20, 10], "speaker limit with stereo balance")
+            assert speaker().mute, "disconnect unmuted the speaker"
+            if override:
+                pactl("set-sink-volume", "desk", "45%", "25%")
+            headset = plug("phones", "headphone")
+            select("phones")
+            desired = [45, 25] if override else [76, 38]
+            wait_for(lambda: levels() == desired, "restore or keep the user's volume")
+            assert speaker().mute, "reconnect unmuted the speaker"
+
+
 def app_mixer():
     """Group separate live streams, move them together, and remember pins after they go away."""
     from contextlib import ExitStack
@@ -1027,7 +1088,7 @@ C.ApplicationWindow {
 
 try:
     {'native': native_updates, 'fallback': fallback, 'recovery': recovery,
-     'widget': widget, 'mixer': app_mixer, 'output-order': output_priority, 'notifications': notifications, 'dock-volume': dock_volume,
+     'widget': widget, 'mixer': app_mixer, 'output-order': output_priority, 'headphone-volume': headphone_volume, 'notifications': notifications, 'dock-volume': dock_volume,
      'dock-volume-memory': dock_volume_memory}[sys.argv[1]]()
 finally:
     for component, obj in objects: obj.deleteLater()

@@ -57,6 +57,10 @@ class NativeAudio(unittest.TestCase):
     def test_ranked_outputs_follow_physical_changes_and_respect_manual_choice(self):
         self.fixture("output-order")
 
+    @unittest.skipUnless(shutil.which("wireplumber") and importlib.util.find_spec("pulsectl"), "native audio routing")
+    def test_headphone_disconnect_limits_the_speaker_and_preserves_manual_changes(self):
+        self.fixture("headphone-volume")
+
     def test_native_changes_are_immediate_and_idle_does_not_spawn_commands(self):
         self.fixture('native')
 

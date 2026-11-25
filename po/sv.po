@@ -19386,3 +19386,22 @@ msgstr "Anpassat datum eller klockslag…"
 #: linux/share/monet/utilities/snippet_format.py:16
 msgid "Date and time format"
 msgstr "Datum- och tidsformat"
+
+#: linux/share/monet/settings-app/OutputOrder.qml:100
+msgid "Lower speakers when headphones disconnect"
+msgstr "Sänk högtalarvolymen när hörlurarna kopplas från"
+
+#: linux/share/monet/settings-app/OutputOrder.qml:101
+msgid ""
+"If playback moves to speakers, lower their volume to your limit. You can adjust it again afterward."
+msgstr ""
+"Om ljudet växlar till högtalarna sänks volymen till din gräns. Du kan ändra volymen igen efteråt."
+
+#: linux/share/monet/settings-app/OutputOrder.qml:109
+msgid "Speaker limit (%1%)"
+msgstr "Volymgräns (%1%)"
+
+#: linux/libexec/monet-quick:9357
+msgid "speaker limit; unplug headphones; headphone disconnect volume"
+msgstr ""
+"volymgräns för högtalare; koppla ur hörlurar; volym när hörlurarna kopplas från"

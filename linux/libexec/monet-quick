@@ -9353,6 +9353,8 @@ def search_catalog():
          N_("headphones; earphones; earbuds; speakers; no sound; change audio output; play sound through"), "sound#output", "audio-headphones"),
         ("volume-mixer", tr("Volume mixer"), tr("Sound · App volume and output"),
          N_("volume mixer; mute an app; route app audio; per-app sound"), "sound#mixer", "audio-volume-high"),
+        ("speaker-limit", tr("Lower speakers when headphones disconnect"), tr("Sound"),
+         N_("speaker limit; unplug headphones; headphone disconnect volume"), "sound#output-order", "audio-speakers"),
         ("output-order", tr("Preferred output order"), tr("Sound · Automatic output switching"),
          N_("preferred output order; audio device priority; automatically switch sound outputs"), "sound#output-order", "audio-card"),
         ("microphone", tr("Microphone"), tr("Sound · Microphone volume"),
