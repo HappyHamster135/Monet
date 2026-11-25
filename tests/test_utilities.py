@@ -126,9 +126,18 @@ class PlayerDetails(unittest.TestCase):
                 patch("player.upcoming", return_value=[]):
             result, = snapshots(selected)
             self.assertEqual((result["service"], result["trackId"], result["lyrics"]["text"]), (name, "/song/2", "Second tab"))
+            self.assertEqual(result["owner"], ":1.41")
             bus.list_names.assert_not_called()
             bus.get_name_owner.assert_called_once_with(name)
             self.assertEqual(snapshots(dict(selected, pid=43)), [])
+            with patch("player.track_lyrics") as lyrics:
+                result, = snapshots(dict(selected, detail="queue"))
+                lyrics.assert_not_called()
+                self.assertNotIn("lyrics", result)
+            with patch("player.upcoming") as queue:
+                result, = snapshots(dict(selected, detail="lyrics"))
+                queue.assert_not_called()
+                self.assertNotIn("queue", result)
 
     def test_queue_uses_playlist_order_and_only_upcoming_tracks(self):
         obj, props = Mock(), Mock()
@@ -139,9 +148,14 @@ class PlayerDetails(unittest.TestCase):
         rows = upcoming(obj, props, {"mpris:trackid": ids[4]})
         self.assertEqual([row["title"] for row in rows], ids[5:25])
         self.assertEqual(list(obj.GetTracksMetadata.call_args.args[0]), ids[5:25])
-        for current in ("/unknown", ids[-1]):
-            self.assertEqual(upcoming(obj, props, {"mpris:trackid": current}), [])
+        self.assertEqual([row["id"] for row in rows], ids[5:25])
+        self.assertIsNone(upcoming(obj, props, {"mpris:trackid": "/unknown"}))
+        self.assertEqual(upcoming(obj, props, {"mpris:trackid": ids[-1]}), [])
         self.assertEqual(obj.GetTracksMetadata.call_count, 1)
+        props.Get.return_value = []
+        self.assertEqual(upcoming(obj, props, {}), [])
+        props.Get.return_value = [ids[6]]
+        self.assertEqual(upcoming(obj, props, {"mpris:trackid": "/org/mpris/MediaPlayer2/TrackList/NoTrack"})[0]["id"], ids[6])
 
 
 @unittest.skipUnless(importlib.util.find_spec("PySide6"), "needs Qt")

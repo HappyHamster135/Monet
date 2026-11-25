@@ -1,4 +1,4 @@
-"""Exercise notch seeking against a player that advances to a same-titled track."""
+"""Exercise track-specific notch controls against an MPRIS player with same-titled tracks."""
 import importlib.util
 from pathlib import Path
 import subprocess
@@ -16,14 +16,20 @@ NATIVE = importlib.util.find_spec("PySide6") and any(
 
 @unittest.skipUnless(NATIVE, "requires Qt and Plasma media controls")
 class NotchPlayback(unittest.TestCase):
-    def test_scrub_belongs_to_the_track_that_was_pressed(self):
+    def run_fixture(self, mode):
         with private_session() as env:
-            probe = subprocess.run([sys.executable, "-m", "tests.test_notch_playback", "--fixture"],
+            probe = subprocess.run([sys.executable, "-m", "tests.test_notch_playback", mode],
                                    env=env, cwd=ROOT, capture_output=True, text=True, timeout=20)
         self.assertEqual(probe.returncode, 0, probe.stdout + probe.stderr)
 
+    def test_scrub_belongs_to_the_track_that_was_pressed(self):
+        self.run_fixture("--fixture")
 
-def fixture():
+    def test_queued_play_waits_for_the_chosen_track_and_service(self):
+        self.run_fixture("--queue")
+
+
+def fixture(queue):
     import dbus
     from PySide6.QtCore import QPointF, Qt, QUrl
     from PySide6.QtQuick import QQuickItem, QQuickView
@@ -39,7 +45,10 @@ Item {
     width: 400; height: 290
     function i18n(text) { return text }
     Mpris.Mpris2Model { id: players }
+    Monet.QueuePlayback { id: action; objectName: "queuePlayback" }
+    function choose(owner, track) { action.choose(owner, musicPage.trackId, track, players.currentPlayer) }
     Monet.Music {
+        id: musicPage
         objectName: "music"; anchors.fill: parent
         sources: players; player: players.currentPlayer
         playing: false; view: 0; formatDuration: ms => String(ms)
@@ -68,6 +77,36 @@ Item {
                             start_new_session=True)
     try:
         wait(lambda: music.property("trackId") == "/sample" and slider.isEnabled(), "first track")
+        if queue:
+            root = view.rootObject()
+            controller = root.findChild(QQuickItem, "queuePlayback")
+            bus = dbus.SessionBus()
+            name = "org.mpris.MediaPlayer2.Music"
+            owner = str(bus.get_name_owner(name))
+            player = bus.get_object(name, "/org/mpris/MediaPlayer2")
+            def calls():
+                return events.read_text().splitlines() if events.exists() else []
+            root.choose(owner, "/other")
+            wait(lambda: calls() == ["Music GoTo /other"], "skip requested without resuming the old song")
+            root.choose(owner, "/missing")
+            player.Next(dbus_interface="org.mpris.MediaPlayer2.Player")
+            wait(lambda: calls() == ["Music GoTo /other", "Music Next", "Music Play"], "resume the chosen track once")
+            wait(lambda: not controller.property("busy"), "finished")
+            root.choose(owner, "/missing")
+            wait(lambda: controller.property("failedOwner") == owner, "unsupported action reported")
+            assert calls()[-1] == "Music GoTo /missing"
+            # A new process can publish precisely the same service name and track IDs.
+            stop(proc)
+            wait(lambda: not music.property("trackId"), "old player exited")
+            proc = subprocess.Popen([sys.executable, str(ROOT / "tests/fixtures/media-keys-wayland.py"),
+                                     "--player", "Music"], start_new_session=True)
+            wait(lambda: music.property("trackId") == "/sample", "replacement player")
+            assert str(bus.get_name_owner(name)) != owner
+            before = calls()
+            root.choose(owner, "/other")
+            wait(lambda: not controller.property("busy"), "stale queue rejected")
+            assert controller.property("failedOwner") == owner and calls() == before
+            return
         QTest.mousePress(view, Qt.LeftButton, pos=at(.2))
         QTest.mouseMove(view, at(.6))
         player = dbus.SessionBus().get_object("org.mpris.MediaPlayer2.Music", "/org/mpris/MediaPlayer2")
@@ -87,5 +126,5 @@ Item {
         app.processEvents()
 
 
-if __name__ == "__main__" and sys.argv[1:] == ["--fixture"]:
-    fixture()
+if __name__ == "__main__" and sys.argv[1:] in (["--fixture"], ["--queue"]):
+    fixture(sys.argv[1] == "--queue")

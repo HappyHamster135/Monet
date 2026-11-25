@@ -53,9 +53,18 @@ PlasmoidItem {
     }
     readonly property bool offerAgenda: tools.offers("calendars")
     readonly property bool offerMediaDetails: tools.offers("media")
+    Loader {
+        id: queuePlayback
+        active: false
+        source: "QueuePlayback.qml"
+    }
+    onMusicViewChanged: if (musicView === 2) queuePlayback.active = true
     readonly property bool offerMixer: tools.offers("mixer")
     onOfferAgendaChanged: if (!offerAgenda) viewingAgenda = false
-    onOfferMediaDetailsChanged: if (!offerMediaDetails && (musicView === 1 || musicView === 2)) musicView = 0
+    onOfferMediaDetailsChanged: if (!offerMediaDetails) {
+        if (musicView === 1 || musicView === 2) musicView = 0
+        queuePlayback.active = false
+    }
     onOfferMixerChanged: if (!offerMixer && musicView === 3) musicView = 0
     readonly property var visibleTabs: {
         const value = Plasmoid.configuration.tabs || ""
@@ -702,6 +711,7 @@ PlasmoidItem {
         id: musicPage
         Music {
             player: root.media; sources: players; playing: root.playing; view: root.musicView
+            playback: queuePlayback.item
             formatDuration: root.duration
             gestures: notchGestures
             offerDetails: root.offerMediaDetails; offerMixer: root.offerMixer

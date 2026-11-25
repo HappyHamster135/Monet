@@ -19757,3 +19757,11 @@ msgstr ""
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:332
 msgid "Repeat off"
 msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NotchQueue.qml:68
+msgid "The player couldn’t play that track."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NotchQueue.qml:140
+msgid "Nothing else is queued."
+msgstr ""

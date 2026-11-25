@@ -19827,3 +19827,11 @@ msgstr "Upprepa spellistan"
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:332
 msgid "Repeat off"
 msgstr "Upprepning av"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NotchQueue.qml:68
+msgid "The player couldn’t play that track."
+msgstr "Spelaren kunde inte spela det spåret."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NotchQueue.qml:140
+msgid "Nothing else is queued."
+msgstr "Det finns inga fler spår i kön."

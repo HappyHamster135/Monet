@@ -12,6 +12,7 @@ ColumnLayout {
     required property var sources
     required property var formatDuration
     property var gestures: null
+    property var playback: null
     property bool offerDetails: true
     property bool offerMixer: true
     required property bool playing
@@ -41,12 +42,12 @@ ColumnLayout {
     }
     onServiceChanged: readTrackId()
     readonly property string selection: player ? JSON.stringify({service: service, pid: player.instancePid, identity: player.identity,
-        title: player.track, artist: player.artist}) : ""
+        title: player.track, artist: player.artist, detail: view === 2 ? "queue" : "lyrics"}) : ""
     readonly property bool detailed: view > 0
     readonly property string watchedService: detailed ? service || details.service || "" : ""
     property var details: ({})
     readonly property var lines: details.lyrics?.timed || []
-    readonly property var queue: details.queue || []
+    property int loadedEpoch: -1
     property int epoch: 0
     property int requestedEpoch: -1
     property bool busy: false
@@ -80,7 +81,7 @@ ColumnLayout {
     Timer {
         id: refreshTimer; interval: 60
         onTriggered: {
-            if (page.busy || !page.selection || !page.view) return
+            if (page.busy || !page.selection || !page.detailed) return
             const bytes = unescape(encodeURIComponent(page.selection))
             const key = Array.from(bytes, c => c.charCodeAt(0).toString(16).padStart(2, "0")).join("")
             page.requestedEpoch = page.epoch
@@ -101,11 +102,12 @@ ColumnLayout {
             let state = {}
             try { state = JSON.parse(data.stdout) } catch (_) {}
             page.details = state
+            page.loadedEpoch = page.requestedEpoch
             if (page.view === 1) page.syncPosition()
         }
     }
     DBus.SignalWatcher {
-        enabled: !!page.watchedService
+        enabled: page.view === 2 && !!page.watchedService
         busType: DBus.BusType.Session; service: page.watchedService
         path: "/org/mpris/MediaPlayer2"; iface: "org.mpris.MediaPlayer2.TrackList"
         function dbusTrackListReplaced() { page.refresh(false) }
@@ -124,7 +126,7 @@ ColumnLayout {
                 else page.readTrackId()
                 if (page.detailed) page.refresh(false)
                 Qt.callLater(page.syncPosition)
-            } else if (page.detailed && String(iface) === "org.mpris.MediaPlayer2.TrackList" && (changed.Tracks !== undefined || invalidated.includes("Tracks"))) {
+            } else if (page.view === 2 && String(iface) === "org.mpris.MediaPlayer2.TrackList" && (changed.Tracks !== undefined || invalidated.includes("Tracks"))) {
                 page.refresh(false)
             }
         }
@@ -374,6 +376,19 @@ ColumnLayout {
         C.Button { visible: page.offerDetails && (!!page.player || page.view !== 0); text: i18n("Up next"); checked: page.view === 2; onClicked: page.viewRequested(2) }
         C.Button { visible: page.offerMixer && page.view === 0; text: i18n("Mixer"); icon.name: "audio-volume-high"; onClicked: page.viewRequested(3) }
         C.ToolButton {
+            visible: page.view === 2
+            icon.name: "view-refresh"
+            Accessible.name: i18n("Refresh")
+            C.ToolTip.text: Accessible.name
+            C.ToolTip.visible: hovered
+            C.ToolTip.delay: Kirigami.Units.toolTipDelay
+            enabled: !!page.player && !page.playback?.busy
+            onClicked: {
+                if (page.playback) page.playback.failedOwner = ""
+                page.refresh(false)
+            }
+        }
+        C.ToolButton {
             visible: page.view === 1 && page.lines.length > 0 && !page.follow
             icon.name: "view-restore"; Accessible.name: i18n("Follow lyrics")
             onClicked: { page.follow = true; lyricsList.centerLine() }
@@ -408,22 +423,23 @@ ColumnLayout {
             contentWidth: availableWidth
             C.Label { width: plainLyrics.availableWidth; textFormat: Text.PlainText; wrapMode: Text.Wrap; text: page.details.lyrics?.text || "" }
         }
-        ListView {
-            objectName: "notchQueue"; anchors.fill: parent; clip: true; spacing: Kirigami.Units.smallSpacing
-            visible: page.view === 2 && count > 0; model: page.queue
-            C.ScrollBar.vertical: C.ScrollBar {}
-            delegate: ColumnLayout {
-                required property var modelData
-                width: ListView.view.width - Kirigami.Units.largeSpacing; spacing: 0
-                C.Label { Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText; text: modelData.title || i18n("Untitled") }
-                C.Label { Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText; visible: !!text; opacity: 0.75; text: modelData.artist }
+        Loader {
+            anchors.fill: parent
+            active: page.view === 2
+            sourceComponent: NotchQueue {
+                player: page.player
+                service: page.service
+                track: page.trackId
+                snapshot: page.details
+                fresh: page.loadedEpoch === page.epoch
+                playback: page.playback
+                onRefreshRequested: page.refresh(false)
             }
         }
         C.Label {
             anchors.centerIn: parent; width: parent.width; horizontalAlignment: Text.AlignHCenter
-            visible: page.view === 1 ? !page.lines.length && !page.details.lyrics?.text : !page.queue.length
-            wrapMode: Text.WordWrap; text: page.busy ? i18n("Loading…") : page.view === 1
-                ? i18n("No lyrics available for this track.") : i18n("No upcoming tracks shared by this player.")
+            visible: page.view === 1 && !page.lines.length && !page.details.lyrics?.text
+            wrapMode: Text.WordWrap; text: page.busy ? i18n("Loading…") : i18n("No lyrics available for this track.")
         }
     }
 }

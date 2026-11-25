@@ -9,6 +9,7 @@ MPRIS = "org.mpris.MediaPlayer2"
 PLAYER = MPRIS + ".Player"
 TRACKS = MPRIS + ".TrackList"
 OBJECT = "/org/mpris/MediaPlayer2"
+NO_TRACK = "/org/mpris/MediaPlayer2/TrackList/NoTrack"
 MAX_LYRICS = 256 * 1024
 STAMP = re.compile(r"\[(\d{1,4}):([0-5]\d)(?:[.:](\d{1,3}))?\]")
 OFFSET = re.compile(r"^\[offset:\s*([+-]?\d{1,8})\s*\]$", re.I | re.M)
@@ -91,21 +92,22 @@ def upcoming(obj, props, meta):
     try:
         ids = props.Get(TRACKS, "Tracks", timeout=1)
         if not isinstance(ids, (list, tuple)):
-            return []
+            return None
         current = meta.get("mpris:trackid")
-        if not ids or current not in ids:
-            return []
-        start = ids.index(current) + 1
+        if ids and current and current != NO_TRACK and current not in ids:
+            return None
+        start = ids.index(current) + 1 if current and current != NO_TRACK and ids else 0
         ids = ids[start:start + 20]
         if not ids:
             return []
         rows = obj.GetTracksMetadata(dbus.Array(ids, signature="o"), dbus_interface=TRACKS, timeout=2)
         metadata = {entry["mpris:trackid"]: entry for entry in rows
                     if isinstance(entry, dict) and isinstance(entry.get("mpris:trackid"), str)}
-        return [{"title": track_title(metadata[key]), "artist": track_artist(metadata[key])}
-                for key in ids if key in metadata]
+        return [{"id": str(key), "title": track_title(metadata[key]), "artist": track_artist(metadata[key]),
+                 "art": str(metadata[key].get("mpris:artUrl", ""))}
+                for key in ids if key in metadata and key != NO_TRACK] or None
     except dbus.DBusException:
-        return []
+        return None
 
 
 def snapshots(selection=None):
@@ -136,14 +138,22 @@ def snapshots(selection=None):
                 continue
             playing = props.Get(PLAYER, "PlaybackStatus", timeout=1) == "Playing"
             owners.add(owner)
-            matches.append((name, obj, props, meta, identity, playing))
+            matches.append((name, owner, obj, props, meta, identity, playing))
         except dbus.DBusException:
             continue
     if selection and len(matches) != 1:
         return []
-    return [{"service": name, "trackId": str(meta.get("mpris:trackid", "")), "identity": identity, "title": track_title(meta), "playing": playing,
-             "lyrics": track_lyrics(meta), "queue": upcoming(obj, props, meta)}
-            for name, obj, props, meta, identity, playing in matches]
+    detail = selection.get("detail") if selection else None
+    results = []
+    for name, owner, obj, props, meta, identity, playing in matches:
+        item = {"service": name, "owner": str(owner), "trackId": str(meta.get("mpris:trackid", "")),
+                "identity": identity, "title": track_title(meta), "playing": playing}
+        if detail != "queue":
+            item["lyrics"] = track_lyrics(meta)
+        if detail != "lyrics":
+            item["queue"] = upcoming(obj, props, meta)
+        results.append(item)
+    return results
 
 
 if __name__ == "__main__":

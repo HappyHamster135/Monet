@@ -68,6 +68,13 @@ def player(name):
             self.track_id = "/other" if self.track_id == "/sample" else "/sample"
             self.PropertiesChanged(PLAYER, {"Metadata": self.GetAll(PLAYER)["Metadata"]}, [])
 
+        @dbus.service.method(MPRIS + ".TrackList", in_signature="o")
+        def GoTo(self, track):
+            record(f"GoTo {track}")
+            if str(track) == "/missing":
+                raise dbus.exceptions.DBusException("track unavailable", name="org.freedesktop.DBus.Error.Failed")
+            # The queue test delivers the metadata change separately with Next.
+
         @dbus.service.method(PLAYER, in_signature="ox")
         def SetPosition(self, track, position):
             record(f"SetPosition {track} {position}")
