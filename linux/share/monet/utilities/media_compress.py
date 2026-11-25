@@ -71,7 +71,7 @@ def inspect_file(path):
             if info["kind"] == "image":
                 return info
     result = subprocess.run(["ffprobe", "-v", "error", "-protocol_whitelist", "file,pipe",
-                             "-show_entries", "format=duration:stream=index,codec_type,width,height,duration:"
+                             "-show_entries", "format=duration:format_tags=major_brand:stream=index,codec_type,codec_name,pix_fmt,width,height,duration:"
                              "stream_disposition=attached_pic:stream_side_data=rotation",
                              "-of", "json", str(path)], capture_output=True, timeout=45)
     if result.returncode:
@@ -88,6 +88,13 @@ def inspect_file(path):
             info["width"], info["height"] = info["height"], info["width"]
     info["stream"] = video["index"]
     info["audio"] = sum(s["codec_type"] == "audio" for s in streams)
+    # Skip lossy recompression only for a compatible MP4. QuickTime files and
+    # other containers can also carry H.264 and AAC under an .mp4 filename.
+    brand = probe.get("format", {}).get("tags", {}).get("major_brand", "").strip()
+    info["compatible_mp4"] = (brand in ("isom", "iso2", "iso3", "iso4", "iso5", "iso6", "avc1", "mp41", "mp42", "M4V")
+                              and video.get("codec_name") == "h264" and video.get("pix_fmt") == "yuv420p"
+                              and all(s is video or (s["codec_type"] == "audio" and s.get("codec_name") == "aac")
+                                      for s in streams))
     try:
         duration = float(probe.get("format", {}).get("duration") or video.get("duration") or 0)
         info["duration"] = duration if math.isfinite(duration) and duration > 0 else 0
@@ -119,18 +126,19 @@ def encode_video(source, output, info, options, progress):
                 duration = 0
     if info["kind"] == "image":
         duration = 1 / 25
-    if limit and not duration:
-        raise ValueError(tr("This video needs a known duration to fit a size limit."))
     width, height = dimensions(info["width"], info["height"], edge)
     # Use even dimensions for H.264 and carry the input display aspect through the scale.
     scale = f"scale={max(2, width - width % 2)}:{max(2, height - height % 2)}"
     base = ffmpeg(source) + ["-map", f"0:{info.get('stream', 0)}", "-vf", scale, "-c:v", "libx264",
                              "-preset", "veryfast", "-pix_fmt", "yuv420p", "-threads", "2"]
     sound = ["-map", "0:a?", "-c:a", "aac"] if count else ["-an"]
-    if not limit:
+    if not limit or info["size"] <= limit:
         transcode(base + ["-crf", str((29, 24, 19)[quality])] + sound +
                   ["-movflags", "+faststart", str(output)], duration, progress)
-        return
+        if not limit or output.stat().st_size <= limit:
+            return
+    if not duration:
+        raise ValueError(tr("This video needs a known duration to fit a size limit."))
     # Reserve room for MP4 headers and AAC variation. Check the actual file after encoding.
     budget = int((limit - 4096) * 8 * .96 / duration)
     audio_rate = min(128000, max(16000, budget // (5 * max(1, count))))
@@ -295,7 +303,8 @@ def main(argv):
     same_picture_format = (info.get("format") == {".jpg": "JPEG", ".png": "PNG", ".webp": "WEBP", ".gif": "GIF",
                                                   ".heic": "HEIC"}.get(suffix)
                            and (info["kind"] == "image" or (info["kind"] == "animation" and suffix == ".gif")))
-    original_fits = (same_picture_format and (not edge or max(info["width"], info["height"]) <= edge)
+    same_video_format = suffix == ".mp4" and info.get("compatible_mp4") and (audio or not info["audio"])
+    original_fits = ((same_picture_format or same_video_format) and (not edge or max(info["width"], info["height"]) <= edge)
                      and (not limit or info["size"] <= limit))
     if original_fits and limit:
         shutil.copyfile(source, output)

@@ -101,6 +101,31 @@ class MediaCompression(unittest.TestCase):
         self.assertEqual([s["codec_name"] for s in streams], ["h264", "aac"])
         self.assertEqual(streams[0]["width"], 120)
 
+    def test_generous_limit_keeps_compatible_video_and_honors_mute(self):
+        self.add_files(self.video)
+        reference = self.folder / "quality.mp4"
+        self.save(reference)
+        original = reference.read_bytes()
+        self.page.limited.setChecked(True)
+        self.page.limit.setValue(5)
+        converted = self.folder / "capped.mp4"
+        self.save(converted)
+        # An under-limit lossless input uses the selected quality when converting.
+        self.assertEqual(converted.stat().st_size, len(original))
+        self.page.tree.selectAll()
+        self.page.remove.click()
+        self.add_files(reference)
+        compatible = self.folder / "unchanged.mp4"
+        self.save(compatible)
+        self.assertEqual(compatible.read_bytes(), original)
+        self.page.audio.setChecked(False)
+        muted = self.folder / "muted.mp4"
+        self.save(muted)
+        self.assertLess(muted.stat().st_size, len(original))
+        self.assertEqual(subprocess.check_output(["ffprobe", "-v", "error", "-select_streams", "a",
+                         "-show_entries", "stream=index", "-of", "csv=p=0", str(muted)]), b"")
+        self.assertEqual(reference.read_bytes(), original)
+
     def test_collision_during_export_preserves_file_and_retry_works(self):
         self.add_files(self.video)
         target = self.folder / "sharing.MP4"

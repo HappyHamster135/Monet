@@ -137,6 +137,7 @@ class CompressPage(QWidget):
         self.save.clicked.connect(self.choose_output)
         footer.addWidget(self.save)
         self.format.currentIndexChanged.connect(self.format_changed)
+        self.limit.valueChanged.connect(self.update_controls)
         self.limited.toggled.connect(self.update_controls)
         self.update_controls()
 
@@ -161,8 +162,11 @@ class CompressPage(QWidget):
         self.options.setEnabled(not self.exporting)
         self.fit_note.setVisible(self.limited.isChecked() and bool(formats - {".mp4"}))
         self.audio.setVisible(any(e.info["audio"] and self.suffix(e) == ".mp4" for e in ready))
-        # Video bitrate comes from the size limit; lossless PNG has no quality setting.
-        self.quality.setEnabled(not formats or bool(formats - ({".png", ".mp4"} if self.limited.isChecked() else {".png"})))
+        # For videos above the cap, the byte budget sets the bitrate.
+        limit = round(self.limit.value() * 1000000) if self.limited.isChecked() else 0
+        self.quality.setEnabled(any(self.suffix(e) != ".png" and
+                                    (self.suffix(e) != ".mp4" or not limit or e.info["size"] <= limit)
+                                    for e in ready))
         entry = self.entries.get(selected[0].data(0, Qt.UserRole)) if len(selected) == 1 else None
         self.reveal.setVisible(bool(entry and entry.output))
         self.save.setText(tr("Save copies…") if len(ready) > 1 else tr("Save copy…"))
