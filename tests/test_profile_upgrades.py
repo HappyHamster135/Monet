@@ -399,7 +399,7 @@ class ProfileUpgrades(unittest.TestCase):
         (inherited / "kwinrc").write_text("[TabBox]\nLayoutName=org.kde.breeze.desktop\n")
         self.env["XDG_CONFIG_DIRS"] = str(inherited)
         subprocess.run([str(look), "--keep"], env=self.env, check=True, capture_output=True, timeout=30)
-        self.assertIn("LayoutName=monet-windows\n", (self.config / "kwinrc").read_text())
+        self.assertIn("LayoutName=monet-switcher\n", (self.config / "kwinrc").read_text())
         # A user who selects Plasma's old grid keeps that choice.
         (self.config / "kwinrc").write_text("[TabBox]\nLayoutName=thumbnail_grid\n")
         subprocess.run([str(look), "--keep"], env=self.env, check=True, capture_output=True, timeout=30)

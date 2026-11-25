@@ -301,6 +301,7 @@ tree "$SRC/share/kwin/effects/monet-motion" "$DATADIR/kwin/effects/monet-motion"
 tree "$SRC/share/kwin/scripts/monet-work" "$DATADIR/kwin/scripts/monet-work"
 tree "$SRC/share/kwin/scripts/monet-quit-on-close" "$DATADIR/kwin/scripts/monet-quit-on-close"
 tree "$SRC/share/kwin/tabbox/monet-windows" "$DATADIR/kwin/tabbox/monet-windows"
+tree "$SRC/share/kwin/tabbox/monet-switcher" "$DATADIR/kwin/tabbox/monet-switcher"
 tree "$SRC/share/fonts/monet" "$DATADIR/fonts/monet"
 command -v fc-cache >/dev/null && fc-cache -f "$DATADIR/fonts/monet" >/dev/null 2>&1 || true
 # The sounds, felt and glass; KDE's Ocean plays the few Monet leaves out.

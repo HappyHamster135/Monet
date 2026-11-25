@@ -603,6 +603,9 @@ class Window(QMainWindow):
         elif key == "media-keys":
             from media_keys import MediaKeys
             self.page(key, MediaKeys)
+        elif key == "window-switcher":
+            from window_switcher import WindowSwitcher
+            self.page(key, WindowSwitcher)
         elif key == "extra-clicks":
             from extra_clicks import ExtraClicks
             self.page(key, ExtraClicks)

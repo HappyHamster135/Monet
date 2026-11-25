@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "KWin/WindowSwitcher",
+    "KPlugin": {
+        "Id": "monet-switcher",
+        "Name": "Monet Window Switcher",
+        "Name[sv]": "Monets fönsterväxlare",
+        "Description": "Search open windows by title or application",
+        "Description[sv]": "Sök bland öppna fönster efter titel eller program",
+        "Icon": "preferences-system-windows",
+        "License": "GPL-2.0-or-later"
+    },
+    "X-Plasma-API": "declarativeappletscript"
+}

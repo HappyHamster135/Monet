@@ -18920,3 +18920,108 @@ msgstr ""
 #: linux/share/monet/utilities/mouse_exceptions.py:50
 msgid "Could not save mouse settings."
 msgstr ""
+
+#: linux/share/kwin/tabbox/monet-switcher/contents/ui/WindowSwitcher.qml:176
+msgid "Search: %1"
+msgstr ""
+
+#: linux/share/kwin/tabbox/monet-switcher/contents/ui/WindowSwitcher.qml:177 linux/share/kwin/tabbox/monet-switcher/contents/ui/WindowSwitcher.qml:188
+msgid "Type to find a window"
+msgstr ""
+
+#: linux/share/kwin/tabbox/monet-switcher/contents/ui/WindowSwitcher.qml:188
+msgid "Clear search"
+msgstr ""
+
+#: linux/share/kwin/tabbox/monet-switcher/contents/ui/WindowSwitcher.qml:331
+msgid "No matching windows"
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsInput.qml:87 linux/libexec/monet-quick:9289 linux/share/monet/utilities/actions.py:78
+msgid "Window switcher"
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsInput.qml:88
+msgid "Choose Alt+Tab previews, apps and displays."
+msgstr ""
+
+#: linux/libexec/monet-quick:9290
+msgid ""
+"Alt Tab; switch apps; open windows; window previews; current monitor; display filter"
+msgstr ""
+
+#: linux/share/monet/utilities/window_switcher.py:33
+msgid "Live window previews"
+msgstr ""
+
+#: linux/share/monet/utilities/window_switcher.py:33
+msgid "Icons and titles"
+msgstr ""
+
+#: linux/share/monet/utilities/window_switcher.py:34
+msgid "All windows"
+msgstr ""
+
+#: linux/share/monet/utilities/window_switcher.py:34
+msgid "One window per app"
+msgstr ""
+
+#: linux/share/monet/utilities/window_switcher.py:35
+msgid "Only the active app"
+msgstr ""
+
+#: linux/share/monet/utilities/window_switcher.py:36
+msgid "Include windows from"
+msgstr ""
+
+#: linux/share/monet/utilities/window_switcher.py:36
+msgid "All displays"
+msgstr ""
+
+#: linux/share/monet/utilities/window_switcher.py:36
+msgid "Current display"
+msgstr ""
+
+#: linux/share/monet/utilities/window_switcher.py:37
+msgid "Other displays"
+msgstr ""
+
+#: linux/share/monet/utilities/window_switcher.py:38
+msgid ""
+"Hold Alt and press Tab. Type a window title or app name to narrow the list. Release Alt to switch, or press Esc to cancel."
+msgstr ""
+
+#: linux/share/monet/utilities/window_switcher.py:64
+msgid "Switcher hidden"
+msgstr ""
+
+#: linux/share/monet/utilities/window_switcher.py:64
+msgid "Current layout: %1"
+msgstr ""
+
+#: linux/share/monet/utilities/window_switcher.py:66 linux/share/monet/utilities/window_switcher.py:67
+msgid "Custom"
+msgstr ""
+
+#: linux/share/monet/utilities/window_switcher.py:77
+msgid "Could not read window switcher settings."
+msgstr ""
+
+#: linux/share/monet/utilities/window_switcher.py:97
+msgid "Could not save window switcher settings."
+msgstr ""
+
+#: linux/share/monet/utilities/window_switcher.py:108
+msgid "Settings saved. The switcher will use them at your next sign-in."
+msgstr ""
+
+#: linux/share/kwin/tabbox/monet-switcher/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Monet Window Switcher"
+msgstr ""
+
+#: linux/share/kwin/tabbox/monet-switcher/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "Search open windows by title or application"
+msgstr ""

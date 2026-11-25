@@ -14,7 +14,7 @@ widgetStyle=kvantum
 name=monet
 
 [kwinrc][WindowSwitcher]
-LayoutName=monet-windows
+LayoutName=monet-switcher
 
 [kwinrc][DesktopSwitcher]
 LayoutName=org.kde.breeze.desktop

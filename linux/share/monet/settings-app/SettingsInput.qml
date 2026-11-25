@@ -83,6 +83,21 @@ ColumnLayout {
             tone: look
             divider: true
             tappable: true
+            objectName: "search-window-switcher"
+            title: i18n("Window switcher")
+            detail: i18n("Choose Alt+Tab previews, apps and displays.")
+            onTapped: sheet.ask("utilities window-switcher")
+            SettingsControls.Glyph {
+                width: 16
+                height: 16
+                path: "M9 5l7 7-7 7"
+                color: look.dim
+            }
+        }
+        SettingsControls.SettingRow {
+            tone: look
+            divider: true
+            tappable: true
             objectName: "wheelScrollingSettings"
             title: i18n("Mouse wheel scrolling")
             detail: i18n("Adjust wheel distance, smoothing and sideways scrolling.")

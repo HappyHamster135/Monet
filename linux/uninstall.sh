@@ -222,7 +222,7 @@ rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/pl
     "$PREFIX/share/aurorae/themes/MonetMatte" "$PREFIX/share/aurorae/themes/MonetSmokeMatte" \
     "$PREFIX/share/aurorae/themes/MonetBare" "$PREFIX/share/kwin/scripts/monet-titles" \
     "$PREFIX/share/kwin/scripts/monet-snap" "$PREFIX/share/kwin/effects/monet-motion" \
-    "$PREFIX/share/kwin/scripts/monet-work" "$PREFIX/share/kwin/scripts/monet-quit-on-close" "$PREFIX/share/kwin/tabbox/monet-windows" \
+    "$PREFIX/share/kwin/scripts/monet-work" "$PREFIX/share/kwin/scripts/monet-quit-on-close" "$PREFIX/share/kwin/tabbox/monet-windows" "$PREFIX/share/kwin/tabbox/monet-switcher" \
     "$PREFIX/share/fonts/monet" "$PREFIX/share/sounds/monet" "$PREFIX/share/wallpapers/Monet" "$PREFIX/share/monet" \
     "$PREFIX/share/doc/monet/passwords-connector" \
     /var/lib/monet

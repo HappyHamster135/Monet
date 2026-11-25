@@ -579,8 +579,8 @@ look --file kdeglobals --group KDE --key DefaultDarkLookAndFeel org.monet.smoke.
 # Also update existing accounts that still inherit the old switcher from their
 # look-and-feel. The profile writer respects any explicitly chosen layout.
 case "$(kreadconfig6 --file kwinrc --group TabBox --key LayoutName 2>/dev/null)" in
-    ""|org.kde.breeze.desktop|thumbnail_grid|monet-windows)
-        look --file kwinrc --group TabBox --key LayoutName monet-windows
+    ""|org.kde.breeze.desktop|thumbnail_grid|monet-windows|monet-switcher)
+        look --file kwinrc --group TabBox --key LayoutName monet-switcher
         ;;
 esac
 

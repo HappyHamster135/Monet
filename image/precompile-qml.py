@@ -19,6 +19,7 @@ def sources(share):
     for kind in ('plasmoids', 'wallpapers', 'look-and-feel'):
         roots.extend(sorted((share / 'plasma' / kind).glob('org.monet.*')))
     roots.extend(sorted((share / 'kwin/scripts').glob('monet-*')))
+    roots.extend(sorted((share / 'kwin/tabbox').glob('monet-*')))
     roots.extend(sorted((share / 'ksysguard/sensorfaces').glob('org.monet.*')))
     files = {path for root in roots for path in root.rglob('*.qml')
              if path.is_file() and not path.is_symlink()}
