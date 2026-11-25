@@ -204,3 +204,6 @@ class NativePreview(unittest.TestCase):
             files=p.plan()
             self.assertEqual(files[p.PRIVATE/'monet/widgets'][0],p.DATA/'monet/widgets')
             self.assertIn(p.DATA/'monet/widgets/ScrollInput.qml',files)
+            gallery = p.DATA / 'plasma/shells/org.kde.plasma.desktop/contents/explorer/MonetWidgetExplorer.qml'
+            self.assertIn(str(p.BIN / 'monet-files').encode(), files[gallery][0])
+            self.assertNotIn(b'@BINDIR@', files[gallery][0])

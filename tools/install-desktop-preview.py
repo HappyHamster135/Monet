@@ -85,7 +85,8 @@ def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None, native_bundle
     prefix = cli_prefix(monet_prefix)
     bindir = prefix / 'bin' if prefix else Path('/usr/bin')
     def render(source, **kwargs):
-        return globals()['render'](source, bindir=bindir, **kwargs)
+        kwargs.setdefault('bindir', bindir)
+        return globals()['render'](source, **kwargs)
     monitor_binary = None
     if monitor_bundle:
         import importlib.util
