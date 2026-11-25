@@ -17691,3 +17691,176 @@ msgstr ""
 #: linux/share/monet/utilities/picture_options.py:68
 msgid "Preview"
 msgstr "Förhandsvisning"
+
+#: linux/share/monet/utilities/compress_page.py:63
+msgid "Export options"
+msgstr "Exportalternativ"
+
+#: linux/share/monet/utilities/compress_page.py:445
+msgid "Couldn’t read the saved dimensions."
+msgstr "Det gick inte att läsa den sparade filens mått."
+
+#: linux/share/monet/utilities/media_names.py:18
+msgid "Use matching braces around each field."
+msgstr "Sätt matchande klammerparenteser runt varje fält."
+
+#: linux/share/monet/utilities/media_names.py:24
+msgid "Unknown filename field. Use Insert field to choose one."
+msgstr "Okänt filnamnsfält. Välj ett via Infoga fält."
+
+#: linux/share/monet/utilities/media_names.py:70
+msgid "File names"
+msgstr "Filnamn"
+
+#: linux/share/monet/utilities/media_names.py:76
+msgid "Pattern"
+msgstr "Namnmönster"
+
+#: linux/share/monet/utilities/media_names.py:84
+msgid "Insert field"
+msgstr "Infoga fält"
+
+#: linux/share/monet/utilities/media_names.py:87
+msgid "Original name"
+msgstr "Ursprungligt namn"
+
+#: linux/share/monet/utilities/media_names.py:87
+msgid "Sequence number"
+msgstr "Löpnummer"
+
+#: linux/share/monet/utilities/media_names.py:88
+msgid "Sequence number (001)"
+msgstr "Löpnummer (001)"
+
+#: linux/share/monet/utilities/media_names.py:88
+msgid "Date"
+msgstr "Datum"
+
+#: linux/share/monet/utilities/media_names.py:89
+msgid "Date and time"
+msgstr "Datum och tid"
+
+#: linux/share/monet/utilities/media_names.py:90
+msgid "Output extension"
+msgstr "Filändelse"
+
+#: linux/share/monet/utilities/media_names.py:95
+msgid "Filename preview"
+msgstr "Förhandsvisning av filnamn"
+
+#: linux/share/monet/utilities/media_names.py:96
+msgid "New name"
+msgstr "Nytt namn"
+
+#: linux/share/monet/utilities/media_names.py:120
+msgid "Picture"
+msgstr "Bild"
+
+#: linux/share/monet/utilities/media_names.py:134
+msgid "The preview uses the requested dimensions. Batch names use the final dimensions. If a name is taken, the copy gets a number."
+msgstr ""
+"Förhandsvisningen använder de begärda måtten. Filnamnen använder de slutliga måtten. Om ett namn redan finns får kopian ett nummer."
+
+#: linux/share/monet/utilities/media_presets.py:20
+msgid "Web picture"
+msgstr "Bild för webben"
+
+#: linux/share/monet/utilities/media_presets.py:21
+msgid "Social picture"
+msgstr "Bild för sociala medier"
+
+#: linux/share/monet/utilities/media_presets.py:22
+msgid "PDF handout"
+msgstr "PDF för utdelning"
+
+#: linux/share/monet/utilities/media_presets.py:82
+msgid "File names…"
+msgstr "Filnamn…"
+
+#: linux/share/monet/utilities/media_presets.py:84
+msgid "Save to folder…"
+msgstr "Spara i mapp…"
+
+#: linux/share/monet/utilities/media_presets.py:93
+msgid "Presets"
+msgstr "Förinställningar"
+
+#: linux/share/monet/utilities/media_presets.py:97
+msgid "My presets"
+msgstr "Mina förinställningar"
+
+#: linux/share/monet/utilities/media_presets.py:101
+msgid "Save as new preset…"
+msgstr "Spara som ny förinställning…"
+
+#: linux/share/monet/utilities/media_presets.py:104
+msgid "Update “%1”"
+msgstr "Uppdatera ”%1”"
+
+#: linux/share/monet/utilities/media_presets.py:105
+msgid "Rename “%1”…"
+msgstr "Byt namn på ”%1”…"
+
+#: linux/share/monet/utilities/media_presets.py:106
+msgid "Delete “%1”…"
+msgstr "Ta bort ”%1”…"
+
+#: linux/share/monet/utilities/media_presets.py:111
+msgid "Using preset “%1”."
+msgstr "Förinställningen ”%1” används."
+
+#: linux/share/monet/utilities/media_presets.py:114
+msgid "Media preset"
+msgstr "Medieförinställning"
+
+#: linux/share/monet/utilities/media_presets.py:114
+msgid "Preset name"
+msgstr "Namn på förinställningen"
+
+#: linux/share/monet/utilities/media_presets.py:119
+msgid "Use a preset name between 1 and 80 characters."
+msgstr "Välj ett namn på 1 till 80 tecken."
+
+#: linux/share/monet/utilities/media_presets.py:124
+msgid "A preset already uses that name."
+msgstr "Det finns redan en förinställning med det namnet."
+
+#: linux/share/monet/utilities/media_presets.py:133
+msgid "Saved preset “%1”."
+msgstr "Förinställningen ”%1” har sparats."
+
+#: linux/share/monet/utilities/media_presets.py:135
+msgid "Couldn’t save the media preset."
+msgstr "Det gick inte att spara förinställningen."
+
+#: linux/share/monet/utilities/media_presets.py:159
+msgid "Delete preset"
+msgstr "Ta bort förinställning"
+
+#: linux/share/monet/utilities/media_presets.py:159
+msgid "Delete the preset “%1”?"
+msgstr "Vill du ta bort förinställningen ”%1”?"
+
+#: linux/share/monet/utilities/media_presets.py:165
+msgid "Deleted preset “%1”."
+msgstr "Förinställningen ”%1” har tagits bort."
+
+#: linux/share/monet/utilities/media_presets.py:167
+msgid "Couldn’t delete the media preset."
+msgstr "Det gick inte att ta bort förinställningen."
+
+#: linux/share/monet/utilities/picture_options.py:62
+msgid "Background"
+msgstr "Bakgrund"
+
+#: linux/share/monet/utilities/picture_options.py:63
+msgid "Black"
+msgstr "Svart"
+
+#: linux/share/monet/utilities/picture_options.py:64
+msgid "Remove camera and location tags"
+msgstr "Ta bort kamera- och platsinformation"
+
+#: linux/share/monet/utilities/picture_options.py:68
+msgid "Keep original modification date"
+msgstr "Behåll ursprungligt ändringsdatum"

@@ -73,6 +73,187 @@ class MediaCompression(unittest.TestCase):
             self.page.save.click()
         self.wait(lambda: not self.page.exporting)
 
+    def test_presets_from_menu_survive_a_new_window_and_support_rename_update_delete(self):
+        from PySide6.QtCore import QSettings
+        from PySide6.QtWidgets import QInputDialog
+        from media_presets import defaults
+        from actions import tr
+        def in_test_store(menu):
+            menu.config = QSettings(str(self.folder / "utilities.ini"), QSettings.IniFormat)
+            menu.config.beginGroup("mediaPresets")
+        def action(menu, label):
+            if "“" in label:
+                stem, rest = label.split("“", 1)
+                name, end = rest.split("”", 1)
+                label = tr(stem + "“%1”" + end).replace("%1", name)
+            else:
+                label = tr(label)
+            menu.refresh()
+            return next(a for a in menu.actions() if a.text() == label)
+        p = self.page
+        m = p.menu
+        in_test_store(m)
+        action(m, "Web picture").trigger()
+        self.assertEqual((p.format.currentData(), p.edge.value(), p.name_pattern), (".jpg", 1600, "{name}-web"))
+        p.name_pattern = "{name}-{index:03}"
+        p.audio.setChecked(False)
+        p.limited.setChecked(True)
+        p.limit.setValue(1.25)
+        p.picture_options.update(size="exact", width=720, height=480, framing="fill", text="Monet", background="black")
+        with patch.object(QInputDialog, "getText", return_value=("Daily & photos", True)):
+            action(m, "Save as new preset…").trigger()
+        uid = m.key
+        settings = p.recipe()
+        other = Window("/usr/libexec")
+        self.addCleanup(other.close)
+        other.Open(["compress"])
+        page = other.pages["compress"]
+        menu = page.menu
+        in_test_store(menu)
+        self.assertEqual(page.recipe(), defaults())
+        action(menu, "Daily && photos").trigger()
+        self.assertEqual(page.recipe(), settings)
+        self.assertTrue(action(menu, "Daily && photos").isChecked())
+        page.edge.setValue(2000)
+        self.assertFalse(action(menu, "Daily && photos").isChecked())
+        with patch.object(QInputDialog, "getText", return_value=(tr("Web picture"), True)):
+            action(menu, "Rename “Daily && photos”…").trigger()
+        self.assertEqual(menu.saved()[uid]["name"], "Daily & photos")
+        action(menu, "Update “Daily && photos”").trigger()
+        self.assertEqual(m.saved()[uid]["settings"]["edge"], 2000)
+        with patch.object(QInputDialog, "getText", return_value=("Newsletter", True)):
+            action(menu, "Rename “Daily && photos”…").trigger()
+        menu.config.setValue("broken", '{"name":"Old","settings":null}')
+        self.assertEqual([x["name"] for x in menu.saved().values()], ["Newsletter"])
+        with patch.object(QMessageBox, "question", return_value=QMessageBox.No):
+            action(menu, "Delete “Newsletter”…").trigger()
+        self.assertIn(uid, m.saved())
+        with patch.object(QMessageBox, "question", return_value=QMessageBox.Yes):
+            action(menu, "Delete “Newsletter”…").trigger()
+        self.assertFalse(m.saved())
+
+    def test_names_dialog_shows_the_batch_and_validates_tokens(self):
+        from PySide6.QtWidgets import QDialogButtonBox
+        from media_names import NameDialog
+        self.add_files(self.picture, self.animation)
+        def edit(d):
+            d.pattern.setText("{index:03}-{name}.{ext}")
+            self.assertEqual(d.table.topLevelItem(0).text(1), "001-Poster 100%.webp")
+            self.assertEqual(d.table.topLevelItem(1).text(1), "002-Loop.gif")
+            d.pattern.setText("{typo}")
+            self.assertFalse(d.buttons.button(QDialogButtonBox.Ok).isEnabled())
+            d.pattern.setText("release-")
+            d.insert_field("index:03")
+            self.assertEqual(d.pattern.text(), "release-{index:03}")
+            self.assertTrue(d.buttons.button(QDialogButtonBox.Ok).isEnabled())
+            return NameDialog.Accepted
+        with patch.object(NameDialog, "exec", edit):
+            self.page.edit_names()
+        self.assertEqual(self.page.name_pattern, "release-{index:03}")
+
+    def test_generated_names_use_final_sizes_and_never_replace_concurrent_files(self):
+        from media_names import CopyNames
+        noisy = self.folder / "large.png"
+        Image.effect_noise((367, 281), 110).save(noisy)
+        self.add_files(noisy, self.picture)
+        p = self.page
+        p.format.setCurrentIndex(p.format.findData(".png"))
+        p.limited.setChecked(True)
+        p.limit.setValue(.01)
+        p.name_pattern = "{counter:03}-{width}x{height}.{format}"
+        with patch.object(QFileDialog, "getExistingDirectory", return_value=str(self.folder)):
+            p.save.click()
+        self.wait(lambda: not p.exporting)
+        self.assertEqual(p.saved, 2, p.message.text())
+        for seq, entry in enumerate(p.entries.values(), 1):
+            with Image.open(entry.output) as img:
+                self.assertEqual(entry.output.name, f"{seq:03}-{img.width}x{img.height}.png")
+                if seq == 1:
+                    self.assertLess(img.width, 367)
+            self.assertIn(entry.output.name, entry.row.text(2))
+        items = list(p.entries.values())
+        p.start_exports([(e, self.folder / "copy.png") for e in items], CopyNames("same"))
+        existing = self.folder / "same.png"
+        existing.write_bytes(b"another application created this file")
+        self.wait(lambda: not p.exporting)
+        self.assertEqual(existing.read_bytes(), b"another application created this file")
+        self.assertEqual([e.output.name for e in items], ["same (2).png", "same (3).png"])
+
+    def test_busy_destination_yields_to_cancel_before_publishing(self):
+        from PySide6.QtCore import QTimer
+        from media_names import CopyNames
+        from recording_export import ExportFile
+        self.add_files(self.picture)
+        entry = next(iter(self.page.entries.values()))
+        attempts = []
+        def taken(output, name=None):
+            attempts.append(name)
+            if len(attempts) == 1:
+                QTimer.singleShot(0, self.page.cancel_export)
+            if len(attempts) > 128:
+                self.fail("Publication blocked the event loop")
+            raise FileExistsError(name)
+        with patch.object(ExportFile, "publish", taken):
+            self.page.start_exports([(entry, self.folder / "copy.webp")], CopyNames("taken"))
+            self.wait(lambda: not self.page.exporting)
+        self.assertGreater(len(attempts), 0)
+        self.assertLessEqual(len(attempts), 32)
+        self.assertIsNone(entry.output)
+        self.assertIsNone(self.page.pending_publish)
+        self.assertEqual(list(self.folder.iterdir()), [])
+        self.save(self.folder / "later.webp")
+        self.assertTrue(entry.output.is_file())
+
+    def test_names_are_visible_single_components_and_fit_utf8_file_limits(self):
+        from datetime import datetime
+        from media_names import CopyNames, copy_base
+        now = datetime(2026, 4, 1, 17, 5, 7)
+        def base(pattern, name="shot.png"):
+            return copy_base(pattern, Path(name), 3, now, (50, 70), ".webp")
+        self.assertEqual(base("{{album}}-{name}-{datetime}-{index:04}-{format}", "{time}.png"),
+                         "{album}-{time}-20260401-170507-0003-webp")
+        self.assertEqual(base("{name}.{ext}"), "shot")
+        self.assertEqual(base(""), "shot-small")
+        self.assertNotIn("/", base("../folder/{name}"))
+        self.assertFalse(base("..").startswith("."))
+        for bad in ("{index:08}", "{name.attr}", "{name!s}", "{date", "{width:02}"):
+            with self.assertRaises(ValueError):
+                base(bad)
+        names = CopyNames("")
+        self.assertEqual([names.candidate(n, ".png") for n in ("a", "a (2)", "a")], ["a.png", "a (2).png", "a (3).png"])
+        choices = [names.candidate("🌷" * 100, ".webp") for _ in range(15)]
+        self.assertEqual(len(set(choices)), 15)
+        self.assertTrue(all(len(os.fsencode(n)) <= 255 for n in choices))
+
+    def test_sharing_preset_removes_tags_and_file_options_preserve_dates_and_background(self):
+        from media_presets import builtins
+        picture = self.folder / "tagged.jpg"
+        photo = Image.new("RGB", (90, 50), "green")
+        exif = Image.Exif()
+        exif[315] = "Camera owner"
+        exif[274] = 6
+        photo.save(picture, exif=exif)
+        self.add_files(picture)
+        self.page.apply_recipe(builtins()["web"][1])
+        self.page.limited.setChecked(True)
+        target = self.folder / "web.jpg"
+        self.save(target)
+        with Image.open(target) as output:
+            self.assertEqual(output.size, (50, 90))
+            self.assertFalse(output.getexif())
+        self.page.picture_options = {"keep_date": True}
+        self.save(self.folder / "original.jpg")
+        self.assertEqual((self.folder / "original.jpg").read_bytes(), picture.read_bytes())
+        self.assertEqual((self.folder / "original.jpg").stat().st_mtime_ns, picture.stat().st_mtime_ns)
+        self.page.tree.selectAll()
+        self.page.remove.click()
+        self.add_files(self.picture)
+        self.page.picture_options = {"background": "black"}
+        self.page.format.setCurrentIndex(self.page.format.findData(".png"))
+        self.save(self.folder / "black.png")
+        with Image.open(self.folder / "black.png") as img:
+            self.assertEqual(img.getpixel((0, 0)), (0, 0, 0))
+
     def test_mixed_batch_format_alpha_timing_size_limit_and_audio(self):
         self.add_files(self.picture, self.video, self.animation, self.picture)
         self.assertEqual(self.page.tree.topLevelItemCount(), 3)

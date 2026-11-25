@@ -10,28 +10,33 @@ from recording_zoom import zoom_filters
 
 
 class ExportFile:
-    def __init__(self, destination):
+    def __init__(self, destination, *, check_name=True):
         self.destination = Path(destination)
-        if os.path.lexists(self.destination):
+        if check_name and os.path.lexists(self.destination):
             raise FileExistsError(self.destination)
         self.directory = tempfile.TemporaryDirectory(prefix=".monet-recording-", dir=self.destination.parent)
         self.file = Path(self.directory.name) / ("export" + self.destination.suffix)
 
-    def publish(self):
         # Both paths are on the same filesystem. RENAME_NOREPLACE also works
         # on removable filesystems that cannot create a hard link.
         try:
-            rename = ctypes.CDLL(None, use_errno=True).renameat2
+            self.rename = ctypes.CDLL(None, use_errno=True).renameat2
         except AttributeError:
-            rename = None
-        if rename is not None:
-            rename.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
-            if rename(-100, os.fsencode(self.file), -100, os.fsencode(self.destination), 1) == 0:
-                return
+            self.rename = None
+        if self.rename is not None:
+            self.rename.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+            self.rename.restype = ctypes.c_int
+
+    def publish(self, name=None):
+        target = self.destination.with_name(name) if name is not None else self.destination
+        if self.rename is not None:
+            if self.rename(-100, os.fsencode(self.file), -100, os.fsencode(target), 1) == 0:
+                return target
             code = ctypes.get_errno()
             if code not in (errno.ENOSYS, errno.EINVAL, errno.EOPNOTSUPP):
-                raise OSError(code, os.strerror(code), self.destination)
-        os.link(self.file, self.destination)
+                raise OSError(code, os.strerror(code), target)
+        os.link(self.file, target)
+        return target
 
     def close(self):
         self.directory.cleanup()

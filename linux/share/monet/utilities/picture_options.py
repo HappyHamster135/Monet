@@ -8,7 +8,7 @@ import tempfile
 
 from PySide6.QtCore import QProcess, QRectF, QSize, Qt
 from PySide6.QtGui import QBrush, QColor, QImageReader, QPainter, QPalette, QPixmap
-from PySide6.QtWidgets import (QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout,
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout,
                                QLabel, QLineEdit, QPushButton, QSpinBox, QTabWidget, QVBoxLayout, QWidget)
 
 from actions import tr
@@ -58,6 +58,16 @@ class PictureOptions(QDialog):
         self.opacity = self.number(marks, tr("Opacity"), 1, 100, options.get("opacity", 55), "%")
         self.scale = self.number(marks, tr("Watermark width"), 1, 100, options.get("scale", 25), "%")
         self.margin = self.number(marks, tr("Margin"), 0, 4096, options.get("margin", 16), " px")
+        files = self.form(tr("File"))
+        self.background = self.combo(files, tr("Background"), [
+            ("", tr("Automatic")), ("white", tr("White")), ("black", tr("Black"))], options.get("background", ""))
+        self.strip_tags = QCheckBox(tr("Remove camera and location tags"))
+        self.strip_tags.setChecked(options.get("strip_metadata", False))
+        files.addRow(self.strip_tags)
+        files.setRowVisible(self.strip_tags, suffix != ".pdf")
+        self.keep_date = QCheckBox(tr("Keep original modification date"))
+        self.keep_date.setChecked(options.get("keep_date", False))
+        files.addRow(self.keep_date)
         self.preview_button = QPushButton(tr("Preview picture"))
         self.preview_button.clicked.connect(self.preview)
         layout.addWidget(self.preview_button)
@@ -74,7 +84,7 @@ class PictureOptions(QDialog):
         self.reset_button.clicked.connect(self.reset)
         layout.addWidget(buttons)
         self.finished.connect(self.stop_preview)
-        for field in (self.size_mode, self.framing, self.position):
+        for field in (self.size_mode, self.framing, self.position, self.background):
             field.currentIndexChanged.connect(self.hide_preview)
         for field in (self.width_px, self.height_px, self.opacity, self.scale, self.margin):
             field.valueChanged.connect(self.hide_preview)
@@ -129,6 +139,9 @@ class PictureOptions(QDialog):
         self.framing.setCurrentIndex(0)
         self.width_px.setValue(self.entry.info["width"])
         self.height_px.setValue(self.entry.info["height"])
+        self.background.setCurrentIndex(0)
+        self.strip_tags.setChecked(False)
+        self.keep_date.setChecked(False)
         self.text.clear()
         self.set_logo("")
         self.position.setCurrentIndex(self.position.findData("bottom-right"))
@@ -150,6 +163,12 @@ class PictureOptions(QDialog):
         if self.text.text().strip() or self.logo:
             options.update(text=self.text.text().strip(), logo=self.logo, position=self.position.currentData(),
                            margin=self.margin.value(), scale=self.scale.value(), opacity=self.opacity.value())
+        if self.background.currentData():
+            options["background"] = self.background.currentData()
+        if self.strip_tags.isChecked():
+            options["strip_metadata"] = True
+        if self.keep_date.isChecked():
+            options["keep_date"] = True
         return options
 
     def hide_preview(self):

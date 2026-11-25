@@ -7,16 +7,19 @@ from pathlib import Path
 import signal
 import sys
 
-from PySide6.QtCore import QLocale, QProcess, Qt
+from PySide6.QtCore import QLocale, QProcess, QTimer, Qt
 from PySide6.QtGui import QImageWriter
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog,
                                QFormLayout, QHBoxLayout, QHeaderView, QLabel, QProgressBar, QPushButton,
-                               QSpinBox, QStackedWidget, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
+                               QSpinBox, QStackedWidget, QTreeWidget, QTreeWidgetItem, QToolButton, QVBoxLayout, QWidget)
 
 from actions import tr
 from recording_export import ExportFile
 from picture_options import PictureOptions
-from media_compress import output_suffix, source_signature
+from media_compress import dimensions, output_suffix, source_signature
+from media_names import CopyNames, NameDialog, copy_base
+from media_presets import ExportMenu
+from picture_edit import picture_geometry
 
 WORKER = Path(__file__).with_name("media_compress.py")
 
@@ -34,16 +37,6 @@ def display_size(size):
     return QLocale().formattedDataSize(size, 1, QLocale.DataSizeSIFormat)
 
 
-def unused_name(source, folder, suffix, reserved):
-    base = folder / (source.stem + "-small")
-    name = Path(str(base) + suffix)
-    count = 1
-    while name in reserved or os.path.lexists(name):
-        count += 1
-        name = Path(f"{base} ({count}){suffix}")
-    return name
-
-
 class CompressPage(QWidget):
     def __init__(self):
         super().__init__()
@@ -51,6 +44,12 @@ class CompressPage(QWidget):
         self.job = None
         self.plans = deque()
         self.picture_options = {}
+        self.name_pattern = ""
+        self.batch_names = None
+        self.pending_publish = None
+        self.publish_timer = QTimer(self)
+        self.publish_timer.setSingleShot(True)
+        self.publish_timer.timeout.connect(self.resume_publish)
         self.exporting = False
         self.cancelled = False
         self.closing = False
@@ -64,6 +63,12 @@ class CompressPage(QWidget):
         self.remove = QPushButton(tr("Remove"))
         self.remove.clicked.connect(self.remove_selected)
         buttons.addWidget(self.remove)
+        self.export_options = QToolButton()
+        self.export_options.setText(tr("Export options"))
+        self.export_options.setPopupMode(QToolButton.InstantPopup)
+        self.menu = ExportMenu(self)
+        self.export_options.setMenu(self.menu)
+        buttons.addWidget(self.export_options)
         buttons.addStretch()
         self.reveal = QPushButton(tr("Show in Files"))
         self.reveal.clicked.connect(self.reveal_copy)
@@ -76,8 +81,10 @@ class CompressPage(QWidget):
         self.tree.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.tree.setMinimumHeight(75)
         self.tree.header().setSectionResizeMode(0, QHeaderView.Stretch)
-        for col in (1, 2):
-            self.tree.header().setSectionResizeMode(col, QHeaderView.ResizeToContents)
+        self.tree.header().setStretchLastSection(False)
+        self.tree.header().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        self.tree.header().setSectionResizeMode(2, QHeaderView.Stretch)
+        self.tree.setTextElideMode(Qt.ElideMiddle)
         self.tree.itemSelectionChanged.connect(self.selection_changed)
         self.tree.setAcceptDrops(False)
         self.stack = QStackedWidget()
@@ -163,6 +170,7 @@ class CompressPage(QWidget):
         selected = self.tree.selectedItems()
         self.remove.setEnabled(bool(selected) and not self.exporting)
         self.add.setEnabled(not self.exporting)
+        self.export_options.setEnabled(not self.exporting)
         self.options.setVisible(bool(ready))
         self.options.setEnabled(not self.exporting)
         picture_formats = formats - {".gif", ".mp4"}
@@ -186,6 +194,45 @@ class CompressPage(QWidget):
         self.save.setEnabled(bool(ready) and not self.job)
         self.cancel.setVisible(self.exporting)
         self.progress.setVisible(self.exporting)
+
+    def recipe(self):
+        return dict(format=self.format.currentData(), quality=self.quality.currentIndex(), edge=self.edge.value(),
+                    limited=self.limited.isChecked(), limit=self.limit.value(), audio=self.audio.isChecked(),
+                    picture=dict(self.picture_options), pattern=self.name_pattern)
+
+    def apply_recipe(self, recipe):
+        self.picture_options = dict(recipe["picture"])
+        self.name_pattern = recipe["pattern"]
+        self.format.setCurrentIndex(self.format.findData(recipe["format"]))
+        self.quality.setCurrentIndex(recipe["quality"])
+        self.edge.setValue(recipe["edge"])
+        self.limit.setValue(recipe["limit"])
+        self.limited.setChecked(recipe["limited"])
+        self.audio.setChecked(recipe["audio"])
+        self.update_controls()
+
+    def planned_size(self, entry):
+        size = entry.info["width"], entry.info["height"]
+        edge = self.edge.value()
+        suffix = self.suffix(entry)
+        if suffix == ".mp4":
+            width, height = dimensions(*size, edge)
+            return max(2, width - width % 2), max(2, height - height % 2)
+        if suffix == ".gif":
+            return dimensions(*size, edge or (720 if entry.info["kind"] == "video" else 0))
+        try:
+            return picture_geometry(size, self.picture_options, edge)
+        except ValueError:
+            return "…", "…"
+
+    def edit_names(self):
+        from itertools import islice
+        ready = (e for e in self.entries.values() if e.info)
+        samples = [(e.path, self.planned_size(e), self.suffix(e)) for e in islice(ready, 6)]
+        dialog = NameDialog(self, self.name_pattern, samples)
+        if dialog.exec() == NameDialog.Accepted:
+            self.name_pattern = dialog.pattern.text().strip()
+        dialog.deleteLater()
 
     def edit_picture_options(self):
         ready = [e for e in self.entries.values() if e.info and self.suffix(e) not in (".gif", ".mp4")]
@@ -310,38 +357,38 @@ class CompressPage(QWidget):
                     input_data=json.dumps(list(batch_entries)).encode())
         self.update_controls()
 
-    def choose_output(self):
+    def choose_output(self, *, to_folder=False):
         ready = [e for e in self.entries.values() if e.info]
         if not ready or self.job or self.exporting:
             return
-        if len(ready) == 1:
+        names = CopyNames(self.name_pattern)
+        if len(ready) == 1 and not to_folder:
             e = ready[0]
             suffix = self.suffix(e)
-            name, _ = QFileDialog.getSaveFileName(self, tr("Save compressed copy"),
-                       str(unused_name(e.path, e.path.parent, suffix, set())), "*" + suffix,
+            base = copy_base(names.pattern, e.path, 1, names.date, self.planned_size(e), suffix)
+            candidate = e.path.with_name(names.candidate(base, suffix))
+            while os.path.lexists(candidate):
+                candidate = e.path.with_name(names.candidate(base, suffix))
+            name, _ = QFileDialog.getSaveFileName(self, tr("Save compressed copy"), str(candidate), "*" + suffix,
                        options=QFileDialog.DontConfirmOverwrite)
             if not name:
                 return
             target = Path(name)
             if output_suffix(target) != suffix:
                 target = Path(name + suffix)
-            targets = [(e, target)]
+            self.start_exports([(e, target)])
         else:
             folder = QFileDialog.getExistingDirectory(self, tr("Save compressed copies in"), str(ready[0].path.parent))
             if not folder:
                 return
-            reserved = set()
-            targets = []
-            for e in ready:
-                target = unused_name(e.path, Path(folder), self.suffix(e), reserved)
-                reserved.add(target)
-                targets.append((e, target))
-        self.start_exports(targets)
+            targets = [(e, Path(folder) / ("copy" + self.suffix(e))) for e in ready]
+            self.start_exports(targets, names)
 
-    def start_exports(self, targets):
+    def start_exports(self, targets, names=None):
         if self.exporting or self.job or not targets:
             return
         self.plans = deque(targets)
+        self.batch_names = names
         for entry, _ in targets:
             entry.output = None
             entry.row.setText(2, tr("Queued"))
@@ -361,8 +408,9 @@ class CompressPage(QWidget):
     def export_next(self):
         while self.plans and not self.cancelled:
             entry, target = self.plans.popleft()
+            saved_dimensions = None
             try:
-                output = ExportFile(target)
+                output = ExportFile(target, check_name=self.batch_names is None)
             except OSError as error:
                 self.failed += 1
                 self.row_error(entry, tr("Choose a new filename for the copy.") if isinstance(error, FileExistsError) else str(error))
@@ -372,11 +420,16 @@ class CompressPage(QWidget):
             self.progress.setRange(0, 0)
             limit = round(self.limit.value() * 1000000) if self.limited.isChecked() else 0
             def progress(line):
+                nonlocal saved_dimensions
                 value = line.strip()
+                if value.startswith(b"["):
+                    saved_dimensions = json.loads(value)
+                    return
                 if value.isdigit():
                     self.progress.setRange(0, 100)
                     self.progress.setValue(int(value))
             def saved(ok, error):
+                deferred = False
                 try:
                     if self.cancelled:
                         entry.row.setText(2, tr("Cancelled"))
@@ -388,10 +441,30 @@ class CompressPage(QWidget):
                             raise ValueError(tr("The output did not meet the requested size."))
                         if source_signature(entry.path) != entry.info["signature"]:
                             raise ValueError(tr("The source changed. Review the file and save again."))
-                        output.publish()
-                        entry.output = target
-                        entry.row.setText(2, target.suffix[1:].upper() + " · " + display_size(size))
-                        entry.row.setToolTip(2, str(target))
+                        if self.picture_options.get("keep_date") and target.suffix.lower() not in (".mp4", ".gif"):
+                            os.utime(output.file, ns=(output.file.stat().st_atime_ns, entry.info["signature"][2]))
+                        if self.batch_names is None:
+                            entry.output = output.publish()
+                        else:
+                            if not saved_dimensions:
+                                raise ValueError(tr("Couldn’t read the saved dimensions."))
+                            sequence = self.total - len(self.plans)
+                            base = copy_base(self.batch_names.pattern, entry.path, sequence, self.batch_names.date,
+                                             saved_dimensions, target.suffix)
+                            # Keep input and cancellation responsive in crowded destination folders.
+                            for _ in range(16):
+                                try:
+                                    entry.output = output.publish(self.batch_names.candidate(base, target.suffix))
+                                    break
+                                except FileExistsError:
+                                    continue
+                            else:
+                                self.pending_publish = lambda: saved(ok, error)
+                                deferred = True
+                                self.publish_timer.start(0)
+                                return
+                        entry.row.setText(2, entry.output.name + " · " + display_size(size))
+                        entry.row.setToolTip(2, str(entry.output))
                         self.saved += 1
                         if self.total == 1:
                             difference = size - entry.info["size"]
@@ -409,11 +482,13 @@ class CompressPage(QWidget):
                     self.failed += 1
                     self.row_error(entry, str(problem))
                 finally:
-                    output.close()
+                    if not deferred:
+                        output.close()
                 self.export_next()
             self.worker(["encode", entry.path, output.file, self.quality.currentIndex(), self.edge.value(),
                          limit, int(self.audio.isChecked()), "--source-info"], saved, line_received=progress,
-                        input_data=json.dumps(dict(entry.info, picture_options=self.picture_options)).encode())
+                        input_data=json.dumps(dict(entry.info, picture_options=self.picture_options,
+                                                   report_dimensions=self.batch_names is not None)).encode())
             return
         self.exporting = False
         if self.cancelled:
@@ -434,6 +509,12 @@ class CompressPage(QWidget):
             else:
                 self.job.kill()
 
+    def resume_publish(self):
+        publish = self.pending_publish
+        self.pending_publish = None
+        if publish:
+            publish()
+
     def cancel_export(self):
         if self.exporting:
             self.cancelled = True
@@ -441,6 +522,8 @@ class CompressPage(QWidget):
                 entry, _ = self.plans.popleft()
                 entry.row.setText(2, tr("Cancelled"))
             self.stop_job()
+            self.publish_timer.stop()
+            self.resume_publish()
 
     def close_jobs(self):
         self.closing = True

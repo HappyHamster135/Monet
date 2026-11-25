@@ -17672,3 +17672,175 @@ msgstr ""
 #: linux/share/monet/utilities/picture_options.py:68
 msgid "Preview"
 msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:63
+msgid "Export options"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:445
+msgid "Couldn’t read the saved dimensions."
+msgstr ""
+
+#: linux/share/monet/utilities/media_names.py:18
+msgid "Use matching braces around each field."
+msgstr ""
+
+#: linux/share/monet/utilities/media_names.py:24
+msgid "Unknown filename field. Use Insert field to choose one."
+msgstr ""
+
+#: linux/share/monet/utilities/media_names.py:70
+msgid "File names"
+msgstr ""
+
+#: linux/share/monet/utilities/media_names.py:76
+msgid "Pattern"
+msgstr ""
+
+#: linux/share/monet/utilities/media_names.py:84
+msgid "Insert field"
+msgstr ""
+
+#: linux/share/monet/utilities/media_names.py:87
+msgid "Original name"
+msgstr ""
+
+#: linux/share/monet/utilities/media_names.py:87
+msgid "Sequence number"
+msgstr ""
+
+#: linux/share/monet/utilities/media_names.py:88
+msgid "Sequence number (001)"
+msgstr ""
+
+#: linux/share/monet/utilities/media_names.py:88
+msgid "Date"
+msgstr ""
+
+#: linux/share/monet/utilities/media_names.py:89
+msgid "Date and time"
+msgstr ""
+
+#: linux/share/monet/utilities/media_names.py:90
+msgid "Output extension"
+msgstr ""
+
+#: linux/share/monet/utilities/media_names.py:95
+msgid "Filename preview"
+msgstr ""
+
+#: linux/share/monet/utilities/media_names.py:96
+msgid "New name"
+msgstr ""
+
+#: linux/share/monet/utilities/media_names.py:120
+msgid "Picture"
+msgstr ""
+
+#: linux/share/monet/utilities/media_names.py:134
+msgid "The preview uses the requested dimensions. Batch names use the final dimensions. If a name is taken, the copy gets a number."
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:20
+msgid "Web picture"
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:21
+msgid "Social picture"
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:22
+msgid "PDF handout"
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:82
+msgid "File names…"
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:84
+msgid "Save to folder…"
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:93
+msgid "Presets"
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:97
+msgid "My presets"
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:101
+msgid "Save as new preset…"
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:104
+msgid "Update “%1”"
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:105
+msgid "Rename “%1”…"
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:106
+msgid "Delete “%1”…"
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:111
+msgid "Using preset “%1”."
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:114
+msgid "Media preset"
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:114
+msgid "Preset name"
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:119
+msgid "Use a preset name between 1 and 80 characters."
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:124
+msgid "A preset already uses that name."
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:133
+msgid "Saved preset “%1”."
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:135
+msgid "Couldn’t save the media preset."
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:159
+msgid "Delete preset"
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:159
+msgid "Delete the preset “%1”?"
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:165
+msgid "Deleted preset “%1”."
+msgstr ""
+
+#: linux/share/monet/utilities/media_presets.py:167
+msgid "Couldn’t delete the media preset."
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:62
+msgid "Background"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:63
+msgid "Black"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:64
+msgid "Remove camera and location tags"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:68
+msgid "Keep original modification date"
+msgstr ""

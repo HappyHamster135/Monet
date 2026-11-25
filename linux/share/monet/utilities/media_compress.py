@@ -128,7 +128,8 @@ def encode_video(source, output, info, options, progress):
         duration = 1 / 25
     width, height = dimensions(info["width"], info["height"], edge)
     # Use even dimensions for H.264 and carry the input display aspect through the scale.
-    scale = f"scale={max(2, width - width % 2)}:{max(2, height - height % 2)}"
+    width, height = max(2, width - width % 2), max(2, height - height % 2)
+    scale = f"scale={width}:{height}"
     base = ffmpeg(source) + ["-map", f"0:{info.get('stream', 0)}", "-vf", scale, "-c:v", "libx264",
                              "-preset", "veryfast", "-pix_fmt", "yuv420p", "-threads", "2"]
     sound = ["-map", "0:a?", "-c:a", "aac"] if count else ["-an"]
@@ -136,7 +137,7 @@ def encode_video(source, output, info, options, progress):
         transcode(base + ["-crf", str((29, 24, 19)[quality])] + sound +
                   ["-movflags", "+faststart", str(output)], duration, progress)
         if not limit or output.stat().st_size <= limit:
-            return
+            return width, height
     if not duration:
         raise ValueError(tr("This video needs a known duration to fit a size limit."))
     # Reserve room for MP4 headers and AAC variation. Check the actual file after encoding.
@@ -156,7 +157,7 @@ def encode_video(source, output, info, options, progress):
             transcode(base + pass_args + ["-pass", str(number)] + args, duration, update)
         actual = output.stat().st_size
         if actual <= limit:
-            return
+            return width, height
         rate = int(rate - (actual-limit) * 8 / duration - rate * .08)
     raise ValueError(tr("The file could not fit this limit. Choose a larger size or a shorter clip."))
 
@@ -197,7 +198,7 @@ def encode_gif(source, output, info, quality, edge, limit, progress):
                   info["duration"], progress)
         actual = output.stat().st_size
         if not limit or actual <= limit:
-            return
+            return width, height
         factor = min(.85, .94 * math.sqrt(limit / actual))
         width, height = dimensions(width, height, max(1, int(max(width, height) * factor)))
         if video:
@@ -242,10 +243,14 @@ def encode_picture(source, output, info, quality, edge, limit, preview=False):
         if frame is None or frame.size != (width, height):
             frame = frame_picture(picture, (width, height), options)
             frame = watermark(frame, options, min(width / full_size[0], height / full_size[1]))
-            if output_suffix(output) in (".jpg", ".pdf") and frame.mode == "RGBA":
-                background = Image.new("RGB", frame.size, "white")
+            fill = options.get("background") or ("white" if output_suffix(output) in (".jpg", ".pdf") else None)
+            if fill and frame.mode == "RGBA":
+                background = Image.new("RGB", frame.size, fill)
                 background.paste(frame, mask=frame.getchannel("A"))
                 frame = background
+            if options.get("strip_metadata"):
+                # Pillow can carry input tags through copies and resize operations.
+                frame.info.clear()
         if preview:
             frame.save(output, format="PNG")
             return
@@ -270,7 +275,7 @@ def encode_picture(source, output, info, quality, edge, limit, preview=False):
             frame.save(output, **args)
         actual = output.stat().st_size
         if not limit or actual <= limit:
-            return
+            return width, height
         if options.get("size"):
             if output_suffix(output) == ".png" or initial_quality <= 12:
                 break
@@ -323,21 +328,24 @@ def main(argv):
     if argv[0] == "preview":
         encode_picture(source, output, info, quality, edge, 0, preview=True)
         return
-    if info.get("picture_options") and suffix not in (".mp4", ".gif"):
+    if info.get("picture_options", {}).keys() - {"keep_date"} and suffix not in (".mp4", ".gif"):
         original_fits = False
+    size = info["width"], info["height"]
     if original_fits and limit:
         shutil.copyfile(source, output)
-        return
-    if output_suffix(output) == ".mp4":
-        encode_video(source, output, info, (quality, edge, limit, audio), progress)
-    elif output_suffix(output) == ".gif":
-        encode_gif(source, output, info, quality, edge, limit, progress)
-    elif output_suffix(output) in (".jpg", ".webp", ".png", ".heic", ".pdf"):
-        encode_picture(source, output, info, quality, edge, limit)
+    elif suffix == ".mp4":
+        size = encode_video(source, output, info, (quality, edge, limit, audio), progress)
+    elif suffix == ".gif":
+        size = encode_gif(source, output, info, quality, edge, limit, progress)
+    elif suffix in (".jpg", ".webp", ".png", ".heic", ".pdf"):
+        size = encode_picture(source, output, info, quality, edge, limit)
     else:
         raise ValueError("Unknown output format")
-    if original_fits and output.stat().st_size > info["size"]:
+    if original_fits and not limit and output.stat().st_size > info["size"]:
         shutil.copyfile(source, output)
+        size = info["width"], info["height"]
+    if info.get("report_dimensions"):
+        print(json.dumps(size), flush=True)
 
 
 if __name__ == "__main__":
