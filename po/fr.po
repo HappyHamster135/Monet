@@ -17171,3 +17171,47 @@ msgstr ""
 msgid ""
 "touchpad clicks; trackpad; three finger middle click; two finger tap; clickfinger; tap and drag; test clicks"
 msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:48 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraFeed.qml:137 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:23
+msgid "Camera"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraFeed.qml:48
+msgid "The selected camera is disconnected."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraFeed.qml:105
+msgid "The camera is unavailable."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraFeed.qml:126
+msgid "No video arrived. Check the camera and try again."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraFeed.qml:149
+msgid "Stop camera"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraFeed.qml:199
+msgid "No camera connected."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraFeed.qml:200
+msgid "Starting camera…"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraFeed.qml:200
+msgid "Camera stopped."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraFeed.qml:206 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraMirror.qml:55
+msgid "Start camera"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraMirror.qml:45
+msgid "The camera preview could not open."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraMirror.qml:46
+msgid "The camera is off."
+msgstr ""

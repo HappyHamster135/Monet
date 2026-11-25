@@ -26,6 +26,7 @@ class Window(QMainWindow):
         self.favorites, self.hidden = preferences(self.settings)
         self.pages = {}
         self.notch_previews = {}
+        self.mirror = None
         self.floating_pads = set()
         self.quick_panel = None
         self.favorites_wheel = None
@@ -192,6 +193,8 @@ class Window(QMainWindow):
                     downloads = self.pages.pop("downloads")
                     self.stack.removeWidget(downloads)
                     downloads.deleteLater()
+                if "camera" in hidden and self.mirror:
+                    self.mirror.close()
                 if "watch" in hidden:
                     for preview in list(self.notch_previews.values()):
                         preview.close()
@@ -587,6 +590,10 @@ class Window(QMainWindow):
         page.openPad.connect(self.floating_pad)
         return page
 
+    def camera_closed(self):
+        self.mirror = None
+        self.panelDismissed.emit()
+
     def run_tool(self, key):
         action = ACTIONS.get(key)
         if not action:
@@ -693,9 +700,17 @@ class Window(QMainWindow):
             mode, ok = QInputDialog.getItem(self, "Keep awake", "Duration", list(choices), 0, False)
             if ok:
                 self.worker([self.helpers / "monet-quick", "keep-awake", choices[mode]], lambda _: self.issue("Keep-awake setting updated."))
-        elif key in ("camera", "watch"):
+        elif key == "camera":
+            from camera_window import CameraWindow
+            if self.mirror is None:
+                self.mirror = CameraWindow(self)
+                self.mirror.finished.connect(self.camera_closed)
+            self.mirror.showNormal()
+            self.mirror.raise_()
+            self.mirror.activateWindow()
+        elif key == "watch":
             from capture import Preview
-            preview = Preview(self, key == "camera")
+            preview = Preview(self)
             preview.show()
         elif key == "ocr":
             self.capture_text()
@@ -714,6 +729,9 @@ class Window(QMainWindow):
         self.favorites, self.hidden = preferences(self.settings)
         if ("notes" if key == "floating-pad" else key) in self.hidden:
             self.panelDismissed.emit()
+            return
+        if key == "camera" and len(args) == 1:
+            self.run_tool(key)
             return
         if key in DIRECT_ACTIONS:
             if len(args) == 1:
@@ -735,7 +753,7 @@ class Window(QMainWindow):
             widget_id = args[1]
             preview = self.notch_previews.get(widget_id)
             if preview is None:
-                preview = Preview(self, False, widget_id)
+                preview = Preview(self, widget_id)
                 self.notch_previews[widget_id] = preview
                 preview.destroyed.connect(lambda: self.notch_previews.pop(widget_id, None))
             preview.edit()
@@ -792,6 +810,8 @@ class Window(QMainWindow):
             self.hide()
             event.ignore()
             return
+        if self.mirror:
+            self.mirror.close()
         for preview in list(self.notch_previews.values()):
             preview.close()
         for job in list(self.running):

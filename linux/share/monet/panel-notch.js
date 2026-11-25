@@ -10,7 +10,8 @@
     if (existing.length > 1) { print(JSON.stringify({ok:false})); return; }
     var panel = existing[0], widget = panel && panel.widgets(type)[0];
     var removedWidget = 0;
-    var names = ["music", "activity", "time", "calendar", "notes"];
+    var defaultTabs = ["music", "activity", "time", "calendar", "notes"];
+    var names = defaultTabs.concat("camera");
     var defaults = {levels:false, companion:false, alerts:true, previews:false, gestures:true};
     var timeDefaults = {timerMinutes:25, focusSessions:1, shortBreakMinutes:5, longBreakMinutes:15, longBreakEvery:4};
     function tabsOf(value) {
@@ -18,7 +19,7 @@
         var keys = String(value || "").split(",");
         return keys.length && keys.every(function (key, i) {
             return names.indexOf(key) >= 0 && keys.indexOf(key) === i;
-        }) ? keys : names.slice();
+        }) ? keys : defaultTabs.slice();
     }
     function optionsOf(w) {
         var options = {};
@@ -40,7 +41,7 @@
         return host;
     }
     var setting = /^(levels|companion|alerts|previews|gestures)-(on|off)$/.exec(choice || "");
-    var tab = /^tab-(music|activity|time|calendar|notes)-(show|hide|earlier|later)$/.exec(choice || "");
+    var tab = /^tab-(music|activity|time|calendar|notes|camera)-(show|hide|earlier|later)$/.exec(choice || "");
     if (tab || setting) {
         if (!widget) { print(JSON.stringify({ok:false})); return; }
         widget.currentConfigGroup = ["General"];

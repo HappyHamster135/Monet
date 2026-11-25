@@ -21,7 +21,7 @@ class WindowWatch(unittest.TestCase):
         from capture import Preview
         # Leave the system picker and the user's windows alone.
         with patch("watch.WindowStream") as stream:
-            self.preview = Preview(None, False)
+            self.preview = Preview(None)
             self.stream = stream.return_value
         self.preview.frames.stop()
 

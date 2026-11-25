@@ -44,7 +44,8 @@ Item {
     property var notchOptions: ({})
     property var notchTabs: []
     readonly property var tabTitles: ({music:i18nd("monet", "Music"), activity:i18nd("monet", "Activity"),
-        time:i18nd("monet", "Time"), calendar:i18nd("monet", "Calendar"), notes:i18nd("monet", "Notes")})
+        time:i18nd("monet", "Time"), calendar:i18nd("monet", "Calendar"), notes:i18nd("monet", "Notes"),
+        camera:i18nd("monet", "Camera")})
     ListModel {
         id: tabRows
         ListElement { key: "music" }
@@ -52,6 +53,7 @@ Item {
         ListElement { key: "time" }
         ListElement { key: "calendar" }
         ListElement { key: "notes" }
+        ListElement { key: "camera" }
     }
     onNotchTabsChanged: {
         const order = notchTabs.concat(Object.keys(tabTitles).filter(key => !notchTabs.includes(key)))

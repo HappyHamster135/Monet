@@ -1,9 +1,8 @@
-"""A camera mirror and user-selected Wayland window previews. Streams stop on close."""
+"""User-selected Wayland window previews. Streams stop on close."""
 import time
 
 from PySide6.QtCore import QPoint, QRect, QRectF, QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QImage, QPixmap, QTransform
-from PySide6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices, QVideoSink
+from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QComboBox, QDialog, QHBoxLayout, QLabel, QLineEdit, QPushButton, QRubberBand, QSizePolicy, QVBoxLayout
 
 class Selection(QLabel):
@@ -39,20 +38,19 @@ class Selection(QLabel):
         self.origin = None
 
 class Preview(QDialog):
-    def __init__(self, parent, camera, widget_id=None):
+    def __init__(self, parent, widget_id=None):
         super().__init__(parent)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowFlag(Qt.WindowStaysOnTopHint)
-        self.setWindowTitle("Camera mirror" if camera else "Watch a window")
+        self.setWindowTitle("Watch a window")
         self.resize(420, 300)
-        self.camera = camera
         self.bridge = None
         self.text_alert = None
         self.picture = QImage()
         self.full_picture = QImage()
         self.baseline = None
         self.changed_at = None
-        self.image = (QLabel if camera else Selection)("Starting camera…" if camera else "Choose a window in the sharing picker.")
+        self.image = Selection("Choose a window in the sharing picker.")
         self.image.setTextFormat(Qt.PlainText)
         self.image.setAlignment(Qt.AlignCenter)
         self.image.setMinimumSize(80, 60)
@@ -61,58 +59,49 @@ class Preview(QDialog):
         layout = QVBoxLayout(self)
         layout.addWidget(self.image, 1)
         self.stream = None
-        self.source = None
-        if camera:
-            self.session = QMediaCaptureSession(self)
-            self.sink = QVideoSink(self)
-            self.session.setVideoSink(self.sink)
-            self.source = QCamera(QMediaDevices.defaultVideoInput(), self)
-            self.session.setCamera(self.source)
-            self.source.errorOccurred.connect(lambda *args: self.image.setText(self.source.errorString()))
-        else:
-            from watch_text import TextAlert
-            self.text_alert = TextAlert(self)
-            self.text_alert.matched.connect(lambda: self.notify("The text appeared in the watched region"))
-            self.text_alert.failed.connect(lambda: self.notify("Text recognition is unavailable"))
-            self.words = QLineEdit()
-            self.words.setAccessibleName("Text to watch for")
-            self.words.setPlaceholderText("Text to watch for…")
-            self.words.setMaxLength(180)
-            self.words.hide()
-            self.words.textChanged.connect(self.reset_alert)
-            self.alert = QComboBox()
-            self.alert.addItems(["Alerts off", "Alert when the picture changes", "Alert when changes stop", "Alert when text appears"])
-            self.alert.setAccessibleName("Window alert")
-            self.alert.setToolTip("Changes stop after five seconds without visible movement.")
-            self.alert.currentIndexChanged.connect(self.reset_alert)
-            layout.addWidget(self.alert)
-            layout.addWidget(self.words)
-            actions = QHBoxLayout()
-            layout.addLayout(actions)
-            choose = QPushButton("Choose window…")
-            choose.clicked.connect(self.choose_window)
-            actions.addWidget(choose)
-            self.reset = QPushButton("Show full window")
-            self.reset.setToolTip("Drag across the preview to watch a smaller region.")
-            self.reset.clicked.connect(self.clear_crop)
-            self.reset.setEnabled(False)
-            actions.addWidget(self.reset)
-            actions.addStretch()
-            self.image.cropChanged.connect(self.crop_changed)
-            if widget_id:
-                from notch_watch import NotchWatch
-                self.bridge = NotchWatch(self, widget_id)
-                self.pin = QPushButton("Show in notch")
-                self.pin.setEnabled(False)
-                self.pin.clicked.connect(self.pin_watch)
-                actions.addWidget(self.pin)
-            from watch import WindowStream
-            self.stream = WindowStream(self.capture_failed)
+        from watch_text import TextAlert
+        self.text_alert = TextAlert(self)
+        self.text_alert.matched.connect(lambda: self.notify("The text appeared in the watched region"))
+        self.text_alert.failed.connect(lambda: self.notify("Text recognition is unavailable"))
+        self.words = QLineEdit()
+        self.words.setAccessibleName("Text to watch for")
+        self.words.setPlaceholderText("Text to watch for…")
+        self.words.setMaxLength(180)
+        self.words.hide()
+        self.words.textChanged.connect(self.reset_alert)
+        self.alert = QComboBox()
+        self.alert.addItems(["Alerts off", "Alert when the picture changes", "Alert when changes stop", "Alert when text appears"])
+        self.alert.setAccessibleName("Window alert")
+        self.alert.setToolTip("Changes stop after five seconds without visible movement.")
+        self.alert.currentIndexChanged.connect(self.reset_alert)
+        layout.addWidget(self.alert)
+        layout.addWidget(self.words)
+        actions = QHBoxLayout()
+        layout.addLayout(actions)
+        choose = QPushButton("Choose window…")
+        choose.clicked.connect(self.choose_window)
+        actions.addWidget(choose)
+        self.reset = QPushButton("Show full window")
+        self.reset.setToolTip("Drag across the preview to watch a smaller region.")
+        self.reset.clicked.connect(self.clear_crop)
+        self.reset.setEnabled(False)
+        actions.addWidget(self.reset)
+        actions.addStretch()
+        self.image.cropChanged.connect(self.crop_changed)
+        if widget_id:
+            from notch_watch import NotchWatch
+            self.bridge = NotchWatch(self, widget_id)
+            self.pin = QPushButton("Show in notch")
+            self.pin.setEnabled(False)
+            self.pin.clicked.connect(self.pin_watch)
+            actions.addWidget(self.pin)
+        from watch import WindowStream
+        self.stream = WindowStream(self.capture_failed)
         self.frames = QTimer(self)
-        self.frames.setInterval(85 if camera else 200)
+        self.frames.setInterval(200)
         self.frames.timeout.connect(self.draw)
         self.frames.start()
-        (self.source or self.stream).start()
+        self.stream.start()
 
     def choose_window(self):
         from watch import WindowStream
@@ -219,25 +208,15 @@ class Preview(QDialog):
 
 
     def draw(self):
-        if self.stream:
-            frame = self.stream.image()
-            if frame is not None and not frame.isNull():
-                self.full_picture = frame
-                self.render_watch()
+        frame = self.stream.image()
+        if frame is not None and not frame.isNull():
+            self.full_picture = frame
+            self.render_watch()
+            self.watch_alert()
+        elif self.changed_at is not None and self.alert.currentIndex() == 2:
+            # Some players send no new frames at all once a progress display settles.
+            if time.monotonic() - self.changed_at >= 5:
                 self.watch_alert()
-            elif self.changed_at is not None and self.alert.currentIndex() == 2:
-                # Some players send no new frames at all once a progress display settles.
-                if time.monotonic() - self.changed_at >= 5:
-                    self.watch_alert()
-            return
-        frame = self.sink.videoFrame()
-        if not frame.isValid():
-            return
-        picture = frame.toImage()
-        if picture.isNull():
-            return
-        preview = QPixmap.fromImage(picture).scaled(self.image.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        self.image.setPixmap(preview.transformed(QTransform().scale(-1, 1)))
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -250,8 +229,6 @@ class Preview(QDialog):
             self.bridge.stop()
         if self.text_alert:
             self.text_alert.stop()
-        if self.source:
-            self.source.stop()
         if self.stream:
             self.stream.close()
         super().closeEvent(event)

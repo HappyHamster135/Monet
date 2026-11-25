@@ -19,8 +19,8 @@ PlasmoidItem {
     readonly property double endTime: countdown.deadline
     readonly property double watchStart: Number(Plasmoid.configuration.watchStart) || 0
     property double now: Date.now()
-    readonly property var tabNames: ["music", "activity", "time", "calendar", "notes"]
-    readonly property var tabLabels: [i18n("Music"), i18n("Activity"), i18n("Time"), i18n("Calendar"), i18n("Notes")]
+    readonly property var tabNames: ["music", "activity", "time", "calendar", "notes", "camera"]
+    readonly property var tabLabels: [i18n("Music"), i18n("Activity"), i18n("Time"), i18n("Calendar"), i18n("Notes"), i18n("Camera")]
     ToolVisibility { id: tools }
     readonly property bool offerShelf: tools.offers("shelf")
     readonly property bool offerDownloads: tools.offers("downloads")
@@ -46,7 +46,7 @@ PlasmoidItem {
         if (value === "none") return []
         const ids = value.split(",").map(key => tabNames.indexOf(key))
         const ordered = ids.every((id, index) => id >= 0 && ids.indexOf(id) === index) ? ids : [0, 1, 2, 3, 4]
-        return ordered.filter(id => id !== 4 || tools.offers("notes"))
+        return ordered.filter(id => (id !== 4 || tools.offers("notes")) && (id !== 5 || tools.offers("camera")))
     }
     readonly property bool hasActivity: visibleTabs.includes(1)
     property int tab: 0
@@ -354,7 +354,9 @@ PlasmoidItem {
     }
 
     fullRepresentation: ColumnLayout {
-        Layout.preferredWidth: Math.min(422, Math.max(250, Screen.width - 32))
+        // The popup may still lack its own screen while its first layout runs.
+        // Use the already-mapped panel so the tab row starts at its final width.
+        Layout.preferredWidth: Math.min(422, Math.max(250, (root.Screen.width || 454) - 32))
         Layout.preferredHeight: root.visibleTabs.length || root.displayShelf || root.showingWatch
             ? Math.min(370, Math.max(200, Screen.height - 80)) : implicitHeight
         spacing: Kirigami.Units.smallSpacing
@@ -372,6 +374,7 @@ PlasmoidItem {
                 : root.tab === 1 && root.viewingDownloads ? downloadsPage
                 : root.tab === 3 && root.viewingAgenda ? agendaPage
                 : root.tab === 0 && root.musicView === 3 ? mixerPage
+                : root.tab === 5 ? cameraPage
                 : root.tab === 4 ? (padController.item ? padPage : null) : [musicPage, activityPage, timerPage, calendarPage][root.tab] ?? null
         }
         RowLayout {
@@ -419,6 +422,12 @@ PlasmoidItem {
                 }
             }
             C.Label { visible: mixerLoader.status === Loader.Error; Layout.fillWidth: true; wrapMode: Text.Wrap; text: i18n("The volume mixer could not open.") }
+        }
+    }
+    Component {
+        id: cameraPage
+        CameraMirror {
+            presented: root.expanded
         }
     }
     Component { id: padPage; Scratchpad { pads: padController.item } }

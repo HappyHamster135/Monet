@@ -105,6 +105,9 @@ class PanelLayouts(unittest.TestCase):
         self.assertTrue(self.choose('right','three')['ok'])
         standard = ['music', 'activity', 'time', 'calendar', 'notes']
         self.assertEqual(notch('right')['tabs'], standard)
+        self.assertEqual(notch('right', 'tab-camera-show')['tabs'], standard + ['camera'])
+        self.assertEqual(notch('right', 'tab-camera-earlier')['tabs'][-2:], ['camera', 'notes'])
+        self.assertEqual(notch('right', 'tab-camera-hide')['tabs'], standard)
         self.assertEqual(notch('right', 'tab-activity-earlier')['tabs'][:2], ['activity', 'music'])
         self.assertEqual(notch('right', 'tab-activity-earlier')['tabs'][:2], ['activity', 'music'])
         self.assertEqual(notch('right', 'tab-time-hide')['tabs'], ['activity', 'music', 'calendar', 'notes'])

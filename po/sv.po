@@ -17185,3 +17185,47 @@ msgid ""
 "touchpad clicks; trackpad; three finger middle click; two finger tap; clickfinger; tap and drag; test clicks"
 msgstr ""
 "styrplatteklick; styrplatta; mittenklick med tre fingrar; tryck med två fingrar; fingerklick; tryck och dra; testa klick"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:48 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraFeed.qml:137 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:23
+msgid "Camera"
+msgstr "Kamera"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraFeed.qml:48
+msgid "The selected camera is disconnected."
+msgstr "Den valda kameran har kopplats från."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraFeed.qml:105
+msgid "The camera is unavailable."
+msgstr "Kameran är inte tillgänglig."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraFeed.qml:126
+msgid "No video arrived. Check the camera and try again."
+msgstr "Ingen videobild kom fram. Kontrollera kameran och försök igen."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraFeed.qml:149
+msgid "Stop camera"
+msgstr "Stoppa kameran"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraFeed.qml:199
+msgid "No camera connected."
+msgstr "Ingen kamera är ansluten."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraFeed.qml:200
+msgid "Starting camera…"
+msgstr "Startar kameran…"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraFeed.qml:200
+msgid "Camera stopped."
+msgstr "Kameran har stoppats."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraFeed.qml:206 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraMirror.qml:55
+msgid "Start camera"
+msgstr "Starta kameran"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraMirror.qml:45
+msgid "The camera preview could not open."
+msgstr "Det gick inte att öppna kameraförhandsvisningen."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraMirror.qml:46
+msgid "The camera is off."
+msgstr "Kameran är avstängd."
