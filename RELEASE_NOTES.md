@@ -18,6 +18,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 - **Focus rounds.** Pause or resume a countdown in the notch. In Time → Focus options, choose how many sessions to do and when to take short or long breaks. The next interval starts when you choose it.
 - **Window controls beside the notch.** Drag a maximized window from either side of the notch, or click Close at the upper-right edge. The notch still opens with one click while the title is visible.
 - **Notch gestures.** Use the mouse wheel or a two-finger scroll to open the notch. Over the song title or cover, scroll up to close or sideways to change tracks. Customize Home Bar includes a switch for gestures.
+- **Wallpaper gallery.** Browse included backgrounds, keep your own pictures and folders in Utilities, and apply a wallpaper to one display or all of them.
 - **Monitor controls.** Adjust brightness for each supported screen in Quick Settings or Settings → Display. The Display page also lets you put an individual monitor to sleep or wake it.
 - **Homebrew packages.** Search for formulae and casks, install or remove individual packages, and review and apply updates from Monet Utilities.
 - **Cleaning mode.** Pause input for up to two minutes while you wipe the keyboard or display. Keep your apps visible, darken every display or lock the session. Visible and darkened cleaning both return to the desktop when time runs out, when you click **Finish cleaning**, or when you press Esc five times.

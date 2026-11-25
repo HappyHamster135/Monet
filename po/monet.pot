@@ -18041,3 +18041,128 @@ msgstr ""
 #: linux/share/monet/utilities/fan_page.py:326
 msgid "Enter an access token from CoolerControl → Access Protection."
 msgstr ""
+
+#: linux/share/monet/utilities/wallpapers.py:72
+msgid "Dawn"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpapers.py:72
+msgid "Day"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpapers.py:72
+msgid "Dusk"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpapers.py:72
+msgid "Night"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpapers.py:107
+msgid "{series} · {light}"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpapers.py:148
+msgid "This wallpaper is unavailable or could not be read."
+msgstr ""
+
+#: linux/share/monet/utilities/wallpapers.py:169
+msgid "The desktop could not apply this wallpaper to the selected display."
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:44
+msgid "Wallpaper collection"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:45
+msgid "All wallpapers"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:45
+msgid "Included wallpapers"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:45
+msgid "My pictures"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:53
+msgid "Collection"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:56 linux/share/monet/utilities/wallpaper_page.py:255
+msgid "Add pictures…"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:57 linux/share/monet/utilities/wallpaper_page.py:261
+msgid "Add folder…"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:59
+msgid "Remove selected picture"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:61
+msgid "Manage sources…"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:67
+msgid "Wallpapers"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:81
+msgid "Previous wallpapers"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:82
+msgid "Next wallpapers"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:93
+msgid "Apply to all displays"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:96
+msgid "Turn off to change only the display containing this window."
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:99
+msgid "Apply wallpaper"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:133
+msgid "Loading wallpapers…"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:151 linux/share/monet/utilities/wallpaper_page.py:157
+msgid "No wallpapers here yet. Add pictures or a folder from Collection."
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:185
+msgid "Page {page} of {total}"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:236
+msgid "Applying wallpaper…"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:241
+msgid "Applied {name}."
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:255
+msgid "Pictures ({formats})"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:279 linux/share/monet/utilities/wallpaper_page.py:305
+msgid "Remove from collection"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:291
+msgid "Manage wallpaper sources"
+msgstr ""
+
+#: linux/share/monet/utilities/wallpaper_page.py:293
+msgid ""
+"Remove a link here to take it out of your collection. Your pictures stay on disk."
+msgstr ""

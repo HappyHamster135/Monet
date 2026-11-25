@@ -6,7 +6,7 @@ import sys
 from PySide6.QtCore import (QObject, QProcess, QSettings, Qt, QTimer, QUrl, Signal, Slot)
 from PySide6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusServiceWatcher, QDBusVirtualObject
 from PySide6.QtGui import QIcon, QKeySequence, QShortcut
-from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QInputDialog,
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QHBoxLayout, QInputDialog,
     QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox, QPlainTextEdit,
     QPushButton, QStackedWidget, QToolButton, QVBoxLayout, QWidget)
 from actions import ACTIONS, DIRECT_ACTIONS, SEARCH_HINTS, clean_url, find_tools, preferences, tr
@@ -627,9 +627,8 @@ class Window(QMainWindow):
         elif key in ("color", "ocr"):
             self.select_from_screen(key, from_catalog=True)
         elif key == "wallpaper":
-            path, _ = QFileDialog.getOpenFileName(self, "Choose wallpaper", "", "Images (*.jpg *.jpeg *.png *.webp *.avif)")
-            if path:
-                self.worker(["plasma-apply-wallpaperimage", path], lambda _: self.issue("Wallpaper applied."))
+            from wallpaper_page import WallpaperPage
+            self.page(key, lambda: WallpaperPage(self))
         elif key == "awake":
             choices = {"30 minutes": "30", "1 hour": "60", "Until turned off": "on", "Turn off": "off"}
             mode, ok = QInputDialog.getItem(self, "Keep awake", "Duration", list(choices), 0, False)

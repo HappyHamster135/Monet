@@ -68,7 +68,7 @@ ACTIONS = {
     "updates": Action(N_("System updates"), "System", "system-software-update", ("@monet-settings", "updates")),
     "homebrew": Action(N_("Homebrew packages"), "System brew formulae casks install uninstall upgrade updates package manager", "applications-other"),
     "store": Action(N_("App store and updates"), "System", "system-software-install", ("@monet-store",)),
-    "wallpaper": Action(N_("Choose wallpaper"), "Display", "preferences-desktop-wallpaper"),
+    "wallpaper": Action(N_("Choose wallpaper"), "Display desktop backgrounds gallery collection pictures folders", "preferences-desktop-wallpaper"),
     "display": Action(N_("Brightness, displays and HDR"), "Display", "video-display", ("@monet-settings", "display")),
     "power": Action(N_("Power and battery"), "System", "battery", ("@monet-settings", "power")),
     "awake": Action(N_("Keep awake"), "Display", "preferences-system-power-management"),
