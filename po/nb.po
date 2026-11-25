@@ -16976,3 +16976,71 @@ msgstr ""
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:440
 msgid "Move %1 later"
 msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NotchTimer.qml:67
+msgid "Break finished"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NotchTimer.qml:74
+msgid "Focus rounds finished"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:28
+msgid "Long break"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:28
+msgid "Short break"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:29
+msgid "Focus session %1 of %2"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:58
+msgid "Start break"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:58
+msgid "Start next session"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:73
+msgid "Focus options"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:82 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:85
+msgid "Focus sessions"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:88 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:90
+msgid "Short break (minutes)"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:93 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:95
+msgid "Long break (minutes)"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:98 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:101
+msgid "Sessions per long break"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:110
+msgid "Pause stopwatch"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:110
+msgid "Resume stopwatch"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:177
+msgid "Break ready"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:177
+msgid "Focus ready"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:264
+msgid "Could not restore the previous notification setting."
+msgstr ""

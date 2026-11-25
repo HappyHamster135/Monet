@@ -17036,3 +17036,71 @@ msgstr "Flytta %1 tidigare"
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:440
 msgid "Move %1 later"
 msgstr "Flytta %1 senare"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NotchTimer.qml:67
+msgid "Break finished"
+msgstr "Pausen är slut"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NotchTimer.qml:74
+msgid "Focus rounds finished"
+msgstr "Fokuspassen är klara"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:28
+msgid "Long break"
+msgstr "Lång paus"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:28
+msgid "Short break"
+msgstr "Kort paus"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:29
+msgid "Focus session %1 of %2"
+msgstr "Fokuspass %1 av %2"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:58
+msgid "Start break"
+msgstr "Starta paus"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:58
+msgid "Start next session"
+msgstr "Starta nästa pass"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:73
+msgid "Focus options"
+msgstr "Fokusalternativ"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:82 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:85
+msgid "Focus sessions"
+msgstr "Fokuspass"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:88 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:90
+msgid "Short break (minutes)"
+msgstr "Kort paus (minuter)"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:93 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:95
+msgid "Long break (minutes)"
+msgstr "Lång paus (minuter)"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:98 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:101
+msgid "Sessions per long break"
+msgstr "Pass per lång paus"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:110
+msgid "Pause stopwatch"
+msgstr "Pausa stoppuret"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/TimePage.qml:110
+msgid "Resume stopwatch"
+msgstr "Fortsätt med stoppuret"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:177
+msgid "Break ready"
+msgstr "Redo för paus"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:177
+msgid "Focus ready"
+msgstr "Redo för fokus"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:264
+msgid "Could not restore the previous notification setting."
+msgstr "Det gick inte att återställa den tidigare aviseringsinställningen."

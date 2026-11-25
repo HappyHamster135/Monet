@@ -9,8 +9,10 @@
     });
     if (existing.length > 1) { print(JSON.stringify({ok:false})); return; }
     var panel = existing[0], widget = panel && panel.widgets(type)[0];
+    var removedWidget = 0;
     var names = ["music", "activity", "time", "calendar", "notes"];
     var defaults = {levels:false, companion:false, alerts:true, previews:false, gestures:true};
+    var timeDefaults = {timerMinutes:25, focusSessions:1, shortBreakMinutes:5, longBreakMinutes:15, longBreakEvery:4};
     function tabsOf(value) {
         if (value === "none") return [];
         var keys = String(value || "").split(",");
@@ -56,8 +58,12 @@
         widget.reloadConfig();
     } else if (choice === "off" && widget) {
         widget.currentConfigGroup = ["General"];
+        removedWidget = widget.id;
         var preferences = optionsOf(widget);
         preferences.tabs = tabsOf(widget.readConfig("tabs", "")).join(",") || "none";
+        Object.keys(timeDefaults).forEach(function (key) {
+            preferences[key] = Number(widget.readConfig(key, timeDefaults[key]));
+        });
         var host = savedOnBar();
         if (host) host.writeConfig("choices", JSON.stringify(preferences));
         panel.currentConfigGroup = ["MonetNotch"];
@@ -82,6 +88,11 @@
                 Object.keys(defaults).forEach(function (key) {
                     if (typeof previous[key] === "boolean") widget.writeConfig(key, previous[key]);
                 });
+                Object.keys(timeDefaults).forEach(function (key) {
+                    var max = key === "focusSessions" || key === "longBreakEvery" ? 24 : 1440;
+                    if (Number.isInteger(previous[key]) && previous[key] >= 1 && previous[key] <= max)
+                        widget.writeConfig(key, previous[key]);
+                });
                 if (typeof previous.tabs === "string") widget.writeConfig("tabs", tabsOf(previous.tabs).join(",") || "none");
             } catch (error) { panel.remove(); print(JSON.stringify({ok:false})); return; }
         }
@@ -91,5 +102,7 @@
     if (widget) widget.currentConfigGroup = ["General"];
     var wide = widget && String(widget.readConfig("wide", false)) === "true";
     var visibleTabs = widget ? tabsOf(widget.readConfig("tabs", "")) : [];
-    print(JSON.stringify({ok:true, options:optionsOf(widget), tabs:visibleTabs, mode: !widget ? "off" : wide ? "wide" : "compact"}));
+    var result = {ok:true, options:optionsOf(widget), tabs:visibleTabs, mode: !widget ? "off" : wide ? "wide" : "compact"};
+    if (removedWidget) result.removedWidget = removedWidget;
+    print(JSON.stringify(result));
 })();

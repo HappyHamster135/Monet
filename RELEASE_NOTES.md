@@ -12,6 +12,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   In Calendar → Upcoming appointments, link calendar files or follow subscriptions. The agenda shows recurring meetings, schedule changes and all-day events, including a saved copy when offline.
   In Activity → Watch, pin a window region and get an alert when it changes, settles, or shows a phrase.
   Dropping files on it adds them to the shelf. Music levels and accessory alerts are optional.
+- **Focus rounds.** Pause or resume a countdown in the notch. In Time → Focus options, choose how many sessions to do and when to take short or long breaks. The next interval starts when you choose it.
 - **Notch gestures.** Use the mouse wheel or a two-finger scroll to open the notch. Over the song title or cover, scroll up to close or sideways to change tracks. Customize Home Bar includes a switch for gestures.
 - **Monitor controls.** Adjust brightness for each supported screen in Quick Settings or Settings → Display. The Display page also lets you put an individual monitor to sleep or wake it.
 - **Homebrew packages.** Search for formulae and casks, install or remove individual packages, and review and apply updates from Monet Utilities.

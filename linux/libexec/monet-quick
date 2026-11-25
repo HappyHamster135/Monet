@@ -8072,10 +8072,10 @@ FOCUS_QUIET = CONFIG / "monet/focus-quiet.json"
 
 
 @contextlib.contextmanager
-def quiet_lock():
+def quiet_lock(suffix=".lock"):
     import fcntl
     FOCUS_QUIET.parent.mkdir(parents=True, exist_ok=True)
-    with FOCUS_QUIET.with_suffix(".lock").open("a") as lock:
+    with FOCUS_QUIET.with_suffix(suffix).open("a") as lock:
         os.chmod(lock.name, 0o600)
         fcntl.flock(lock, fcntl.LOCK_EX)
         yield
@@ -8177,6 +8177,27 @@ def focus(end=None, owner="default"):
     return result
 
 
+def notch_focus(end, owner, *, removed=False):
+    if not re.fullmatch(r"[0-9]{1,10}", owner):
+        return {"ok": False}
+    # Serialize the check and the complete transition (including the wallpaper)
+    # with removal. A delayed Start from a removed widget cannot reacquire quiet.
+    try:
+        with quiet_lock(".notch.lock"):
+            if end is not None:
+                script = ('print(panels().some(p => p.widgets("org.monet.notch").some('
+                          f'w => w.id === {int(owner)})))')
+                reply = busjson("--user", "call", "org.kde.plasmashell", "/PlasmaShell",
+                                "org.kde.PlasmaShell", "evaluateScript", "s", script)
+                if not reply or reply[0].strip() != "true":
+                    return {"ok": False}
+            elif removed and not FOCUS_QUIET.exists():
+                return {"ok": True}
+            return focus(end, owner)
+    except OSError:
+        return {"ok": False}
+
+
 def screen_features(outputs=None):
     """The screens that can show HDR, or keep pace with a game (variable refresh rate):
     [{name, hdr, vrr}], each None where the screen can't. kscreen-doctor lists "hdr"
@@ -8246,6 +8267,9 @@ def panel_notch(ident, choice=None):
     try:
         state = json.loads(result[0])
         if state.get("ok") and state.get("mode") in ("compact", "wide", "off"):
+            owner = state.pop("removedWidget", None)
+            if choice == "off" and type(owner) is int and 0 < owner <= 4294967295:
+                notch_focus(None, str(owner), removed=True)
             return state
     except (AttributeError, IndexError, TypeError, ValueError):
         pass
@@ -10707,6 +10731,8 @@ def main(argv):
         emit(game_marks())
     elif cmd == "place":
         print(place())
+    elif cmd == "notch-focus" and len(args) == 2 and (args[0] == "off" or args[0].isdigit()):
+        emit(notch_focus(None if args[0] == "off" else int(args[0]), args[1]))
     elif cmd == "focus" and len(args) in (1, 2) and (args[0] == "off" or args[0].isdigit()):
         emit(focus(None if args[0] == "off" else int(args[0]), args[1] if len(args) > 1 else "default"))
     elif cmd == "screens":

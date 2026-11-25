@@ -118,6 +118,22 @@ class Notifications(unittest.TestCase):
                 self.assertFalse(q.change_notifications(command, args)["ok"])
             self.assertEqual(len(written), count)
 
+    def test_removed_notch_rejects_late_starts_and_releases_existing_focus(self):
+        q = self.q
+        config = {}
+        now = 1793136600
+        kconfig = self.quiet_run(config)
+        def run(*args, **kwargs):
+            return "" if args[0].endswith("/monet-light") else kconfig(*args, **kwargs)
+        with patch.object(q, "run", side_effect=run), patch.object(q.time, "time", return_value=now):
+            with patch.object(q, "busjson", return_value=["true\n"]):
+                self.assertTrue(q.notch_focus(now + 60, "41")["ok"])
+            with patch.object(q, "busjson", return_value=["false\n"]):
+                self.assertTrue(q.notch_focus(None, "41", removed=True)["ok"])
+                self.assertFalse(q.notch_focus(now + 60, "41")["ok"])
+            self.assertFalse(config.get("Until"))
+            self.assertFalse(q.FOCUS_QUIET.exists())
+
     def test_focus_keeps_existing_quiet_deadline_and_unrelated_preferences(self):
         q = self.q
         now = 1793136600

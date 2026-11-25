@@ -16,7 +16,7 @@ PlasmoidItem {
     readonly property string helper: "@LIBEXECDIR@/monet-quick"
     readonly property var media: players.count ? players.itemAt(0)?.model ?? null : null
     readonly property bool playing: media?.playbackStatus === Mpris.PlaybackStatus.Playing
-    readonly property double endTime: Number(Plasmoid.configuration.deadline) || 0
+    readonly property double endTime: countdown.deadline
     readonly property double watchStart: Number(Plasmoid.configuration.watchStart) || 0
     property double now: Date.now()
     readonly property var tabNames: ["music", "activity", "time", "calendar", "notes"]
@@ -142,7 +142,7 @@ PlasmoidItem {
         sourceComponent: DownloadFeed { directory: root.downloadFolder }
     }
     toolTipMainText: i18n("Monet Notch")
-    toolTipSubText: preview.item?.title ? [preview.item.sender, preview.item.title].filter(Boolean).join(" · ") : endTime ? remaining() : watch.registered ? i18n("Watching a window") : media?.track || i18n("Music, activity and tools")
+    toolTipSubText: preview.item?.title ? [preview.item.sender, preview.item.title].filter(Boolean).join(" · ") : countdown.active ? timerSummary : watch.registered ? i18n("Watching a window") : media?.track || i18n("Music, activity and tools")
     Repeater {
         id: players
         model: Mpris.MultiplexerModel {}
@@ -174,7 +174,8 @@ PlasmoidItem {
         return (s >= 3600 ? Math.floor(s / 3600) + ":" : "") +
             String(Math.floor(s / 60) % 60).padStart(s >= 3600 ? 2 : 1, "0") + ":" + String(s % 60).padStart(2, "0")
     }
-    function remaining() { return duration(Math.ceil((endTime - now) / 1000)) }
+    readonly property string timerSummary: countdown.waiting ? (countdown.onBreak ? i18n("Break ready") : i18n("Focus ready"))
+        : duration(Math.ceil(countdown.remaining(now) / 1000))
     function hex(text) {
         return Array.from(unescape(encodeURIComponent(text)), c => c.charCodeAt(0).toString(16).padStart(2, "0")).join("")
     }
@@ -182,27 +183,34 @@ PlasmoidItem {
         runner.connectSource(helper + " utilities " + page)
         expanded = false
     }
-    function start(minutes, focus) {
-        now = Date.now()
-        Plasmoid.configuration.deadline = String(now + minutes * 60000)
-        Plasmoid.configuration.focus = focus
-        if (focus) runner.connectSource(helper + " focus " + Math.ceil(endTime / 1000) + " " + Plasmoid.id)
+    NotchTimer {
+        id: countdown
+        settings: Plasmoid.configuration
+        onDeadlineChanged: if (deadline) root.now = Date.now()
+        onQuietRequested: until => {
+            root.desiredQuiet = until
+            if (!root.quietCommand) root.applyQuiet()
+        }
+        onFinished: message => runner.connectSource(root.helper + " ring " + root.hex(i18n("Monet Notch")) + " " + root.hex(message))
+        onActiveChanged: root.message = ""
     }
-    function stop(ring) {
-        const focused = Plasmoid.configuration.focus
-        Plasmoid.configuration.deadline = ""
-        Plasmoid.configuration.focus = false
-        if (focused) runner.connectSource(helper + " focus off " + Plasmoid.id)
-        if (ring) runner.connectSource(helper + " ring " + hex(i18n("Monet Notch")) + " " +
-            hex(focused ? i18n("Focus session finished") : i18n("Timer finished")))
+    // Apply only the latest request after an in-flight helper returns. A quick
+    // pause followed by Resume must never leave the newer session unmuted.
+    property double desiredQuiet: 0
+    property double sentQuiet: 0
+    property string quietCommand: ""
+    function applyQuiet() {
+        sentQuiet = desiredQuiet
+        quietCommand = helper + " notch-focus " + (sentQuiet || "off") + " " + Plasmoid.id
+        runner.connectSource(quietCommand)
     }
     function refreshTime() {
         now = Date.now()
-        if (endTime && now >= endTime) stop(true)
+        countdown.finishIfDue(now)
     }
     Timer {
         interval: 1000; repeat: true
-        running: !!root.endTime || (root.expanded && root.tab === 2 && !!root.watchStart)
+        running: !!root.endTime || (root.expanded && !root.displayShelf && !root.showingWatch && root.tab === 2 && !!root.watchStart)
         onTriggered: root.refreshTime()
     }
     Component.onCompleted: { selectVisibleTab(); refreshTime() }
@@ -211,7 +219,7 @@ PlasmoidItem {
         agendaDay = new Date()
         refreshTime()
         if (requestedNotice || viewingShelf) return
-        if (endTime && visibleTabs.includes(2)) tab = 2
+        if (countdown.active && visibleTabs.includes(2)) tab = 2
         else if (watch.registered) {
             viewingWatch = true
             if (hasActivity) tab = 1
@@ -245,10 +253,16 @@ PlasmoidItem {
                     root.downloadAvailable = state.available && state.folder.startsWith("file:///")
                 } catch (_) { root.downloadAvailable = false }
             }
-            if (source.startsWith(root.helper + " focus ") && !source.includes(" focus off ")) {
-                try { if (JSON.parse(data.stdout).ok) return } catch (e) {}
-                Plasmoid.configuration.focus = false
-                root.message = i18n("Quiet mode was unavailable. Your timer is running.")
+            if (source === root.quietCommand) {
+                root.quietCommand = ""
+                if (root.sentQuiet !== root.desiredQuiet) {
+                    root.applyQuiet()
+                } else {
+                    let ok = false
+                    try { ok = JSON.parse(data.stdout).ok } catch (_) {}
+                    root.message = ok ? "" : root.sentQuiet ? i18n("Quiet mode was unavailable. Your timer is running.")
+                        : i18n("Could not restore the previous notification setting.")
+                }
             }
         }
     }
@@ -285,7 +299,7 @@ PlasmoidItem {
             Kirigami.Icon {
                 visible: !Plasmoid.configuration.companion || !!preview.item?.noticeId
                 Layout.preferredHeight: 17; Layout.preferredWidth: 17
-                source: shelfDrop.containsDrag ? "folder-add" : preview.item?.noticeId ? "notifications" : root.endTime ? "chronometer" : watch.registered ? "view-visible" : root.media ? "audio-x-generic" : "applications-utilities"
+                source: shelfDrop.containsDrag ? "folder-add" : preview.item?.noticeId ? "notifications" : countdown.paused ? "media-playback-pause" : countdown.active ? "chronometer" : watch.registered ? "view-visible" : root.media ? "audio-x-generic" : "applications-utilities"
                 color: "#9dd9c9"; isMask: true
             }
             C.Label {
@@ -296,7 +310,7 @@ PlasmoidItem {
             }
             C.Label {
                 Layout.fillWidth: true; color: "#f6f3e9"; textFormat: Text.PlainText; elide: Text.ElideRight
-                text: shelfDrop.containsDrag ? i18n("Shelf") : preview.item?.title || (root.endTime ? root.remaining() : watch.registered ? i18n("Watching") : root.media?.track || i18n("Tools"))
+                text: shelfDrop.containsDrag ? i18n("Shelf") : preview.item?.title || (countdown.active ? root.timerSummary : watch.registered ? i18n("Watching") : root.media?.track || i18n("Tools"))
             }
         }
         NotchGestureSurface { gestures: notchGestures }
@@ -481,36 +495,7 @@ PlasmoidItem {
     }
     Component {
         id: timerPage
-        ColumnLayout {
-            Item { Layout.fillHeight: true }
-            C.Label {
-                Layout.alignment: Qt.AlignHCenter; font.pointSize: 23
-                text: root.endTime ? root.remaining() : i18n("Timer")
-            }
-            RowLayout {
-                Layout.alignment: Qt.AlignHCenter
-                C.SpinBox { id: minutes; visible: !root.endTime; from: 1; to: 1440; value: 25; editable: true; Accessible.name: i18n("Minutes") }
-                C.Button { text: root.endTime ? i18n("Cancel") : i18n("Start"); onClicked: root.endTime ? root.stop(false) : root.start(minutes.value, false) }
-                C.Button { visible: !root.endTime; text: i18n("Focus"); onClicked: root.start(minutes.value, true) }
-            }
-            C.Label { Layout.fillWidth: true; wrapMode: Text.Wrap; visible: text.length > 0; text: root.message }
-            RowLayout {
-                Layout.alignment: Qt.AlignHCenter
-                C.Label { text: root.duration((Plasmoid.configuration.watchElapsed + (root.watchStart ? root.now - root.watchStart : 0)) / 1000) }
-                C.Button {
-                    text: root.watchStart ? i18n("Pause") : i18n("Stopwatch")
-                    onClicked: {
-                        root.now = Date.now()
-                        if (root.watchStart) {
-                            Plasmoid.configuration.watchElapsed += Math.max(0, root.now - root.watchStart)
-                            Plasmoid.configuration.watchStart = ""
-                        } else Plasmoid.configuration.watchStart = String(root.now)
-                    }
-                }
-                C.ToolButton { icon.name: "edit-reset"; Accessible.name: i18n("Reset stopwatch"); onClicked: { Plasmoid.configuration.watchStart = ""; Plasmoid.configuration.watchElapsed = 0 } }
-            }
-            Item { Layout.fillHeight: true }
-        }
+        TimePage { timer: countdown; now: root.now; message: root.message; formatDuration: root.duration }
     }
     Component {
         id: agendaPage
