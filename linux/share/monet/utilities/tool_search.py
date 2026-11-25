@@ -94,12 +94,17 @@ class ToolSearch(dbus.service.Object):
         reply(self.tool_matches(query, sender))
 
     def tool_matches(self, query, sender):
+        complete = len(query) <= 256
         raw = str(query[:256]).strip()
+        expression = raw
         query = words(raw)
         scoped = False
         for prefix in sorted(self.prefixes, key=len, reverse=True):
             if query == prefix or query.startswith(prefix + " "):
                 scoped, query = True, query[len(prefix):].strip()
+                parts = raw.split(None, len(prefix.split()))
+                if len(parts) > 1:
+                    expression = parts[-1]
                 break
         if not scoped and len(query) < 3:
             self.menu_search = None
@@ -131,6 +136,11 @@ class ToolSearch(dbus.service.Object):
                 return command_matches(*direct, hidden, self.settings, self.clip_search)
         self.close_clip_search()
         self.menu_search = None
+        if complete and "command-bar" not in hidden and expression.lower().startswith(("#", "rgb(", "rgba(", "hsl(", "hsla(", "color(")):
+            from command_search import color_match
+            match = color_match(expression)
+            if match is not None:
+                return [match]
         matches = find_tools(query, favorites, hidden)
         if scoped and not query:
             matches = [(key, score) for key, score in matches if key in favorites]
@@ -196,7 +206,7 @@ class ToolSearch(dbus.service.Object):
             finally:
                 self.finish_menu(sender, key)
             return
-        if not action and str(key).startswith(("snippet/", "clip/", "emoji/")):
+        if not action and str(key).startswith(("snippet/", "clip/", "emoji/", "convert-color/")):
             from command_search import copy_result
             copy_result(str(key), hidden, self.settings, self.bus)
             return

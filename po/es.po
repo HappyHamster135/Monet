@@ -19166,3 +19166,11 @@ msgstr ""
 #: image/files-paste-image/pasteimage.cpp:127
 msgid "Paste Image as PNG…"
 msgstr ""
+
+#: linux/share/monet/utilities/command_search.py:58
+msgid "Color conversion"
+msgstr ""
+
+#: linux/share/monet/utilities/command_search.py:58
+msgid "Copy converted color"
+msgstr ""

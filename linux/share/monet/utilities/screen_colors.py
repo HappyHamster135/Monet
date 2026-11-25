@@ -1,5 +1,4 @@
 """Pick a composited screen pixel and copy it in the user's preferred format."""
-import colorsys
 import re
 
 from PySide6.QtGui import QColor, QPalette
@@ -7,21 +6,8 @@ from PySide6.QtWidgets import (QComboBox, QFormLayout, QFrame, QHBoxLayout,
                                QLineEdit, QPushButton, QVBoxLayout)
 
 from actions import tr
+from color_values import color_text
 from screen_selection import ScreenSelection
-
-
-def color_text(rgb, form):
-    red, green, blue = (rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255
-    if form == "rgb":
-        return f"rgb({red}, {green}, {blue})"
-    def decimal(value):
-        return f"{value:.4f}".rstrip("0").rstrip(".")
-    if form == "swiftui":
-        return f"Color(red: {decimal(red / 255)}, green: {decimal(green / 255)}, blue: {decimal(blue / 255)})"
-    if form == "hsl":
-        hue, light, saturation = colorsys.rgb_to_hls(red / 255, green / 255, blue / 255)
-        return f"hsl({decimal(hue * 360)}, {decimal(saturation * 100)}%, {decimal(light * 100)}%)"
-    return ("" if form == "bare" else "#") + f"{rgb:06X}"
 
 
 class ScreenColors(ScreenSelection):

@@ -12,6 +12,7 @@ import subprocess
 import dbus
 
 from actions import stored, tr, words
+from color_values import conversion, parse_color
 
 KLIPPER = "org.kde.klipper"
 SCOPES = {"snippet": "snippets", "clip": "clipboard", "emoji": "emoji", "menu": "command-bar", "script": "scripts"}
@@ -39,6 +40,26 @@ def identity(value):
 
 def result(key, label, icon, category, hint, score=1.0):
     return key, label, icon, 100, score, {"category": category, "subtext": hint}
+
+
+@lru_cache(maxsize=64)
+def color_swatch(color):
+    # A checkerboard makes translucent and fully transparent colors visible on both themes.
+    side = 24
+    rgb = color.bytes()[:3]
+    tiles = [bytes(round(c * color.alpha + background * (1 - color.alpha)) for c in rgb)
+             for background in (230, 158)]
+    pixels = b"".join(tiles[(x // 6 + y // 6) % 2] for y in range(side) for x in range(side))
+    return dbus.Struct((side, side, side * 3, False, 8, 3, dbus.ByteArray(pixels)), signature="iiibiiay")
+
+
+def color_match(query):
+    converted = conversion(query)
+    if converted is None:
+        return None
+    color, text = converted
+    return ("convert-color/" + query, text, "color-picker", 100, 1.0,
+            {"category": tr("Color conversion"), "subtext": tr("Copy converted color"), "icon-data": color_swatch(color)})
 
 
 def clipboard(bus):
@@ -120,8 +141,12 @@ def clips(items, query):
         label = " ".join(text[:160].split()) or tr("Whitespace")
         if len(text) > 160:
             label += "…"
-        rows.append(result(f"clip/{index}/{digest}", label, "edit-paste", tr("Clipboard history"),
-                           tr("Copy as plain text"), 1 - len(rows) * .01))
+        row = result(f"clip/{index}/{digest}", label, "edit-paste", tr("Clipboard history"),
+                     tr("Copy as plain text"), 1 - len(rows) * .01)
+        color = parse_color(text)
+        if color is not None:
+            row[5]["icon-data"] = color_swatch(color)
+        rows.append(row)
         if len(rows) == 8:
             break
     return rows
@@ -210,7 +235,14 @@ def copy_result(key, hidden, settings, bus):
     if SCOPES.get(scope) in hidden:
         return
     value = ""
-    if scope == "clip":
+    if scope == "convert-color":
+        if "command-bar" in hidden:
+            return
+        converted = conversion(ref)
+        if converted is None:
+            return
+        value = converted[1]
+    elif scope == "clip":
         row, _, digest = ref.partition("/")
         if not row.isascii() or not row.isdigit() or len(row) > 8 or not re.fullmatch("[0-9a-f]{64}", digest):
             return

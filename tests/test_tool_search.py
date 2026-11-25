@@ -175,13 +175,33 @@ def fixture():
         assert rocket[0] == "emoji/🚀", rocket
         run(runner, rocket[0])
         assert copied[-1] == "🚀"
+        clip_entries.append(" #3A89 ")
+        clipboard.clipboardHistoryUpdated()
+        previews, = call(runner.Match, "clip: #3A89")
+        assert "icon-data" in previews[0][5]
+        run(runner, previews[0][0])
+        assert copied[-1] == " #3A89 "
+        color, = runner.Match("tools #3698 to rgba")
+        assert color[1] == "rgba(51, 102, 153, 0.5333)"
+        width, height, stride, alpha, bits, channels, pixels = color[5]["icon-data"]
+        assert (width, height, stride, alpha, bits, channels) == (24, 24, 72, False, 8, 3)
+        assert len(pixels) == height * stride and list(pixels[:3]) != list(pixels[18:21])
+        run(runner, color[0])
+        assert copied[-1] == color[1]
+        assert keys("#369 to rgb")[0].startswith("convert-color/") and not keys("#369 to rgb" + " " * 300 + " books")
+        config.setValue("hidden", json.dumps(["command-bar"]))
+        config.sync()
+        count = len(copied)
+        assert not keys("#369 to rgb")
+        run(runner, color[0])
+        assert len(copied) == count
         config.setValue("hidden", json.dumps(["snippets", "clipboard", "emoji"]))
         config.sync()
         reads = len(history_reads)
         for prefix, key in (("clip", clip[0]), ("snippet", snippet[0]), ("emoji", rocket[0])):
             assert not runner.Match(prefix + ":")
             run(runner, key)
-        assert len(copied) == 3 and len(history_reads) == reads
+        assert len(copied) == count and len(history_reads) == reads
         from tests.fixtures.exported_menu import check_menu_search
         check_menu_search(bus, runner, second, call, config)
         from tests.fixtures.saved_script_search import check_script_search

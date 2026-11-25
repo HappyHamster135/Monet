@@ -19228,3 +19228,11 @@ msgstr "Inklistrad bild"
 #: image/files-paste-image/pasteimage.cpp:127
 msgid "Paste Image as PNG…"
 msgstr "Klistra in bild som PNG…"
+
+#: linux/share/monet/utilities/command_search.py:58
+msgid "Color conversion"
+msgstr "Färgkonvertering"
+
+#: linux/share/monet/utilities/command_search.py:58
+msgid "Copy converted color"
+msgstr "Kopiera konverterad färg"
