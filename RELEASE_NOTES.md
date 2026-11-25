@@ -4,6 +4,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 ### New in 0.9.8-9: Startup and Settings polish (in development)
 
+- **Clipboard in the notch.** Add Clipboard in Customize Home Bar → Edit notch tabs. Search, star and restore copied text, pictures and files.
 - **Convert colors in the Command Bar.** Press Super+R and type `#369 to rgb`. A swatch shows the color and Enter copies the converted value.
 - **Save a copied picture in Files.** Right-click inside a folder and choose **Paste Image as PNG…**. You can save the picture even when the clipboard also contains a caption or link.
 - **Keep text and links on the shelf.** Drop a web link or selected text on the notch and drag it into another app later. The shelf in Utilities shares the same entries.

@@ -9,6 +9,12 @@ C.TabBar {
     required property int page
     signal chosen(int tab)
 
+    clip: true
+    readonly property real naturalWidth: {
+        let width = leftPadding + rightPadding + Math.max(0, count - 1) * spacing
+        for (let i = 0; i < count; ++i) width += itemAt(i)?.implicitWidth ?? 0
+        return width
+    }
     property var order: []
     property bool syncing: false
     property bool ready: false
@@ -33,6 +39,7 @@ C.TabBar {
         C.TabButton {
             required property int modelData
             text: strip.labels[modelData]
+            width: implicitWidth + Math.max(0, strip.width - strip.naturalWidth) / Math.max(1, strip.count)
             onClicked: strip.chosen(modelData)
             Accessible.onPressAction: click()
         }

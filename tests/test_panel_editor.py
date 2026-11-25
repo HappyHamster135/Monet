@@ -83,6 +83,7 @@ import sys
 choice = sys.argv[3] if len(sys.argv) > 3 else ""
 if sys.argv[1] == "panel-notch":
     tabs = ["music", "activity", "time", "calendar", "notes"]
+    if choice == "tab-clipboard-show": tabs.append("clipboard")
     if choice == "tab-music-hide": tabs.remove("music")
     if choice == "tab-activity-earlier": tabs[:2] = ["activity", "music"]
     print(json.dumps(dict(ok=True, mode="compact", tabs=tabs, options=dict(previews=choice == "previews-on"))))
@@ -212,6 +213,13 @@ Window {
         QTest.qWait(200)
         self.assertFalse(music.property('checked'))
         self.assertFalse(self.item('notchEarlier-music').isEnabled())
+        clipboard = self.item('notchTab-clipboard')
+        self.assertFalse(clipboard.property('checked'))
+        clipboard.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        QTest.qWait(200)
+        self.assertTrue(clipboard.property('checked'))
+        self.assertEqual(editor.property('notchTabs').toVariant()[-1], 'clipboard')
 
     def test_one_and_three_bar_choices_use_layout_helper(self):
         self.assertTrue(self.item('panelThreeBars').property('checked'))

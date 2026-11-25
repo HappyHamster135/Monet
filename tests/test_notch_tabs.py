@@ -4,7 +4,7 @@ import tempfile
 import unittest
 
 try:
-    from PySide6.QtCore import QPoint, Qt, QUrl
+    from PySide6.QtCore import QObject, QPoint, Qt, QUrl
     from PySide6.QtGui import QAccessible, QAccessibleActionInterface, QGuiApplication
     from PySide6.QtQuick import QQuickView
     from PySide6.QtTest import QTest
@@ -67,5 +67,10 @@ Item {
             self.assertIn(QAccessibleActionInterface.pressAction(), action.actionNames())
             action.doAction(QAccessibleActionInterface.pressAction())
             self.assertEqual((root.property("page"), root.property("highlighted")), (1, "Activity"))
+            strip = root.findChild(QObject, "notchTabStrip")
+            root.setWidth(95)
+            QTest.qWait(40)
+            self.assertGreater(strip.property("naturalWidth"), strip.width())
+            self.assertGreaterEqual(item.width(), item.implicitWidth())
             root.setProperty("order", [])
             self.assertEqual(root.property("highlighted"), "")

@@ -47,7 +47,7 @@ Item {
     property var companionSettings: ({})
     readonly property var tabTitles: ({music:i18nd("monet", "Music"), activity:i18nd("monet", "Activity"),
         time:i18nd("monet", "Time"), calendar:i18nd("monet", "Calendar"), notes:i18nd("monet", "Notes"),
-        camera:i18nd("monet", "Camera")})
+        camera:i18nd("monet", "Camera"), clipboard:i18nd("monet", "Clipboard")})
     ListModel {
         id: tabRows
         ListElement { key: "music" }
@@ -56,6 +56,7 @@ Item {
         ListElement { key: "calendar" }
         ListElement { key: "notes" }
         ListElement { key: "camera" }
+        ListElement { key: "clipboard" }
     }
     onNotchTabsChanged: {
         const order = notchTabs.concat(Object.keys(tabTitles).filter(key => !notchTabs.includes(key)))

@@ -22,8 +22,8 @@ PlasmoidItem {
     readonly property string playingTrack: playing ? (media?.track || " ") : ""
     onPlayingTrackChanged: if (playingTrack) react("music")
     signal react(string kind)
-    readonly property var tabNames: ["music", "activity", "time", "calendar", "notes", "camera"]
-    readonly property var tabLabels: [i18n("Music"), i18n("Activity"), i18n("Time"), i18n("Calendar"), i18n("Notes"), i18n("Camera")]
+    readonly property var tabNames: ["music", "activity", "time", "calendar", "notes", "camera", "clipboard"]
+    readonly property var tabLabels: [i18n("Music"), i18n("Activity"), i18n("Time"), i18n("Calendar"), i18n("Notes"), i18n("Camera"), i18n("Clipboard")]
     ToolVisibility { id: tools }
     readonly property bool offerShelf: tools.offers("shelf")
     readonly property bool offerDownloads: tools.offers("downloads")
@@ -49,7 +49,8 @@ PlasmoidItem {
         if (value === "none") return []
         const ids = value.split(",").map(key => tabNames.indexOf(key))
         const ordered = ids.every((id, index) => id >= 0 && ids.indexOf(id) === index) ? ids : [0, 1, 2, 3, 4]
-        return ordered.filter(id => (id !== 4 || tools.offers("notes")) && (id !== 5 || tools.offers("camera")))
+        return ordered.filter(id => (id !== 4 || tools.offers("notes")) && (id !== 5 || tools.offers("camera"))
+                                    && (id !== 6 || tools.offers("clipboard")))
     }
     readonly property bool hasActivity: visibleTabs.includes(1)
     property int tab: 0
@@ -408,11 +409,48 @@ PlasmoidItem {
         Layout.preferredHeight: root.visibleTabs.length || root.displayShelf || root.showingWatch
             ? Math.min(370, Math.max(200, Screen.height - 80)) : implicitHeight
         spacing: Kirigami.Units.smallSpacing
-        NotchTabs {
-            visible: !root.viewingShelf && tabs.length > 0
+        RowLayout {
+            id: navigation
+            visible: !root.viewingShelf && root.visibleTabs.length > 0
             Layout.fillWidth: true
-            tabs: root.visibleTabs; labels: root.tabLabels; page: root.tab
-            onChosen: tab => { root.viewingWatch = false; root.tab = tab }
+            spacing: Kirigami.Units.smallSpacing
+            NotchTabs {
+                id: strip
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                tabs: root.visibleTabs; labels: root.tabLabels; page: root.tab
+                onChosen: tab => { root.viewingWatch = false; root.tab = tab }
+            }
+            C.ToolButton {
+                id: allTabs
+                visible: strip.naturalWidth > navigation.width
+                text: i18n("All tabs")
+                display: C.AbstractButton.IconOnly
+                icon.name: "arrow-down"
+                onClicked: tabMenu.open()
+                C.ToolTip.visible: hovered
+                C.ToolTip.text: text
+                C.Menu {
+                    id: tabMenu
+                    y: allTabs.height
+                    onOpened: {
+                        currentIndex = root.visibleTabs.indexOf(root.tab)
+                        itemAt(currentIndex)?.forceActiveFocus(Qt.PopupFocusReason)
+                    }
+                    Instantiator {
+                        model: root.visibleTabs
+                        delegate: C.MenuItem {
+                            required property int modelData
+                            text: root.tabLabels[modelData]
+                            checkable: true
+                            checked: root.tab === modelData
+                            onTriggered: strip.chosen(modelData)
+                        }
+                        onObjectAdded: (index, item) => tabMenu.insertItem(index, item)
+                        onObjectRemoved: (index, item) => tabMenu.removeItem(item)
+                    }
+                }
+            }
         }
         Loader {
             Layout.fillWidth: true; Layout.fillHeight: true
@@ -422,6 +460,7 @@ PlasmoidItem {
                 : root.tab === 1 && root.viewingDownloads ? downloadsPage
                 : root.tab === 3 && root.viewingAgenda ? agendaPage
                 : root.tab === 0 && root.musicView === 3 ? mixerPage
+                : root.tab === 6 ? clipboardPage
                 : root.tab === 5 ? cameraPage
                 : root.tab === 4 ? (padController.item ? padPage : null) : [musicPage, activityPage, timerPage, calendarPage][root.tab] ?? null
         }
@@ -483,6 +522,40 @@ PlasmoidItem {
                 }
             }
             C.Label { visible: mixerLoader.status === Loader.Error; Layout.fillWidth: true; wrapMode: Text.Wrap; text: i18n("The volume mixer could not open.") }
+        }
+    }
+    Component {
+        id: clipboardPage
+        Item {
+            id: clipboardView
+            readonly property var session: power.nativeState ?? portableLock.item
+            readonly property bool unlocked: !!session?.lockKnown && !session.locked
+            onUnlockedChanged: if (session?.lockKnown && session.locked) root.expanded = false
+            Loader {
+                id: portableLock
+                active: !power.nativeState
+                sourceComponent: Component { CameraLock {} }
+            }
+            Loader {
+                id: history
+                anchors.fill: parent
+                active: clipboardView.unlocked && power.active
+                source: "NotchClipboard.qml"
+                focus: true
+                onLoaded: item.forceActiveFocus(Qt.OtherFocusReason)
+            }
+            Connections {
+                target: history.item
+                function onRequestHidePopup() { root.expanded = false }
+            }
+            C.Label {
+                anchors.centerIn: parent
+                width: parent.width
+                visible: history.status === Loader.Error || !clipboardView.unlocked
+                text: i18n("Clipboard history is unavailable.")
+                wrapMode: Text.Wrap
+                horizontalAlignment: Text.AlignHCenter
+            }
         }
     }
     Component {

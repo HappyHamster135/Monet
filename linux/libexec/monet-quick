@@ -8441,7 +8441,7 @@ def panel_notch(ident, choice=None):
     modes = {None, "compact", "wide", "off"}
     if not re.fullmatch(r"[0-9]{1,10}", str(ident)) or (choice not in modes and
             not re.fullmatch(r"(levels|companion|alerts|previews|gestures)-(on|off)|companion-[a-z]{1,10}-[a-z]{1,12}|"
-                             r"tab-(music|activity|time|calendar|notes|camera)-(show|hide|earlier|later)", choice)):
+                             r"tab-(music|activity|time|calendar|notes|camera|clipboard)-(show|hide|earlier|later)", choice)):
         return {"ok": False}
     try:
         script = (Path(DATADIR) / "monet/panel-notch.js").read_text(encoding="utf-8")

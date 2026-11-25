@@ -19197,3 +19197,15 @@ msgstr ""
 #: linux/share/monet/utilities/command_search.py:58
 msgid "Copy converted color"
 msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:50 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:26
+msgid "Clipboard"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:427
+msgid "All tabs"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:551
+msgid "Clipboard history is unavailable."
+msgstr ""
