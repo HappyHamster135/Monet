@@ -24,7 +24,7 @@ class ToolVisibility(unittest.TestCase):
 
 
 def fixture():
-    from PySide6.QtCore import QSettings, Qt, QTimer, QUrl
+    from PySide6.QtCore import QCoreApplication, QEvent, QSettings, Qt, QTimer, QUrl
     from PySide6.QtDBus import QDBusConnection
     from PySide6.QtQml import QQmlApplicationEngine
     from PySide6.QtTest import QTest
@@ -66,6 +66,10 @@ def fixture():
             QTest.qWait(20)
         raise AssertionError((tools.property("hidden").toVariant(), warnings))
 
+    apply(set())
+    window.Open(["downloads"])
+    assert "downloads" in window.pages
+    window.hide()
     test_file = Path.home() / "kept file"
     test_file.touch()
     assert receiver.AddToShelf(test_file.as_uri())
@@ -87,6 +91,12 @@ def fixture():
     assert json.loads(receiver.pad_request('{"action":"view"}'))["pad"]["body"] == "Final keystroke"
     assert not warnings, warnings
     bus.unregisterService(SERVICE)
+    receiver.idle.stop()
+    receiver.deleteLater()
+    window.close()
+    window.deleteLater()
+    engine.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
 
 
 if __name__ == "__main__":

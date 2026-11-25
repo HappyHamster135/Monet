@@ -155,8 +155,8 @@ class Window(QMainWindow):
         dialog = QDialog(self)
         dialog.setWindowTitle("Customize Utilities")
         layout = QVBoxLayout(dialog)
-        hint = QLabel(tr("Choose which tools appear. Favorites open from the Quick Panel, and the first eight also appear in the wheel."))
-        hint.setText(hint.text() + " " + tr("Hiding a tool also removes its controls from the notch."))
+        hint = QLabel(tr("Choose which tools appear. Favorites open from the Quick Panel, and the first eight also appear in the wheel.")
+                      + " " + tr("Hiding a tool also removes its controls from the notch."))
         hint.setWordWrap(True)
         layout.addWidget(hint)
         from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem
@@ -210,6 +210,7 @@ class Window(QMainWindow):
         dialog.resize(560, 420)
         if dialog.exec():
             self.home()
+        dialog.deleteLater()
 
     def save_favorites(self, keys):
         self.favorites = list(dict.fromkeys(k for k in keys if k in ACTIONS and k != "quick-panel" and k not in self.hidden))
