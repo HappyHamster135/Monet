@@ -20,6 +20,7 @@ from PySide6.QtCore import QEvent, QObject, Property, QProcess, QRect, QRectF, Q
 from PySide6.QtGui import QGuiApplication, QIcon, QPainterPath, QRegion, QScreen, QWindow
 from PySide6.QtNetwork import QLocalServer, QLocalSocket, QNetworkAccessManager, QNetworkDiskCache
 from PySide6.QtQml import QQmlApplicationEngine, QQmlNetworkAccessManagerFactory
+from shiboken6 import isValid
 
 BINDIR = "@BINDIR@"
 LIBEXECDIR = "@LIBEXECDIR@"
@@ -262,7 +263,8 @@ class Helper(QObject):
 
         def complete(code, error=""):
             nonlocal settled
-            if settled:
+            # QProcess can emit finished from its destructor as the window closes.
+            if settled or not isValid(self) or not isValid(process):
                 return
             settled = True
             out = bytes(process.readAllStandardOutput()).decode("utf-8", "replace")

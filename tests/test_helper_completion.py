@@ -117,6 +117,21 @@ QtObject {
         self.assertEqual([reply[2] for reply in self.results], [1] * 8)
         self.assertTrue(all(reply[3] for reply in self.results))
 
+    def test_closing_the_owner_with_a_request_in_flight_discards_its_callback(self):
+        owner = self.games.Helper()
+        replies = []
+        owner.done.connect(lambda *reply: replies.append(reply))
+        with patch.dict(self.games.PROGRAMS, {"helper": sys.executable}):
+            owner.run(["helper", "-c", "import time; time.sleep(10)"])
+        child = owner.findChild(QProcess)
+        self.assertTrue(child.waitForStarted(1000))
+        with patch.object(sys, "excepthook") as errors:
+            owner.deleteLater()
+            QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+            QTest.qWait(20)
+            errors.assert_not_called()
+        self.assertEqual(replies, [])
+
     def test_a_crashed_process_completes_once_and_following_requests_still_work(self):
         with patch.dict(self.games.PROGRAMS, {"helper": sys.executable}):
             crashed = self.helper.run(["helper", "-c", "import os, signal; os.kill(os.getpid(), signal.SIGKILL)"])
