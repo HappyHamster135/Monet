@@ -5,6 +5,9 @@ set -euo pipefail
 PREFIX=/usr/local
 
 if [ "$(id -u)" -ne 0 ]; then
+    # Retire this account's optional last-window listener and startup choice.
+    busctl --user --auto-start=no call org.kde.KWin /Scripting org.kde.kwin.Scripting unloadScript s monet-quit-on-close >/dev/null 2>&1 || true
+    kwriteconfig6 --file kwinrc --group Plugins --key monet-quit-on-closeEnabled --delete >/dev/null 2>&1 || true
     # Remove this user's game shortcuts and settings, then the system part.
     rm -f "$HOME"/.local/share/applications/monet-game-*.desktop
     # The app menu's Windows apps (monet-quick windows-apps), with their icons.
@@ -219,12 +222,16 @@ rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/pl
     "$PREFIX/share/aurorae/themes/MonetMatte" "$PREFIX/share/aurorae/themes/MonetSmokeMatte" \
     "$PREFIX/share/aurorae/themes/MonetBare" "$PREFIX/share/kwin/scripts/monet-titles" \
     "$PREFIX/share/kwin/scripts/monet-snap" "$PREFIX/share/kwin/effects/monet-motion" \
-    "$PREFIX/share/kwin/scripts/monet-work" "$PREFIX/share/kwin/tabbox/monet-windows" \
+    "$PREFIX/share/kwin/scripts/monet-work" "$PREFIX/share/kwin/scripts/monet-quit-on-close" "$PREFIX/share/kwin/tabbox/monet-windows" \
     "$PREFIX/share/fonts/monet" "$PREFIX/share/sounds/monet" "$PREFIX/share/wallpapers/Monet" "$PREFIX/share/monet" \
     "$PREFIX/share/doc/monet/passwords-connector" \
     /var/lib/monet
 
 echo "Monet is removed. To also remove Monet Bridge, run \"Uninstall Monet\" in Windows."
+
+rm -f "$PREFIX/share/dbus-1/services/org.monet.QuitOnClose.service" \
+    "$PREFIX/share/dbus-1/services/org.monet.ToolSearch.service" \
+    "$PREFIX/share/krunner/dbusplugins/monet-utilities.desktop"
 
 # On-demand Keep awake owns native cookies only for its process lifetime.
 rm -f /etc/systemd/user/monet-bluetooth-sleep.service /etc/systemd/user/monet-clean-links.service /etc/systemd/user/monet-output-order.service /etc/systemd/user/monet-brightness.service /etc/systemd/user/monet-keep-awake.service "$PREFIX/share/dbus-1/services/org.monet.KeepAwake.service" "$PREFIX/share/dbus-1/services/org.monet.Utilities.service"
