@@ -160,7 +160,7 @@ class Window(QMainWindow):
         self.status.clearMessage()
         return self.pages[key]
 
-    def customize(self):
+    def customize(self, focus_tool=None):
         dialog = QDialog(self)
         dialog.setWindowTitle("Customize Utilities")
         layout = QVBoxLayout(dialog)
@@ -174,6 +174,8 @@ class Window(QMainWindow):
         for key, action in ACTIONS.items():
             item = QTreeWidgetItem(tree, [action.name])
             item.setData(0, Qt.UserRole, key)
+            if key == focus_tool:
+                tree.setCurrentItem(item, 1)
             item.setCheckState(1, Qt.Unchecked if key in self.hidden else Qt.Checked)
             if key != "quick-panel":
                 item.setCheckState(2, Qt.Checked if key in self.favorites else Qt.Unchecked)
@@ -191,12 +193,15 @@ class Window(QMainWindow):
                     favorites.append(key)
             visibility_changed = set(self.hidden) != set(hidden)
             agent_visibility_changed = ("agents" in self.hidden) != ("agents" in hidden)
+            awake_changed = ("awake" in self.hidden) != ("awake" in hidden)
             alerts_changed = ("monitor-alerts" in self.hidden) != ("monitor-alerts" in hidden)
             self.hidden = hidden
             ordered = [key for key in self.favorites if key in favorites]
             self.save_favorites(ordered + [key for key in favorites if key not in ordered])
             self.settings.setValue("hidden", json.dumps(hidden))
             self.settings.sync()
+            if awake_changed and self.settings.contains("awakeRules"):
+                self.worker([self.helpers / "monet-quick", "keep-awake-rules"], lambda _: None, finish_on_close=True)
             if alerts_changed and self.settings.contains("monitorAlerts"):
                 self.worker([sys.executable, MODULES / "monitor_alerts.py", "sync"], lambda _: None, finish_on_close=True)
             if visibility_changed:
@@ -223,7 +228,10 @@ class Window(QMainWindow):
         layout.addWidget(buttons)
         dialog.resize(560, 420)
         if dialog.exec():
-            self.home()
+            if focus_tool and focus_tool in ACTIONS and focus_tool not in self.hidden:
+                self.Open([focus_tool])
+            else:
+                self.home()
         dialog.deleteLater()
 
     def save_favorites(self, keys):
@@ -649,10 +657,8 @@ class Window(QMainWindow):
             from wallpaper_page import WallpaperPage
             self.page(key, lambda: WallpaperPage(self))
         elif key == "awake":
-            choices = {"30 minutes": "30", "1 hour": "60", "Until turned off": "on", "Turn off": "off"}
-            mode, ok = QInputDialog.getItem(self, "Keep awake", "Duration", list(choices), 0, False)
-            if ok:
-                self.worker([self.helpers / "monet-quick", "keep-awake", choices[mode]], lambda _: self.issue("Keep-awake setting updated."))
+            from awake_page import AwakePage
+            self.page(key, lambda: AwakePage(self))
         elif key == "camera":
             from camera_window import CameraWindow
             if self.mirror is None:
@@ -682,6 +688,10 @@ class Window(QMainWindow):
         self.settings.sync()
         self.favorites, self.hidden = preferences(self.settings)
         if ("notes" if key == "floating-pad" else key) in self.hidden:
+            if args == ["awake", "settings"]:
+                self.Open(["tools"])
+                QTimer.singleShot(0, lambda: self.customize("awake"))
+                return
             self.panelDismissed.emit()
             return
         if key in ("color", "ocr"):

@@ -1,5 +1,5 @@
 [Unit]
-Description=Monet temporary Keep awake
+Description=Monet Keep awake timers and automatic rules
 PartOf=graphical-session.target
 StartLimitIntervalSec=0
 
@@ -9,3 +9,6 @@ BusName=org.monet.KeepAwake
 ExecStart=@LIBEXECDIR@/monet-keep-awake
 Slice=background.slice
 TimeoutStopSec=5
+
+[Install]
+WantedBy=graphical-session.target

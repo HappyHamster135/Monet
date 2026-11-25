@@ -7,6 +7,9 @@ import signal
 import tempfile
 import time
 
+from .awake_apps import SYSTEMD
+from .awake_rules import KWIN, RuleMonitor
+
 NAME = 'org.monet.KeepAwake'
 PATH = '/org/monet/KeepAwake'
 INTERFACE = NAME
@@ -14,8 +17,11 @@ POWER = ('org.kde.Solid.PowerManagement', '/org/kde/Solid/PowerManagement/Policy
          'org.kde.Solid.PowerManagement.PolicyAgent')
 SCREEN = ('org.freedesktop.ScreenSaver', '/ScreenSaver', 'org.freedesktop.ScreenSaver')
 XML = '''<node><interface name="org.monet.KeepAwake">
+<signal name="StatusChanged"><arg type="s"/></signal>
 <method name="GetStatus"><arg type="s" direction="out"/></method>
 <method name="SetDuration"><arg type="i" direction="in"/><arg type="s" direction="out"/></method>
+<method name="ReloadRules"><arg type="s" direction="out"/></method>
+<method name="WindowsChanged"><arg type="s" direction="in"/></method>
 </interface></node>'''
 
 
@@ -32,55 +38,74 @@ class Controller:
     def __init__(self, backend, clock=boottime):
         self.backend, self.clock = backend, clock
         self.duration, self.end, self.cookies, self.error = 0, 0., None, ''
+        self.changed = lambda: None
+        self.reasons = []
+        self.watching = False
+        self.rule_display = self.holding_display = False
 
     def status(self):
         remaining = max(0, math.ceil(self.end-self.clock())) if self.end else 0
         return dict(active=self.cookies is not None, duration=self.duration, end=self.end,
                     remaining=remaining, indefinite=self.duration == -1,
-                    pending=bool(self.duration and self.cookies is None), error=self.error)
+                    pending=bool((self.duration or self.reasons) and self.cookies is None), error=self.error,
+                    reasons=self.reasons, display=self.holding_display, watching=self.watching)
 
     def set_duration(self, seconds):
         if type(seconds) is not int or seconds not in (-1, 0) and not 1 <= seconds <= 86400:
             return dict(ok=False, state=self.status(), error='request')
-        if seconds == 0:
-            self.stop()
-            return dict(ok=True, state=self.status())
         self.duration, self.end = seconds, self.clock()+seconds if seconds > 0 else 0.
         self.acquire()
-        return dict(ok=self.cookies is not None, state=self.status(), error=self.error)
+        self.changed()
+        return dict(ok=not self.error, state=self.status(), error=self.error)
+
+    def set_rules(self, reasons, display):
+        if reasons == self.reasons and display == self.rule_display and not self.error:
+            return
+        self.reasons, self.rule_display = reasons, display
+        self.acquire()
+        self.changed()
 
     def acquire(self):
-        if self.cookies is not None:
+        if not (self.duration or self.reasons):
+            self.release()
+            self.error = ''
+            return
+        display = bool(self.duration or self.rule_display)
+        if self.cookies is not None and self.holding_display == display:
             self.error = ''
             return
         try:
-            self.cookies = self.backend.acquire()
+            cookies = self.backend.acquire() if display else self.backend.acquire(keep_display=False)
+            self.release()
+            self.cookies, self.holding_display = cookies, display
             self.error = ''
         except (OSError, RuntimeError):
-            self.cookies = None
+            self.release()
             self.error = 'backend-unavailable'
 
     def backend_changed(self):
         # Release the surviving old cookie before reacquiring the pair. The backend
         # addresses unique owners, so an old number cannot release a new owner's cookie.
         self.release()
-        if self.duration and not self.expired():
+        if not self.expired():
             self.acquire()
+            self.changed()
 
     def expired(self):
         if self.duration > 0 and self.clock() >= self.end:
-            self.stop()
+            self.set_duration(0)
             return True
         return False
 
     def release(self):
         if self.cookies is not None:
             self.backend.release(self.cookies)
-            self.cookies = None
+            self.cookies, self.holding_display = None, False
 
     def stop(self):
         self.release()
         self.duration, self.end, self.error = 0, 0., ''
+        self.reasons = []
 
 
 class DesktopBackend:
@@ -99,13 +124,14 @@ class DesktopBackend:
         return self.call(('org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus'),
                          'GetNameOwner', '(s)', (service,))[0]
 
-    def acquire(self):
+    def acquire(self, keep_display=True):
         cookies = []
         try:
             # ChangeScreenSettings (4) implies InterruptSession (1) in PowerDevil.
-            for endpoint, method, signature, args in [
-                (POWER, 'AddInhibition', '(uss)', (5, 'Monet', 'Keep awake')),
-                (SCREEN, 'Inhibit', '(ss)', ('Monet', 'Keep awake'))]:
+            requests = [(POWER, 'AddInhibition', '(uss)', (5 if keep_display else 1, 'Monet', 'Keep awake'))]
+            if keep_display:
+                requests.append((SCREEN, 'Inhibit', '(ss)', ('Monet', 'Keep awake')))
+            for endpoint, method, signature, args in requests:
                 owner = self.owner(endpoint[0])
                 cookie = self.call((owner, *endpoint[1:]), method, signature, args)[0]
                 cookies.append((endpoint, owner, cookie))
@@ -134,20 +160,42 @@ def main():
     loop = GLib.MainLoop()
     controller = Controller(backend)
 
+    def publish():
+        connection.emit_signal(None, PATH, NAME, 'StatusChanged',
+                               GLib.Variant('(s)', (json.dumps(controller.status()),)))
+    controller.changed = publish
+    monitor = RuleMonitor(backend, controller, Gio, GLib)
+
     def quit_later():
         loop.quit()
+        return False
+
+    def quit_if_idle():
+        if not (controller.duration or monitor.rules):
+            loop.quit()
         return False
 
     def method_call(bus, sender, path, interface, method, args, invocation):
         if method == 'GetStatus':
             if controller.expired():
-                GLib.idle_add(quit_later)
+                arm_expiry()
+                GLib.idle_add(quit_if_idle)
             result = controller.status()
+        elif method == 'WindowsChanged':
+            if not monitor.windows_changed(sender, args.unpack()[0]):
+                invocation.return_dbus_error(INTERFACE+'.Denied', 'Unknown window observer')
+                return
+            invocation.return_value(GLib.Variant('()', ()))
+            return
+        elif method == 'ReloadRules':
+            monitor.reload()
+            result = controller.status()
+            GLib.idle_add(quit_if_idle)
         elif method == 'SetDuration':
             result = controller.set_duration(args.unpack()[0])
             arm_expiry()
             if not controller.duration:
-                GLib.idle_add(quit_later)
+                GLib.idle_add(quit_if_idle)
         else:
             invocation.return_dbus_error(INTERFACE+'.UnknownMethod', 'Unknown method')
             return
@@ -155,31 +203,52 @@ def main():
 
     def owner_changed(bus, sender, path, interface, signal_name, parameters):
         service, old, new = parameters.unpack()
-        if service in (POWER[0], SCREEN[0]) and controller.duration:
+        if service == SYSTEMD and monitor.rules.get('apps'):
+            monitor.units.configure(monitor.rules['apps'])
+            monitor.update()
+        if service == KWIN and monitor.rules.get('apps'):
+            monitor.watch_windows()
+            monitor.update()
+        if service in (POWER[0], SCREEN[0]) and (controller.duration or controller.reasons):
             controller.backend_changed()
             arm_expiry()
             if not controller.duration:
-                GLib.idle_add(quit_later)
+                GLib.idle_add(quit_if_idle)
 
-    timer = [None]
-    def tick():
+    # A boottime deadline includes explicit suspend and needs no periodic wakeups.
+    # Older portable Python builds use the existing clock check.
+    deadline_fd = None
+    if hasattr(os, 'timerfd_create') and hasattr(time, 'CLOCK_BOOTTIME'):
+        deadline_fd = os.timerfd_create(time.CLOCK_BOOTTIME, flags=os.TFD_NONBLOCK | os.TFD_CLOEXEC)
+    timer = None
+
+    def tick(*_):
+        nonlocal timer
+        if deadline_fd is not None:
+            os.read(deadline_fd, 8)
         if controller.expired():
-            timer[0] = None
-            loop.quit()
-            return False
+            timer = None
+            return quit_if_idle()
         return True
 
     def arm_expiry():
-        if timer[0] is not None:
-            GLib.source_remove(timer[0])
-            timer[0] = None
+        nonlocal timer
+        if timer is not None:
+            GLib.source_remove(timer)
+            timer = None
+        if deadline_fd is not None:
+            os.timerfd_settime(deadline_fd, flags=os.TFD_TIMER_ABSTIME, initial=controller.end)
         if controller.duration > 0:
-            timer[0] = GLib.timeout_add_seconds(1, tick)
+            if deadline_fd is None:
+                timer = GLib.timeout_add_seconds(1, tick)
+            else:
+                timer = GLib.io_add_watch(deadline_fd, GLib.PRIORITY_DEFAULT, GLib.IO_IN, tick)
 
     info = Gio.DBusNodeInfo.new_for_xml(XML)
     registration = connection.register_object(PATH, info.interfaces[0], method_call, None, None)
-    subscription = connection.signal_subscribe('org.freedesktop.DBus', 'org.freedesktop.DBus',
-        'NameOwnerChanged', '/org/freedesktop/DBus', None, Gio.DBusSignalFlags.NONE, owner_changed)
+    subscriptions = [connection.signal_subscribe('org.freedesktop.DBus', 'org.freedesktop.DBus',
+        'NameOwnerChanged', '/org/freedesktop/DBus', name, Gio.DBusSignalFlags.NONE, owner_changed)
+        for name in (POWER[0], SCREEN[0], KWIN, SYSTEMD)]
     for signum in (signal.SIGINT, signal.SIGTERM):
         GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signum, quit_later)
 
@@ -195,11 +264,21 @@ def main():
         json.dump(dict(owner=connection.get_unique_name()), output)
     os.replace(temporary, marker)
     try:
+        monitor.reload()
+        # Activation can precede its requesting D-Bus method. An empty service
+        # left after a crash or an abandoned request should exit on its own.
+        GLib.timeout_add_seconds(5, quit_if_idle)
         loop.run()
     finally:
+        if timer is not None:
+            GLib.source_remove(timer)
+        if deadline_fd is not None:
+            os.close(deadline_fd)
         controller.stop()
+        monitor.close()
         marker.unlink(missing_ok=True)
-        connection.signal_unsubscribe(subscription)
+        for subscription in subscriptions:
+            connection.signal_unsubscribe(subscription)
         connection.unregister_object(registration)
         connection.flush_sync(None)
     return 0

@@ -4469,11 +4469,6 @@ msgstr ""
 msgid "Until off"
 msgstr ""
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5807
-msgid ""
-"Temporarily pauses automatic screen-off, locking and sleep. Your saved settings stay the same."
-msgstr ""
-
 #: linux/share/monet/settings-app/MonetSettings.qml:5815
 msgid "Locking"
 msgstr ""
@@ -18897,4 +18892,101 @@ msgstr ""
 
 #: linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:47 linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:276
 msgid "Choose Home Bar readings"
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1752
+msgid "An automatic rule is keeping this PC awake"
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsPower.qml:268
+msgid "Automatic Keep awake rules"
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsPower.qml:269
+msgid "While plugged in, using an external display or running selected apps"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:26 linux/share/monet/utilities/awake_page.py:32
+msgid "Manual timer"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:27
+msgid "30 minutes"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:28
+msgid "Until turned off"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:39
+msgid "Use automatic rules"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:44
+msgid "Keep this PC awake when any of these conditions applies."
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:47
+msgid "Connected to power"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:48
+msgid "An external display is connected"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:58
+msgid "Also keep the screen on and delay automatic locking"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:101
+msgid "While open: {apps}"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:102
+msgid "No applications selected"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:118
+msgid "power connected"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:118
+msgid "external display"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:121
+msgid "manual timer"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:123
+msgid "Keep awake is unavailable. Apply your choices to retry."
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:125
+msgid "Keeping this PC awake because of {conditions}."
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:127
+msgid "This PC is using its usual sleep settings."
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:143
+msgid "Choose a condition or turn off automatic rules."
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:150
+msgid "Could not save Keep awake rules."
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:158
+msgid "Could not apply Keep awake rules. {reason}"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:129
+msgid "Waiting for a matching condition."
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsPower.qml:259
+msgid ""
+"A manual timer keeps the screen on and delays automatic locking and sleep until it ends."
 msgstr ""

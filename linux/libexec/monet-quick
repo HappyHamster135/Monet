@@ -3185,7 +3185,10 @@ def awake_reply(data):
             raise ValueError("Invalid Keep awake duration")
         if state.get("indefinite") is not (duration == -1) or not isinstance(state.get("pending"), bool):
             raise ValueError("Invalid Keep awake state")
-        if state["active"] and (duration == 0 or state["pending"]):
+        reasons = state.get("reasons", [])
+        if not isinstance(reasons, list) or not all(isinstance(reason, str) for reason in reasons):
+            raise ValueError("Invalid automatic rules")
+        if state["active"] and ((duration == 0 and not reasons) or state["pending"]):
             raise ValueError("Invalid active inhibition")
         return result
     except (ValueError, TypeError, KeyError, IndexError, AttributeError):
@@ -3221,6 +3224,31 @@ def set_keep_awake(mode):
             awake_marker().unlink(missing_ok=True)
             return dict(ok=True, state=awake_off())
     return awake_reply(busjson("--user", "--", "call", *AWAKE_BUS, "SetDuration", "i", str(durations[mode])))
+
+
+def sync_keep_awake_rules():
+    import fcntl
+    shared = Path(DATADIR) / "monet"
+    if not shared.is_dir():
+        shared = Path(__file__).resolve().parents[1] / "share/monet"
+    sys.path.insert(0, str(shared))
+    from monet_runtime.awake_rules import preferences, watching
+    lock = awake_marker().parent
+    lock.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with (lock / "keep-awake-rules.lock").open("a") as file:
+        fcntl.flock(file, fcntl.LOCK_EX)
+        enabled = watching(preferences())
+        # Disabling automatic rules must preserve a separately requested timer.
+        subprocess.run(["systemctl", "--user", "enable" if enabled else "disable",
+                        "monet-keep-awake.service"], check=True, timeout=15)
+        owner = busjson("--user", "call", "org.freedesktop.DBus", "/org/freedesktop/DBus",
+                        "org.freedesktop.DBus", "GetNameOwner", "s", AWAKE_BUS[0])
+        if enabled or owner:
+            state = awake_reply(busjson("--user", "call", *AWAKE_BUS, "ReloadRules"))
+            if state.get("error"):
+                raise RuntimeError("Could not apply Keep awake rules")
+            return state
+        return awake_off()
 
 
 def virtual_machine():
@@ -11129,6 +11157,12 @@ def main(argv):
         result = restart()
         emit(result)
         return 0 if result["ok"] else 1
+    elif cmd == "keep-awake-rules" and not args:
+        try:
+            emit(sync_keep_awake_rules())
+        except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
     elif cmd == "keep-awake-status":
         emit(keep_awake_status())
     elif cmd == "keep-awake" and len(args) == 1:
@@ -11218,9 +11252,11 @@ def main(argv):
     elif cmd == "accessory-alert" and len(args) == 2 and re.fullmatch(r"(?:[a-f0-9]{2}){1,1024}", args[0]) and args[1].isdigit() and len(args[1]) <= 2 and int(args[1]) <= 20:
         run("notify-send", "--app-name=Monet", "--icon=battery-low", "--", tr("Low accessory battery"),
             tr("%1 has %2% battery remaining.", unhex(args[0]), args[1]))
-    elif cmd == "utilities" and args and args[0] in ("tools", "shelf", "notes", "downloads", "notifications", "media", "media-keys", "quit-on-close", "extra-clicks", "wheel-scrolling", "agents", "watch", "wheel", "calendars"):
+    elif cmd == "utilities" and args and args[0] in ("tools", "shelf", "notes", "downloads", "notifications", "awake", "media", "media-keys", "quit-on-close", "extra-clicks", "wheel-scrolling", "agents", "watch", "wheel", "calendars"):
         extra = []
-        if len(args) == 2 and args[0] == "agents" and args[1] in ("claude", "codex", "session"):
+        if args == ["awake", "settings"]:
+            extra = ["settings"]
+        elif len(args) == 2 and args[0] == "agents" and args[1] in ("claude", "codex", "session"):
             extra = [args[1]]
         elif len(args) == 2 and args[0] == "watch" and re.fullmatch(r"[1-9][0-9]{0,9}", args[1]):
             extra = [args[1]]

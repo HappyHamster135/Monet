@@ -4415,12 +4415,6 @@ msgstr "1 timme"
 msgid "Until off"
 msgstr "Tills du stänger av"
 
-#: linux/share/monet/settings-app/MonetSettings.qml:5807
-msgid ""
-"Temporarily pauses automatic screen-off, locking and sleep. Your saved settings stay the same."
-msgstr ""
-"Pausar tillfälligt automatisk skärmsläckning, låsning och vila. Dina sparade inställningar behålls."
-
 #: linux/share/monet/settings-app/MonetSettings.qml:5815
 msgid "Locking"
 msgstr "Låsning"
@@ -18910,3 +18904,104 @@ msgstr "Fläkt %1"
 #: linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:47 linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:276
 msgid "Choose Home Bar readings"
 msgstr "Välj mätvärden för aktivitetsfältet"
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1752
+msgid "An automatic rule is keeping this PC awake"
+msgstr "En automatisk regel håller datorn vaken"
+
+#: linux/share/monet/settings-app/SettingsPower.qml:268
+msgid "Automatic Keep awake rules"
+msgstr "Automatiska regler för att hålla datorn vaken"
+
+#: linux/share/monet/settings-app/SettingsPower.qml:269
+msgid "While plugged in, using an external display or running selected apps"
+msgstr ""
+"När strömmen är ansluten, en extern skärm används eller valda appar är öppna"
+
+#: linux/share/monet/utilities/awake_page.py:26 linux/share/monet/utilities/awake_page.py:32
+msgid "Manual timer"
+msgstr "Manuell timer"
+
+#: linux/share/monet/utilities/awake_page.py:27
+msgid "30 minutes"
+msgstr "30 minuter"
+
+#: linux/share/monet/utilities/awake_page.py:28
+msgid "Until turned off"
+msgstr "Tills du stänger av"
+
+#: linux/share/monet/utilities/awake_page.py:39
+msgid "Use automatic rules"
+msgstr "Använd automatiska regler"
+
+#: linux/share/monet/utilities/awake_page.py:44
+msgid "Keep this PC awake when any of these conditions applies."
+msgstr "Håll datorn vaken när något av dessa villkor är uppfyllt."
+
+#: linux/share/monet/utilities/awake_page.py:47
+msgid "Connected to power"
+msgstr "Strömmen är ansluten"
+
+#: linux/share/monet/utilities/awake_page.py:48
+msgid "An external display is connected"
+msgstr "En extern skärm är ansluten"
+
+#: linux/share/monet/utilities/awake_page.py:58
+msgid "Also keep the screen on and delay automatic locking"
+msgstr "Låt även skärmen vara på och skjut upp automatisk låsning"
+
+#: linux/share/monet/utilities/awake_page.py:101
+msgid "While open: {apps}"
+msgstr "När {apps} är öppna"
+
+#: linux/share/monet/utilities/awake_page.py:102
+msgid "No applications selected"
+msgstr "Inga appar har valts"
+
+#: linux/share/monet/utilities/awake_page.py:118
+msgid "power connected"
+msgstr "ansluten ström"
+
+#: linux/share/monet/utilities/awake_page.py:118
+msgid "external display"
+msgstr "extern skärm"
+
+#: linux/share/monet/utilities/awake_page.py:121
+msgid "manual timer"
+msgstr "manuell timer"
+
+#: linux/share/monet/utilities/awake_page.py:123
+msgid "Keep awake is unavailable. Apply your choices to retry."
+msgstr ""
+"Det gick inte att hålla datorn vaken. Verkställ dina val för att försöka igen."
+
+#: linux/share/monet/utilities/awake_page.py:125
+msgid "Keeping this PC awake because of {conditions}."
+msgstr "Datorn hålls vaken på grund av följande: {conditions}."
+
+#: linux/share/monet/utilities/awake_page.py:127
+msgid "This PC is using its usual sleep settings."
+msgstr "Datorn använder sina vanliga strömsparinställningar."
+
+#: linux/share/monet/utilities/awake_page.py:143
+msgid "Choose a condition or turn off automatic rules."
+msgstr "Välj ett villkor eller stäng av automatiska regler."
+
+#: linux/share/monet/utilities/awake_page.py:150
+msgid "Could not save Keep awake rules."
+msgstr "Det gick inte att spara reglerna för att hålla datorn vaken."
+
+#: linux/share/monet/utilities/awake_page.py:158
+msgid "Could not apply Keep awake rules. {reason}"
+msgstr ""
+"Det gick inte att verkställa reglerna för att hålla datorn vaken. {reason}"
+
+#: linux/share/monet/utilities/awake_page.py:129
+msgid "Waiting for a matching condition."
+msgstr "Väntar på att ett villkor ska uppfyllas."
+
+#: linux/share/monet/settings-app/SettingsPower.qml:259
+msgid ""
+"A manual timer keeps the screen on and delays automatic locking and sleep until it ends."
+msgstr ""
+"En manuell timer håller skärmen på och skjuter upp automatisk låsning och vila tills tiden har gått ut."

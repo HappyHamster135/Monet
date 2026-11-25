@@ -7,7 +7,7 @@ import dbus
 from PySide6.QtCore import QSettings, Qt
 from PySide6.QtWidgets import QCheckBox, QDialog, QLabel, QListWidget, QPushButton, QVBoxLayout, QWidget
 from actions import tr
-from close_rules import applications, settings
+from close_rules import application_aliases, applications, settings
 from quit_protection import AppPicker, installed_apps
 
 
@@ -52,23 +52,7 @@ class QuitOnClose(QWidget):
             self.set_apps(dialog.selection())
 
     def set_apps(self, selected):
-        from gi.repository import Gio
-        # A shared StartupWMClass cannot distinguish two applications.
-        owners = {}
-        aliases = {}
-        for entry in Gio.AppInfo.get_all():
-            ident = entry.get_id()
-            if not ident or not ident.endswith(".desktop"):
-                continue
-            alias = (entry.get_startup_wm_class() or "").lower()
-            owners.setdefault(ident[:-8].lower(), set()).add(ident)
-            if alias:
-                owners.setdefault(alias, set()).add(ident)
-                aliases[ident] = alias
-        rules = {}
-        for ident in selected:
-            alias = aliases.get(ident)
-            rules[ident] = [alias] if alias and owners[alias] == {ident} else []
+        rules = application_aliases(selected)
         self.config.setValue("applications", json.dumps(rules, ensure_ascii=False))
         self.config.sync()
         if self.config.status() != QSettings.NoError:

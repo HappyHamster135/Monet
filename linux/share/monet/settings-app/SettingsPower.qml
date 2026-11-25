@@ -256,10 +256,21 @@ ColumnLayout {
         Text {
             Layout.fillWidth: true
             Layout.margins: 18
-            text: i18n("Temporarily pauses automatic screen-off, locking and sleep. Your saved settings stay the same.")
+            text: i18n("A manual timer keeps the screen on and delays automatic locking and sleep until it ends.")
             color: look.dim
             font.pixelSize: Math.max(15, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) - 1)
             wrapMode: Text.Wrap
+        }
+        SettingsControls.SettingRow {
+            tone: look
+            divider: false
+            tappable: true
+            title: i18n("Automatic Keep awake rules")
+            detail: i18n("While plugged in, using an external display or running selected apps")
+            onTapped: sheet.ask("utilities awake settings")
+            SettingsControls.Glyph {
+                width: 16; height: 16; path: "M9 5l7 7-7 7"; color: look.dim
+            }
         }
     }
     SettingsControls.Caption {

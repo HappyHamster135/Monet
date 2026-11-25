@@ -25,6 +25,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 - **Favorites wheel.** Press Super+Alt+W to open your first eight favorites around the pointer. Click an action or use the arrow keys and Enter.
 - **Quick Panel.** Press Super+Alt+U to open your favorite tools. Add and remove favorites in the panel, and drag them into the order you want. The favorites wheel and tool search follow that order.
 - **Desktop actions.** Pin appearance, keyboard backlight, screen lock, display power and Empty Trash to your Quick Panel, or run them from tool search. Empty Trash asks before permanently deleting files.
+- **Automatic Keep awake.** Keep a laptop awake while plugged in, using an external display or running a chosen app. Timers work alongside rules. Automatic rules allow the screen to lock unless you choose to keep it on.
 - **Home Bar readings.** Add the System widget to a bottom or side bar to see CPU, memory, graphics, traffic, battery time and fan speed. Choose which readings to show and whether usage appears as a number or a bar.
 - **Network activity.** View traffic and local addresses by interface, and run or cancel an Internet speed test from Utilities.
 - **System alerts.** In Utilities, choose which CPU, memory, temperature, disk or battery conditions should notify you. Monitoring starts when you enable an alert.

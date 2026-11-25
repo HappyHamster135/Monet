@@ -29,7 +29,7 @@ TEST='org.monet.KeepAwakeTest'
 TESTPATH='/org/monet/KeepAwakeTest'
 
 if sys.argv[1]=='fake':
-    cookies={}; counter=[0]; fail_screen=[False]
+    cookies={}; counter=[0]; fail_screen=[False]; battery=[True]
     xmls=[(POWER[1],'''<node><interface name="org.kde.Solid.PowerManagement.PolicyAgent">
     <method name="AddInhibition"><arg type="u" direction="in"/><arg type="s" direction="in"/><arg type="s" direction="in"/><arg type="u" direction="out"/></method>
     <method name="ReleaseInhibition"><arg type="u" direction="in"/></method></interface></node>'''),
@@ -39,13 +39,14 @@ if sys.argv[1]=='fake':
     (TESTPATH,'''<node><interface name="org.monet.KeepAwakeTest">
     <method name="Snapshot"><arg type="s" direction="out"/></method>
     <method name="DropPower"/><method name="RestorePower"/>
+    <method name="SetBattery"><arg type="b" direction="in"/></method>
     <method name="FailScreen"><arg type="b" direction="in"/></method></interface></node>''')]
     def method(connection,sender,path,interface,method,args,invocation):
         values=args.unpack()
         if method in ('AddInhibition','Inhibit'):
             if method=='Inhibit' and fail_screen[0]:
                 invocation.return_dbus_error('org.monet.Test.Unavailable','Screen failure'); return
-            if method=='AddInhibition': assert values[0]==5
+            if method=='AddInhibition': assert values[0] in (1,5)
             counter[0]+=1; cookies[counter[0]]=dict(owner=sender,kind='power' if method=='AddInhibition' else 'screen')
             invocation.return_value(GLib.Variant('(u)',(counter[0],))); return
         if method in ('ReleaseInhibition','UnInhibit'):
@@ -55,6 +56,10 @@ if sys.argv[1]=='fake':
             invocation.return_value(GLib.Variant('(s)',(json.dumps(list(cookies.values())),))); return
         elif method=='DropPower': dbus('ReleaseName','(s)',(POWER[0],))
         elif method=='RestorePower': dbus('RequestName','(su)',(POWER[0],4))
+        elif method=='SetBattery':
+            battery[0]=values[0]
+            bus.emit_signal(None,'/org/freedesktop/UPower','org.freedesktop.DBus.Properties','PropertiesChanged',
+                GLib.Variant('(sa{sv}as)',('org.freedesktop.UPower',{'OnBattery':GLib.Variant('b',battery[0])},[])))
         elif method=='FailScreen': fail_screen[0]=values[0]
         invocation.return_value(GLib.Variant('()',()))
     for path,xml in xmls:
@@ -67,7 +72,10 @@ if sys.argv[1]=='fake':
                 if cookies[cookie]['owner']==name: cookies.pop(cookie)
     bus.signal_subscribe('org.freedesktop.DBus','org.freedesktop.DBus','NameOwnerChanged',
         '/org/freedesktop/DBus',None,Gio.DBusSignalFlags.NONE,changed)
-    for name in (POWER[0],SCREEN[0],TEST): assert dbus('RequestName','(su)',(name,4))[0]==1
+    upower='org.freedesktop.UPower'
+    info=Gio.DBusNodeInfo.new_for_xml('<node><interface name="org.freedesktop.UPower"><property name="OnBattery" type="b" access="read"/></interface></node>')
+    bus.register_object('/org/freedesktop/UPower',info.interfaces[0],None,lambda *_: GLib.Variant('b',battery[0]),None)
+    for name in (POWER[0],SCREEN[0],TEST,upower): assert dbus('RequestName','(su)',(name,4))[0]==1
     print('READY',flush=True)
     GLib.MainLoop().run()
 else:
@@ -116,6 +124,32 @@ else:
         wait(lambda: not owner(NAME)); wait(lambda: not snapshot())
         q=quick_helper(); assert q.keep_awake_status()['error']=='interrupted'
         assert q.set_keep_awake('off')['ok']
+        from PySide6.QtCore import QSettings
+        settings=QSettings('Monet','Utilities')
+        settings.setValue('awakeRules', json.dumps(dict(enabled=True, power=True)))
+        settings.sync()
+        os.environ['DBUS_SYSTEM_BUS_ADDRESS']=os.environ['DBUS_SESSION_BUS_ADDRESS']
+        worker=start()
+        assert not status()['active']
+        test_call('SetBattery','(b)',(False,))
+        wait(lambda: status()['reasons']==['power'])
+        assert q.keep_awake_status()['active'] and len(snapshot())==1
+        assert set_duration(2)['ok'] and len(snapshot())==2
+        wait(lambda: status()['duration']==0)
+        assert status()['reasons']==['power'] and len(snapshot())==1
+        assert set_duration(-1)['ok']
+        test_call('SetBattery','(b)',(True,))
+        wait(lambda: not status()['reasons'])
+        assert status()['indefinite'] and len(snapshot())==2
+        test_call('SetBattery','(b)',(False,))
+        wait(lambda: status()['reasons']==['power'])
+        settings.setValue('awakeRules',json.dumps(dict(enabled=True,power=True,display=True))); settings.sync()
+        call(NAME,PATH,NAME,'ReloadRules')
+        assert set_duration(0)['ok'] and len(snapshot())==2 and status()['display']
+        settings.setValue('hidden','["awake"]'); settings.sync()
+        call(NAME,PATH,NAME,'ReloadRules')
+        worker.wait(timeout=5)
+        assert not snapshot()
         print('Native expiry, partial acquisition, owner restart and crash cleanup passed.')
     finally:
         if worker and worker.poll() is None: worker.terminate(); worker.wait(timeout=5)

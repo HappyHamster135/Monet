@@ -365,7 +365,7 @@ Shared.MonetWindow {
         interval: 1000
         repeat: true
         running: sheet.pollingActive && sheet.page === "power" && sheet.keepAwakeInfo.active === true
-            && sheet.keepAwakeInfo.indefinite !== true
+            && sheet.keepAwakeInfo.duration > 0
         onTriggered: sheet.keepAwakeTick++
     }
     Timer {
@@ -1748,6 +1748,8 @@ Shared.MonetWindow {
         if (keepAwakeInfo.error === "interrupted") return i18n("Keep awake stopped unexpectedly. Choose a duration to start it again.")
         if (keepAwakeInfo.error) return i18n("Keep awake is unavailable. Choose a duration to try again.")
         if (!keepAwakeInfo.active) return i18n("Uses your screen, lock and sleep settings")
+        if (keepAwakeInfo.duration === 0 && keepAwakeInfo.reasons && keepAwakeInfo.reasons.length)
+            return i18n("An automatic rule is keeping this PC awake")
         if (keepAwakeInfo.indefinite) return i18n("Until turned off or you sign out")
         if (keepAwakeLeft === 0) return i18n("Finishing…")
         const minutes = Math.floor(keepAwakeLeft / 60)
