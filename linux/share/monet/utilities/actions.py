@@ -51,7 +51,7 @@ ACTIONS = {
     "quit-protection": Action(N_("Quit and close protection"), "Input keyboard shortcut Ctrl+Q Ctrl+W", "preferences-desktop-keyboard"),
     "paste-shortcut": Action(N_("Paste as plain text shortcut"), "Writing", "edit-paste", ("kcmshell6", "kcm_keys")),
     "plain": Action(N_("Copy as plain text"), "Writing", "edit-copy"),
-    "link-settings": Action(N_("Copied link settings"), "Writing", "preferences-system"),
+    "link-settings": Action(N_("Copied link settings"), "Writing clean URL tracking parameters website rules preview", "preferences-system"),
     "clean": Action(N_("Clean a copied link"), "Writing", "edit-clear"),
     "color": Action(N_("Pick a screen color"), "Capture", "color-picker"),
     "screenshot": Action(N_("Screenshot and annotate"), "Capture", "spectacle", ("spectacle", "-r")),

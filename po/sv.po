@@ -19422,3 +19422,113 @@ msgstr "Återställ volymen till 100 %"
 msgid "100% is normal volume. Higher levels boost this app."
 msgstr ""
 "100 % är normal volym. Högre nivåer förstärker ljudet från den här appen."
+
+#: linux/share/monet/utilities/link_settings.py:18
+msgid "Link cleanup rules"
+msgstr "Regler för länkrensning"
+
+#: linux/share/monet/utilities/link_settings.py:24
+msgid "Website"
+msgstr "Webbplats"
+
+#: linux/share/monet/utilities/link_settings.py:25
+msgid "All websites"
+msgstr "Alla webbplatser"
+
+#: linux/share/monet/utilities/link_settings.py:29 linux/share/monet/utilities/link_settings.py:80
+msgid "Add website…"
+msgstr "Lägg till webbplats…"
+
+#: linux/share/monet/utilities/link_settings.py:32
+msgid ""
+"Checked parameters are removed. Website rules also apply to subdomains."
+msgstr ""
+"Markerade parametrar tas bort. Regler för en webbplats gäller även dess underdomäner."
+
+#: linux/share/monet/utilities/link_settings.py:36
+msgid "Parameters to remove"
+msgstr "Parametrar att ta bort"
+
+#: linux/share/monet/utilities/link_settings.py:40 linux/share/monet/utilities/link_settings.py:96
+msgid "Add parameter…"
+msgstr "Lägg till parameter…"
+
+#: linux/share/monet/utilities/link_settings.py:43
+msgid "Use default"
+msgstr "Använd standardvärdet"
+
+#: linux/share/monet/utilities/link_settings.py:80
+msgid "Website name"
+msgstr "Webbplatsnamn"
+
+#: linux/share/monet/utilities/link_settings.py:86
+msgid "Enter a website name such as example.com."
+msgstr "Ange ett webbplatsnamn, till exempel example.com."
+
+#: linux/share/monet/utilities/link_settings.py:96
+msgid "Parameter name"
+msgstr "Parameternamn"
+
+#: linux/share/monet/utilities/link_settings.py:102
+msgid "Enter a parameter name such as ref or utm_source."
+msgstr "Ange ett parameternamn, till exempel ref eller utm_source."
+
+#: linux/share/monet/utilities/link_settings.py:125
+msgid "Couldn’t save the link rules."
+msgstr "Det gick inte att spara länkreglerna."
+
+#: linux/share/monet/utilities/link_settings.py:140
+msgid "Edit cleanup rules…"
+msgstr "Redigera rensningsregler…"
+
+#: linux/share/monet/utilities/link_settings.py:147
+msgid "Paste a web link to preview"
+msgstr "Klistra in en webblänk för att förhandsvisa"
+
+#: linux/share/monet/utilities/link_settings.py:150
+msgid "Web link"
+msgstr "Webblänk"
+
+#: linux/share/monet/utilities/link_settings.py:151
+msgid "Cleaned link"
+msgstr "Rensad länk"
+
+#: linux/share/monet/utilities/link_settings.py:156
+msgid "Copy cleaned link"
+msgstr "Kopiera rensad länk"
+
+#: linux/share/monet/utilities/link_settings.py:171 linux/share/monet/utilities/window.py:624
+msgid "Removed %1"
+msgstr "Tog bort %1"
+
+#: linux/share/monet/utilities/link_settings.py:172 linux/share/monet/utilities/window.py:626
+msgid "No parameters removed."
+msgstr "Inga parametrar togs bort."
+
+#: linux/share/monet/utilities/link_settings.py:174 linux/share/monet/utilities/link_settings.py:185 linux/share/monet/utilities/window.py:618
+msgid "Couldn’t read the saved link rules."
+msgstr "Det gick inte att läsa de sparade länkreglerna."
+
+#: linux/share/monet/utilities/link_settings.py:175
+msgid "Enter a valid web link."
+msgstr "Ange en giltig webblänk."
+
+#: linux/share/monet/utilities/window.py:620
+msgid "Copy one web link first."
+msgstr "Kopiera en webblänk först."
+
+#: linux/share/monet/utilities/link_settings.py:184
+msgid "Link copied."
+msgstr "Länken kopierades."
+
+#: linux/share/monet/utilities/link_settings.py:184 linux/share/monet/utilities/window.py:625
+msgid "Couldn’t copy the link."
+msgstr "Det gick inte att kopiera länken."
+
+#: linux/share/monet/utilities/window.py:549
+msgid "Focus Utilities and try again."
+msgstr "Växla till Verktyg och försök igen."
+
+#: linux/share/monet/utilities/window.py:568
+msgid "Plain text copied."
+msgstr "Oformaterad text kopierades."

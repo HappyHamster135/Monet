@@ -19399,3 +19399,112 @@ msgstr ""
 #: linux/share/monet/settings-app/VolumeMixer.qml:203
 msgid "100% is normal volume. Higher levels boost this app."
 msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:18
+msgid "Link cleanup rules"
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:24
+msgid "Website"
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:25
+msgid "All websites"
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:29 linux/share/monet/utilities/link_settings.py:80
+msgid "Add website…"
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:32
+msgid ""
+"Checked parameters are removed. Website rules also apply to subdomains."
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:36
+msgid "Parameters to remove"
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:40 linux/share/monet/utilities/link_settings.py:96
+msgid "Add parameter…"
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:43
+msgid "Use default"
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:80
+msgid "Website name"
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:86
+msgid "Enter a website name such as example.com."
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:96
+msgid "Parameter name"
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:102
+msgid "Enter a parameter name such as ref or utm_source."
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:125
+msgid "Couldn’t save the link rules."
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:140
+msgid "Edit cleanup rules…"
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:147
+msgid "Paste a web link to preview"
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:150
+msgid "Web link"
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:151
+msgid "Cleaned link"
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:156
+msgid "Copy cleaned link"
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:171 linux/share/monet/utilities/window.py:624
+msgid "Removed %1"
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:172 linux/share/monet/utilities/window.py:626
+msgid "No parameters removed."
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:174 linux/share/monet/utilities/link_settings.py:185 linux/share/monet/utilities/window.py:618
+msgid "Couldn’t read the saved link rules."
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:175
+msgid "Enter a valid web link."
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:620
+msgid "Copy one web link first."
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:184
+msgid "Link copied."
+msgstr ""
+
+#: linux/share/monet/utilities/link_settings.py:184 linux/share/monet/utilities/window.py:625
+msgid "Couldn’t copy the link."
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:549
+msgid "Focus Utilities and try again."
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:568
+msgid "Plain text copied."
+msgstr ""

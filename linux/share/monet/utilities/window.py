@@ -3,13 +3,13 @@ import os
 from pathlib import Path
 import re
 import sys
-from PySide6.QtCore import (QObject, QProcess, QSettings, Qt, QTimer, QUrl, Signal, Slot)
+from PySide6.QtCore import (QEvent, QObject, QProcess, QSettings, Qt, QTimer, QUrl, Signal, Slot)
 from PySide6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusServiceWatcher, QDBusVirtualObject
 from PySide6.QtGui import QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QHBoxLayout, QInputDialog,
     QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox, QPlainTextEdit,
     QPushButton, QStackedWidget, QToolButton, QVBoxLayout, QWidget)
-from actions import ACTIONS, DIRECT_ACTIONS, SEARCH_HINTS, clean_url, find_tools, preferences, tr
+from actions import ACTIONS, DIRECT_ACTIONS, SEARCH_HINTS, find_tools, preferences, tr
 from pages import Downloads, Shelf, ShelfList, Snippets, row
 from shelf_content import ShelfEntry
 
@@ -37,6 +37,7 @@ class Window(QMainWindow):
         self.pad_store = None
         self.agent_feed = None
         self.running = set()
+        self.clipboard_request = None
         self.setWindowIcon(QIcon.fromTheme("applications-utilities"))
         self.resize(630, 490)
         central = QWidget()
@@ -137,6 +138,7 @@ class Window(QMainWindow):
             self.run_tool(item.data(Qt.UserRole))
 
     def home(self):
+        self.cancel_clipboard_request()
         self.setWindowTitle(tr("Monet Utilities"))
         self.title.setText("Utilities")
         self.back.hide()
@@ -487,32 +489,6 @@ class Window(QMainWindow):
             request("/org/monet/Cleaning", "org.monet.Cleaning", "Begin", [seconds, dark], began)
         request("/Plugins", "org.kde.KWin.Plugins", "LoadPlugin", ["monet_cleaning"], loaded)
 
-    def link_settings(self):
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        switch = QCheckBox(tr("Clean copied links automatically"))
-        layout.addWidget(switch)
-        detail = QLabel(tr("Remove common tracking parameters when you copy a plain web address. Formatted text, files and recognized signed links keep their original contents."))
-        detail.setWordWrap(True)
-        layout.addWidget(detail)
-        layout.addStretch()
-        command = [sys.executable, MODULES / "clipboard_links.py"]
-        def read():
-            switch.setEnabled(False)
-            def show(result):
-                switch.setChecked(result.strip() == "on")
-                switch.setEnabled(True)
-            self.worker([*command, "status"], show)
-        def change(on):
-            switch.setEnabled(False)
-            def failed(message):
-                self.issue(message)
-                read()
-            self.worker([*command, "on" if on else "off"], lambda _: read(), failed)
-        switch.clicked.connect(change)
-        page.refresh = read
-        return page
-
     def pads(self):
         if self.pad_store is None:
             from scratchpads import Pads
@@ -561,7 +537,52 @@ class Window(QMainWindow):
         self.mirror = None
         self.panelDismissed.emit()
 
+    def cancel_clipboard_request(self):
+        if self.clipboard_request:
+            _, timer = self.clipboard_request
+            self.clipboard_request = None
+            timer.stop()
+            timer.deleteLater()
+
+    def clipboard_focus_timeout(self):
+        self.cancel_clipboard_request()
+        self.issue(tr("Focus Utilities and try again."))
+
+    def changeEvent(self, event):
+        super().changeEvent(event)
+        if event.type() == QEvent.ActivationChange and self.isActiveWindow() and getattr(self, "clipboard_request", None):
+            QTimer.singleShot(0, self, self.read_focused_clipboard)
+
+    def read_focused_clipboard(self):
+        if self.clipboard_request and self.isActiveWindow():
+            key, _ = self.clipboard_request
+            self.cancel_clipboard_request()
+            self.use_clipboard(key)
+
+    def use_clipboard(self, key):
+        from clipboard_text import copy_text
+        value = QApplication.clipboard().text()
+        if not value:
+            self.issue(tr("Copy some text first."))
+        elif key == "plain":
+            copy_text(self, value, lambda ok: self.issue(tr("Plain text copied.") if ok else tr("Couldn’t copy the text.")))
+        else:
+            from links import RulesError, clean_link
+            try:
+                result, removed = clean_link(value)
+            except RulesError:
+                self.issue(tr("Couldn’t read the saved link rules."))
+            except ValueError:
+                self.issue(tr("Copy one web link first."))
+            else:
+                if removed:
+                    summary = tr("Removed %1").replace("%1", ", ".join(removed))
+                    copy_text(self, result, lambda ok: self.issue(summary if ok else tr("Couldn’t copy the link.")))
+                else:
+                    self.issue(tr("No parameters removed."))
+
     def run_tool(self, key):
+        self.cancel_clipboard_request()
         action = ACTIONS.get(key)
         if not action:
             self.home()
@@ -626,17 +647,18 @@ class Window(QMainWindow):
             from quit_protection import QuitProtection
             self.page(key, QuitProtection)
         elif key == "link-settings":
-            self.page(key, self.link_settings).refresh()
+            from link_settings import LinkSettings
+            self.page(key, lambda: LinkSettings(self)).refresh()
         elif key in ("clean", "plain"):
-            clipboard = QApplication.clipboard()
-            try:
-                value = clipboard.text()
-                if not value:
-                    raise ValueError("Copy some text first.")
-                clipboard.setText(clean_url(value) if key == "clean" else value)
-                self.issue("Link copied." if key == "clean" else "Plain text copied.")
-            except ValueError as error:
-                self.issue(str(error))
+            if QApplication.platformName().startswith("wayland") and not self.isActiveWindow():
+                # Wayland offers the clipboard when the window receives keyboard focus.
+                timer = QTimer(self)
+                timer.setSingleShot(True)
+                self.clipboard_request = (key, timer)
+                timer.timeout.connect(self.clipboard_focus_timeout)
+                timer.start(3000)
+            else:
+                self.use_clipboard(key)
         elif key in ("ports", "process-control"):
             from ports import ProcessBrowser
             self.page(key, lambda: ProcessBrowser(self, key == "ports")).refresh()
@@ -759,6 +781,7 @@ class Window(QMainWindow):
             self.run_tool(key)
 
     def closeEvent(self, event):
+        self.cancel_clipboard_request()
         notes = self.pages.get("notes")
         if notes and not notes.flush():
             event.ignore()

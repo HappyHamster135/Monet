@@ -34,7 +34,7 @@ class ScreenTextActions(unittest.TestCase):
         wayland = patch.object(QApplication, "platformName", return_value="wayland")
         wayland.start()
         self.addCleanup(wayland.stop)
-        clipboard = patch("screen_selection.shutil.which", return_value="/usr/bin/wl-copy")
+        clipboard = patch("clipboard_text.shutil.which", return_value="/usr/bin/wl-copy")
         clipboard.start()
         self.addCleanup(clipboard.stop)
 

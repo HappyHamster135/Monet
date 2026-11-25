@@ -36,6 +36,42 @@ class Tools(unittest.TestCase):
             with self.assertRaises(ValueError):
                 clean_url(value)
 
+    def test_site_rules_match_real_subdomains_and_preserve_signed_links(self):
+        from links import clean_link
+        for host in ("YOUTU.BE", "music.youtube.com.", "open.spotify.com"):
+            url = f"https://{host}/track?%73i=A&si=B&t=90&list=a%2Bb#"
+            self.assertEqual(clean_link(url, {}), (f"https://{host}/track?t=90&list=a%2Bb#", ["si"]))
+        for host in ("notyoutube.com", "youtube.com.example.org"):
+            url = f"https://{host}/watch?si=A&t=90"
+            self.assertEqual(clean_link(url, {}), (url, []))
+        url = "https://x.com/share?t=share&s=abc&id=a+b"
+        self.assertEqual(clean_link(url, {}), ("https://x.com/share?id=a+b", ["t", "s"]))
+        signed = "https://youtu.be/video?si=test&%73ig=x&utm_medium=y"
+        self.assertEqual(clean_link(signed, {"": {"sig": True}}), (signed, []))
+
+    def test_edited_link_rules_are_shared_persistent_and_reversible(self):
+        from links import RulesError, clean_link, read_rules, rules_path, set_rule, site_name
+        with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ, XDG_CONFIG_HOME=folder):
+            set_rule("", "ref", True)
+            set_rule("Example.org.", "ref", False)
+            set_rule("example.org", "share_code", True)
+            set_rule("example.org", "utm_*", False)
+            url = "https://news.example.org/?ref=item&share_code=share&utm_source=mail"
+            self.assertEqual(clean_link(url), ("https://news.example.org/?ref=item&utm_source=mail", ["share_code"]))
+            self.assertEqual(clean_url("https://elsewhere.test/?ref=item"), "https://elsewhere.test/")
+            set_rule("news.example.org", "ref", True)
+            self.assertEqual(clean_link(url)[1], ["ref", "share_code"])
+            set_rule("news.example.org", "ref", None)
+            self.assertNotIn("news.example.org", read_rules())
+            self.assertEqual(clean_link(url)[1], ["share_code"])
+            self.assertEqual(site_name("BÜCHER.example"), "xn--bcher-kva.example")
+            with self.assertRaises(ValueError):
+                site_name("example.org/path")
+            rules_path().write_text("{partial")
+            with self.assertRaises(RulesError):
+                set_rule("", "ref", False)
+            self.assertEqual(rules_path().read_text(), "{partial")
+
     def test_agent_summary_reads_reported_numbers_only(self):
         with tempfile.TemporaryDirectory() as directory:
             log = Path(directory) / "sample.jsonl"
@@ -92,6 +128,30 @@ class DesktopTools(unittest.TestCase):
     def setUpClass(cls):
         from PySide6.QtWidgets import QApplication
         cls.app = QApplication.instance() or QApplication([])
+
+    def test_cold_clipboard_actions_wait_for_focus_and_cancel_on_navigation(self):
+        from PySide6.QtCore import QEvent
+        from PySide6.QtTest import QTest
+        from PySide6.QtWidgets import QApplication
+        from window import Window
+        window = Window("/usr/libexec", defer_catalog=True)
+        self.addCleanup(window.close)
+        with patch.object(QApplication, "platformName", return_value="wayland"), \
+                patch.object(window, "isActiveWindow", return_value=False) as active, \
+                patch.object(window, "use_clipboard") as read:
+            window.run_tool("clean")
+            window.home()
+            active.return_value = True
+            window.changeEvent(QEvent(QEvent.ActivationChange))
+            QTest.qWait(10)
+            read.assert_not_called()
+            active.return_value = False
+            window.run_tool("plain")
+            window.run_tool("clean")
+            active.return_value = True
+            window.changeEvent(QEvent(QEvent.ActivationChange))
+            QTest.qWait(10)
+            read.assert_called_once_with("clean")
 
     def test_search_arrows_keep_typing_focus_and_enter_uses_selection_once(self):
         from PySide6.QtCore import Qt

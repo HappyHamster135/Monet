@@ -37,7 +37,7 @@ class ScreenColorActions(unittest.TestCase):
         wayland = patch.object(QApplication, "platformName", return_value="wayland")
         wayland.start()
         self.addCleanup(wayland.stop)
-        wl_copy = patch("screen_selection.shutil.which", return_value="/usr/bin/wl-copy")
+        wl_copy = patch("clipboard_text.shutil.which", return_value="/usr/bin/wl-copy")
         wl_copy.start()
         self.addCleanup(wl_copy.stop)
 

@@ -1,10 +1,9 @@
 """Lifecycle and clipboard delivery for a user-selected screen region or pixel."""
-import shutil
 import time
 
 from PySide6.QtCore import QTimer
 from PySide6.QtDBus import QDBusConnection, QDBusMessage, QDBusPendingCallWatcher, QDBusVariant
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QWidget
 
 from actions import ACTIONS, tr
 
@@ -56,40 +55,9 @@ class ScreenSelection(QWidget):
         self.capture()
 
     def copy_text(self, text, confirmation, failure):
-        def copied(_):
-            self.finish(confirmation)
-
-        def local_copy():
-            if self.closing:
-                self.finish("")
-                return
-            clipboard = QApplication.clipboard()
-            clipboard.setText(text)
-            self.finish(confirmation if clipboard.ownsClipboard() else failure)
-
-        def klipper(_):
-            if self.closing:
-                self.finish("")
-                return
-            message = QDBusMessage.createMethodCall("org.kde.klipper", "/klipper",
-                                                    "org.kde.klipper.klipper", "setClipboardContents")
-            message.setArguments([text])
-            watcher = QDBusPendingCallWatcher(QDBusConnection.sessionBus().asyncCall(message, 3000), self)
-            def finished(call):
-                reply = call.reply()
-                call.deleteLater()
-                if reply.type() == QDBusMessage.ErrorMessage:
-                    local_copy()
-                else:
-                    copied(None)
-            watcher.finished.connect(finished)
-
-        if QApplication.platformName().startswith("wayland") and shutil.which("wl-copy"):
-            # Keep recognized text out of process listings and avoid argument-size limits.
-            self.owner.worker(["wl-copy", "--type", "text/plain;charset=utf-8"], copied, klipper,
-                              input_data=text.encode("utf-8"))
-        else:
-            klipper(None)
+        from clipboard_text import copy_text
+        copy_text(self.owner, text, lambda ok: self.finish(confirmation if ok else failure),
+                  cancelled=lambda: self.closing)
 
     def finish(self, message):
         self.busy = False
