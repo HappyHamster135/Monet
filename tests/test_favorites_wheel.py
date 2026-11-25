@@ -154,3 +154,87 @@ class Wheel(unittest.TestCase):
         self.assertFalse(self.window.isVisible())
         self.assertTrue(self.window.quick_panel.isVisible())
         self.assertEqual(self.window.quick_panel.stack.currentIndex(), 1)
+
+    def test_submenus_restore_focus_and_hidden_tools_disappear_at_every_level(self):
+        from wheel_profiles import Entry, Profile, save_profile
+        self.favorites(["notes"], ["shelf"])
+        ident = save_profile(self.settings, "", Profile("Study", (
+            Entry("menu", name="Hidden", children=(Entry("tool", "shelf"),)),
+            Entry("tool", "ports"),
+            Entry("menu", name="Writing", children=(Entry("tool", "shelf"), Entry("tool", "notes"))))))
+        self.settings.setValue("activeWheel", ident)
+        self.window.Open(["wheel"])
+        wheel = self.window.favorites_wheel
+        self.assertEqual([b.text() for b in wheel.buttons], [ACTIONS["ports"].name, "Writing"])
+        QTest.keyClick(wheel.current, Qt.Key_Right)
+        QTest.keyClick(wheel.current, Qt.Key_Return)
+        self.assertEqual([b.key for b in wheel.buttons], ["notes"])
+        QTest.keyClick(wheel.current, Qt.Key_Escape)
+        self.assertTrue(wheel.isVisible())
+        self.assertEqual(wheel.current.text(), "Writing")
+        QTest.keyClick(wheel.current, Qt.Key_Return)
+        QTest.mouseClick(wheel.hub, Qt.LeftButton)
+        self.assertEqual(wheel.current.text(), "Writing")
+        QTest.keyClick(wheel.current, Qt.Key_Escape)
+        self.assertFalse(wheel.isVisible())
+
+    def test_editor_persists_profile_targets_order_and_reparenting(self):
+        from wheel_profiles import Entry, profiles
+        self.favorites(["notes"], ["shelf"])
+        self.window.Open(["wheel-settings"])
+        editor = self.window.pages["wheel-settings"]
+        self.assertFalse(editor.add.isVisible())
+        self.assertEqual(editor.root.child(0).data(0, Qt.UserRole).value, "notes")
+        with patch.object(editor, "profile_name", return_value="Work"):
+            editor.new_profile()
+        key = editor.selector.currentData()
+        self.assertEqual(self.settings.value("activeWheel"), key)
+        menu = Entry("menu", name="Project")
+        file = Entry("file", "/tmp/file with spaces", "Plan")
+        with patch.object(editor, "choose_entry", side_effect=[menu, file]):
+            editor.add_item("menu")
+            editor.tree.setCurrentItem(editor.root)
+            editor.add_item("file")
+        editor.move_in()
+        self.assertEqual(profiles(self.settings)[key].items[0].children, (file,))
+        editor.move_out()
+        editor.move(-1)
+        self.assertEqual(profiles(self.settings)[key].items, (file, menu))
+        editor.refresh()
+        self.assertEqual([editor.root.child(i).text(0) for i in range(2)], ["Plan", "Project"])
+        self.window.Open(["wheel"])
+        wheel = self.window.favorites_wheel
+        self.assertEqual([b.text() for b in wheel.buttons], ["Plan"])
+        self.window.switch_wheel("")
+        self.assertEqual([b.key for b in wheel.buttons], ["notes"])
+        self.assertEqual(editor.selector.currentData(), "")
+        self.assertEqual(profiles(self.settings)[key].items, (file, menu))
+        wheel.hide()
+
+    def test_full_submenu_rejects_moves_and_cannot_contain_itself(self):
+        from wheel_profiles import Entry, Profile, save_profile
+        group = Entry("menu", name="Full", children=(Entry("file", "/a"),) * 8)
+        key = save_profile(self.settings, "", Profile("Work", (group, Entry("tool", "notes"))))
+        self.settings.setValue("activeWheel", key)
+        self.window.Open(["wheel-settings"])
+        editor = self.window.pages["wheel-settings"]
+        first, second = (editor.root.child(i) for i in range(2))
+        editor.tree.setCurrentItem(first)
+        self.assertFalse(editor.add.isEnabled())
+        self.assertFalse(editor.tree.move_item(first, first, 0))
+        self.assertFalse(editor.tree.move_item(second, first, 0))
+        self.assertEqual(editor.root.childCount(), 2)
+        self.assertEqual(first.childCount(), 8)
+
+    def test_missing_target_offers_editor_and_keeps_other_entries(self):
+        from wheel_profiles import Entry, Profile, save_profile, web_address
+        key = save_profile(self.settings, "", Profile("Work", (Entry("file", "/missing-wheel-test-target", "Plan"),)))
+        self.settings.setValue("activeWheel", key)
+        self.window.Open(["wheel"])
+        wheel = self.window.favorites_wheel
+        QTest.keyClick(wheel.current, Qt.Key_Return)
+        self.assertTrue(self.window.isVisible())
+        self.assertEqual(self.window.stack.currentWidget(), self.window.pages["wheel-settings"])
+        self.assertIn("Plan", self.window.status.currentMessage())
+        self.assertEqual(web_address("file:///tmp/run"), "")
+        self.assertEqual(web_address("https://example.org/a?x=2"), "https://example.org/a?x=2")

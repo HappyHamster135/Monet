@@ -16859,20 +16859,9 @@ msgstr "Lägg till en favorit för att använda den från snabbpanelen."
 msgid "Edit favorites…"
 msgstr "Redigera favoriter…"
 
-#: linux/share/monet/utilities/quick_panel.py:59
-msgid "Drag to reorder. The first eight favorites appear in the wheel."
-msgstr ""
-"Dra för att ändra ordningen. De första åtta favoriterna visas i hjulet."
-
 #: linux/share/monet/utilities/quick_panel.py:82
 msgid "Available tools"
 msgstr "Tillgängliga verktyg"
-
-#: linux/share/monet/utilities/window.py:137
-msgid ""
-"Choose which tools appear. Favorites open from the Quick Panel, and the first eight also appear in the wheel."
-msgstr ""
-"Välj vilka verktyg som visas. Favoriter öppnas från snabbpanelen och de första åtta visas även i hjulet."
 
 #: linux/share/applications/monet-utilities.desktop:23
 msgctxt "an app's name in the menu"
@@ -19574,3 +19563,173 @@ msgstr "Inställningarna har sparats."
 #: linux/share/monet/utilities/clipboard_expiry_page.py:84
 msgid "Couldn’t apply clipboard settings."
 msgstr "Det gick inte att tillämpa urklippsinställningarna."
+
+#: linux/share/monet/utilities/actions.py:104
+msgid "Customize wheels"
+msgstr "Anpassa hjul"
+
+#: linux/share/monet/utilities/quick_panel.py:103
+msgid ""
+"Drag to reorder. The first eight favorites appear in the built-in wheel."
+msgstr ""
+"Dra för att ändra ordningen. De första åtta favoriterna visas i det inbyggda hjulet."
+
+#: linux/share/monet/utilities/wheel_profiles.py:103 linux/share/monet/utilities/wheel_editor.py:172
+msgid "Quick Panel favorites"
+msgstr "Snabbpanelens favoriter"
+
+#: linux/share/monet/utilities/wheel_editor.py:105
+msgid "Active wheel"
+msgstr "Aktivt hjul"
+
+#: linux/share/monet/utilities/wheel_editor.py:112
+msgid "New wheel…"
+msgstr "Nytt hjul…"
+
+#: linux/share/monet/utilities/wheel_editor.py:116 linux/share/monet/utilities/wheel_editor.py:117
+msgid "Wheel options"
+msgstr "Hjulalternativ"
+
+#: linux/share/monet/utilities/wheel_editor.py:119
+msgid "Rename wheel…"
+msgstr "Byt namn på hjul…"
+
+#: linux/share/monet/utilities/wheel_editor.py:120
+msgid "Delete wheel…"
+msgstr "Ta bort hjul…"
+
+#: linux/share/monet/utilities/wheel_editor.py:129
+msgid "Wheel items"
+msgstr "Objekt i hjulet"
+
+#: linux/share/monet/utilities/wheel_editor.py:139
+msgid "Add item"
+msgstr "Lägg till objekt"
+
+#: linux/share/monet/utilities/wheel_editor.py:141
+msgid "Utility…"
+msgstr "Verktyg…"
+
+#: linux/share/monet/utilities/wheel_editor.py:141
+msgid "Application…"
+msgstr "Program…"
+
+#: linux/share/monet/utilities/wheel_editor.py:141
+msgid "File…"
+msgstr "Fil…"
+
+#: linux/share/monet/utilities/wheel_editor.py:142 linux/share/monet/utilities/wheel_editor.py:355
+msgid "Web link…"
+msgstr "Webblänk…"
+
+#: linux/share/monet/utilities/wheel_editor.py:142 linux/share/monet/utilities/wheel_editor.py:371
+msgid "Desktop shortcut…"
+msgstr "Skrivbordsgenväg…"
+
+#: linux/share/monet/utilities/wheel_editor.py:143 linux/share/monet/utilities/wheel_editor.py:361
+msgid "Submenu…"
+msgstr "Undermeny…"
+
+#: linux/share/monet/utilities/wheel_editor.py:147
+msgid "Edit Quick Panel favorites…"
+msgstr "Redigera snabbpanelens favoriter…"
+
+#: linux/share/monet/utilities/wheel_editor.py:152
+msgid "Move into preceding submenu"
+msgstr "Flytta in i föregående undermeny"
+
+#: linux/share/monet/utilities/wheel_editor.py:153
+msgid "Move out of submenu"
+msgstr "Flytta ut ur undermenyn"
+
+#: linux/share/monet/utilities/wheel_editor.py:154 linux/share/monet/utilities/wheel_editor.py:311
+msgid "Rename item…"
+msgstr "Byt namn på objekt…"
+
+#: linux/share/monet/utilities/wheel_editor.py:155
+msgid "Remove item"
+msgstr "Ta bort objekt"
+
+#: linux/share/monet/utilities/wheel_editor.py:200
+msgid ""
+"Select a submenu to add items inside it. Each menu holds up to eight items."
+msgstr ""
+"Välj en undermeny för att lägga till objekt i den. Varje meny rymmer upp till åtta objekt."
+
+#: linux/share/monet/utilities/wheel_editor.py:201
+msgid "This wheel follows the first eight Quick Panel favorites."
+msgstr "Hjulet visar de första åtta favoriterna i snabbpanelen."
+
+#: linux/share/monet/utilities/wheel_editor.py:237
+msgid "Wheel name"
+msgstr "Hjulets namn"
+
+#: linux/share/monet/utilities/wheel_editor.py:243
+msgid "A wheel with that name already exists."
+msgstr "Det finns redan ett hjul med det namnet."
+
+#: linux/share/monet/utilities/wheel_editor.py:261
+msgid "Delete wheel?"
+msgstr "Ta bort hjulet?"
+
+#: linux/share/monet/utilities/wheel_editor.py:262
+msgid "Remove the wheel “%1” and its items?"
+msgstr "Ta bort hjulet ”%1” och dess objekt?"
+
+#: linux/share/monet/utilities/wheel_editor.py:319
+msgid "Remove submenu?"
+msgstr "Ta bort undermenyn?"
+
+#: linux/share/monet/utilities/wheel_editor.py:320
+msgid "Remove this submenu and its items from the wheel?"
+msgstr "Ta bort undermenyn och dess objekt från hjulet?"
+
+#: linux/share/monet/utilities/wheel_editor.py:344
+msgid "Choose a utility"
+msgstr "Välj ett verktyg"
+
+#: linux/share/monet/utilities/wheel_editor.py:347
+msgid "Choose an application"
+msgstr "Välj ett program"
+
+#: linux/share/monet/utilities/wheel_editor.py:350
+msgid "Choose a folder"
+msgstr "Välj en mapp"
+
+#: linux/share/monet/utilities/wheel_editor.py:351
+msgid "Choose a file"
+msgstr "Välj en fil"
+
+#: linux/share/monet/utilities/wheel_editor.py:355
+msgid "Web address"
+msgstr "Webbadress"
+
+#: linux/share/monet/utilities/wheel_editor.py:368
+msgid "Shortcut group"
+msgstr "Genvägsgrupp"
+
+#: linux/share/monet/utilities/wheel_editor.py:374
+msgid "Desktop shortcuts are unavailable."
+msgstr "Skrivbordsgenvägarna är inte tillgängliga."
+
+#: linux/share/monet/utilities/favorites_wheel.py:137
+msgid "Wheels"
+msgstr "Hjul"
+
+#: linux/share/monet/utilities/favorites_wheel.py:146
+msgid "Empty wheel"
+msgstr "Tomt hjul"
+
+#: linux/share/monet/utilities/favorites_wheel.py:214
+msgid "Customize wheels…"
+msgstr "Anpassa hjul…"
+
+#: linux/share/monet/utilities/window.py:170
+msgid ""
+"Choose which tools appear. Quick Panel favorites also appear in the built-in wheel."
+msgstr ""
+"Välj vilka verktyg som ska visas. Snabbpanelens favoriter visas även i det inbyggda hjulet."
+
+#: linux/share/monet/utilities/window.py:354
+msgid "Couldn’t open %1."
+msgstr "Det gick inte att öppna %1."

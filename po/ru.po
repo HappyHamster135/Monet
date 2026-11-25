@@ -16843,17 +16843,8 @@ msgstr ""
 msgid "Edit favorites…"
 msgstr ""
 
-#: linux/share/monet/utilities/quick_panel.py:59
-msgid "Drag to reorder. The first eight favorites appear in the wheel."
-msgstr ""
-
 #: linux/share/monet/utilities/quick_panel.py:82
 msgid "Available tools"
-msgstr ""
-
-#: linux/share/monet/utilities/window.py:137
-msgid ""
-"Choose which tools appear. Favorites open from the Quick Panel, and the first eight also appear in the wheel."
 msgstr ""
 
 #: linux/share/applications/monet-utilities.desktop:23
@@ -19519,4 +19510,171 @@ msgstr ""
 
 #: linux/share/monet/utilities/clipboard_expiry_page.py:84
 msgid "Couldn’t apply clipboard settings."
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:104
+msgid "Customize wheels"
+msgstr ""
+
+#: linux/share/monet/utilities/quick_panel.py:103
+msgid ""
+"Drag to reorder. The first eight favorites appear in the built-in wheel."
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_profiles.py:103 linux/share/monet/utilities/wheel_editor.py:172
+msgid "Quick Panel favorites"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:105
+msgid "Active wheel"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:112
+msgid "New wheel…"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:116 linux/share/monet/utilities/wheel_editor.py:117
+msgid "Wheel options"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:119
+msgid "Rename wheel…"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:120
+msgid "Delete wheel…"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:129
+msgid "Wheel items"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:139
+msgid "Add item"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:141
+msgid "Utility…"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:141
+msgid "Application…"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:141
+msgid "File…"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:142 linux/share/monet/utilities/wheel_editor.py:355
+msgid "Web link…"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:142 linux/share/monet/utilities/wheel_editor.py:371
+msgid "Desktop shortcut…"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:143 linux/share/monet/utilities/wheel_editor.py:361
+msgid "Submenu…"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:147
+msgid "Edit Quick Panel favorites…"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:152
+msgid "Move into preceding submenu"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:153
+msgid "Move out of submenu"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:154 linux/share/monet/utilities/wheel_editor.py:311
+msgid "Rename item…"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:155
+msgid "Remove item"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:200
+msgid ""
+"Select a submenu to add items inside it. Each menu holds up to eight items."
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:201
+msgid "This wheel follows the first eight Quick Panel favorites."
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:237
+msgid "Wheel name"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:243
+msgid "A wheel with that name already exists."
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:261
+msgid "Delete wheel?"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:262
+msgid "Remove the wheel “%1” and its items?"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:319
+msgid "Remove submenu?"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:320
+msgid "Remove this submenu and its items from the wheel?"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:344
+msgid "Choose a utility"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:347
+msgid "Choose an application"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:350
+msgid "Choose a folder"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:351
+msgid "Choose a file"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:355
+msgid "Web address"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:368
+msgid "Shortcut group"
+msgstr ""
+
+#: linux/share/monet/utilities/wheel_editor.py:374
+msgid "Desktop shortcuts are unavailable."
+msgstr ""
+
+#: linux/share/monet/utilities/favorites_wheel.py:137
+msgid "Wheels"
+msgstr ""
+
+#: linux/share/monet/utilities/favorites_wheel.py:146
+msgid "Empty wheel"
+msgstr ""
+
+#: linux/share/monet/utilities/favorites_wheel.py:214
+msgid "Customize wheels…"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:170
+msgid ""
+"Choose which tools appear. Quick Panel favorites also appear in the built-in wheel."
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:354
+msgid "Couldn’t open %1."
 msgstr ""

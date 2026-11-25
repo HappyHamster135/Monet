@@ -101,6 +101,7 @@ ACTIONS = {
     "devices": Action(N_("USB devices and fan sensors"), "System", "computer"),
     "bluetooth": Action(N_("Bluetooth accessories"), "System", "preferences-system-bluetooth", ("@monet-settings", "bluetooth")),
     "quick-panel": Action(N_("Quick Panel"), "Favorite tools floating launcher grid", "view-grid"),
+    "wheel-settings": Action(N_("Customize wheels"), "Desktop radial menu profile shortcut application file submenu favorites", "preferences-desktop"),
     "wheel": Action(N_("Favorite actions wheel"), "Desktop", "view-more"),
 }
 SEARCH_HINTS = {

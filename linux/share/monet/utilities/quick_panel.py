@@ -100,7 +100,7 @@ class QuickPanel(QDialog):
         editor = QWidget()
         box = QVBoxLayout(editor)
         box.setContentsMargins(0, 0, 0, 0)
-        hint = QLabel(tr("Drag to reorder. The first eight favorites appear in the wheel."))
+        hint = QLabel(tr("Drag to reorder. The first eight favorites appear in the built-in wheel."))
         hint.setWordWrap(True)
         box.addWidget(hint)
         self.order = QListWidget()

@@ -167,7 +167,7 @@ class Window(QMainWindow):
         dialog = QDialog(self)
         dialog.setWindowTitle("Customize Utilities")
         layout = QVBoxLayout(dialog)
-        hint = QLabel(tr("Choose which tools appear. Favorites open from the Quick Panel, and the first eight also appear in the wheel.")
+        hint = QLabel(tr("Choose which tools appear. Quick Panel favorites also appear in the built-in wheel.")
                       + " " + tr("Hiding a tool also removes its controls from the notch."))
         hint.setWordWrap(True)
         layout.addWidget(hint)
@@ -292,8 +292,14 @@ class Window(QMainWindow):
             modal.raise_()
             modal.activateWindow()
             return
-        keys = [k for k in self.favorites if k in ACTIONS and k not in self.hidden and k != "wheel"][:8]
-        if not keys:
+        from wheel_profiles import favorites_profile, profiles, visible
+        default = favorites_profile([k for k in self.favorites if k not in self.hidden])
+        wheels = {"": default, **profiles(self.settings)}
+        active = self.settings.value("activeWheel", "")
+        if active not in wheels:
+            active = ""
+        items = visible(wheels[active].items, self.hidden)
+        if not items and len(wheels) == 1:
             if "quick-panel" not in self.hidden:
                 if not (self.quick_panel and self.quick_panel.isVisible()):
                     self.toggle_panel()
@@ -307,9 +313,15 @@ class Window(QMainWindow):
             self.favorites_wheel = FavoritesWheel()
             self.favorites_wheel.chosen.connect(self.open_favorite)
             self.favorites_wheel.dismissed.connect(self.wheel_dismissed)
+            self.favorites_wheel.targetChosen.connect(self.open_wheel_target)
+            self.favorites_wheel.profileChosen.connect(self.switch_wheel)
+        self.wheel_profiles = wheels
+        self.favorites_wheel.active_id = active
+        self.favorites_wheel.profile_names = {key: profile.name for key, profile in wheels.items()}
+        self.favorites_wheel.editable = "wheel-settings" not in self.hidden
         self.wheel_serial += 1
         token = str(self.wheel_serial)
-        self.wheel_request = (token, keys)
+        self.wheel_request = (token, items)
         if QApplication.platformName().startswith("wayland"):
             # KWin arms its windowAdded handler before asking us to map the wheel.
             # A compositor without the KWin service can still open a normal chooser.
@@ -320,6 +332,26 @@ class Window(QMainWindow):
                 self.show_wheel(token)
         else:
             self.show_wheel(token)
+
+    def switch_wheel(self, ident):
+        from wheel_profiles import visible
+        wheel = self.favorites_wheel
+        if ident in self.wheel_profiles and wheel.isVisible():
+            self.settings.setValue("activeWheel", ident)
+            self.settings.sync()
+            wheel.active_id = ident
+            wheel.history.clear()
+            wheel.contents(visible(self.wheel_profiles[ident].items, self.hidden))
+            if editor := self.pages.get("wheel-settings"):
+                editor.refresh()
+
+    def open_wheel_target(self, entry):
+        from wheel_profiles import open_target
+        # Send the unmap to the compositor before invoking a window shortcut.
+        QApplication.sync()
+        if not open_target(entry):
+            self.Open(["wheel-settings"] if "wheel-settings" not in self.hidden else ["tools"])
+            self.issue(tr("Couldn’t open %1.").replace("%1", entry.title))
 
     def wheel_dismissed(self):
         if self.wheel_placement:
@@ -637,6 +669,9 @@ class Window(QMainWindow):
         elif key == "extra-clicks":
             from extra_clicks import ExtraClicks
             self.page(key, ExtraClicks)
+        elif key == "wheel-settings":
+            from wheel_editor import WheelEditor
+            self.page(key, lambda: WheelEditor(self)).refresh()
         elif key == "wheel-scrolling":
             from wheel_scrolling import WheelScrolling
             self.page(key, WheelScrolling)
