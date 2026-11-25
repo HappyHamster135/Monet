@@ -238,6 +238,7 @@ def gather():
     qml.append(ROOT / "image/dock/patch.py")
     # Native modules use the same i18nd("monet", ...) literal convention.
     qml.extend(sorted((ROOT / "image/launcher").glob("*.cpp")))
+    qml.extend(sorted((ROOT / "image/files-paste-image").glob("*.cpp")))
     qml.extend(sorted((ROOT / "image/graphics").glob("*.cpp")))
     qml.extend(sorted((ROOT / "image/window-identity").glob("*.cpp")))
     for p in qml:

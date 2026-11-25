@@ -19212,3 +19212,19 @@ msgstr "Klistra in"
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/ShelfModel.qml:80
 msgid "Reopen Utilities to use text and links on the shelf."
 msgstr "Öppna Verktyg igen för att använda text och länkar på filhyllan."
+
+#: image/files-paste-image/pasteimage.cpp:78
+msgid "Copy an image, then choose Paste Image as PNG again."
+msgstr "Kopiera en bild och välj sedan Klistra in bild som PNG igen."
+
+#: image/files-paste-image/pasteimage.cpp:87
+msgid "Files could not read the copied image."
+msgstr "Filer kunde inte läsa den kopierade bilden."
+
+#: image/files-paste-image/pasteimage.cpp:95
+msgid "Pasted image"
+msgstr "Inklistrad bild"
+
+#: image/files-paste-image/pasteimage.cpp:127
+msgid "Paste Image as PNG…"
+msgstr "Klistra in bild som PNG…"

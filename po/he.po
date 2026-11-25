@@ -19059,3 +19059,19 @@ msgstr ""
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/ShelfModel.qml:80
 msgid "Reopen Utilities to use text and links on the shelf."
 msgstr ""
+
+#: image/files-paste-image/pasteimage.cpp:78
+msgid "Copy an image, then choose Paste Image as PNG again."
+msgstr ""
+
+#: image/files-paste-image/pasteimage.cpp:87
+msgid "Files could not read the copied image."
+msgstr ""
+
+#: image/files-paste-image/pasteimage.cpp:95
+msgid "Pasted image"
+msgstr ""
+
+#: image/files-paste-image/pasteimage.cpp:127
+msgid "Paste Image as PNG…"
+msgstr ""
