@@ -54,6 +54,12 @@ class NativeAudio(unittest.TestCase):
     def test_per_app_mixer_groups_routes_and_remembers_its_order(self):
         self.fixture("mixer")
 
+    @unittest.skipUnless(shutil.which('pacat') and shutil.which('wireplumber'), 'Pulse playback and routing policy')
+    @unittest.skipUnless(importlib.util.find_spec('dbus') and importlib.util.find_spec('gi') and any(
+        Path('/usr').glob('lib*/qt6/qml/org/kde/plasma/private/mpris/qmldir')), 'MPRIS players and Qt model')
+    def test_notch_levels_follow_the_selected_players_streams(self):
+        self.fixture("notch-levels")
+
     def test_ranked_outputs_follow_physical_changes_and_respect_manual_choice(self):
         self.fixture("output-order")
 

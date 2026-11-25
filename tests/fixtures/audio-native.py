@@ -819,6 +819,138 @@ QtObject {
             policy.terminate()
 
 
+def notch_levels():
+    from array import array
+    from contextlib import ExitStack
+    from math import sin, tau
+
+    # Drive the two virtual speakers even on machines with no audio hardware.
+    config.write_text(config.read_text().replace("context.objects = [", """context.objects = [
+        { factory = spa-node-factory args = { factory.name = support.node.driver node.name = Dummy-Driver } }"""))
+    start_server()
+    ui = Path(os.environ.get("MONET_NOTCH_LEVEL_UI", ROOT / "linux/share/plasma/plasmoids/org.monet.notch/contents/ui"))
+    qml = TEMP / "PlayerLevelCheck.qml"
+    qml.write_text('import QtQuick\nimport org.kde.plasma.private.mpris as Mpris\nimport "' + ui.as_uri() + '''" as Monet
+Item {
+    id: scene
+    property var selected: null
+    property bool useDesktop: false
+    property bool showLevels: true
+    readonly property string activeName: players.currentPlayer?.identity || ""
+    Mpris.Mpris2Model { id: players }
+    readonly property alias sourceCount: rows.count
+    Instantiator { id: rows; model: players; delegate: QtObject {} }
+    function desktopSource(index) { useDesktop = true; players.currentIndex = index }
+    property real level: loader.item?.level ?? 0
+    function select(pid, entry, name) {
+        selected = {kdePid: 0, instancePid: pid, desktopEntry: entry, identity: name}
+    }
+    Loader {
+        id: loader; active: scene.showLevels
+        sourceComponent: Monet.MusicLevel {
+            player: scene.useDesktop ? players.currentPlayer : scene.selected
+            sources: scene.useDesktop ? players : null
+        }
+    }
+}''')
+    warnings = []
+    engine.warnings.connect(lambda errors: warnings.extend(e.toString() for e in errors))
+    component = QQmlComponent(engine, QUrl.fromLocalFile(str(qml)))
+    assert component.isReady(), [e.toString() for e in component.errors()]
+    scene = component.create()
+    assert scene, warnings
+    tone = TEMP / "tone.raw"
+    tone.write_bytes(array("h", (int(23000 * sin(tau * i / 32)) for i in range(32))).tobytes() * 15000)
+
+    with ExitStack() as stack:
+        def launch(args):
+            proc = subprocess.Popen(args, stdout=log, stderr=log)
+            def stop():
+                if proc.poll() is None:
+                    proc.terminate()
+                    proc.wait(timeout=3)
+            stack.callback(stop)
+            return proc
+
+        def play(entry, name, device, samples, *extra):
+            return launch(["pacat", "--raw", "--playback", "--format=s16ne", "--rate=8000", "--channels=1",
+                           "--device=" + device, "--client-name=" + name, "--property=application.id=" + entry,
+                           *extra, str(samples)])
+
+        def streams():
+            return json.loads(pactl("-f", "json", "list", "sink-inputs"))
+
+        def monitors():
+            return json.loads(pactl("-f", "json", "list", "source-outputs"))
+
+        def quiet(description):
+            wait_for(lambda: scene.property("level") <= .01, description)
+            for _ in range(15):
+                QTest.qWait(40)
+                assert scene.property("level") <= .01, description
+
+        launch(["wireplumber", "--profile=policy"])
+        wait_for(lambda: "route-settings" in subprocess.check_output(["pw-metadata", "-l"], text=True), "audio graph")
+        first = play("fixture.radio", "Radio", "monet_one", "/dev/zero")
+        second = play("fixture.video", "Video", "monet_one", tone)
+        wait_for(lambda: len(streams()) == 2, "two players on the same output")
+        scene.select(second.pid, "fixture.video", "Video")
+        wait_for(lambda: scene.property("level") > .4, "tone from selected player")
+        scene.select(first.pid, "fixture.radio", "Radio")
+        quiet("silent player while the other app plays on the same speakers")
+        scene.select(0, "fixture.video.desktop", "Video")
+        wait_for(lambda: scene.property("level") > .4, "desktop ID of a player with a separate audio process")
+        index = str(next(s["index"] for s in streams() if s["properties"]["application.id"] == "fixture.video"))
+        old_monitor, = monitors()
+        pactl("move-sink-input", index, "monet_two")
+        wait_for(lambda: len(current := monitors()) == 1 and current[0]["index"] != old_monitor["index"]
+                 and scene.property("level") > .4, "monitor follows the player to the nondefault output")
+        pactl("set-sink-input-mute", index, "1")
+        quiet("muted selection")
+        pactl("set-sink-input-mute", index, "0")
+        wait_for(lambda: scene.property("level") > .4, "unmuted on the nondefault output")
+        pactl("set-sink-input-volume", index, "0%")
+        quiet("stream volume is zero")
+        pactl("set-sink-input-volume", index, "100%")
+        wait_for(lambda: scene.property("level") > .4, "volume restored")
+        scene.select(0, "test.missing", "Missing")
+        quiet("unknown player with other audio running")
+        wait_for(lambda: not monitors(), "unmatched selection releases audio subscriptions")
+        extra = play("fixture.radio", "Radio", "monet_two", tone)
+        play("fixture.radio", "Radio", "monet_one", tone, "--property=media.role=event")
+        scene.select(first.pid, "fixture.radio", "Radio")
+        quiet("exact process takes precedence over another instance with the same app ID")
+        scene.select(0, "fixture.radio", "Radio")
+        wait_for(lambda: scene.property("level") > .4, "one active tone among the app's streams")
+        extra.terminate()
+        extra.wait(timeout=3)
+        quiet("stream removal and notification sounds")
+        # Switch using the real desktop player model, including its Automatic row.
+        player_helper = ROOT / "tests/fixtures/media-keys-wayland.py"
+        launch([sys.executable, str(player_helper), "--player", "Video"])
+        scene.desktopSource(0)
+        wait_for(lambda: scene.property("activeName") == "Video" and scene.property("level") > .4,
+                 "automatic MPRIS source playing through a separate process")
+        launch([sys.executable, str(player_helper), "--player", "Radio"])
+        wait_for(lambda: scene.property("sourceCount") == 3, "automatic and two individual players")
+        scene.desktopSource(1)
+        if scene.property("activeName") != "Radio":
+            scene.desktopSource(2)
+        assert scene.property("activeName") == "Radio"
+        quiet("individually selected MPRIS player")
+        scene.desktopSource(0)
+        wait_for(lambda: scene.property("level") > .4, "back to automatic")
+        other = launch([sys.executable, str(player_helper), "--player", "video"])
+        wait_for(lambda: scene.property("sourceCount") == 4, "second instance with the same desktop ID")
+        quiet("ambiguous audio process shared by two player identities")
+        other.terminate()
+        other.wait(timeout=3)
+        wait_for(lambda: scene.property("level") > .4, "unambiguous player after the other instance quits")
+        scene.setProperty("showLevels", False)
+        wait_for(lambda: not monitors(), "disabling levels releases audio subscriptions")
+    assert not warnings, warnings
+
+
 def output_priority():
     start_server()
     quick = str(ROOT / "linux/libexec/monet-quick")
@@ -1112,7 +1244,7 @@ C.ApplicationWindow {
 
 try:
     {'native': native_updates, 'fallback': fallback, 'recovery': recovery,
-     'widget': widget, 'mixer': app_mixer, 'output-order': output_priority, 'headphone-volume': headphone_volume, 'notifications': notifications, 'dock-volume': dock_volume,
+     'widget': widget, 'notch-levels': notch_levels, 'mixer': app_mixer, 'output-order': output_priority, 'headphone-volume': headphone_volume, 'notifications': notifications, 'dock-volume': dock_volume,
      'dock-volume-memory': dock_volume_memory}[sys.argv[1]]()
 finally:
     for component, obj in objects: obj.deleteLater()

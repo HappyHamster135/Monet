@@ -374,6 +374,10 @@ PlasmoidItem {
                 Layout.preferredWidth: active ? 13 : 0; Layout.preferredHeight: 18
                 visible: active; active: Plasmoid.configuration.levels && root.playing && power.active
                 source: "MusicLevel.qml"
+                onLoaded: {
+                    item.sources = players
+                    item.player = Qt.binding(() => root.media)
+                }
             }
             Kirigami.Icon {
                 visible: !companionLoader.item?.showing
