@@ -6,6 +6,8 @@ import os
 from pathlib import Path
 import tempfile
 
+from recording_zoom import zoom_filters
+
 
 class ExportFile:
     def __init__(self, destination):
@@ -44,9 +46,8 @@ class ExportLayer:
     sigma: float
 
 
-def overlay_graph(command, layers, start, end):
+def overlay_graph(command, layers, start, end, base):
     graph = []
-    base = "[0:v:0]"
     image_index = 0
     for i, layer in enumerate(layers):
         if layer.end <= start or layer.start >= end:
@@ -71,7 +72,7 @@ def overlay_graph(command, layers, start, end):
     return graph, base
 
 
-def export_command(source, output, start, end, speed, crop, mute, layers=()):
+def export_command(source, output, start, end, speed, crop, mute, layers=(), zooms=(), size=(0, 0), fps=0):
     if not 0 <= start < end or speed not in (0.5, 1, 1.5, 2):
         raise ValueError("Invalid trim range or playback speed")
     filters = []
@@ -81,13 +82,21 @@ def export_command(source, output, start, end, speed, crop, mute, layers=()):
             raise ValueError("Crop is outside the picture")
         filters.append(f"crop=w='max(2,trunc(iw*{w:.8f}/2)*2)':h='max(2,trunc(ih*{h:.8f}/2)*2)':"
                        f"x='trunc(iw*{x:.8f}/2)*2':y='trunc(ih*{y:.8f}/2)*2'")
+    rate, motion = zoom_filters(zooms, start, end, size, crop, fps)
+    filters.extend(motion)
     if speed != 1:
         filters.append(f"setpts=PTS/{speed:g}")
     command = ["nice", "-n", "10", "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-n",
                "-progress", "pipe:1", "-nostats", "-filter_threads", "1", "-filter_complex_threads", "1",
-               "-ss", f"{start/1000:.3f}", "-t", f"{(end-start)/1000:.3f}", "-threads", "2",
-               "-protocol_whitelist", "file,pipe", "-i", str(source)]
-    graph, base = overlay_graph(command, layers, start, end)
+               "-ss", f"{start/1000:.3f}"]
+    duration = (end-start)/1000
+    # Keep the last decoded frame before a trim inside a long still. The FPS
+    # filter selects that frame at time zero and drives overlays as it moves.
+    command += ["-noaccurate_seek"] if rate else ["-t", f"{duration:.3f}"]
+    command += ["-threads", "2", "-protocol_whitelist", "file,pipe", "-i", str(source)]
+    graph, base = overlay_graph(command, layers, start, end, "[clock]" if rate else "[0:v:0]")
+    if rate:
+        graph.insert(0, f"[0:v:0]fps={rate}:start_time=0,trim=duration={duration:.3f}[clock]")
     command += ["-map_metadata", "-1", "-map_chapters", "-1"]
     if output.suffix.lower() == ".gif":
         # A palette per frame keeps memory bounded even for long captures.
@@ -109,8 +118,13 @@ def export_command(source, output, start, end, speed, crop, mute, layers=()):
             command += ["-an"]
         else:
             command += ["-map", "0:a:0?", "-c:a", "aac", "-b:a", "160k"]
+            audio = [f"atrim=start=0:end={duration:.3f}"] if rate else []
             if speed != 1:
-                command += ["-af", f"atempo={speed:g}"]
+                audio.append(f"atempo={speed:g}")
+            if audio:
+                command += ["-af", ",".join(audio)]
     else:
         raise ValueError("Unknown export format")
+    if rate:
+        command += ["-t", f"{duration/speed:.6f}"]
     return command + ["-threads", "2", str(output)]

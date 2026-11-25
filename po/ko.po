@@ -16243,3 +16243,51 @@ msgstr ""
 #: linux/share/monet/utilities/extra_clicks.py:188
 msgid "Could not save mouse click settings."
 msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:326
+msgid "Zooms"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:481
+msgid "Add zoom at playhead…"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:483
+msgid "Edit zoom at playhead…"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:491
+msgid "Undo zoom edit"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:492
+msgid "Redo zoom edit"
+msgstr ""
+
+#: linux/share/monet/utilities/recordings.py:499
+msgid "Play or seek to a frame before adding a zoom."
+msgstr ""
+
+#: linux/share/monet/utilities/recording_zoom_editor.py:19
+msgid "Zoom focus"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_zoom_editor.py:20 linux/share/monet/utilities/recording_zoom_editor.py:95
+msgid "Click the picture or use the arrow keys to choose the zoom focus."
+msgstr ""
+
+#: linux/share/monet/utilities/recording_zoom_editor.py:91
+msgid "Edit zoom"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_zoom_editor.py:91
+msgid "Add zoom"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_zoom_editor.py:111
+msgid "Magnification"
+msgstr ""
+
+#: linux/share/monet/utilities/recording_zoom_editor.py:117
+msgid "Remove zoom"
+msgstr ""

@@ -146,6 +146,7 @@ class PreviewVideo(QGraphicsObject):
         self.output = QSize()
         self.image = QImage()
         self.options = QVideoFrame.PaintOptions()
+        self.zoom_preview_width = 0
         self.sink = QVideoSink(self)
         self.sink.videoFrameChanged.connect(self.present)
 
@@ -200,7 +201,12 @@ class PreviewVideo(QGraphicsObject):
             return
         rect = self.boundingRect()
         target = painter.deviceTransform().mapRect(rect).size().toSize()
-        size = self.size.scaled(target, Qt.KeepAspectRatio).boundedTo(self.size).expandedTo(QSize(1, 1))
+        if self.zoom_preview_width:
+            width = min(self.size.width(), self.zoom_preview_width)
+            size = QSize(width, round(width*self.size.height()/self.size.width()))
+        else:
+            size = self.size.scaled(target, Qt.KeepAspectRatio).boundedTo(self.size)
+        size = size.expandedTo(QSize(1, 1))
         if self.output != size:
             self.output = size
             self.image = self.scaler.image(self.frame, size)

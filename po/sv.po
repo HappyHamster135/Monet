@@ -16488,3 +16488,52 @@ msgstr "Välj en musknapp för att börja filtrera."
 #: linux/share/monet/utilities/extra_clicks.py:188
 msgid "Could not save mouse click settings."
 msgstr "Det gick inte att spara inställningarna för musklick."
+
+#: linux/share/monet/utilities/recordings.py:326
+msgid "Zooms"
+msgstr "Zoomningar"
+
+#: linux/share/monet/utilities/recordings.py:481
+msgid "Add zoom at playhead…"
+msgstr "Lägg till zoomning vid spelhuvudet…"
+
+#: linux/share/monet/utilities/recordings.py:483
+msgid "Edit zoom at playhead…"
+msgstr "Redigera zoomningen vid spelhuvudet…"
+
+#: linux/share/monet/utilities/recordings.py:491
+msgid "Undo zoom edit"
+msgstr "Ångra zoomändring"
+
+#: linux/share/monet/utilities/recordings.py:492
+msgid "Redo zoom edit"
+msgstr "Gör om zoomändring"
+
+#: linux/share/monet/utilities/recordings.py:499
+msgid "Play or seek to a frame before adding a zoom."
+msgstr "Spela upp eller gå till en bildruta innan du lägger till en zoomning."
+
+#: linux/share/monet/utilities/recording_zoom_editor.py:19
+msgid "Zoom focus"
+msgstr "Fokuspunkt för zoomning"
+
+#: linux/share/monet/utilities/recording_zoom_editor.py:20 linux/share/monet/utilities/recording_zoom_editor.py:95
+msgid "Click the picture or use the arrow keys to choose the zoom focus."
+msgstr ""
+"Klicka i bilden eller använd piltangenterna för att välja zoomningens fokuspunkt."
+
+#: linux/share/monet/utilities/recording_zoom_editor.py:91
+msgid "Edit zoom"
+msgstr "Redigera zoomning"
+
+#: linux/share/monet/utilities/recording_zoom_editor.py:91
+msgid "Add zoom"
+msgstr "Lägg till zoomning"
+
+#: linux/share/monet/utilities/recording_zoom_editor.py:111
+msgid "Magnification"
+msgstr "Förstoring"
+
+#: linux/share/monet/utilities/recording_zoom_editor.py:117
+msgid "Remove zoom"
+msgstr "Ta bort zoomning"
