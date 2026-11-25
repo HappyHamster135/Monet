@@ -295,6 +295,7 @@ tree "$SRC/share/kwin/scripts/monet-snap" "$DATADIR/kwin/scripts/monet-snap"
 tree "$SRC/share/kwin/effects/monet-motion" "$DATADIR/kwin/effects/monet-motion"
 # Your work after a restart: tells monet-work.service when windows open, close or move.
 tree "$SRC/share/kwin/scripts/monet-work" "$DATADIR/kwin/scripts/monet-work"
+tree "$SRC/share/kwin/scripts/monet-quit-on-close" "$DATADIR/kwin/scripts/monet-quit-on-close"
 tree "$SRC/share/kwin/tabbox/monet-windows" "$DATADIR/kwin/tabbox/monet-windows"
 tree "$SRC/share/fonts/monet" "$DATADIR/fonts/monet"
 command -v fc-cache >/dev/null && fc-cache -f "$DATADIR/fonts/monet" >/dev/null 2>&1 || true
@@ -349,6 +350,7 @@ put 644 "$SRC/systemd/user/plasma-powerdevil.service.d/monet-login.conf" "$USERU
 put 644 "$SRC/systemd/monet-login-brightness.service" "$UNITDIR/monet-login-brightness.service"
 put 644 "$SRC/share/krunner/dbusplugins/monet-utilities.desktop" "$DATADIR/krunner/dbusplugins/monet-utilities.desktop"
 put 644 "$SRC/share/dbus-1/services/org.monet.ToolSearch.service" "$DATADIR/dbus-1/services/org.monet.ToolSearch.service"
+put 644 "$SRC/share/dbus-1/services/org.monet.QuitOnClose.service" "$DATADIR/dbus-1/services/org.monet.QuitOnClose.service"
 put 644 "$SRC/share/dbus-1/services/org.monet.Utilities.service" "$DATADIR/dbus-1/services/org.monet.Utilities.service"
 put 644 "$SRC/share/dbus-1/services/org.monet.KeepAwake.service" "$DATADIR/dbus-1/services/org.monet.KeepAwake.service"
 put 644 "$SRC/systemd/user/monet-keys.service" "$USERUNITDIR/monet-keys.service"

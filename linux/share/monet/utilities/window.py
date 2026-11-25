@@ -446,6 +446,9 @@ class Window(QMainWindow):
         elif key == "wheel-scrolling":
             from wheel_scrolling import WheelScrolling
             self.page(key, WheelScrolling)
+        elif key == "quit-on-close":
+            from quit_on_close import QuitOnClose
+            self.page(key, QuitOnClose)
         elif key == "quit-protection":
             from quit_protection import QuitProtection
             self.page(key, QuitProtection)

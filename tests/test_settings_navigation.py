@@ -141,6 +141,15 @@ class SettingsNavigation(unittest.TestCase):
         QTest.keyClick(self.window, Qt.Key_Return)
         self.assertIn(["helper", "utilities", "wheel-scrolling"], self.helper.commands)
 
+    def test_default_apps_opens_last_window_preferences(self):
+        from PySide6.QtQuick import QQuickItem
+        select_settings_page(self.window, "apps")
+        row = self.window.findChild(QQuickItem, "quitOnCloseSettings")
+        self.assertIsNotNone(row)
+        row.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertIn(["helper", "utilities", "quit-on-close"], self.helper.commands)
+
     def test_sound_settings_opens_the_media_key_editor(self):
         from PySide6.QtQuick import QQuickItem
         select_settings_page(self.window, "sound")

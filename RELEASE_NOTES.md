@@ -18,6 +18,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 - **Codex account limits.** Enable them in Utilities → AI session usage to see your remaining allowance and reset times in the notch. The account check runs when you use the feature.
 - **Notch downloads.** Open Activity → Downloads to see recent files, recognize partial downloads, show a finished file in Files or add it to the shelf. The folder can be changed from the same view.
 - **Notch notifications.** Read a message from Activity, reply or use the actions its app provides. Customize Home Bar can show a brief preview in the closed notch while the desktop is unlocked and Do Not Disturb is off.
+- **Quit on last window.** In Settings → Default Apps, choose which apps should also leave the tray when their last window closes. Apps keep their usual behavior until selected.
 - **Media keys.** In Settings → Sound, choose which players can respond to playback keys. You can also choose a music app for Play to open when no player is available.
 - **Volume mixer.** In the notch’s Music tab, Settings → Sound or the Home Bar sound popup, adjust an app’s volume, mute it or choose which output it plays through. Pin the apps you use most and drag their names to put them in order.
 - **Scratchpads.** Keep several named notes in Utilities or edit them from the notch’s Notes tab. Open a pad above another app, preview Markdown or export text. Existing scratchpad text carries over.

@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=org.monet.QuitOnClose
+Exec=/usr/bin/python3 @DATADIR@/monet/utilities/last_window.py

@@ -16065,3 +16065,53 @@ msgstr ""
 #: linux/share/monet/utilities/media_keys.py:192
 msgid "Could not save media key settings."
 msgstr ""
+
+#: linux/share/monet/settings-app/SettingsApps.qml:122 linux/share/monet/utilities/actions.py:36
+msgid "Quit on last window"
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsApps.qml:123
+msgid "Choose which apps quit when you close their last window."
+msgstr ""
+
+#: linux/share/monet/utilities/quit_on_close.py:20
+msgid ""
+"Choose apps that should quit when you close their last window. Minimized windows and windows on other desktops still count as open."
+msgstr ""
+
+#: linux/share/monet/utilities/quit_on_close.py:24
+msgid "Selected applications"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_on_close.py:29
+msgid "Send a termination request if the app has no Quit action"
+msgstr ""
+
+#: linux/share/monet/utilities/quit_on_close.py:33
+msgid ""
+"This can end background work in a selected app. Leave it off to use only the app’s own Quit action."
+msgstr ""
+
+#: linux/share/monet/utilities/quit_on_close.py:47
+msgid "Apps currently keep their usual close behavior."
+msgstr ""
+
+#: linux/share/monet/utilities/quit_on_close.py:64 linux/share/monet/utilities/quit_on_close.py:86
+msgid "Could not save window closing preferences."
+msgstr ""
+
+#: linux/share/monet/utilities/quit_on_close.py:78
+msgid ""
+"The desktop could not apply this change. Open Choose applications to try again."
+msgstr ""
+
+#: linux/share/kwin/scripts/monet-quit-on-close/metadata.json
+msgctxt ""
+"the name of a part of Monet (a widget, a style, a painting) in KDE's lists"
+msgid "Quit on last window"
+msgstr ""
+
+#: linux/share/kwin/scripts/monet-quit-on-close/metadata.json
+msgctxt "what a part of Monet is, in KDE's lists"
+msgid "Quit selected applications after their last window closes"
+msgstr ""

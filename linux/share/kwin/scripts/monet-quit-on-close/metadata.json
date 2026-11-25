@@ -1,0 +1,17 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Authors": [{"Name": "Monet"}],
+        "Category": "Window Management",
+        "Description": "Quit selected applications after their last window closes",
+        "Description[sv]": "Avsluta valda appar när deras sista fönster har stängts",
+        "EnabledByDefault": false,
+        "Id": "monet-quit-on-close",
+        "License": "GPL-3.0-or-later",
+        "Name": "Quit on last window",
+        "Name[sv]": "Avsluta när sista fönstret stängs",
+        "Version": "1.0"
+    },
+    "X-Plasma-API": "declarativescript",
+    "X-Plasma-MainScript": "ui/main.qml"
+}

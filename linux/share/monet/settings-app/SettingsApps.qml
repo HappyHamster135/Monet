@@ -112,6 +112,24 @@ ColumnLayout {
         text: i18n("More default apps…")
         onClicked: sheet.ask("kde apps")
     }
+    SettingsControls.Card {
+        tone: look
+        SettingsControls.SettingRow {
+            objectName: "quitOnCloseSettings"
+            tone: look
+            divider: false
+            tappable: true
+            title: i18n("Quit on last window")
+            detail: i18n("Choose which apps quit when you close their last window.")
+            onTapped: sheet.ask("utilities quit-on-close")
+            SettingsControls.Glyph {
+                width: 16
+                height: 16
+                path: "M9 5l7 7-7 7"
+                color: look.dim
+            }
+        }
+    }
     SettingsControls.Caption { tone: look; text: i18n("Browser bookmarks") }
     SettingsControls.Card {
         id: bookmarkImport
