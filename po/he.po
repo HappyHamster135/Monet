@@ -17236,3 +17236,204 @@ msgstr ""
 #: linux/share/monet/utilities/screen_text.py:76
 msgid "Couldn’t copy the text."
 msgstr ""
+
+#: linux/share/monet/utilities/media_compress.py:38
+msgid "Choose a local media file."
+msgstr ""
+
+#: linux/share/monet/utilities/media_compress.py:43
+msgid "This picture is too large to process."
+msgstr ""
+
+#: linux/share/monet/utilities/media_compress.py:72 linux/share/monet/utilities/media_compress.py:78
+msgid "This file has no readable picture or video."
+msgstr ""
+
+#: linux/share/monet/utilities/media_compress.py:117
+msgid "This video needs a known duration to fit a size limit."
+msgstr ""
+
+#: linux/share/monet/utilities/media_compress.py:147
+msgid ""
+"The file could not fit this limit. Choose a larger size or a shorter clip."
+msgstr ""
+
+#: linux/share/monet/utilities/media_compress.py:169 linux/share/monet/utilities/compress_page.py:352
+msgid "The media encoder could not finish."
+msgstr ""
+
+#: linux/share/monet/utilities/media_compress.py:191
+msgid "The animation could not fit this limit. Try a larger size."
+msgstr ""
+
+#: linux/share/monet/utilities/media_compress.py:253
+msgid "The picture could not fit this limit. Try a larger size."
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:55
+msgid "Add files…"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:66
+msgid "Media files"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:67
+msgid "File"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:67
+msgid "Original"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:67
+msgid "Compressed copy"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:78
+msgid "Drop photos, videos or GIFs here."
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:88
+msgid "MP4 video"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:88
+msgid "GIF animation"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:89
+msgid "WebP image"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:89
+msgid "JPEG image"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:89
+msgid "PNG image"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:92
+msgid "HEIC image"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:93
+msgid "PDF document"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:94
+msgid "Save as"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:96
+msgid "Smaller file"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:96
+msgid "Higher quality"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:98
+msgid "Quality"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:103
+msgid "Longest edge"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:104
+msgid "Maximum file size"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:113
+msgid "Pictures and GIFs can be resized to fit."
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:116
+msgid "Keep video sound"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:121
+msgid "Compression progress"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:132 linux/share/monet/utilities/compress_page.py:163
+msgid "Save copy…"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:163
+msgid "Save copies…"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:176
+msgid "Add media files"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:187
+msgid "Reading…"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:223
+msgid "Couldn’t open Files."
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:274
+msgid "Couldn’t read this file."
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:288
+msgid "Save compressed copy"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:298
+msgid "Save compressed copies in"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:315
+msgid "Queued"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:336
+msgid "Choose a new filename for the copy."
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:338
+msgid "Saving %1"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:356
+msgid "The output did not meet the requested size."
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:364
+msgid "Copy saved. %1 smaller."
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:364
+msgid "Copy saved. %1 larger."
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:366
+msgid "Copy saved at the original size."
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:378
+msgid "Cancelled. %1 of %2 copies saved."
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:380
+msgid "Saved %1 of %2 copies."
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:747
+msgid "Cancel compression?"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:747
+msgid "Stop saving the remaining copies and close Utilities?"
+msgstr ""
+
+#: linux/share/monet/utilities/media_compress.py:277 linux/share/monet/utilities/compress_page.py:363
+msgid "The source changed. Review the file and save again."
+msgstr ""

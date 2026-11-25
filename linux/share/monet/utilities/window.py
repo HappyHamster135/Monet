@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 import re
 import sys
-import tempfile
 from PySide6.QtCore import (QObject, QProcess, QSettings, Qt, QTimer, QUrl, Signal, Slot)
 from PySide6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusServiceWatcher, QDBusVirtualObject
 from PySide6.QtGui import QIcon, QKeySequence, QShortcut
@@ -37,7 +36,6 @@ class Window(QMainWindow):
         self.pad_store = None
         self.agent_feed = None
         self.running = set()
-        self.converting = False
         self.setWindowIcon(QIcon.fromTheme("applications-utilities"))
         self.resize(630, 490)
         central = QWidget()
@@ -463,52 +461,6 @@ class Window(QMainWindow):
             request("/org/monet/Cleaning", "org.monet.Cleaning", "Begin", [seconds, dark], began)
         request("/Plugins", "org.kde.KWin.Plugins", "LoadPlugin", ["monet_cleaning"], loaded)
 
-    def compress(self):
-        if self.converting:
-            self.issue("A conversion is already running.")
-            return
-        source, _ = QFileDialog.getOpenFileName(self, "Compress media")
-        if not source:
-            return
-        mode, ok = QInputDialog.getItem(self, "Output format", "Save as", ["MP4 video", "WebP image", "GIF animation"], 0, False)
-        if not ok:
-            return
-        extension, opts = {"MP4 video": (".mp4", ["-c:v","libx264","-preset","veryfast","-crf","26","-c:a","aac"]),
-                           "WebP image": (".webp", ["-frames:v","1","-c:v","libwebp","-quality","78"]),
-                           "GIF animation": (".gif", ["-vf","fps=12,scale='min(720,iw)':-1","-loop","0"])}[mode]
-        target, _ = QFileDialog.getSaveFileName(self, "Save compressed copy", str(Path(source).with_suffix("")) + "-small" + extension)
-        if not target:
-            return
-        target = Path(target)
-        if target.suffix.casefold() != extension:
-            target = Path(str(target) + extension)
-        if target.exists():
-            self.issue("Choose a new file name for the compressed copy.")
-            return
-        try:
-            temp = tempfile.TemporaryDirectory(prefix=".monet-media-", dir=target.parent)
-        except OSError as error:
-            self.issue(str(error))
-            return
-        output = Path(temp.name) / ("copy" + extension)
-        self.converting = True
-        self.issue("Compressing media…")
-        def fail(reason):
-            temp.cleanup()
-            self.converting = False
-            self.issue(reason)
-        def finish(_):
-            try:
-                os.link(output, target)
-            except OSError as error:
-                fail(str(error))
-                return
-            temp.cleanup()
-            self.converting = False
-            self.issue("Saved " + target.name)
-        self.worker(["nice", "-n", "10", "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-n",
-                     "-threads","2","-filter_threads","1","-i",source,*opts,"-threads","2",output], finish, fail)
-
     def link_settings(self):
         page = QWidget()
         layout = QVBoxLayout(page)
@@ -698,7 +650,10 @@ class Window(QMainWindow):
             if key == "record":
                 editor.capture("r")
         elif key == "compress":
-            self.compress()
+            from compress_page import CompressPage
+            page = self.page(key, CompressPage)
+            page.closing = False
+            page.inspect_next()
 
     @Slot("QStringList")
     def Open(self, args):
@@ -787,13 +742,17 @@ class Window(QMainWindow):
             job = editor.exporter
             editor.cancel_export()
             job.waitForFinished(2000)
-        if self.converting and QMessageBox.question(self, "Cancel conversion?", "A conversion is running. Cancel it and close Utilities?") != QMessageBox.Yes:
-            event.ignore()
-            return
+        compressor = self.pages.get("compress")
+        if compressor and compressor.exporting:
+            if QMessageBox.question(self, tr("Cancel compression?"), tr("Stop saving the remaining copies and close Utilities?")) != QMessageBox.Yes:
+                event.ignore()
+                return
         if self.direct_actions and self.direct_actions.busy:
             self.hide()
             event.ignore()
             return
+        if compressor:
+            compressor.close_jobs()
         if self.mirror:
             self.mirror.close()
         for preview in list(self.notch_previews.values()):
@@ -824,6 +783,10 @@ class Receiver(QObject):
             return
         editor = self.window.pages.get("recordings")
         if editor and (editor.recorder or editor.exporter):
+            return
+        compressor = self.window.pages.get("compress")
+        if compressor and compressor.job:
+            self.idle.start()
             return
         if self.window.running or any(self.window.pages[key].busy for key in ("color", "ocr") if key in self.window.pages):
             self.idle.start()

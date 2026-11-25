@@ -57,7 +57,7 @@ ACTIONS = {
     "recordings": Action(N_("Screen recorder and editor"), "Capture video trim crop MP4 GIF", "video-x-generic"),
     "camera": Action(N_("Camera mirror"), "Capture", "camera-web"),
     "watch": Action(N_("Watch a window"), "Capture", "video-display"),
-    "compress": Action(N_("Compress media"), "Files", "media-optical"),
+    "compress": Action(N_("Compress media"), "Files images pictures photos videos GIF JPEG WebP HEIC PDF PNG MP4 size convert compression", "media-optical"),
     "trash": Action(N_("Open Trash"), "Files", "user-trash", ("dolphin", "trash:/")),
     "files": Action(N_("Browse and rename files"), "Files", "system-file-manager", ("dolphin",)),
     "storage": Action(N_("Review storage and unused files"), "Files", "drive-harddisk", ("@monet-settings", "storage")),
