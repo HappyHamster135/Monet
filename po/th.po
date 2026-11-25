@@ -19350,3 +19350,44 @@ msgstr ""
 #: linux/share/monet/utilities/window.py:568
 msgid "Plain text copied."
 msgstr ""
+
+#: linux/share/monet/utilities/actions.py:54
+msgid "Automatically clear clipboard"
+msgstr ""
+
+#: linux/share/monet/utilities/clipboard_expiry_page.py:22
+msgid ""
+"Choose when Paste should forget the last item you copied. You can still select saved items from Clipboard history."
+msgstr ""
+
+#: linux/share/monet/utilities/clipboard_expiry_page.py:28
+msgid "15 seconds"
+msgstr ""
+
+#: linux/share/monet/utilities/clipboard_expiry_page.py:28
+msgid "5 minutes"
+msgstr ""
+
+#: linux/share/monet/utilities/clipboard_expiry_page.py:29
+msgid "15 minutes"
+msgstr ""
+
+#: linux/share/monet/utilities/clipboard_expiry_page.py:32
+msgid "Time after copying"
+msgstr ""
+
+#: linux/share/monet/utilities/clipboard_expiry_page.py:33
+msgid "Clear when the screen locks"
+msgstr ""
+
+#: linux/share/monet/utilities/clipboard_expiry_page.py:34
+msgid "Clear when the computer sleeps"
+msgstr ""
+
+#: linux/share/monet/utilities/clipboard_expiry_page.py:84
+msgid "Settings saved."
+msgstr ""
+
+#: linux/share/monet/utilities/clipboard_expiry_page.py:84
+msgid "Couldn’t apply clipboard settings."
+msgstr ""

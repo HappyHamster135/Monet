@@ -646,6 +646,9 @@ class Window(QMainWindow):
         elif key == "quit-protection":
             from quit_protection import QuitProtection
             self.page(key, QuitProtection)
+        elif key == "clipboard-expiry":
+            from clipboard_expiry_page import ClipboardExpiryPage
+            self.page(key, lambda: ClipboardExpiryPage(self)).refresh()
         elif key == "link-settings":
             from link_settings import LinkSettings
             self.page(key, lambda: LinkSettings(self)).refresh()

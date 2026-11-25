@@ -19532,3 +19532,45 @@ msgstr "Växla till Verktyg och försök igen."
 #: linux/share/monet/utilities/window.py:568
 msgid "Plain text copied."
 msgstr "Oformaterad text kopierades."
+
+#: linux/share/monet/utilities/actions.py:54
+msgid "Automatically clear clipboard"
+msgstr "Rensa urklipp automatiskt"
+
+#: linux/share/monet/utilities/clipboard_expiry_page.py:22
+msgid ""
+"Choose when Paste should forget the last item you copied. You can still select saved items from Clipboard history."
+msgstr ""
+"Välj när det senast kopierade objektet ska tas bort från urklipp. Du kan fortfarande välja sparade objekt i urklippshistoriken."
+
+#: linux/share/monet/utilities/clipboard_expiry_page.py:28
+msgid "15 seconds"
+msgstr "15 sekunder"
+
+#: linux/share/monet/utilities/clipboard_expiry_page.py:28
+msgid "5 minutes"
+msgstr "5 minuter"
+
+#: linux/share/monet/utilities/clipboard_expiry_page.py:29
+msgid "15 minutes"
+msgstr "15 minuter"
+
+#: linux/share/monet/utilities/clipboard_expiry_page.py:32
+msgid "Time after copying"
+msgstr "Tid efter kopiering"
+
+#: linux/share/monet/utilities/clipboard_expiry_page.py:33
+msgid "Clear when the screen locks"
+msgstr "Rensa när skärmen låses"
+
+#: linux/share/monet/utilities/clipboard_expiry_page.py:34
+msgid "Clear when the computer sleeps"
+msgstr "Rensa när datorn går i vila"
+
+#: linux/share/monet/utilities/clipboard_expiry_page.py:84
+msgid "Settings saved."
+msgstr "Inställningarna har sparats."
+
+#: linux/share/monet/utilities/clipboard_expiry_page.py:84
+msgid "Couldn’t apply clipboard settings."
+msgstr "Det gick inte att tillämpa urklippsinställningarna."

@@ -1,0 +1,17 @@
+[Unit]
+Description=Automatically clear the current Monet clipboard
+PartOf=graphical-session.target
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+Type=notify-reload
+ExecStart=/usr/bin/python3 -B @DATADIR@/monet/utilities/clipboard_expiry_service.py
+Slice=background.slice
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=8
+TimeoutStopSec=3
+
+[Install]
+WantedBy=graphical-session.target
