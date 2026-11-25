@@ -19,6 +19,7 @@
 import QtQuick
 import QtQuick.Window as QuickWindow
 import org.kde.kwin
+import org.kde.plasma.workspace.dbus as Bus
 import org.kde.kirigami as Kirigami
 import "dialogs.js" as Dialogs
 
@@ -88,6 +89,25 @@ Item {
         }
     }
 
+    Bus.SignalWatcher {
+        busType: Bus.BusType.Session
+        service: "org.kde.plasmashell"
+        path: "/org/monet/HomeBar"
+        iface: "org.monet.HomeBar"
+        enabled: root.snapping
+        function dbusSnapWindowRequested(windowId) {
+            const id = String(windowId)
+            const w = Workspace.stackingOrder.find(candidate => root.key(candidate) === id)
+            root.openLayouts(w)
+        }
+    }
+
+    function openLayouts(w) {
+        if (!snapping || !w || w.deleted || !w.normalWindow || !w.resizeable || w.fullScreen || w.specialWindow || !w.output) return
+        assist.close()
+        picker.open(w, w.output.geometry, Workspace.clientArea(KWin.MaximizeArea, w))
+    }
+
     function key(w) {
         return String(w.internalId)
     }
@@ -148,6 +168,7 @@ Item {
         const id = key(w)
         w.closed.connect(() => {
             if (!root || !root.hooks) return
+            if (picker.target === w) picker.close()
             root.hooks = root.hooks.filter(h => h.window !== w)
             delete root.pendingGeometry[id]
         })
@@ -476,9 +497,8 @@ Item {
             const w = Workspace.activeWindow
             if (picker.shown) {
                 picker.close()
-            } else if (w && w.normalWindow && root.snapping) {
-                assist.close()
-                picker.open(w, w.output.geometry, Workspace.clientArea(KWin.MaximizeArea, w))
+            } else {
+                root.openLayouts(w)
             }
         }
     }
@@ -538,6 +558,11 @@ Item {
         lily: root.lily
         speed: root.speed
         onChosen: (w, layout, zone) => {
+            if (!root.snapping || !w.output || !w.resizeable || w.fullScreen || w.specialWindow) return
+            // A preview can belong to a minimized window or another desktop.
+            // Keep the workspace intact until the user actually chooses a zone.
+            if (w.minimized) w.minimized = false
+            Workspace.activeWindow = w
             const a = Workspace.clientArea(KWin.MaximizeArea, w)
             root.place(w, root.partRect(layout, zone, a), w.frameGeometry)
             assist.offer(w, layout, zone, a)

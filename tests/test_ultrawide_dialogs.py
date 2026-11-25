@@ -256,8 +256,32 @@ FAKE_KIRIGAMI = {
     "Icon.qml": "import QtQuick\nItem { property var source }\n",
 }
 
+# The isolated scene has no Plasma shell. Feed it the same per-window request
+# as the real session bus without connecting these unit tests to a desktop.
+FAKE_BUS = {
+    "qmldir": "module org.kde.plasma.workspace.dbus\nsingleton BusType 1.0 BusType.qml\nSignalWatcher 1.0 SignalWatcher.qml\n",
+    "BusType.qml": "pragma Singleton\nimport QtQml\nQtObject { enum Type { Session }\n    signal snap(string windowId)\n}\n",
+    "SignalWatcher.qml": """import QtQml
+QtObject {
+    id: watcher
+    property bool enabled
+    property int busType
+    property string service
+    property string path
+    property string iface
+    property Connections events: Connections {
+        target: BusType
+        enabled: watcher.enabled
+        // The Plasma bus decoder wraps the string argument.
+        function onSnap(windowId) { watcher.dbusSnapWindowRequested(new String(windowId)) }
+    }
+}
+""",
+}
+
 SCENE = """import QtQuick
 import org.kde.kwin
+import org.kde.plasma.workspace.dbus as Bus
 
 Item {
     id: scene
@@ -340,7 +364,8 @@ class Behaviour(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         folder = Path(self.temp.name)
-        for module, files in (("org/kde/kwin", FAKE_KWIN), ("org/kde/kirigami", FAKE_KIRIGAMI)):
+        for module, files in (("org/kde/kwin", FAKE_KWIN), ("org/kde/kirigami", FAKE_KIRIGAMI),
+                              ("org/kde/plasma/workspace/dbus", FAKE_BUS)):
             path = folder / "imports" / module
             path.mkdir(parents=True)
             for name, text in files.items():
@@ -379,6 +404,30 @@ class Behaviour(unittest.TestCase):
     def frame(self, name):
         r = self.js(f"scene.{name}.frameGeometry")
         return (r.x(), r.y(), r.width(), r.height())
+
+    def test_preview_snap_uses_the_selected_windows_screen_and_preserves_focus_on_cancel(self):
+        self.js("scene.picker.output = scene.side; scene.picker.minimized = true")
+        self.start("app", "picker")
+        self.js("Workspace.activeWindow = scene.app")
+        original = self.frame("app")
+        target = self.frame("picker")
+        self.js('Bus.BusType.snap(scene.picker.internalId); scene.snap.pressed("close")')
+        self.assertTrue(self.js("Workspace.activeWindow === scene.app && scene.picker.minimized"))
+        self.assertEqual(self.frame("picker"), target)
+        self.js('Bus.BusType.snap(scene.picker.internalId); scene.snap.pressed("1"); scene.snap.pressed("2")')
+        self.assertTrue(self.js("Workspace.activeWindow === scene.picker && !scene.picker.minimized"), self.errors)
+        self.assertEqual(self.frame("app"), original)
+        self.assertEqual(self.frame("picker"), (6080, 0, 960, 1080))
+
+    def test_target_closed_during_layout_selection_keeps_the_other_window_in_place(self):
+        self.start("app", "picker")
+        self.js("Workspace.activeWindow = scene.app")
+        original = self.frame("app")
+        target = self.frame("picker")
+        self.js("Bus.BusType.snap(scene.picker.internalId); scene.picker.closed()")
+        self.js('scene.snap.pressed("1"); scene.snap.pressed("2")')
+        self.assertTrue(self.js("Workspace.activeWindow === scene.app"))
+        self.assertEqual((self.frame("app"), self.frame("picker")), (original, target))
 
     def test_a_file_dialog_opening_on_an_ultrawide_gets_a_16_9_width_once(self):
         self.start("app")

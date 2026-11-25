@@ -44,12 +44,14 @@ Window {
         width = screen.width
         height = screen.height
         numbered = -1
+        litLayout = litZone = -1
         hide.stop()
         shown = true
         show()
     }
 
     function close() {
+        target = null
         shown = false
         litLayout = -1
         hide.restart()

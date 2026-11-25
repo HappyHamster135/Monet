@@ -274,9 +274,74 @@ def patch_audio(applet):
                     stream.model.Volume = v''')
     (applet/'qml/MonetAppVolume.qml').write_bytes(Path(__file__).with_name('MonetAppVolume.qml').read_bytes())
 
+def patch_preview_snap(applet):
+    header = applet/'backend.h'
+    backend = applet/'backend.cpp'
+    prepend(header, '    Q_INVOKABLE QRect globalRect', '''    Q_PROPERTY(bool monetSnapAvailable READ monetSnapAvailable NOTIFY monetSnapAvailableChanged)
+    bool monetSnapAvailable() const;
+    Q_INVOKABLE void requestMonetSnap(const QString &windowId) const;
+
+''')
+    prepend(header, '    void showAllPlaces();', '    void monetSnapAvailableChanged();\n')
+    prepend(header, '    KConfigWatcher::Ptr m_activityManagerPluginsSettingsWatcher;', '''    const KSharedConfig::Ptr m_monetKWinConfig = KSharedConfig::openConfig(QStringLiteral("kwinrc"));
+    const KConfigWatcher::Ptr m_monetKWinWatcher = KConfigWatcher::create(m_monetKWinConfig);
+''')
+    prepend(backend, '#include <QAction>\n', '#include <QDBusConnection>\n#include <QDBusMessage>\n#include <QUuid>\n')
+    prepend(backend, '    connect(m_activityManagerPluginsSettingsWatcher.get(),', '''    connect(m_monetKWinWatcher.get(), &KConfigWatcher::configChanged, this, [this](const KConfigGroup &group) {
+        if (group.name() == QLatin1String("Script-monet-snap") || group.name() == QLatin1String("Plugins")) {
+            Q_EMIT monetSnapAvailableChanged();
+        }
+    });
+''')
+    prepend(backend, 'void Backend::setActionGroup(QAction *action) const', '''bool Backend::monetSnapAvailable() const
+{
+    return KWindowSystem::isPlatformWayland()
+        && m_monetKWinConfig->group(QStringLiteral("Plugins")).readEntry("monet-snapEnabled", true)
+        && m_monetKWinConfig->group(QStringLiteral("Script-monet-snap")).readEntry("Snapping", true);
+}
+
+void Backend::requestMonetSnap(const QString &windowId) const
+{
+    const QUuid id(windowId);
+    if (id.isNull() || !monetSnapAvailable()) {
+        return;
+    }
+    auto message = QDBusMessage::createSignal(QStringLiteral("/org/monet/HomeBar"), QStringLiteral("org.monet.HomeBar"), QStringLiteral("SnapWindowRequested"));
+    message << id.toString();
+    QDBusConnection::sessionBus().send(message);
+}
+
+''')
+    prepend(applet/'CMakeLists.txt', '                      Qt::Qml\n', '                      Qt::DBus\n')
+    prepend(applet/'qml/ToolTipInstance.qml', '            // Count badge.', '''            PlasmaComponents3.ToolButton {
+                id: snapButton
+                readonly property var windowModel: root.model ?? toolTipDelegate.parentTask?.model
+                readonly property string windowId: String(windowModel?.WinIdList?.[0] ?? "")
+                visible: root.index >= 0 && toolTipDelegate.isWin && backend.monetSnapAvailable
+                    && windowId.length > 0 && windowModel?.IsResizable === true && !windowModel.IsFullScreen
+                Layout.alignment: Qt.AlignTop
+                Layout.topMargin: -headerItem.Layout.margins
+                icon.name: "view-split-left-right"
+                text: i18nd("monet", "Snap layouts")
+                display: PlasmaComponents3.ToolButton.IconOnly
+                Accessible.name: text
+                Accessible.description: root.display
+                PlasmaComponents3.ToolTip.text: text
+                PlasmaComponents3.ToolTip.visible: root.visible && hovered
+                PlasmaComponents3.ToolTip.delay: Kirigami.Units.toolTipDelay
+                onClicked: {
+                    backend.requestMonetSnap(windowId);
+                    tasks.cancelHighlightWindows();
+                    toolTipDelegate.parentTask.hideImmediately();
+                }
+            }
+
+''')
+
 def apply(source):
     applet=source/'applets/taskmanager'
     patch_audio(applet)
+    patch_preview_snap(applet)
     # Plasma's internal task-manager model is the Home Bar in Monet. Keep the
     # actual System Monitor/Task Manager app distinct in user-facing menus.
     context = applet/'qml/ContextMenu.qml'
