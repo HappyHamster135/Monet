@@ -5,6 +5,7 @@
 
 // The same at every scale: KWin draws the bar at its screen's.
 var BAR = 40     // the bar's height, as on Monet's own apps' title bars
+var BUTTON_WIDTH = 44
 var EDGE_DEPTH = 6   // the pointer stops at the screen edge
 var FLOATING_DEPTH = 18  // an easier target when the pointer can pass the top in either direction
 var ABOVE = 7   // let the pointer just overshoot a floating window's top
@@ -32,27 +33,44 @@ function visibleTop(client, screen) {
 }
 
 // The bar: across the window's top, as wide as the window and never taller than it.
-function barRect(client, screen, stack) {
+function barRect(client, screen) {
     var top = visibleTop(client, screen)
-    // Leave room for a short, top-center panel over a maximized client.
-    // Its own input and the app's title buttons must both remain reachable.
-    if (stack && top === screen.y) {
-        for (var i = 0; i < stack.length; i++) {
-            var dock = stack[i]
-            if (!dock || !dock.dock || dock.hidden || dock.minimized) continue
-            var d = dock.frameGeometry
-            if (d.y !== screen.y || d.height > 64 || d.width > 260
-                    || Math.abs(d.x + d.width / 2 - screen.x - screen.width / 2) > 2
-                    || d.x >= client.x + client.width || d.x + d.width <= client.x
-                    || d.y + d.height + BAR >= client.y + client.height) continue
-            top = Math.max(top, d.y + d.height + 1)
-        }
-    }
     var x = Math.round(client.x)
     var y = Math.round(top)
     var width = Math.max(1, Math.round(client.x + client.width) - x)
     var height = Math.max(1, Math.min(BAR, Math.round(client.y + client.height) - y))
     return rect(x, y, width, height)
+}
+
+// Keep the native title and the panel independently clickable. Round the gap
+// outwards so neither surface takes a pixel of the notch on fractional scales.
+function barLayout(client, screen, stack) {
+    var bar = barRect(client, screen)
+    for (var i = 0; i < stack.length; ++i) {
+        var dock = stack[i]
+        if (!dock || !dock.dock || dock.deleted || dock.hidden || dock.minimized) continue
+        var d = dock.frameGeometry
+        if (Math.abs(d.y - screen.y) > 1 || d.width >= screen.width / 2
+                || Math.abs(d.x + d.width / 2 - screen.x - screen.width / 2) > 2
+                || !overlaps(d, bar)) continue
+        var leftWidth = Math.max(0, Math.floor(d.x) - bar.x)
+        var right = Math.ceil(d.x + d.width)
+        var rightWidth = bar.x + bar.width - right
+        if (rightWidth >= 3 * BUTTON_WIDTH + BAR) {
+            return {main: rect(right, bar.y, rightWidth, bar.height),
+                    side: leftWidth > 0 ? rect(bar.x, bar.y, leftWidth, bar.height) : null}
+        }
+        // A narrow window may have its close button directly under the notch.
+        // Drop its controls below the panel rather than squeezing or hiding them.
+        var below = Math.ceil(d.y + d.height)
+        var available = Math.floor(client.y + client.height) - below
+        if (available > 0) {
+            bar.y = below
+            bar.height = Math.min(bar.height, available)
+        }
+        break
+    }
+    return {main: bar, side: null}
 }
 
 // The pointer at a window's top: within its reveal band. For a window
@@ -112,7 +130,7 @@ function covered(w, bar, stacking, desktop, ignore) {
         if (!o || o === w || o.deleted || isSnapPreview(o) || (ignore && ignore(o)))
             continue
         if (o.dock) {
-            if (touches(o.frameGeometry, bar))
+            if (o.hidden ? touches(o.frameGeometry, bar) : overlaps(o.frameGeometry, bar))
                 return true
             continue
         }

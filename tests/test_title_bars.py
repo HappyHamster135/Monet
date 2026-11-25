@@ -68,15 +68,19 @@ class Arithmetic(unittest.TestCase):
         w.update(kw)
         return json.dumps(w)
 
-    def test_top_center_panel_leaves_room_for_the_title_buttons(self):
-        result = self.js.evaluate("""
-            var screen={x:100,y:50,width:1000,height:700};
-            var dock={dock:true,frameGeometry:{x:550,y:50,width:100,height:32}};
-            var bar=barRect(screen,screen,[dock]);
-            bar.y===83 && bar.height===40 && !touches(dock.frameGeometry,bar)
-                && barRect({x:100,y:130,width:500,height:400},screen,[dock]).y===130
+    def test_notch_keeps_the_screen_edge_and_owns_its_fractional_pixels(self):
+        self.js.evaluate("""
+            var screen=rect(100,50,1000,700);
+            var dock={dock:true,frameGeometry:rect(549.75,50,100.5,44)};
+            var narrow=rect(420,55,270,360);
         """)
-        self.assertTrue(result.toBool(), result.toString())
+        self.assertEqual(self.run_js("barLayout(screen,screen,[dock])"), dict(
+            main=dict(x=651, y=50, width=449, height=40), side=dict(x=100, y=50, width=449, height=40)))
+        self.assertEqual(self.run_js("barLayout(narrow,screen,[dock])"), dict(
+            main=dict(x=420, y=94, width=270, height=40), side=None))
+        self.assertEqual(self.run_js("barLayout(rect(100,130,500,400),screen,[dock]).main.y"), 130)
+        self.assertEqual(self.run_js("barLayout(screen,screen,[Object.assign({},dock,{hidden:true})]).main"),
+                         self.run_js("barRect(screen,screen)"))
 
     def test_the_bar_lies_over_the_windows_top_at_every_scale(self):
         screen = "rect(0, 0, 1920, 1080)"
@@ -479,6 +483,38 @@ class Behaviour(unittest.TestCase):
         self.point(960, 500, 800)
         self.stack("filled", "topPanel")
         self.point(960, 0, 400)
+        self.assertIsNone(self.shown_for())
+
+    def test_adding_and_removing_the_notch_while_a_title_is_visible(self):
+        self.stack("filled")
+        self.point(1800, 1, 350)
+        self.assertEqual(self.bar.width(), 1920)
+        self.js("scene.topPanel.frameGeometry=Qt.rect(899,0,122,44); scene.topPanel.hidden=false")
+        self.stack("filled", "topPanel")
+        self.js("Workspace.windowAdded(scene.topPanel)")
+        QTest.qWait(180)
+        self.assertEqual((self.bar.x(), self.bar.y(), self.bar.width()), (1021, 0, 899))
+        side = next(w for w in self.titles.findChildren(QQuickWindow) if w != self.bar)
+        self.assertTrue(side.isVisible())
+        self.assertEqual((side.x(), side.y(), side.width()), (0, 0, 899))
+        self.stack("filled")
+        self.js("Workspace.windowRemoved(scene.topPanel)")
+        QTest.qWait(150)
+        self.assertEqual((self.bar.x(), self.bar.width()), (0, 1920))
+        self.assertFalse(side.isVisible())
+
+    def test_slow_pointer_can_reach_the_controls_below_a_notch(self):
+        self.js("scene.topPanel.frameGeometry=Qt.rect(899,0,122,44); scene.topPanel.hidden=false")
+        self.js("scene.app.frameGeometry=Qt.rect(840,0,240,370)")
+        self.stack("app", "topPanel")
+        self.js("Workspace.windowAdded(scene.topPanel)")
+        self.point(860, 0, 350)
+        self.assertEqual((self.bar.x(), self.bar.y()), (840, 44))
+        self.point(860, 23, 650)
+        self.assertEqual(self.shown_for(), "Files")
+        self.point(860, 55, 450)
+        self.assertEqual(self.shown_for(), "Files")
+        self.point(860, 200, 750)
         self.assertIsNone(self.shown_for())
 
     def test_never_over_a_menu_or_another_window(self):

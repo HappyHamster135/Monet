@@ -20,13 +20,15 @@ Window {
     property bool smoke: false
     // The frames' own buttons (tools/make-decoration.py; install.sh fills in where Monet's files are).
     property string art: "file://@DATADIR@/monet/window-buttons/"
-    property var panelStack: null
-    readonly property var area: window && window.output ? Hover.barRect(window.clientGeometry, window.output.geometry, panelStack)
-                                                        : Hover.rect(0, 0, 1, 1)
-    readonly property bool dragHeld: grip.holding
-    readonly property point dragOrigin: grip.origin
+    property var panels: []
+    readonly property var layout: window && window.output ? Hover.barLayout(window.clientGeometry, window.output.geometry, panels)
+                                                          : {main: Hover.rect(0, 0, 1, 1), side: null}
+    readonly property var area: layout.main
+    readonly property bool dragHeld: grip.holding || sideGrip.holding
+    readonly property point dragOrigin: sideGrip.holding ? sideGrip.origin : grip.origin
+    readonly property var dragSurface: sideGrip.holding ? sideBar : bar
     readonly property bool held: dragHeld || (grip.pressedButtons & Qt.RightButton) !== 0
-        || minimize.held || maximize.held || dismiss.held
+        || (sideGrip.pressedButtons & Qt.RightButton) !== 0 || minimize.held || maximize.held || dismiss.held
     readonly property bool lit: window !== null && window.active
     readonly property bool filling: window !== null && Hover.filling(window.maximizeMode)
     readonly property bool inputReady: visible && window !== null && !window.deleted
@@ -49,11 +51,18 @@ Window {
     width: area.width
     height: area.height
 
+    // KWin can create the notch after this script loads. Take a fresh list on
+    // reveal and when a dock arrives or leaves while the title is visible.
+    function updatePanels(stack) {
+        panels = stack.filter(w => w && w.dock && !w.deleted)
+    }
+
     // Out over w's top, or at once over another window's top if it's out already.
-    function openFor(w) {
+    function openFor(w, stack) {
+        updatePanels(stack)
         settle.stop()
         if (!open || window !== w) {
-            grip.holding = false
+            letGo()
         }
         window = w
         if (!visible) {
@@ -82,6 +91,7 @@ Window {
     // KWin consumes the physical release; its native bridge finishes Qt's press at handoff.
     function letGo() {
         grip.holding = false
+        sideGrip.holding = false
     }
 
     // A bar that is still painted must still accept a press. Re-entering or
@@ -121,80 +131,19 @@ Window {
             }
         }
 
-        // The frames' matte glass, light along its top and a hairline under it.
-        Rectangle {
-            objectName: "titleGlass"
-            anchors.fill: parent
-            color: bar.smoke ? Qt.rgba(34 / 255, 33 / 255, 31 / 255, 0.94) : Qt.rgba(247 / 255, 245 / 255, 241 / 255, 0.93)
-        }
-        Rectangle {
-            y: 1
-            width: parent.width
-            height: 1
-            color: bar.smoke ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.47)
-        }
-        Rectangle {
-            anchors.bottom: parent.bottom
-            width: parent.width
-            height: 1
-            color: bar.smoke ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(0, 0, 0, 0.10)
-        }
-
-        // Held and dragged, the window moves; double-clicked, it fills the screen or gets its
-        // size back; right-clicked, its menu. A press brings the window forward, as a title bar's does.
-        MouseArea {
+        TitleGlass { anchors.fill: parent }
+        TitleGrip {
             id: grip
-            objectName: "titleGrip"
-            property point from: Qt.point(0, 0)
-            property point origin: Qt.point(0, 0)
-            property bool asked: false
-            // Track intent separately from MouseArea's press. The scripting-only
-            // fallback cannot finish Qt's press when KWin takes the pointer.
-            property bool holding: false
-            anchors.left: parent.left
-            anchors.right: buttons.left
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            acceptedButtons: Qt.LeftButton | Qt.RightButton
-            // KWin owns the pointer during a move; keep the grip idle until it finishes.
-            enabled: bar.inputReady && !bar.window.move && !bar.window.resize
-            hoverEnabled: true
-            onEntered: bar.keepOpen()
-            onPressed: mouse => {
-                bar.keepOpen()
-                from = Qt.point(mouse.x, mouse.y)
-                origin = Qt.point(bar.x + mouse.x, bar.y + mouse.y)
-                asked = false
-                holding = mouse.button === Qt.LeftButton
-                if (holding) {
-                    bar.activateAsked()
-                }
-            }
-            onReleased: holding = false
-            onCanceled: holding = false
-            onPositionChanged: mouse => {
-                if (holding && !asked
-                        && Math.abs(mouse.x - from.x) + Math.abs(mouse.y - from.y) >= Qt.styleHints.startDragDistance) {
-                    asked = true
-                    bar.moveAsked()
-                }
-            }
-            onDoubleClicked: mouse => {
-                if (mouse.button === Qt.LeftButton) {
-                    bar.toggleFilling()
-                }
-            }
-            onClicked: mouse => {
-                if (mouse.button === Qt.RightButton) {
-                    bar.menuAsked()
-                }
-            }
+            surface: bar
+            anchors.fill: parent
+            anchors.rightMargin: buttons.width
         }
 
         // The app's icon and title, in the middle, as on the frames.
         Row {
             id: label
-            readonly property real room: Math.max(0, bar.width - 2 * (buttons.width + 24))
+            parent: bar.layout.side && bar.layout.side.width >= bar.width - buttons.width ? sideSheet : sheet
+            readonly property real room: Math.max(0, parent.width - 2 * (parent === sheet ? buttons.width + 24 : 12))
             anchors.centerIn: parent
             spacing: 8
             visible: room > 40
@@ -270,6 +219,100 @@ Window {
         }
     }
 
+    Window {
+        id: sideBar
+        title: bar.title
+        transientParent: null
+        flags: bar.flags
+        color: "transparent"
+        x: bar.layout.side?.x ?? 0
+        y: bar.layout.side?.y ?? 0
+        width: bar.layout.side?.width ?? 1
+        height: bar.area.height
+        readonly property bool needed: bar.visible && bar.layout.side !== null
+        onNeededChanged: if (needed) show(); else hide()
+        Item {
+            id: sideSheet
+            anchors.fill: parent
+            opacity: sheet.opacity
+            TitleGlass { anchors.fill: parent }
+            TitleGrip {
+                id: sideGrip
+                anchors.fill: parent
+                surface: sideBar
+            }
+        }
+    }
+
+    component TitleGlass: Item {
+        // The frames' matte glass, light along its top and a hairline under it.
+        Rectangle {
+            objectName: "titleGlass"
+            anchors.fill: parent
+            color: bar.smoke ? Qt.rgba(34 / 255, 33 / 255, 31 / 255, 0.94) : Qt.rgba(247 / 255, 245 / 255, 241 / 255, 0.93)
+        }
+        Rectangle {
+            y: 1
+            width: parent.width
+            height: 1
+            color: bar.smoke ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.47)
+        }
+        Rectangle {
+            anchors.bottom: parent.bottom
+            width: parent.width
+            height: 1
+            color: bar.smoke ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(0, 0, 0, 0.10)
+        }
+
+    }
+
+    // Held and dragged, the window moves; double-clicked, it fills the screen or gets its
+    // size back; right-clicked, its menu. A press brings the window forward, as a title bar's does.
+    component TitleGrip: MouseArea {
+        required property Window surface
+        objectName: "titleGrip"
+        property point from: Qt.point(0, 0)
+        property point origin: Qt.point(0, 0)
+        property bool asked: false
+        // Track intent separately from MouseArea's press. The scripting-only
+        // fallback cannot finish Qt's press when KWin takes the pointer.
+        property bool holding: false
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        // KWin owns the pointer during a move; keep the grip idle until it finishes.
+        enabled: bar.inputReady && !bar.window.move && !bar.window.resize
+        hoverEnabled: true
+        onEntered: bar.keepOpen()
+        onPressed: mouse => {
+            bar.keepOpen()
+            from = Qt.point(mouse.x, mouse.y)
+            origin = Qt.point(surface.x + mouse.x, surface.y + mouse.y)
+            asked = false
+            holding = mouse.button === Qt.LeftButton
+            if (holding) {
+                bar.activateAsked()
+            }
+        }
+        onReleased: holding = false
+        onCanceled: holding = false
+        onPositionChanged: mouse => {
+            if (holding && !asked
+                    && Math.abs(mouse.x - from.x) + Math.abs(mouse.y - from.y) >= Qt.styleHints.startDragDistance) {
+                asked = true
+                bar.moveAsked()
+            }
+        }
+        onDoubleClicked: mouse => {
+            if (mouse.button === Qt.LeftButton) {
+                bar.toggleFilling()
+            }
+        }
+        onClicked: mouse => {
+            if (mouse.button === Qt.RightButton) {
+                bar.menuAsked()
+            }
+        }
+    }
+
     // A button: the sign alone, and under the pointer its dab of paint. A packaging or artwork
     // error must never leave a window without a way to close it: then a plain sign.
     component BarButton: Item {
@@ -282,7 +325,7 @@ Window {
         required property color ink
         signal activated()
         readonly property bool held: press.pressed
-        width: Math.min(44, bar.width / 3)
+        width: Math.min(Hover.BUTTON_WIDTH, bar.width / 3)
         height: bar.height
         Accessible.role: Accessible.Button
         Accessible.name: name

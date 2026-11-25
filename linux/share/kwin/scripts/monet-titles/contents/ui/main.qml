@@ -64,7 +64,7 @@ Item {
     function startMove() {
         if (!bar.window || !bar.dragHeld) return
         if (mouseMove) {
-            if (mouseMove.beginMove(bar.window, bar.dragOrigin, bar)) bar.letGo()
+            if (mouseMove.beginMove(bar.window, bar.dragOrigin, bar.dragSurface)) bar.letGo()
         } else {
             whenActive(bar.window, "move")
         }
@@ -83,8 +83,19 @@ Item {
     }
 
     function coveredNow(w) {
-        return Hover.covered(w, Hover.barRect(w.clientGeometry, w.output.geometry, Workspace.stackingOrder), Workspace.stackingOrder,
-                             Workspace.currentDesktop, ours)
+        const stack = Workspace.stackingOrder
+        const layout = Hover.barLayout(w.clientGeometry, w.output.geometry, stack)
+        return Hover.covered(w, layout.main, stack, Workspace.currentDesktop, ours)
+            || (layout.side !== null && Hover.covered(w, layout.side, stack, Workspace.currentDesktop, ours))
+    }
+
+    function aroundBar(p) {
+        if (Hover.onBar(bar.area, p) || (bar.layout.side && Hover.onBar(bar.layout.side, p))) return true
+        // A narrow window can only fit its controls below the notch. Keep them
+        // open while the pointer crosses the intervening part of this window.
+        const w = bar.window
+        return w && p.y < bar.area.y && p.y >= Hover.visibleTop(w.clientGeometry, w.output.geometry)
+            && p.x >= bar.area.x && p.x < bar.area.x + bar.area.width && topWindow(p) === w
     }
 
     function canShow(w) {
@@ -127,10 +138,10 @@ Item {
         }
         const p = Workspace.cursorPos
         const w = bar.window
-        if (bar.visible && !bar.open && w && !root.busy() && root.canShow(w) && Hover.onBar(bar.area, p)) {
+        if (bar.visible && !bar.open && w && !root.busy() && root.canShow(w) && aroundBar(p)) {
             bar.keepOpen()
         }
-        if (bar.open && w && (bar.held || w.move || w.resize || Hover.onBar(bar.area, p))) {
+        if (bar.open && w && (bar.held || w.move || w.resize || aroundBar(p))) {
             pending = null
             reveal.stop()
             away.stop()
@@ -175,12 +186,14 @@ Item {
             root.queueEvaluation()
         }
         function onWindowAdded(w) {
+            if (bar.visible && w && w.dock) bar.updatePanels(Workspace.stackingOrder)
             if (root.hovering && w && w.normalWindow && w.managed && !w.popupWindow && !w.transient) {
                 root.newWindow = w
                 introduce.restart()
             }
         }
         function onWindowRemoved(w) {
+            if (bar.visible && w && w.dock) bar.updatePanels(Workspace.stackingOrder)
             if (w && !root.ours(w)) root.edgeChanged()
         }
         function onWindowActivated(w) {
@@ -223,7 +236,7 @@ Item {
             root.pending = null
             reveal.stop()
             away.stop()
-            bar.openFor(w)
+            bar.openFor(w, Workspace.stackingOrder)
             root.preview = w
             previewTime.restart()
         }
@@ -235,7 +248,7 @@ Item {
             const w = root.preview
             root.preview = null
             if (bar.open && w && bar.window === w && !bar.held && !w.move && !w.resize
-                    && !Hover.onBar(bar.area, Workspace.cursorPos)) bar.close()
+                    && !root.aroundBar(Workspace.cursorPos)) bar.close()
         }
     }
     Timer {
@@ -244,7 +257,7 @@ Item {
         onTriggered: {
             const w = root.aimedAt(Workspace.cursorPos)
             if (w && w === root.pending && !bar.held) {
-                bar.openFor(w)
+                bar.openFor(w, Workspace.stackingOrder)
             } else if (root.pending && !bar.held && root.nearEdge(Workspace.cursorPos)) {
                 // The outline may appear during the hover delay itself.
                 settleEdge.restart()
@@ -258,7 +271,7 @@ Item {
         onTriggered: {
             const w = bar.window
             const p = Workspace.cursorPos
-            if (!w || bar.held || w.move || w.resize || Hover.onBar(bar.area, p) || root.aimedAt(p) === w) {
+            if (!w || bar.held || w.move || w.resize || aroundBar(p) || root.aimedAt(p) === w) {
                 return
             }
             bar.close()
@@ -342,7 +355,6 @@ Item {
 
     TitleBar {
         id: bar
-        panelStack: Workspace.stackingOrder
         speed: root.speed
         smoke: root.smoke
         onOpenChanged: {
