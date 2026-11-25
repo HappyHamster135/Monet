@@ -17109,3 +17109,79 @@ msgstr "Det gick inte att återställa den tidigare aviseringsinställningen."
 msgid "Hiding a tool also removes its controls from the notch."
 msgstr ""
 "Om du döljer ett verktyg tas också dess kontroller bort från panelen högst upp på skärmen."
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1814
+msgid "This touchpad disconnected."
+msgstr "Styrplattan kopplades från."
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1815
+msgid "The touchpad could not apply that choice."
+msgstr "Det gick inte att göra den ändringen på styrplattan."
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:42
+msgid "Touchpad clicks"
+msgstr "Klick på styrplattan"
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:47
+msgid "Checking touchpads…"
+msgstr "Söker efter styrplattor…"
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:47
+msgid "No touchpad connected"
+msgstr "Ingen styrplatta är ansluten"
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:72
+msgid "Two-finger tap"
+msgstr "Tryck med två fingrar"
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:74
+msgid "Three fingers give a secondary click."
+msgstr "Tryck med tre fingrar ger ett sekundärklick."
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:74
+msgid "Three fingers give a middle click."
+msgstr "Tryck med tre fingrar ger ett mittenklick."
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:85
+msgid "Tap and drag"
+msgstr "Tryck och dra"
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:85
+msgid "Tap, then touch and hold to drag."
+msgstr "Tryck lätt, sätt sedan ned fingret igen och håll kvar för att dra."
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:92
+msgid "Physical click"
+msgstr "Fysiskt klick"
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:93
+msgid ""
+"Press with two fingers for a secondary click or three for a middle click."
+msgstr ""
+"Klicka med två fingrar för ett sekundärklick eller tre för ett mittenklick."
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:94
+msgid "Where you press along the bottom selects the button."
+msgstr "Var du klickar längs nederkanten avgör vilken knapp som används."
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:97
+msgid "Button areas"
+msgstr "Knappområden"
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:97
+msgid "Finger count"
+msgstr "Antal fingrar"
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:105
+msgid "Test clicks"
+msgstr "Testa klick"
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:135
+msgid "More touchpad settings…"
+msgstr "Fler inställningar för styrplattan…"
+
+#: linux/libexec/monet-quick:9207
+msgid ""
+"touchpad clicks; trackpad; three finger middle click; two finger tap; clickfinger; tap and drag; test clicks"
+msgstr ""
+"styrplatteklick; styrplatta; mittenklick med tre fingrar; tryck med två fingrar; fingerklick; tryck och dra; testa klick"

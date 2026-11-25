@@ -17032,3 +17032,77 @@ msgstr ""
 #: linux/share/monet/utilities/window.py:159
 msgid "Hiding a tool also removes its controls from the notch."
 msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1814
+msgid "This touchpad disconnected."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1815
+msgid "The touchpad could not apply that choice."
+msgstr ""
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:42
+msgid "Touchpad clicks"
+msgstr ""
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:47
+msgid "Checking touchpads…"
+msgstr ""
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:47
+msgid "No touchpad connected"
+msgstr ""
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:72
+msgid "Two-finger tap"
+msgstr ""
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:74
+msgid "Three fingers give a secondary click."
+msgstr ""
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:74
+msgid "Three fingers give a middle click."
+msgstr ""
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:85
+msgid "Tap and drag"
+msgstr ""
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:85
+msgid "Tap, then touch and hold to drag."
+msgstr ""
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:92
+msgid "Physical click"
+msgstr ""
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:93
+msgid ""
+"Press with two fingers for a secondary click or three for a middle click."
+msgstr ""
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:94
+msgid "Where you press along the bottom selects the button."
+msgstr ""
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:97
+msgid "Button areas"
+msgstr ""
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:97
+msgid "Finger count"
+msgstr ""
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:105
+msgid "Test clicks"
+msgstr ""
+
+#: linux/share/monet/settings-app/TouchpadClicks.qml:135
+msgid "More touchpad settings…"
+msgstr ""
+
+#: linux/libexec/monet-quick:9207
+msgid ""
+"touchpad clicks; trackpad; three finger middle click; two finger tap; clickfinger; tap and drag; test clicks"
+msgstr ""

@@ -392,6 +392,11 @@ Shared.MonetWindow {
     onBatteryPowerZoneChanged: Qt.callLater(() => { if (pollingActive && page === "power") powerStateRefresh.restart() })
     Timer { id: powerStateRefresh; interval: 150; onTriggered: if (sheet.pollingActive && sheet.page === "power" && !sheet.powerBusy) sheet.reloadPower() }
     property var inputInfo: ({})
+    property bool inputReading: false
+    property bool inputReadAgain: false
+    property int inputRevision: 0
+    property bool padChanging: false
+    property string padProblem: ""
     property var knownLayouts: []
     property var notifyInfo: ({})
     property string notifyBusy: ""
@@ -871,7 +876,7 @@ Shared.MonetWindow {
             ask("ready", out => sheet.ready = sheet.json(out, sheet.ready))
             loadReturn()
         } else if (page === "input") {
-            ask("input", out => sheet.inputInfo = sheet.json(out, sheet.inputInfo))
+            loadInputDevices()
             ask("prefs", out => sheet.prefs = sheet.json(out, sheet.prefs))  // Windows+Z goes with Snap layouts
             if (knownLayouts.length === 0) {
                 ask("layouts-known", out => sheet.knownLayouts = sheet.json(out, []))
@@ -1784,6 +1789,33 @@ Shared.MonetWindow {
         ask("power", out => sheet.powerInfo = sheet.json(out, sheet.powerInfo))
     }
 
+    function loadInputDevices() {
+        if (page !== "input" || !pollingActive) return
+        if (inputReading || padChanging) { inputReadAgain = true; return }
+        inputReading = true
+        inputReadAgain = false
+        const revision = inputRevision
+        ask("input", out => {
+            sheet.inputReading = false
+            if (revision === sheet.inputRevision) sheet.inputInfo = sheet.json(out, sheet.inputInfo)
+            if (sheet.inputReadAgain) sheet.loadInputDevices()
+        })
+    }
+    function changePad(id, setting, value) {
+        if (padChanging) return
+        inputRevision++
+        padChanging = true
+        padProblem = ""
+        ask("touchpad-click " + id + " " + setting + " " + value, (out, code) => {
+            const result = sheet.json(out, {})
+            sheet.padChanging = false
+            if (Array.isArray(result.pads)) sheet.inputInfo = sheet.changed(sheet.inputInfo, ["touchpads"], result.pads)
+            if (code !== 0 || result.ok !== true)
+                sheet.padProblem = result.problem === "gone" ? i18n("This touchpad disconnected.")
+                    : i18n("The touchpad could not apply that choice.")
+            if (sheet.inputReadAgain || !Array.isArray(result.pads)) sheet.loadInputDevices()
+        })
+    }
     function pointer(kind, name, on) {
         inputInfo = changed(inputInfo, [kind, name], on)
         ask("pointer " + kind + " " + name + (on ? " on" : " off"))
@@ -1795,7 +1827,7 @@ Shared.MonetWindow {
         const names = {}
         knownLayouts.forEach(l => names[l.code] = l.name)
         inputInfo = changed(inputInfo, ["layouts"], codes.map(c => ({ code: c, name: names[c] || c })))
-        ask("layouts " + codes.join(","), () => ask("input", out => sheet.inputInfo = sheet.json(out, sheet.inputInfo)))
+        ask("layouts " + codes.join(","), () => sheet.loadInputDevices())
     }
     function findLayouts(text) {
         const word = text.trim().toLowerCase()

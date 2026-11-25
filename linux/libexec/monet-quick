@@ -273,6 +273,7 @@ KDE_PAGES = {
     "display": "kcm_kscreen",
     "sound": "kcm_pulseaudio",
     "input": "kcm_mouse",
+    "touchpad": "kcm_touchpad",
     "power": "kcm_powerdevilprofilesconfig",
     "notifications": "kcm_notifications",
     "datetime": "kcm_clock",
@@ -3414,17 +3415,95 @@ def device_kind(props):
 
 
 def input_devices():
-    """{sysName: properties} for every input device KWin knows."""
-    names = busjson("--user", "get-property", *KWIN_DEVICES, "org.kde.KWin.InputDeviceManager", "devicesSysNames") or []
+    """Read the pointer inventory over one connection to the current KWin instance."""
+    import dbus
     devices = {}
-    for sys_name in names:
-        if not re.fullmatch(r"[\w.-]+", sys_name):
-            continue
-        data = busjson("--user", "call", KWIN_DEVICES[0], f"{KWIN_DEVICES[1]}/{sys_name}",
-                       "org.freedesktop.DBus.Properties", "GetAll", "s", "org.kde.KWin.InputDevice")
-        if data:
-            devices[sys_name] = {key: value.get("data") for key, value in data[0].items()}
+    try:
+        bus = dbus.SessionBus()
+        owner = bus.get_name_owner(KWIN_DEVICES[0])
+        manager = bus.get_object(owner, KWIN_DEVICES[1], introspect=False)
+        try:
+            names = manager.ListPointers(dbus_interface="org.kde.KWin.InputDeviceManager", timeout=2)
+        except dbus.DBusException as error:
+            if error.get_dbus_name() != "org.freedesktop.DBus.Error.UnknownMethod":
+                raise
+            names = manager.Get("org.kde.KWin.InputDeviceManager", "devicesSysNames",
+                                dbus_interface=dbus.PROPERTIES_IFACE, timeout=2)
+        for name in names:
+            if not re.fullmatch(r"[A-Za-z0-9_]+", name):
+                continue
+            obj = bus.get_object(owner, f"{KWIN_DEVICES[1]}/{name}", introspect=False)
+            try:
+                props = obj.GetAll("org.kde.KWin.InputDevice", dbus_interface=dbus.PROPERTIES_IFACE, timeout=2)
+            except dbus.DBusException:
+                continue  # A mouse or touchpad can disappear during enumeration.
+            devices[str(name)] = dict(props, owner=str(owner))
+    except dbus.DBusException:
+        pass
     return devices
+
+
+def touchpad_rows(devices):
+    rows = []
+    for name, props in devices.items():
+        if not props.get("touchpad"):
+            continue
+        identity = [str(props.get(k, "")) for k in ("owner", "deviceGroupId", "vendor", "product", "name")]
+        key = hashlib.sha256(json.dumps([name, *identity]).encode()).hexdigest()
+        fingers = int(props.get("tapFingerCount", 0))
+        row = {"id": key, "name": str(props.get("name") or name), "fingers": fingers}
+        if fingers and "tapToClick" in props:
+            row["tap"] = bool(props["tapToClick"])
+            if "tapAndDrag" in props:
+                row["drag"] = bool(props["tapAndDrag"])
+            if fingers >= 2 and props.get("supportsLmrTapButtonMap") and "lmrTapButtonMap" in props:
+                row["map"] = "middle" if props["lmrTapButtonMap"] else "secondary"
+        methods = [v for v, prop in (("areas", "Areas"), ("fingers", "Clickfinger"))
+                   if props.get("supportsClickMethod" + prop)]
+        if methods:
+            row["methods"] = methods
+            row["method"] = next((v for v, prop in (("areas", "Areas"), ("fingers", "Clickfinger"))
+                                  if v in methods and props.get("clickMethod" + prop)), "")
+        rows.append((name, row))
+    return rows
+
+
+def change_touchpad(key, setting, value):
+    import dbus
+    devices = input_devices()
+    rows = touchpad_rows(devices)
+    match = next(((name, row) for name, row in rows if row["id"] == key), None)
+    result = {"ok": False, "pads": [row for _, row in rows], "problem": "gone"}
+    if not match:
+        return result
+    name, row = match
+    result["problem"] = "unavailable"
+    if setting in ("tap", "drag") and setting in row and value in ("on", "off"):
+        prop = "tapToClick" if setting == "tap" else "tapAndDrag"
+        enabled = expected = value == "on"
+        if setting == "drag" and not row["tap"]:
+            return result
+    elif setting == "map" and setting in row and row["tap"] and value in ("middle", "secondary"):
+        prop, enabled, expected = "lmrTapButtonMap", value == "middle", value
+    elif setting == "method" and value in row.get("methods", ()):
+        prop = "clickMethodAreas" if value == "areas" else "clickMethodClickfinger"
+        enabled, expected = True, value
+    else:
+        return result
+    try:
+        obj = dbus.SessionBus().get_object(devices[name]["owner"], f"{KWIN_DEVICES[1]}/{name}", introspect=False)
+        obj.Set("org.kde.KWin.InputDevice", prop, dbus.Boolean(enabled, variant_level=1),
+                dbus_interface=dbus.PROPERTIES_IFACE, timeout=2)
+    except dbus.DBusException:
+        pass  # Read the current value even if the reply was lost.
+    result["pads"] = [pad for _, pad in touchpad_rows(input_devices())]
+    current = next((pad for pad in result["pads"] if pad["id"] == key), None)
+    result["ok"] = current is not None and current.get(setting) == expected
+    if current is None:
+        result["problem"] = "gone"
+    elif result["ok"]:
+        result["problem"] = ""
+    return result
 
 
 def pointer_state(devices):
@@ -9124,6 +9203,9 @@ def search_catalog():
          "storage#disks", "drive-harddisk"),
         ("battery-limit", tr("Battery charge limit"), tr("Power & Sleep · Protect the battery"),
          N_("battery limit; battery charge limit; charge limit; protect battery; stop charging at 80; battery protection"), "power#battery-limit", "battery"),
+        ("touchpad-clicks", tr("Touchpad clicks"), tr("Mouse & Keyboard"),
+         N_("touchpad clicks; trackpad; three finger middle click; two finger tap; clickfinger; tap and drag; test clicks"),
+         "input#touchpad-clicks", "input-touchpad"),
         ("keep-awake", tr("Keep awake"), tr("Power & Sleep · Temporarily prevent idle sleep and locking"),
          N_("keep awake; stay awake; prevent sleep temporarily; presentation mode; keep screen on"), "power#keep-awake", "preferences-system-power-management"),
         ("saved-passwords", tr("Passwords"), tr("Saved logins, app access and vault unlocking"),
@@ -11016,7 +11098,12 @@ def main(argv):
         emit(result)
         return 0 if result.get("ok") else 1
     elif cmd == "input":
-        emit(dict(pointer_state(input_devices()), **keyboard_state()))
+        devices = input_devices()
+        emit(dict(pointer_state(devices), touchpads=[pad for _, pad in touchpad_rows(devices)], **keyboard_state()))
+    elif cmd == "touchpad-click" and len(args) == 3 and re.fullmatch(r"[0-9a-f]{64}", args[0]):
+        result = change_touchpad(*args)
+        emit(result)
+        return 0 if result["ok"] else 1
     elif cmd == "pointer" and len(args) == 3 and args[0] in ("mouse", "touchpad") and args[1] in INPUT_SETTINGS:
         if args[1] == "speed" and args[2].isdigit() and int(args[2]) <= 100:
             set_pointer(args[0], "speed", int(args[2]))

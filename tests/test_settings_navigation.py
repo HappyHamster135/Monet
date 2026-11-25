@@ -141,6 +141,57 @@ class SettingsNavigation(unittest.TestCase):
         QTest.keyClick(self.window, Qt.Key_Return)
         self.assertIn(["helper", "utilities", "wheel-scrolling"], self.helper.commands)
 
+    def test_touchpad_switches_reported_choices_and_counts_actual_buttons(self):
+        from PySide6.QtQuick import QQuickItem
+        def item(name):
+            return self.window.findChild(QQuickItem, name)
+
+        full = dict(name="Built-in pad", id="a" * 64, tap=True, fingers=3, drag=True,
+                    map="secondary", method="areas", methods=["areas", "fingers"])
+        small = dict(name="External pad", id="b" * 64, tap=True, fingers=1, drag=False)
+        self.helper.replies["input"] = json.dumps(dict(touchpads=[full, small]))
+        self.open("input#touchpad-clicks")
+        self.wait_for(lambda: item("touchpadTapButtons").isVisible())
+        selector = item("clickTouchpadDevice")
+        self.assertTrue(selector.isVisible())
+        self.assertEqual(selector.property("currentIndex"), 0)
+        selector.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Down)
+        self.wait_for(lambda: selector.property("currentIndex") == 1)
+        self.assertFalse(item("touchpadPressMethod").isVisible())
+        self.assertFalse(item("touchpadTapButtons").isVisible())
+        self.helper.held_commands.add("touchpad-click")
+        row = item("touchpadTapEnabled")
+        row.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertEqual(self.helper.commands.count(["helper", "touchpad-click", small["id"], "tap", "off"]), 1)
+        self.helper.done.emit(self.helper.pending_commands.pop(), json.dumps({"ok": True,
+            "pads": [full, dict(small, tap=False)]}), 0, "")
+        self.wait_for(lambda: not row.property("checked"))
+
+        toggle = item("touchpadTestToggle")
+        toggle.forceActiveFocus(); QTest.keyClick(self.window, Qt.Key_Return)
+        view = item("settingsScroller"); area = item("touchpadClickTest")
+        self.wait_for(area.isVisible)
+        y = area.mapToItem(view, QPointF(0, 0)).y() + view.property("contentY")
+        view.setProperty("contentY", max(0, min(view.property("contentHeight") - view.height(), y - 24)))
+        QTest.qWait(70)
+        pt = area.mapToScene(QPointF(area.width() / 2, area.height() / 2)).toPoint()
+        for button in (Qt.LeftButton, Qt.RightButton, Qt.MiddleButton):
+            QTest.mouseClick(self.window, button, pos=pt)
+        panel = area
+        while panel and panel.metaObject().indexOfProperty("primary") < 0:
+            panel = panel.parentItem()
+        self.assertEqual([panel.property(key) for key in ("primary", "secondary", "middle")], [1, 1, 1])
+        self.capture("touchpad-clicks")
+        self.assertEqual(selector.property("displayText"), small["name"])
+        self.assertLessEqual(panel.width(), panel.parentItem().width() + 1)
+        selector.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Up)
+        self.wait_for(lambda: item("touchpadPressMethod").isVisible())
+        self.capture("finger-clicks")
+
     def test_mouse_settings_opens_extra_click_preferences(self):
         from PySide6.QtQuick import QQuickItem
         select_settings_page(self.window, "input")

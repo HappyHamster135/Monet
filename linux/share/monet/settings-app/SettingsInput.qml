@@ -54,7 +54,8 @@ ColumnLayout {
                         ["natural", i18n("Natural scrolling"), i18n("The page follows your fingers, as on a phone")],
                         ["left", i18n("Left-handed"), i18n("The buttons swap sides")],
                         ["typing", i18n("Off while typing"), i18n("A palm on it won't move the pointer")]
-                    ].filter(s => pointerKind.settings[s[0]] !== undefined)
+                    ].filter(s => pointerKind.settings[s[0]] !== undefined &&
+                        !(s[0] === "tap" && Array.isArray(sheet.inputInfo.touchpads)))
                     SettingsControls.SettingRow {
                         id: pointerRow
                         required property var modelData
@@ -74,6 +75,7 @@ ColumnLayout {
             }
         }
     }
+    TouchpadClicks { host: sheet; tone: look }
     SettingsControls.Card {
         tone: look
         SettingsControls.SettingRow {
