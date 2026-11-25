@@ -22,6 +22,7 @@ class ToolSearch(dbus.service.Object):
         self.settings = QSettings("Monet", "Utilities")
         self.tokens = {}
         self.menu_search = None
+        self.script_searches = {}
         self.clip_search = None
         self.prefixes = {"tools", words(tr("tools")), "monet tools", words(tr("Monet Utilities"))}
         self.timeout = 0
@@ -30,7 +31,13 @@ class ToolSearch(dbus.service.Object):
     def touch(self):
         if self.timeout:
             GLib.source_remove(self.timeout)
-        self.timeout = GLib.timeout_add_seconds(45, self.loop.quit)
+        self.timeout = GLib.timeout_add_seconds(45, self.idle)
+
+    def idle(self):
+        if any(search.running for search in self.script_searches.values()):
+            return True
+        self.loop.quit()
+        return False
 
     def close_clip_search(self):
         if self.clip_search:
@@ -40,6 +47,8 @@ class ToolSearch(dbus.service.Object):
     @dbus.service.method(INTERFACE, sender_keyword="sender")
     def Teardown(self, sender=None):
         self.tokens.pop(sender, None)
+        if sender in self.script_searches:
+            self.script_searches[sender].leave()
         self.menu_search = None
         self.close_clip_search()
 
@@ -57,9 +66,32 @@ class ToolSearch(dbus.service.Object):
         self.touch()
         return []
 
-    @dbus.service.method(INTERFACE, in_signature="s", out_signature="a(sssida{sv})", sender_keyword="sender")
-    def Match(self, query, sender=None):
+    @dbus.service.method(INTERFACE, in_signature="s", out_signature="a(sssida{sv})", sender_keyword="sender",
+                         async_callbacks=("reply", "error"))
+    def Match(self, query, reply, error, sender=None):
         self.touch()
+        if ":" in query:
+            from command_search import command_query
+            direct = command_query(str(query), self.prefixes)
+            if direct and direct[0] == "script":
+                self.close_clip_search()
+                self.menu_search = None
+                self.settings.sync()
+                if len(query) > 8192 or "scripts" in preferences(self.settings)[1] or not self.desktop_search(sender):
+                    if sender in self.script_searches:
+                        self.script_searches[sender].leave()
+                    reply([])
+                    return
+                if sender not in self.script_searches:
+                    from script_search import ScriptSearch
+                    self.script_searches[sender] = ScriptSearch(self.bus, self.settings)
+                self.script_searches[sender].search(direct[1], reply)
+                return
+        if sender in self.script_searches:
+            self.script_searches[sender].leave()
+        reply(self.tool_matches(query, sender))
+
+    def tool_matches(self, query, sender):
         raw = str(query[:256]).strip()
         query = words(raw)
         scoped = False
@@ -122,6 +154,10 @@ class ToolSearch(dbus.service.Object):
         token, expiry = self.tokens.pop(sender, ("", 0))
         self.settings.sync()
         _, hidden = preferences(self.settings)
+        if not action and str(key).startswith("script/"):
+            if "scripts" not in hidden and self.desktop_search(sender) and sender in self.script_searches:
+                self.script_searches[sender].run(str(key))
+            return
         if not action and str(key).startswith("menu/"):
             if "command-bar" not in hidden and self.desktop_search(sender):
                 from menu_commands import MenuSearch

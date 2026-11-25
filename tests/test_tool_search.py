@@ -184,6 +184,8 @@ def fixture():
         assert len(copied) == 3 and len(history_reads) == reads
         from tests.fixtures.exported_menu import check_menu_search
         check_menu_search(bus, runner, second, call, config)
+        from tests.fixtures.saved_script_search import check_script_search
+        check_script_search(bus, runner, second, call, config, copied)
     finally:
         child.terminate()
         child.wait(timeout=3)

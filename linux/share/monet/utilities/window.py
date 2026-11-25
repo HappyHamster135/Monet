@@ -571,6 +571,9 @@ class Window(QMainWindow):
             self.page(key, self.file_shelf)
         elif key == "notes":
             self.page(key, self.pad_page).edit.setFocus()
+        elif key == "scripts":
+            from script_page import ScriptPage
+            self.page(key, lambda: ScriptPage(self.settings)).refresh()
         elif key == "snippets":
             self.page(key, lambda: Snippets(self.settings))
         elif key == "calendars":

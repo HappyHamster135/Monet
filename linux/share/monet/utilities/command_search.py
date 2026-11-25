@@ -14,7 +14,7 @@ import dbus
 from actions import stored, tr, words
 
 KLIPPER = "org.kde.klipper"
-SCOPES = {"snippet": "snippets", "clip": "clipboard", "emoji": "emoji", "menu": "command-bar"}
+SCOPES = {"snippet": "snippets", "clip": "clipboard", "emoji": "emoji", "menu": "command-bar", "script": "scripts"}
 
 
 def command_query(query, tool_prefixes):
@@ -25,7 +25,8 @@ def command_query(query, tool_prefixes):
     prefix, space, keyword = head.rpartition(" ")
     if space and words(prefix) in tool_prefixes:
         head = keyword
-    aliases = {tr("snippet").casefold(): "snippet", tr("clip").casefold(): "clip", tr("menu").casefold(): "menu"}
+    aliases = {tr("snippet").casefold(): "snippet", tr("clip").casefold(): "clip", tr("menu").casefold(): "menu",
+               tr("script").casefold(): "script"}
     scope = aliases.get(head.casefold(), head.casefold())
     if scope in SCOPES:
         return scope, tail.strip()
@@ -228,29 +229,32 @@ def copy_result(key, hidden, settings, bus):
         if entry and entry[0] == ref:
             value = ref
     if not value:
-        notice = tr("This search result is no longer available.")
-    else:
-        try:
-            clipboard(bus).setClipboardContents(value, timeout=2)
-            return
-        except dbus.DBusException:
-            copier = shutil.which("wl-copy")
-            if copier:
-                try:
-                    subprocess.run([copier, "--type", "text/plain;charset=utf-8"], input=value.encode(),
-                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2, check=True)
-                    return
-                except (OSError, subprocess.SubprocessError):
-                    pass
-        notice = tr("Could not copy this search result.")
-    notify(bus, notice)
+        notify(bus, tr("This search result is no longer available."))
+    elif not copy_text(bus, value):
+        notify(bus, tr("Could not copy this search result."))
 
 
-def notify(bus, notice):
+def copy_text(bus, value):
+    try:
+        clipboard(bus).setClipboardContents(value, timeout=2)
+        return True
+    except dbus.DBusException:
+        copier = shutil.which("wl-copy")
+        if copier:
+            try:
+                subprocess.run([copier, "--type", "text/plain;charset=utf-8"], input=value.encode(),
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2, check=True)
+                return True
+            except (OSError, subprocess.SubprocessError):
+                pass
+    return False
+
+
+def notify(bus, notice, icon="edit-paste", body=""):
     try:
         service = "org.freedesktop.Notifications"
         proxy = bus.get_object(service, "/org/freedesktop/Notifications", introspect=False)
-        proxy.Notify(tr("Command Bar"), 0, "edit-paste", notice, "",
+        proxy.Notify(tr("Command Bar"), 0, icon, notice, body,
                      dbus.Array(signature="s"), dbus.Dictionary(signature="sv"), 3500,
                      dbus_interface=service, signature="susssasa{sv}i", timeout=1)
     except dbus.DBusException:

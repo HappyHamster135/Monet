@@ -18028,3 +18028,147 @@ msgstr "meny"
 #: linux/share/monet/utilities/menu_commands.py:202
 msgid "App menu"
 msgstr "Appmeny"
+
+#: linux/share/monet/utilities/actions.py:45 linux/share/monet/utilities/script_page.py:75 linux/share/monet/utilities/script_search.py:110
+msgid "Saved scripts"
+msgstr "Sparade skript"
+
+#: linux/share/monet/utilities/actions.py:103
+msgid "Type script: and a name to run a saved script"
+msgstr "Skriv skript: och ett namn för att köra ett sparat skript"
+
+#: linux/share/monet/utilities/command_search.py:29 linux/share/monet/utilities/script_page.py:136 linux/share/monet/utilities/script_search.py:203
+msgid "script"
+msgstr "skript"
+
+#: linux/share/monet/utilities/saved_scripts.py:48
+msgid "Give the script a name."
+msgstr "Ge skriptet ett namn."
+
+#: linux/share/monet/utilities/saved_scripts.py:51
+msgid "Choose a local script with permission to run."
+msgstr "Välj ett lokalt skript som du har behörighet att köra."
+
+#: linux/share/monet/utilities/saved_scripts.py:54
+msgid "A saved script already uses that name."
+msgstr "Ett sparat skript har redan det namnet."
+
+#: linux/share/monet/utilities/saved_scripts.py:59
+msgid "Could not save the script settings."
+msgstr "Kunde inte spara skriptinställningarna."
+
+#: linux/share/monet/utilities/script_page.py:17
+msgid "Edit script"
+msgstr "Redigera skript"
+
+#: linux/share/monet/utilities/script_page.py:17
+msgid "Add script"
+msgstr "Lägg till skript"
+
+#: linux/share/monet/utilities/script_page.py:22
+msgid "Script name"
+msgstr "Skriptnamn"
+
+#: linux/share/monet/utilities/script_page.py:25
+msgid "Browse…"
+msgstr "Bläddra…"
+
+#: linux/share/monet/utilities/script_page.py:28
+msgid "Executable file"
+msgstr "Körbar fil"
+
+#: linux/share/monet/utilities/script_page.py:29
+msgid "Require text after the script name"
+msgstr "Kräv text efter skriptets namn"
+
+#: linux/share/monet/utilities/script_page.py:32
+msgid "Run while typing to preview the output"
+msgstr "Kör medan jag skriver för att förhandsvisa resultatet"
+
+#: linux/share/monet/utilities/script_page.py:35
+msgid ""
+"Enable previews for scripts that can run repeatedly. The text after the name is passed as one argument."
+msgstr ""
+"Aktivera förhandsvisning för skript som kan köras flera gånger. Texten efter namnet skickas som ett enda argument."
+
+#: linux/share/monet/utilities/script_page.py:49
+msgid "Choose a script"
+msgstr "Välj ett skript"
+
+#: linux/share/monet/utilities/script_page.py:71
+msgid ""
+"Type script: and a saved name in the Command Bar. Enter runs the script and copies its text output."
+msgstr ""
+"Skriv skript: och ett sparat namn i kommandofältet. Retur kör skriptet och kopierar dess textutdata."
+
+#: linux/share/monet/utilities/script_page.py:86
+msgid "Add script…"
+msgstr "Lägg till skript…"
+
+#: linux/share/monet/utilities/script_page.py:88
+msgid "Edit…"
+msgstr "Redigera…"
+
+#: linux/share/monet/utilities/script_page.py:90
+msgid "Remove from list"
+msgstr "Ta bort från listan"
+
+#: linux/share/monet/utilities/script_page.py:92
+msgid "Open in Command Bar"
+msgstr "Öppna i kommandofältet"
+
+#: linux/share/monet/utilities/script_page.py:118
+msgid "Add a script to make it available in desktop search."
+msgstr "Lägg till ett skript för att använda det i skrivbordssökningen."
+
+#: linux/share/monet/utilities/script_page.py:137
+msgid "Could not open the Command Bar."
+msgstr "Kunde inte öppna kommandofältet."
+
+#: linux/share/monet/utilities/script_search.py:35
+msgid "Could not start the script."
+msgstr "Kunde inte starta skriptet."
+
+#: linux/share/monet/utilities/script_search.py:47
+msgid "The script timed out."
+msgstr "Skriptets tidsgräns överskreds."
+
+#: linux/share/monet/utilities/script_search.py:55
+msgid "The script produced too much output."
+msgstr "Skriptet gav för mycket utdata."
+
+#: linux/share/monet/utilities/script_search.py:58
+msgid "The script exited with code %1."
+msgstr "Skriptet avslutades med kod %1."
+
+#: linux/share/monet/utilities/script_search.py:61
+msgid "The script returned binary output."
+msgstr "Skriptet gav binära utdata."
+
+#: linux/share/monet/utilities/script_search.py:105 linux/share/monet/utilities/script_search.py:215
+msgid "Finished with no output"
+msgstr "Klart utan utdata"
+
+#: linux/share/monet/utilities/script_search.py:107 linux/share/monet/utilities/script_search.py:205
+msgid "Add text after the script name"
+msgstr "Skriv text efter skriptets namn"
+
+#: linux/share/monet/utilities/script_search.py:109
+msgid "Run script and copy its output"
+msgstr "Kör skriptet och kopiera dess utdata"
+
+#: linux/share/monet/utilities/script_search.py:213
+msgid "Script output copied."
+msgstr "Skriptets utdata har kopierats."
+
+#: linux/share/monet/utilities/script_search.py:213
+msgid "Could not copy the script output."
+msgstr "Kunde inte kopiera skriptets utdata."
+
+#: linux/share/monet/utilities/script_search.py:72
+msgid "The script finished. Its output was too large to copy."
+msgstr "Skriptet blev klart. Dess utdata var för stora för att kopiera."
+
+#: linux/share/monet/utilities/script_search.py:240
+msgid "Running script…"
+msgstr "Kör skript…"

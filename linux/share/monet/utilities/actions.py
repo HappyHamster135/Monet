@@ -42,6 +42,7 @@ ACTIONS = {
     "shelf": Action(N_("File shelf"), "Files", "folder-favorites"),
     "downloads": Action(N_("Watch downloads"), "Files", "folder-download"),
     "notes": Action(N_("Scratchpad"), "Writing notes pads Markdown", "accessories-text-editor"),
+    "scripts": Action(N_("Saved scripts"), "Desktop command bar executable script run preview output", "text-x-script"),
     "snippets": Action(N_("Text snippets"), "Writing", "edit-paste"),
     "clipboard": Action(N_("Clipboard history"), "Writing", "edit-paste", ("qdbus-qt6", "org.kde.klipper", "/klipper", "org.kde.klipper.klipper.showKlipperPopupMenu")),
     "extra-clicks": Action(N_("Extra click filter"), "Mouse buttons double repeat bounce primary secondary middle", "input-mouse"),
@@ -99,6 +100,7 @@ ACTIONS = {
 }
 SEARCH_HINTS = {
     "command-bar": N_("Search apps and files, or type menu: for commands in the active app"),
+    "scripts": N_("Type script: and a name to run a saved script"),
     "snippets": N_("Type snippet: and a name to copy a saved snippet"),
     "clipboard": N_("Type clip: and a few words to find copied text"),
     "emoji": N_("Type emoji: and a name to copy an emoji"),
