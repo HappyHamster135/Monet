@@ -16698,3 +16698,65 @@ msgstr ""
 #: linux/share/monet/utilities/pages.py:284
 msgid "New snippet"
 msgstr "Nytt textutdrag"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:401 linux/share/monet/utilities/agent_page.py:188
+msgid "Checking Claude Code limits…"
+msgstr "Kontrollerar gränserna för Claude Code…"
+
+#: linux/share/monet/utilities/agent_page.py:27
+msgid "Provider"
+msgstr "Leverantör"
+
+#: linux/share/monet/utilities/agent_page.py:90
+msgid "Show Claude Code account limits"
+msgstr "Visa kontogränser för Claude Code"
+
+#: linux/share/monet/utilities/agent_page.py:91
+msgid ""
+"Uses your signed-in Claude Code CLI to read subscription limits when you open this page or notch Activity."
+msgstr ""
+"Läser prenumerationsgränser via din inloggning i Claude Code när du öppnar den här sidan eller Aktivitet i skärmöverkantens panel."
+
+#: linux/share/monet/utilities/agent_page.py:93
+msgid "Choose Claude Code CLI…"
+msgstr "Välj kommandoradsprogram för Claude Code…"
+
+#: linux/share/monet/utilities/agent_page.py:116
+msgid "Choose the Claude Code executable"
+msgstr "Välj den körbara filen för Claude Code"
+
+#: linux/share/monet/utilities/agent_page.py:198 linux/share/monet/utilities/codex_limits.py:212
+msgid "Could not check Claude Code limits. Try refreshing."
+msgstr ""
+"Kunde inte kontrollera gränserna för Claude Code. Försök att uppdatera."
+
+#: linux/share/monet/utilities/codex_limits.py:207
+msgid "Install Claude Code or choose its executable."
+msgstr "Installera Claude Code eller välj dess körbara fil."
+
+#: linux/share/monet/utilities/codex_limits.py:208
+msgid ""
+"Claude Code did not report subscription limits for this account. Check /usage in Claude Code."
+msgstr ""
+"Claude Code rapporterade inga prenumerationsgränser för det här kontot. Se /usage i Claude Code."
+
+#: linux/share/monet/utilities/codex_limits.py:209
+msgid "Sign in to Claude Code to see subscription limits."
+msgstr "Logga in i Claude Code för att se prenumerationsgränserna."
+
+#: linux/share/monet/utilities/codex_limits.py:210
+msgid "Update Claude Code to a version that supports usage requests."
+msgstr ""
+"Uppdatera Claude Code till en version som kan visa användningsuppgifter."
+
+#: linux/share/monet/utilities/codex_limits.py:211
+msgid "Claude Code did not report a current limit window."
+msgstr "Claude Code rapporterade ingen aktuell gränsperiod."
+
+#: linux/share/monet/utilities/codex_limits.py:214
+msgid "Claude Code limits unavailable"
+msgstr "Gränserna för Claude Code är inte tillgängliga"
+
+#: linux/share/monet/utilities/codex_limits.py:238
+msgid "Read from Claude Code at %1"
+msgstr "Avläst från Claude Code %1"

@@ -148,10 +148,16 @@ class Window(QMainWindow):
             if len(favorites) > 8:
                 QMessageBox.information(dialog, "Favorites", "Choose up to eight favorites.")
                 return
+            agent_visibility_changed = ("agents" in self.hidden) != ("agents" in hidden)
             self.hidden, self.favorites = hidden, favorites
             self.settings.setValue("favorites", json.dumps(favorites))
             self.settings.setValue("hidden", json.dumps(hidden))
             self.settings.sync()
+            if agent_visibility_changed:
+                if "agents" in self.pages:
+                    self.pages["agents"].configure_provider()
+                signal = QDBusMessage.createSignal("/Utilities", "org.monet.Utilities", "AgentVisibilityChanged")
+                QDBusConnection.sessionBus().send(signal)
             dialog.accept()
         buttons.accepted.connect(apply)
         buttons.rejected.connect(dialog.reject)
@@ -602,6 +608,13 @@ class Window(QMainWindow):
             shelf = self.page(key, lambda: Shelf(self.settings))
             urls = [QUrl(arg) for arg in args[1:101]]
             shelf.files.add_paths([u.toLocalFile() for u in urls if u.isLocalFile()])
+        elif key == "agents" and key in self.hidden:
+            self.home()
+        elif key == "agents" and len(args) == 2 and args[1] in ("codex", "claude"):
+            from agent_page import AgentUsage
+            page = self.ensure_page(key, lambda: AgentUsage(self))
+            page.open_provider(args[1])
+            self.page(key, lambda: page)
         elif key in ACTIONS:
             self.run_tool(key)
 

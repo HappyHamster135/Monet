@@ -73,30 +73,28 @@ PlasmoidItem {
     property string message: ""
     property string agentSummary: ""
     property string codexKey: ""
-    onCodexKeyChanged: {
-        codexLimits = ({})
-        if (codexKey && activityOpen && !viewingDownloads)
-            runner.connectSource(helper + " notch-codex-limits")
-    }
+    property string claudeKey: ""
+    property bool agentsVisible: false
     DBus.SignalWatcher {
         enabled: root.activityOpen
         busType: DBus.BusType.Session; service: "org.monet.Utilities"
         path: "/Utilities"; iface: "org.monet.Utilities"
-        function dbusCodexLimitsChanged(key) { root.codexKey = key }
-    }
-    property var codexLimits: ({})
-    Timer {
-        interval: 60000; repeat: true
-        running: root.activityOpen && !root.viewingDownloads && !!root.codexKey
-        onTriggered: runner.connectSource(root.helper + " notch-codex-limits")
+        function dbusCodexLimitsChanged(key) { root.codexKey = key; if (root.checkingDownloads) root.refreshPending = true }
+        function dbusClaudeLimitsChanged(key) { root.claudeKey = key; if (root.checkingDownloads) root.refreshPending = true }
+        function dbusAgentVisibilityChanged() {
+            root.agentSummary = ""; root.agentsVisible = false
+            root.refreshActivity()
+        }
     }
     property bool viewingDownloads: false
     property bool checkingDownloads: false
+    property bool refreshPending: false
     property string downloadPath: ""
     property url downloadFolder: ""
     property bool downloadAvailable: false
     readonly property bool activityOpen: expanded && tab === 1 && !(viewingWatch && watch.registered)
     function refreshActivity() {
+        if (checkingDownloads) { refreshPending = true; return }
         checkingDownloads = true
         runner.connectSource(helper + " notch-activity")
     }
@@ -104,7 +102,7 @@ PlasmoidItem {
         if (activityOpen) refreshActivity()
         else {
             downloadAvailable = false; downloadPath = ""; downloadFolder = ""
-            codexKey = ""; codexLimits = ({})
+            codexKey = ""; claudeKey = ""; agentsVisible = false
         }
     }
     Loader {
@@ -197,23 +195,22 @@ PlasmoidItem {
             }
             if (source.endsWith(" notch-activity")) {
                 root.checkingDownloads = false
+                if (root.refreshPending) {
+                    root.refreshPending = false
+                    if (root.activityOpen) Qt.callLater(root.refreshActivity)
+                    return
+                }
                 if (!root.activityOpen) return
                 try {
                     const state = JSON.parse(data.stdout)
                     root.agentSummary = state.agent
+                    root.agentsVisible = state.agentsVisible !== false
                     root.codexKey = state.codexKey || ""
+                    root.claudeKey = state.claudeKey || ""
                     root.downloadPath = state.path
                     root.downloadFolder = state.folder
                     root.downloadAvailable = state.available && state.folder.startsWith("file:///")
                 } catch (_) { root.downloadAvailable = false }
-            }
-            if (source.endsWith(" notch-codex-limits") && root.activityOpen && root.codexKey) {
-                try {
-                    const value = JSON.parse(data.stdout)
-                    if (value.state === "off") { root.codexKey = ""; root.refreshActivity() }
-                    else if (value.generation === root.codexKey) root.codexLimits = value
-                    else runner.connectSource(root.helper + " notch-codex-limits")
-                } catch (_) { root.codexLimits = ({}) }
             }
             if (source.startsWith(root.helper + " focus ") && !source.includes(" focus off ")) {
                 try { if (JSON.parse(data.stdout).ok) return } catch (e) {}
@@ -393,15 +390,21 @@ PlasmoidItem {
                 Layout.fillWidth: true; visible: !notices.inDetail && text.length > 0; textFormat: Text.PlainText
                 elide: Text.ElideRight; text: root.agentSummary; Accessible.name: root.agentSummary
             }
-            C.ToolButton {
-                Layout.fillWidth: true
-                visible: !notices.inDetail && !!root.codexKey
-                text: root.codexLimits.summary || i18n("Checking Codex limits…")
-                Accessible.description: root.codexLimits.details || ""
-                C.ToolTip.visible: hovered && !!root.codexLimits.details
-                C.ToolTip.text: root.codexLimits.details || ""
-                contentItem: C.Label { text: parent.text; elide: Text.ElideRight; textFormat: Text.PlainText }
-                onClicked: root.openTool("agents")
+            Repeater {
+                model: ["codex", "claude"]
+                delegate: AccountLimitButton {
+                    required property string modelData
+                    Layout.fillWidth: true
+                    active: root.agentsVisible && root.activityOpen && !root.viewingDownloads && !notices.inDetail
+                    generation: modelData === "claude" ? root.claudeKey : root.codexKey
+                    command: root.helper + " notch-" + modelData + "-limits"
+                    pendingLabel: modelData === "claude" ? i18n("Checking Claude Code limits…") : i18n("Checking Codex limits…")
+                    onPreferencesChanged: root.refreshActivity()
+                    onClicked: {
+                        runner.connectSource(root.helper + " utilities agents " + modelData)
+                        root.expanded = false
+                    }
+                }
             }
             C.Label {
                 readonly property string latestName: downloadFeed.item?.latestFinished ?? ""
@@ -412,7 +415,7 @@ PlasmoidItem {
             RowLayout {
                 visible: !notices.inDetail
                 C.Button { text: i18n("Downloads"); onClicked: root.viewingDownloads = true }
-                C.Button { visible: !root.codexKey; text: i18n("Agent usage"); onClicked: root.openTool("agents") }
+                C.Button { visible: root.agentsVisible && !root.codexKey && !root.claudeKey; text: i18n("Agent usage"); onClicked: root.openTool("agents") }
                 C.Button {
                     text: i18n("Watch")
                     onClicked: {

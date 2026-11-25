@@ -16388,3 +16388,61 @@ msgstr ""
 #: linux/share/monet/utilities/pages.py:284
 msgid "New snippet"
 msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:401 linux/share/monet/utilities/agent_page.py:188
+msgid "Checking Claude Code limits…"
+msgstr ""
+
+#: linux/share/monet/utilities/agent_page.py:27
+msgid "Provider"
+msgstr ""
+
+#: linux/share/monet/utilities/agent_page.py:90
+msgid "Show Claude Code account limits"
+msgstr ""
+
+#: linux/share/monet/utilities/agent_page.py:91
+msgid ""
+"Uses your signed-in Claude Code CLI to read subscription limits when you open this page or notch Activity."
+msgstr ""
+
+#: linux/share/monet/utilities/agent_page.py:93
+msgid "Choose Claude Code CLI…"
+msgstr ""
+
+#: linux/share/monet/utilities/agent_page.py:116
+msgid "Choose the Claude Code executable"
+msgstr ""
+
+#: linux/share/monet/utilities/agent_page.py:198 linux/share/monet/utilities/codex_limits.py:212
+msgid "Could not check Claude Code limits. Try refreshing."
+msgstr ""
+
+#: linux/share/monet/utilities/codex_limits.py:207
+msgid "Install Claude Code or choose its executable."
+msgstr ""
+
+#: linux/share/monet/utilities/codex_limits.py:208
+msgid ""
+"Claude Code did not report subscription limits for this account. Check /usage in Claude Code."
+msgstr ""
+
+#: linux/share/monet/utilities/codex_limits.py:209
+msgid "Sign in to Claude Code to see subscription limits."
+msgstr ""
+
+#: linux/share/monet/utilities/codex_limits.py:210
+msgid "Update Claude Code to a version that supports usage requests."
+msgstr ""
+
+#: linux/share/monet/utilities/codex_limits.py:211
+msgid "Claude Code did not report a current limit window."
+msgstr ""
+
+#: linux/share/monet/utilities/codex_limits.py:214
+msgid "Claude Code limits unavailable"
+msgstr ""
+
+#: linux/share/monet/utilities/codex_limits.py:238
+msgid "Read from Claude Code at %1"
+msgstr ""

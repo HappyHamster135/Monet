@@ -1,4 +1,4 @@
-"""Read account quota windows from the signed-in Codex CLI, on demand."""
+"""Read and cache account limits from the selected provider’s own CLI on demand."""
 import asyncio
 import json
 import os
@@ -11,39 +11,50 @@ import time
 from uuid import uuid4
 
 from PySide6.QtCore import QDateTime, QLocale, QLockFile, QSettings, QStandardPaths
-from actions import tr
+from actions import stored, tr
+import claude_limits
 
 REPLY_TIMEOUT = 10
 
 
-def generation(settings):
-    value = settings.value("codexLimits", "")
+def saved_generation(settings, provider):
+    value = settings.value(provider + "Limits", "")
     return value if isinstance(value, str) and re.fullmatch(r"[a-f0-9]{32}", value) else ""
 
 
-def cache_file(key):
+def generation(settings, provider="codex"):
+    return "" if "agents" in stored(settings, "hidden", []) else saved_generation(settings, provider)
+
+
+def cache_file(key, provider="codex"):
     # RuntimeLocation is private to the login and the OS clears it at logout.
-    return Path(QStandardPaths.writableLocation(QStandardPaths.RuntimeLocation)) / ("monet-codex-limits-" + key + ".json")
+    return Path(QStandardPaths.writableLocation(QStandardPaths.RuntimeLocation)) / ("monet-" + provider + "-limits-" + key + ".json")
 
 
-def enable(settings, on):
-    old = generation(settings)
+def enable(settings, on, provider="codex"):
+    old = saved_generation(settings, provider)
     if on:
-        settings.setValue("codexLimits", uuid4().hex)
+        settings.setValue(provider + "Limits", uuid4().hex)
     else:
-        settings.remove("codexLimits")
+        settings.remove(provider + "Limits")
     settings.sync()
     if old:
-        cache_file(old).unlink(missing_ok=True)
+        cache_file(old, provider).unlink(missing_ok=True)
 
 
-def executable(settings):
-    chosen = settings.value("codexExecutable", "")
+def executable(settings, provider="codex"):
+    chosen = settings.value(provider + "Executable", "")
     if chosen:
         return chosen if isinstance(chosen, str) and os.path.isabs(chosen) and os.path.isfile(chosen) and os.access(chosen, os.X_OK) else None
-    cli = shutil.which("codex")
+    search = os.pathsep.join(p for p in os.get_exec_path() if os.path.isabs(p))
+    cli = shutil.which(provider, path=search)
     if cli:
         return cli
+    if provider == "claude":
+        for path in (Path.home() / ".local/bin/claude", Path.home() / ".claude/local/claude"):
+            if path.is_file() and os.access(path, os.X_OK):
+                return str(path)
+        return None
     # A relocatable ChatGPT desktop install also ships a CLI. Resolve the
     # registered application's binary without running its launcher.
     try:
@@ -140,19 +151,19 @@ async def fetch(cli):
                 await asyncio.wait_for(proc.communicate(), timeout=2)
 
 
-def snapshot(settings, force=False):
+def snapshot(settings, force=False, provider="codex"):
     settings.sync()
-    key = generation(settings)
+    key = generation(settings, provider)
     if not key:
         return {"state": "off"}
-    cache = cache_file(key)
+    cache = cache_file(key, provider)
     lock = QLockFile(str(cache) + ".lock")
     started = time.time()
-    if not lock.tryLock(12000):
+    if not lock.tryLock(18000 if provider == "claude" else 12000):
         return {"state": "unavailable", "generation": key}
     try:
         settings.sync()
-        if generation(settings) != key:
+        if generation(settings, provider) != key:
             return {"state": "off"}
         try:
             prior = json.loads(cache.read_bytes())
@@ -161,15 +172,15 @@ def snapshot(settings, force=False):
                 return prior
         except (OSError, KeyError, ValueError, TypeError):
             pass
-        cli = executable(settings)
+        cli = executable(settings, provider)
         state, rows = "missing", []
         if cli:
             try:
-                state, rows = asyncio.run(fetch(cli))
+                state, rows = asyncio.run(claude_limits.fetch(cli) if provider == "claude" else fetch(cli))
             except (OSError, ValueError, TimeoutError, RecursionError):
                 state, rows = "unavailable", []
         now = time.time()
-        expires = min([now + (300 if state == "ready" else 30),
+        expires = min([now + (300 if state == "ready" or provider == "claude" else 30),
                        *(row["reset"] for row in rows if row["reset"] > now)])
         data = dict(state=state, generation=key, rows=rows, checked=now, expires=expires)
         # All readers hold this lock. Disable/reenable gets a fresh generation
@@ -181,7 +192,7 @@ def snapshot(settings, force=False):
         except OSError:
             pass  # A full runtime directory should not hide a successful reading.
         settings.sync()
-        if generation(settings) != key:
+        if generation(settings, provider) != key:
             cache.unlink(missing_ok=True)
             return {"state": "off"}
         return data
@@ -189,14 +200,21 @@ def snapshot(settings, force=False):
         lock.unlock()
 
 
-def display(data):
+def display(data, provider="codex"):
     state = data["state"]
     messages = {"missing": tr("Install the Codex CLI or choose its executable."),
                 "sign-in": tr("Sign in to the Codex CLI with a ChatGPT account to see limits."),
                 "empty": tr("Codex did not report any account limit windows."),
                 "unavailable": tr("Could not check Codex limits. Try refreshing.")}
+    if provider == "claude":
+        messages = {"missing": tr("Install Claude Code or choose its executable."),
+                    "no-plan": tr("Claude Code did not report subscription limits for this account. Check /usage in Claude Code."),
+                    "sign-in": tr("Sign in to Claude Code to see subscription limits."),
+                    "outdated": tr("Update Claude Code to a version that supports usage requests."),
+                    "empty": tr("Claude Code did not report a current limit window."),
+                    "unavailable": tr("Could not check Claude Code limits. Try refreshing.")}
     if state != "ready":
-        return {"state": state, "generation": data.get("generation", ""), "summary": "" if state == "off" else tr("Codex limits unavailable"),
+        return {"state": state, "generation": data.get("generation", ""), "summary": "" if state == "off" else (tr("Claude Code limits unavailable") if provider == "claude" else tr("Codex limits unavailable")),
                 "details": messages.get(state, ""), "rows": []}
     locale = QLocale()
     def date_time(stamp):
@@ -212,14 +230,21 @@ def display(data):
             name = tr("%1min window").replace("%1", str(mins))
         else:
             name = tr("Primary window") if item["window"] == "primary" else tr("Secondary window")
+        if item["window"] == "seven_day_oauth_apps":
+            name = tr("Connected apps") + " · " + name
+        if item.get("scope"):
+            name = item["scope"] + " · " + name
         left = tr("%1% left").replace("%1", locale.toString(float(item["left"]), "f", 0 if item["left"] % 1 == 0 else 1))
         reset = tr("Resets %1").replace("%1", date_time(item["reset"])) if item["reset"] else ""
         rows.append(dict(name=name, remaining=left, reset=reset, value=item["left"]))
-    checked = tr("Checked %1").replace("%1", date_time(data["checked"]))
-    return {"state": state, "generation": data["generation"], "rows": rows, "summary": "Codex · " + " · ".join(r["name"] + " " + r["remaining"] for r in rows),
+    stamp = tr("Read from Claude Code at %1") if provider == "claude" else tr("Checked %1")
+    checked = stamp.replace("%1", date_time(data["checked"]))
+    label = "Claude Code" if provider == "claude" else "Codex"
+    return {"state": state, "generation": data["generation"], "rows": rows, "summary": label + " · " + " · ".join(r["name"] + " " + r["remaining"] for r in rows),
             "details": "\n".join(" · ".join(filter(None, (r["name"], r["remaining"], r["reset"]))) for r in rows) + "\n" + checked,
             "checked": checked}
 
 
 if __name__ == "__main__":
-    print(json.dumps(display(snapshot(QSettings("Monet", "Utilities"), "--refresh" in sys.argv[1:]))))
+    provider = "claude" if "--claude" in sys.argv[1:] else "codex"
+    print(json.dumps(display(snapshot(QSettings("Monet", "Utilities"), "--refresh" in sys.argv[1:], provider), provider)))

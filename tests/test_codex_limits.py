@@ -93,7 +93,7 @@ send({"id": 2, **json.loads((root / "reply").read_text())})
         self.reply({"result": {"rateLimits": self.bucket}})
         code = ("import json, sys; from pathlib import Path; from PySide6.QtCore import QSettings; "
                 "sys.path.insert(0,sys.argv[1]); import codex_limits as m; "
-                "m.cache_file=lambda _:Path(sys.argv[3]); "
+                "m.cache_file=lambda *_:Path(sys.argv[3]); "
                 "print(json.dumps(m.snapshot(QSettings(sys.argv[2],QSettings.IniFormat))))")
         args = [sys.executable, "-B", "-c", code, str(MODULE), self.settings.fileName(), str(self.cache)]
         procs = [subprocess.Popen(args, stdout=subprocess.PIPE, text=True) for _ in range(2)]
