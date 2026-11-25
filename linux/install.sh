@@ -194,6 +194,11 @@ put 644 "$SRC/share/applications/monet-games.desktop" "$DATADIR/applications/mon
 put 644 "$SRC/share/applications/monet-utilities.desktop" "$DATADIR/applications/monet-utilities.desktop"
 put 644 "$SRC/share/applications/org.monet.QuickPanel.desktop" "$DATADIR/applications/org.monet.QuickPanel.desktop"
 put 644 "$SRC/share/applications/org.monet.FavoritesWheel.desktop" "$DATADIR/applications/org.monet.FavoritesWheel.desktop"
+wheel_defaults=/etc/xdg
+if [ "$IMAGE" = 1 ] && [ -d /usr/share/kde-settings/kde-profile/default/xdg ]; then
+    wheel_defaults=/usr/share/kde-settings/kde-profile/default/xdg
+fi
+bash "$SRC/share/monet/wheel-placement/configure.sh" install "$wheel_defaults/kwinrulesrc"
 put 644 "$SRC/share/applications/monet-apps.desktop" "$DATADIR/applications/monet-apps.desktop"
 put 644 "$SRC/share/applications/org.kde.plasma-systemmonitor.desktop" "$DATADIR/applications/org.kde.plasma-systemmonitor.desktop"
 # The Store, Monet's own: Flathub's apps, and the Windows apps on the PC.

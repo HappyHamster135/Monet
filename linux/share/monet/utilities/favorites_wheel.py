@@ -167,7 +167,14 @@ class FavoritesWheel(QDialog):
             area = screen.availableGeometry()
             self.move(max(area.left(), min(pos.x()-size//2, area.right()-size+1)),
                       max(area.top(), min(pos.y()-size//2, area.bottom()-size+1)))
-        self.show()
+        # Qt Wayland takes the desktop ID when the surface maps. Use the wheel's
+        # own launcher so KWin can place it under the pointer on its first frame.
+        desktop_id = QApplication.desktopFileName()
+        QApplication.setDesktopFileName("org.monet.FavoritesWheel")
+        try:
+            self.show()
+        finally:
+            QApplication.setDesktopFileName(desktop_id)
         self.raise_()
         self.activateWindow()
         if self.buttons:

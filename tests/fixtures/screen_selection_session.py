@@ -8,7 +8,7 @@ import sys
 from tools.test import private_session, stop
 
 
-def run_selection_test(fixture, installed, display):
+def run_selection_test(fixture, installed, display, *, kwin_rules=None):
     with private_session() as env:
         home = Path(env["HOME"])
         binary = home / "kwin_wayland"
@@ -17,6 +17,10 @@ def run_selection_test(fixture, installed, display):
         env.update(WAYLAND_DISPLAY=display, QT_QPA_PLATFORM="wayland", XDG_SESSION_TYPE="wayland",
                    XDG_CURRENT_DESKTOP="KDE", XDG_CONFIG_DIRS=str(home / "config-dirs"),
                    PLASMA_SESSION_GUI_TEST="1", LIBGL_ALWAYS_SOFTWARE="1", LP_NUM_THREADS="1")
+        if kwin_rules is not None:
+            config = Path(env["XDG_CONFIG_DIRS"])
+            config.mkdir(exist_ok=True)
+            shutil.copyfile(kwin_rules, config / "kwinrulesrc")
         session = home / "session.sh"
         args = [sys.executable, str(fixture.resolve()), "--worker"]
         if installed:

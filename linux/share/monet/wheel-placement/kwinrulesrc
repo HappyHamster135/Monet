@@ -1,0 +1,12 @@
+[org.monet.FavoritesWheel]
+Description=Monet favorites wheel
+wmclass=org.monet.FavoritesWheel
+wmclassmatch=1
+placement=7
+placementrule=2
+skiptaskbar=true
+skiptaskbarrule=2
+skippager=true
+skippagerrule=2
+skipswitcher=true
+skipswitcherrule=2

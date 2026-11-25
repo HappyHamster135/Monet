@@ -174,6 +174,7 @@ done
 for icon in monet monet-windows monet-quick-symbolic; do
     rm -f "$PREFIX/share/icons/hicolor/scalable/apps/$icon.svg"
 done
+bash "$(dirname "${BASH_SOURCE[0]}")/share/monet/wheel-placement/configure.sh" remove /etc/xdg/kwinrulesrc
 rm -f "$PREFIX/libexec/monet-utilities" "$PREFIX/share/applications/monet-utilities.desktop" "$PREFIX/share/applications/org.monet.QuickPanel.desktop" "$PREFIX/share/applications/org.monet.FavoritesWheel.desktop" "$PREFIX/share/applications/monet-windows.desktop" "$PREFIX/share/applications/monet-settings.desktop" "$PREFIX/share/applications/monet-passwords.desktop" \
     "$PREFIX/share/applications/monet-archive.desktop" \
     "$PREFIX/share/kio/servicemenus/monet-local-app.desktop" \
