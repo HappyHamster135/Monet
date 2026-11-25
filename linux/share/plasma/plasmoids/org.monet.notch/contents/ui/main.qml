@@ -407,6 +407,43 @@ PlasmoidItem {
 
     fullRepresentation: ColumnLayout {
         id: pages
+        readonly property bool canNavigate: root.expanded && !root.searching && !root.draggingShelf
+        readonly property bool canGoBack: root.displayShelf ? root.visibleTabs.length > 0
+            : root.showingWatch ? root.visibleTabs.length > 0 || root.offerShelf
+            : (root.tab === 0 && root.musicView !== 0) || (root.tab === 1 && root.viewingDownloads)
+              || (root.tab === 3 && root.viewingAgenda) || !!body.item?.notificationOpen
+
+        function back() {
+            if (root.displayShelf) {
+                root.viewingShelf = false
+                shelfButton.forceActiveFocus(Qt.BacktabFocusReason)
+            } else if (root.showingWatch) {
+                root.viewingWatch = false
+                strip.currentItem?.forceActiveFocus(Qt.BacktabFocusReason)
+            } else if (body.item?.notificationOpen) {
+                body.item.backFromNotification()
+            } else {
+                if (root.tab === 0) root.musicView = 0
+                else if (root.tab === 1) root.viewingDownloads = false
+                else if (root.tab === 3) root.viewingAgenda = false
+                strip.currentItem?.forceActiveFocus(Qt.BacktabFocusReason)
+            }
+        }
+        Shortcut {
+            sequences: ["Escape", "Alt+Left"]
+            enabled: pages.canNavigate && pages.canGoBack
+            onActivated: pages.back()
+        }
+        Shortcut {
+            sequence: "Ctrl+Tab"
+            enabled: pages.canNavigate && navigation.visible && strip.count > 1
+            onActivated: strip.step(1)
+        }
+        Shortcut {
+            sequence: "Ctrl+Shift+Tab"
+            enabled: pages.canNavigate && navigation.visible && strip.count > 1
+            onActivated: strip.step(-1)
+        }
         Shortcut {
             sequence: "Ctrl+K"
             enabled: root.expanded && root.offerSearch && !root.searching && !root.draggingShelf
@@ -514,6 +551,7 @@ PlasmoidItem {
             }
         }
         Loader {
+            id: body
             Layout.fillWidth: true; Layout.fillHeight: true
             readonly property bool hasPage: root.visibleTabs.length > 0 || root.displayShelf || root.showingWatch
             visible: hasPage && !root.searching
@@ -529,7 +567,7 @@ PlasmoidItem {
         RowLayout {
             visible: !root.searching && (!root.viewingShelf || !root.visibleTabs.length)
             Layout.fillWidth: true
-            C.Button { visible: root.offerShelf && root.visibleTabs.length > 0; text: i18n("File shelf"); icon.name: "folder-open"; onClicked: root.showShelf() }
+            C.Button { id: shelfButton; visible: root.offerShelf && root.visibleTabs.length > 0; text: i18n("File shelf"); icon.name: "folder-open"; onClicked: root.showShelf() }
             Item { Layout.fillWidth: true }
             C.ToolButton {
                 id: searchButton
@@ -659,6 +697,11 @@ PlasmoidItem {
     Component {
         id: activityPage
         ColumnLayout {
+            readonly property bool notificationOpen: notices.inDetail || notices.toRemove.length > 0
+            function backFromNotification() {
+                if (notices.toRemove.length) notices.cancelClear()
+                else notices.back()
+            }
 
             Repeater {
                 model: notices.inDetail ? [] : power.batteries

@@ -27,6 +27,12 @@ C.TabBar {
         setCurrentIndex(order.indexOf(page))
         syncing = false
     }
+    function step(direction) {
+        if (count < 2) return
+        const index = (order.indexOf(page) + direction + count) % count
+        chosen(order[index])
+        currentItem?.forceActiveFocus(Qt.TabFocusReason)
+    }
     Component.onCompleted: { ready = true; syncSelection() }
     onTabsChanged: syncSelection()
     onPageChanged: syncSelection()

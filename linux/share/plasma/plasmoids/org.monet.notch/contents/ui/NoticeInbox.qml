@@ -67,6 +67,10 @@ ColumnLayout {
         refreshDetail()
         if (inDetail) backButton.forceActiveFocus(Qt.OtherFocusReason)
     }
+    function cancelClear() {
+        toRemove = []
+        clearButton.forceActiveFocus(Qt.BacktabFocusReason)
+    }
     function back() {
         const previous = selection
         selection = null
@@ -147,7 +151,7 @@ ColumnLayout {
                 pending.push({id: history.data(entry, NM.Notifications.IdRole), stamp: deliveryTime(entry)})
         }
         toRemove = pending
-        if (pending.length) cancelClear.forceActiveFocus(Qt.OtherFocusReason)
+        if (pending.length) cancelButton.forceActiveFocus(Qt.OtherFocusReason)
     }
     function clearListed() {
         for (const item of toRemove) {
@@ -171,6 +175,7 @@ ColumnLayout {
             textFormat: Text.PlainText; elide: Text.ElideRight
         }
         C.ToolButton {
+            id: clearButton
             visible: !inbox.toRemove.length && (inbox.inDetail ? !!inbox.detail.closable : inbox.canClear)
             text: inbox.inDetail ? i18n("Dismiss notification") : i18n("Clear notifications…")
             display: C.AbstractButton.IconOnly
@@ -183,9 +188,9 @@ ColumnLayout {
         Layout.fillWidth: true; Layout.fillHeight: true
         visible: inbox.toRemove.length > 0
         C.Label { Layout.fillWidth: true; text: i18n("Remove these notifications from desktop history?"); wrapMode: Text.Wrap }
-        Keys.onEscapePressed: inbox.toRemove = []
+        Keys.onEscapePressed: inbox.cancelClear()
         RowLayout {
-            C.Button { id: cancelClear; text: i18n("Cancel"); onClicked: inbox.toRemove = [] }
+            C.Button { id: cancelButton; text: i18n("Cancel"); onClicked: inbox.cancelClear() }
             C.Button { text: i18n("Clear"); onClicked: inbox.clearListed() }
         }
     }
