@@ -98,7 +98,6 @@ int main(int argc, char **argv)
         dock->setVisible(true);
         window.show();
         for (int i = 0; i < 100 && tasks(dock).size() < 3; ++i) QTest::qWait(20);
-        QTest::qWait(350); // Initial mirrored/centered layout must settle before pointer targeting.
         // The applet can load the distribution's pins before the fixture writes
         // its KConfig group. Update the live map just as its configuration UI does.
         applet->configuration()->setProperty("launchers", launchers);
@@ -110,6 +109,7 @@ int main(int argc, char **argv)
             current.sort();
             return current == expectedPins;
         }, 2000), "Native applet did not load the fixture launchers");
+        QTest::qWait(350); // Let the restored pin layout settle before targeting either direction.
         auto buttons = tasks(dock);
         require(buttons.first()->isVisible(), "Native launcher delegates are not visible");
         require(dock->property("monetMotionEnabled").toBool(), "Dock motion unexpectedly disabled");

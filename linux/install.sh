@@ -763,6 +763,12 @@ TMP
         sed "s|@PANEL_EDITOR@|$editor_page|g" "$SRC/share/monet/panel/PanelConfiguration.qml" > "$wrapper.tmp"
         chmod 644 "$wrapper.tmp"
         mv -f "$wrapper.tmp" "$wrapper"
+        # A running shell can enter the new loader at its own URL once, even
+        # if Qt still has a previous PanelConfiguration.qml mapped in memory.
+        install -D -m 644 "$wrapper" "$configuration/monet-editor-entry/PanelConfiguration.qml"
+        printf '[Editor]\nPage=%s\n' "$editor_page" > "$configuration/MonetPanelEditor.ini.tmp"
+        chmod 644 "$configuration/MonetPanelEditor.ini.tmp"
+        mv -f "$configuration/MonetPanelEditor.ini.tmp" "$configuration/MonetPanelEditor.ini"
     fi
     # The password prompt: KDE's agent built with Monet's page (image/password),
     # started instead of KDE's build. Without it, KDE's prompt stays.

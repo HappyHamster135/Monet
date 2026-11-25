@@ -28,8 +28,8 @@ def sources(share):
              if path.is_file() and not path.is_symlink()}
     panel = share / PANEL_CONFIG
     if (panel / 'MonetPanelConfiguration.qml').is_file():
-        files.update(p for p in (panel / 'MonetPanelConfiguration.qml', panel / 'PanelConfiguration.qml')
-                     if p.is_file())
+        files.update(panel / name for name in ('MonetPanelConfiguration.qml', 'PanelConfiguration.qml',
+                                                'monet-editor-entry/PanelConfiguration.qml') if (panel / name).is_file())
     # Only JavaScript imported by QML belongs to the Qt cache. Monet also ships
     # Node/browser code and dependencies, whose JavaScript uses other runtimes.
     pending = list(files)
