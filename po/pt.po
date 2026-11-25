@@ -18448,3 +18448,145 @@ msgstr ""
 msgid ""
 "Remove a link here to take it out of your collection. Your pictures stay on disk."
 msgstr ""
+
+#: linux/share/monet/utilities/monitor_alerts.py:20
+msgid "High CPU usage"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_alerts.py:20
+msgid "High CPU temperature"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_alerts.py:21
+msgid "High battery temperature"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_alerts.py:21
+msgid "High memory pressure"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_alerts.py:22
+msgid "Low disk space"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_alerts.py:22
+msgid "Low battery charge"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_alerts.py:49
+msgid "CPU usage has stayed near {percent}%."
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_alerts.py:51
+msgid "{sensor} has stayed near {degrees} °C."
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_alerts.py:53
+msgid "Tasks are stalling while the system waits for memory."
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_alerts.py:55
+msgid "{disk} has {percent}% free."
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_alerts.py:56
+msgid "{battery} has {percent}% charge and is discharging."
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_alerts.py:143
+msgid "Could not update the system alert service."
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_page.py:33
+msgid ""
+"Choose which desktop notifications to receive. CPU, temperature and memory alerts wait for 12 seconds of sustained activity."
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_page.py:41
+msgid "Alert"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_page.py:42
+msgid "Limit"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_page.py:43
+msgid "Current reading"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_page.py:50
+msgid "All runnable tasks are waiting for memory at least 10% of the time."
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_page.py:57
+msgid "{alert} limit"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_page.py:70
+msgid "Repeat after"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_page.py:75
+msgid "{minutes} minutes"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_page.py:80
+msgid ""
+"Disk alerts repeat after six hours, or sooner if free space falls below half the limit. Battery charge alerts apply while discharging."
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_page.py:88
+msgid "Refresh readings"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_page.py:92
+msgid "Apply changes"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_page.py:148
+msgid "Monitoring is on."
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_page.py:148
+msgid "Monitoring is stopped. Apply your choices to start it."
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_page.py:150
+msgid "System alerts are off."
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_page.py:155
+msgid "{percent}% stalled"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_page.py:157
+msgid "{percent}% free"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_page.py:169
+msgid "Could not save the alert settings."
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_page.py:173
+msgid "Applying alert settings…"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_page.py:180
+msgid "Could not apply alert settings. {reason}"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_readings.py:139
+msgid "System disk"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_readings.py:141
+msgid "Home folder"
+msgstr ""
+
+#: linux/share/monet/utilities/actions.py:95
+msgid "System alerts"
+msgstr ""
+
+#: linux/share/monet/utilities/monitor_readings.py:86 linux/share/monet/utilities/monitor_readings.py:112
+msgid "Battery"
+msgstr ""

@@ -1,0 +1,14 @@
+[Unit]
+Description=Monitor selected system alerts
+PartOf=graphical-session.target
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/python3 -B @DATADIR@/monet/utilities/monitor_alerts.py watch
+Slice=background.slice
+Nice=10
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=graphical-session.target

@@ -191,11 +191,14 @@ class Window(QMainWindow):
                     favorites.append(key)
             visibility_changed = set(self.hidden) != set(hidden)
             agent_visibility_changed = ("agents" in self.hidden) != ("agents" in hidden)
+            alerts_changed = ("monitor-alerts" in self.hidden) != ("monitor-alerts" in hidden)
             self.hidden = hidden
             ordered = [key for key in self.favorites if key in favorites]
             self.save_favorites(ordered + [key for key in favorites if key not in ordered])
             self.settings.setValue("hidden", json.dumps(hidden))
             self.settings.sync()
+            if alerts_changed and self.settings.contains("monitorAlerts"):
+                self.worker([sys.executable, MODULES / "monitor_alerts.py", "sync"], lambda _: None, finish_on_close=True)
             if visibility_changed:
                 if "downloads" in hidden and "downloads" in self.pages:
                     downloads = self.pages.pop("downloads")
@@ -326,9 +329,17 @@ class Window(QMainWindow):
     def issue(self, text):
         self.status.showMessage(text[:500], 12000)
 
-    def worker(self, argv, done, failed=None, *, input_data=None):
+    def worker(self, argv, done, failed=None, *, input_data=None, finish_on_close=False):
         job = QProcess(self)
         self.running.add(job)
+        if finish_on_close:
+            job.setProperty("finishOnClose", True)
+        def close_if_requested():
+            if finish_on_close and getattr(self, "close_after_process_action", False):
+                if self.isVisible():
+                    self.close_after_process_action = False
+                else:
+                    self.close()
         def finish(code, status):
             if job not in self.running:
                 return
@@ -340,12 +351,14 @@ class Window(QMainWindow):
                 done(out)
             else:
                 (failed or self.issue)(err.strip()[-400:] or "The operation could not be completed.")
+            close_if_requested()
         job.finished.connect(finish)
         def error(reason):
             if reason == QProcess.FailedToStart and job in self.running:
                 self.running.remove(job)
                 job.deleteLater()
                 (failed or self.issue)("Could not start " + Path(argv[0]).name)
+                close_if_requested()
         job.errorOccurred.connect(error)
         job.start(str(argv[0]), [str(a) for a in argv[1:]])
         if input_data is not None:
@@ -609,6 +622,9 @@ class Window(QMainWindow):
         elif key in ("ports", "process-control"):
             from ports import ProcessBrowser
             self.page(key, lambda: ProcessBrowser(self, key == "ports")).refresh()
+        elif key == "monitor-alerts":
+            from monitor_page import MonitorPage
+            self.page(key, lambda: MonitorPage(self))
         elif key == "fans":
             from fan_page import Fans
             self.page(key, Fans)
@@ -724,7 +740,8 @@ class Window(QMainWindow):
         if notes and not notes.flush():
             event.ignore()
             return
-        if any(getattr(page, "applying_action", False) for page in self.pages.values()):
+        if (any(getattr(page, "applying_action", False) for page in self.pages.values()) or
+                any(job.property("finishOnClose") for job in self.running)):
             self.close_after_process_action = True
             self.hide()
             event.ignore()

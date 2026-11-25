@@ -345,6 +345,7 @@ put 644 "$SRC/systemd/user/monet-light-sync.path" "$USERUNITDIR/monet-light-sync
 put 644 "$SRC/systemd/user/monet-fresh.service" "$USERUNITDIR/monet-fresh.service"
 put 644 "$SRC/systemd/user/monet-bluetooth-sleep.service" "$USERUNITDIR/monet-bluetooth-sleep.service"
 put 644 "$SRC/systemd/user/monet-clean-links.service" "$USERUNITDIR/monet-clean-links.service"
+put 644 "$SRC/systemd/user/monet-monitor-alerts.service" "$USERUNITDIR/monet-monitor-alerts.service"
 put 644 "$SRC/systemd/user/monet-output-order.service" "$USERUNITDIR/monet-output-order.service"
 put 644 "$SRC/systemd/user/monet-keep-awake.service" "$USERUNITDIR/monet-keep-awake.service"
 put 644 "$SRC/systemd/user/monet-brightness.service" "$USERUNITDIR/monet-brightness.service"
