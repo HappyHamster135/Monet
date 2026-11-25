@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 
 def read_text(path):
+    os.environ.setdefault("OMP_THREAD_LIMIT", "1")
     from PIL import Image
     lib = ctypes.CDLL(find_library("tesseract") or "libtesseract.so")
     # Declare the C API explicitly, including the ownership of its result.
@@ -86,6 +87,25 @@ S.VideoScanner { property string decoded: result.content ? String(result.content
     app.exec()
     return scanner.property("decoded")
 
+def recognize(path):
+    from PIL import Image
+    with Image.open(path) as image:
+        if image.width * image.height > 33_177_600:
+            raise ValueError("Select a smaller area.")
+        try:
+            import zxingcpp
+        except ImportError:
+            # Standalone installations can still use Plasma's barcode scanner.
+            try:
+                code = read_qr(path)
+            except (ImportError, RuntimeError):
+                code = ""
+        else:
+            codes = zxingcpp.read_barcodes(image.convert("L"), text_mode=zxingcpp.TextMode.Plain)
+            code = "\n".join(item.text for item in codes if item.valid and item.text)
+    return code or read_text(path)
+
+
 if __name__ == "__main__":
     try:
         if sys.argv[1] == "player":
@@ -96,9 +116,8 @@ if __name__ == "__main__":
             if data:
                 print(read_text(BytesIO(data)))
         elif sys.argv[1] == "read" and len(sys.argv) == 3:
-            qr = read_qr(sys.argv[2])
-            text = read_text(sys.argv[2]) if not qr else ""
-            print(qr or text or "No text or QR code was recognized.")
+            import json
+            print(json.dumps(recognize(sys.argv[2])))
     except (OSError, RuntimeError, ValueError, ImportError) as exc:
         print(exc, file=sys.stderr)
         sys.exit(1)

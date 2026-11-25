@@ -318,7 +318,7 @@ class Window(QMainWindow):
     def issue(self, text):
         self.status.showMessage(text[:500], 12000)
 
-    def worker(self, argv, done, failed=None):
+    def worker(self, argv, done, failed=None, *, input_data=None):
         job = QProcess(self)
         self.running.add(job)
         def finish(code, status):
@@ -340,6 +340,9 @@ class Window(QMainWindow):
                 (failed or self.issue)("Could not start " + Path(argv[0]).name)
         job.errorOccurred.connect(error)
         job.start(str(argv[0]), [str(a) for a in argv[1:]])
+        if input_data is not None:
+            job.write(input_data)
+            job.closeWriteChannel()
         return job
 
     def output_page(self, key, command):
@@ -460,29 +463,6 @@ class Window(QMainWindow):
             request("/org/monet/Cleaning", "org.monet.Cleaning", "Begin", [seconds, dark], began)
         request("/Plugins", "org.kde.KWin.Plugins", "LoadPlugin", ["monet_cleaning"], loaded)
 
-    def capture_text(self):
-        area = tempfile.TemporaryDirectory(prefix="monet-capture-")
-        path = Path(area.name) / "selection.png"
-        def fail(reason):
-            area.cleanup()
-            self.issue(reason)
-        def captured(_):
-            if not path.is_file():
-                fail("Capture canceled.")
-                return
-            def read(out):
-                area.cleanup()
-                box = QDialog(self)
-                box.setWindowTitle("Text from screen")
-                layout = QVBoxLayout(box)
-                editor = QPlainTextEdit(out.strip())
-                layout.addWidget(editor)
-                row(layout, ("Copy", lambda: QApplication.clipboard().setText(editor.toPlainText())), ("Close", box.accept))
-                box.resize(480, 300)
-                box.exec()
-            self.worker([sys.executable, MODULES / "media.py", "read", path], read, fail)
-        self.worker(["spectacle", "-brn", "-o", path], captured, fail)
-
     def compress(self):
         if self.converting:
             self.issue("A conversion is already running.")
@@ -590,9 +570,14 @@ class Window(QMainWindow):
         page.openPad.connect(self.floating_pad)
         return page
 
-    def pick_color(self, from_catalog=False):
-        from screen_colors import ScreenColors
-        self.ensure_page("color", lambda: ScreenColors(self)).pick(from_catalog)
+    def select_from_screen(self, key, from_catalog=False):
+        if key == "ocr":
+            from screen_text import ScreenText
+            page = self.ensure_page(key, lambda: ScreenText(self))
+        else:
+            from screen_colors import ScreenColors
+            page = self.ensure_page(key, lambda: ScreenColors(self))
+        page.pick(from_catalog)
 
     def camera_closed(self):
         self.mirror = None
@@ -684,8 +669,8 @@ class Window(QMainWindow):
             self.output_page(key, [sys.executable, MODULES / "media.py", "player"])
         elif key == "output":
             self.cycle_output()
-        elif key == "color":
-            self.pick_color(from_catalog=True)
+        elif key in ("color", "ocr"):
+            self.select_from_screen(key, from_catalog=True)
         elif key == "wallpaper":
             path, _ = QFileDialog.getOpenFileName(self, "Choose wallpaper", "", "Images (*.jpg *.jpeg *.png *.webp *.avif)")
             if path:
@@ -707,8 +692,6 @@ class Window(QMainWindow):
             from capture import Preview
             preview = Preview(self)
             preview.show()
-        elif key == "ocr":
-            self.capture_text()
         elif key in ("record", "recordings"):
             from recordings import Recordings
             editor = self.page("recordings", lambda: Recordings(self))
@@ -725,9 +708,9 @@ class Window(QMainWindow):
         if ("notes" if key == "floating-pad" else key) in self.hidden:
             self.panelDismissed.emit()
             return
-        if key == "color":
+        if key in ("color", "ocr"):
             if len(args) == 1:
-                self.pick_color()
+                self.select_from_screen(key)
             else:
                 self.panelDismissed.emit()
             return
@@ -815,8 +798,9 @@ class Window(QMainWindow):
             self.mirror.close()
         for preview in list(self.notch_previews.values()):
             preview.close()
-        if "color" in self.pages:
-            self.pages["color"].closing = True
+        for key in ("color", "ocr"):
+            if key in self.pages:
+                self.pages[key].closing = True
         for job in list(self.running):
             job.kill()
             job.waitForFinished(1000)
@@ -841,8 +825,7 @@ class Receiver(QObject):
         editor = self.window.pages.get("recordings")
         if editor and (editor.recorder or editor.exporter):
             return
-        colors = self.window.pages.get("color")
-        if self.window.running or (colors and colors.busy):
+        if self.window.running or any(self.window.pages[key].busy for key in ("color", "ocr") if key in self.window.pages):
             self.idle.start()
         else:
             QApplication.quit()
@@ -988,7 +971,7 @@ def main(argv, helpers):
     if bus.isConnected() and bus.interface().isServiceRegistered(SERVICE).value() and forward():
         return 0
     window = Window(helpers if Path(helpers).is_absolute() else "/usr/libexec",
-                    defer_catalog=args in (["wheel"], ["quick-panel"], ["color"], ["--pad-service"]))
+                    defer_catalog=args in (["wheel"], ["quick-panel"], ["color"], ["ocr"], ["--pad-service"]))
     receiver = Receiver(window)
     if bus.isConnected():
         if not bus.registerObject("/Utilities", SERVICE, receiver, QDBusConnection.ExportAllSlots):

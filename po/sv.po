@@ -17337,3 +17337,31 @@ msgstr "Kopierade %1"
 #: linux/share/monet/utilities/screen_colors.py:132
 msgid "Couldn’t copy the color."
 msgstr "Det gick inte att kopiera färgen."
+
+#: linux/share/monet/utilities/screen_text.py:18
+msgid "Recognized text"
+msgstr "Identifierad text"
+
+#: linux/share/monet/utilities/screen_text.py:22
+msgid "Select area…"
+msgstr "Välj område…"
+
+#: linux/share/monet/utilities/screen_text.py:35
+msgid "Couldn’t start the screen capture."
+msgstr "Det gick inte att starta skärmbilden."
+
+#: linux/share/monet/utilities/screen_text.py:41 linux/share/monet/utilities/screen_text.py:53
+msgid "Couldn’t read the selected area."
+msgstr "Det gick inte att läsa det valda området."
+
+#: linux/share/monet/utilities/screen_text.py:56
+msgid "No text or QR code was found."
+msgstr "Ingen text eller QR-kod hittades."
+
+#: linux/share/monet/utilities/screen_text.py:76
+msgid "Text copied."
+msgstr "Texten har kopierats."
+
+#: linux/share/monet/utilities/screen_text.py:76
+msgid "Couldn’t copy the text."
+msgstr "Det gick inte att kopiera texten."

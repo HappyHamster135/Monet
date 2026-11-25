@@ -28,7 +28,18 @@ class ScreenColorActions(unittest.TestCase):
         self.window = Window("/usr/libexec", defer_catalog=True)
         self.window.settings = QSettings(str(Path(self.folder.name) / "colors.ini"), QSettings.IniFormat)
         self.jobs = []
-        self.window.worker = lambda argv, done, failed: self.jobs.append((argv, done, failed))
+        self.input_data = []
+        def worker(argv, done, failed, *, input_data=None):
+            self.jobs.append((argv, done, failed))
+            if input_data is not None:
+                self.input_data.append(input_data)
+        self.window.worker = worker
+        wayland = patch.object(QApplication, "platformName", return_value="wayland")
+        wayland.start()
+        self.addCleanup(wayland.stop)
+        wl_copy = patch("screen_selection.shutil.which", return_value="/usr/bin/wl-copy")
+        wl_copy.start()
+        self.addCleanup(wl_copy.stop)
 
     def tearDown(self):
         self.window.close()
@@ -73,7 +84,8 @@ class ScreenColorActions(unittest.TestCase):
         command, done, fail = self.get_job()
         done("((uint32 4278256131,),)")  # #010203
         command, copied, failed = self.get_job()
-        self.assertEqual(command[-1], "#010203")
+        self.assertEqual(command[0], "wl-copy")
+        self.assertEqual(self.input_data.pop(), b"#010203")
         copied("")
         page = self.window.pages["color"]
         self.assertIs(self.window.stack.currentWidget(), page)
@@ -83,7 +95,7 @@ class ScreenColorActions(unittest.TestCase):
         self.assertFalse(self.jobs)
         page.copy_button.click()
         command, copied, failed = self.get_job()
-        self.assertEqual(command[-1], "rgb(1, 2, 3)")
+        self.assertEqual(self.input_data.pop(), b"rgb(1, 2, 3)")
         copied("")
         self.assertEqual(self.window.settings.value("colorFormat"), "rgb")
         self.window.run_tool("color")

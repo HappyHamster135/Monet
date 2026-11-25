@@ -17018,3 +17018,31 @@ msgstr ""
 #: linux/share/monet/utilities/screen_colors.py:132
 msgid "Couldn’t copy the color."
 msgstr ""
+
+#: linux/share/monet/utilities/screen_text.py:18
+msgid "Recognized text"
+msgstr ""
+
+#: linux/share/monet/utilities/screen_text.py:22
+msgid "Select area…"
+msgstr ""
+
+#: linux/share/monet/utilities/screen_text.py:35
+msgid "Couldn’t start the screen capture."
+msgstr ""
+
+#: linux/share/monet/utilities/screen_text.py:41 linux/share/monet/utilities/screen_text.py:53
+msgid "Couldn’t read the selected area."
+msgstr ""
+
+#: linux/share/monet/utilities/screen_text.py:56
+msgid "No text or QR code was found."
+msgstr ""
+
+#: linux/share/monet/utilities/screen_text.py:76
+msgid "Text copied."
+msgstr ""
+
+#: linux/share/monet/utilities/screen_text.py:76
+msgid "Couldn’t copy the text."
+msgstr ""

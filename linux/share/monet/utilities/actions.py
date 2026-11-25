@@ -52,7 +52,7 @@ ACTIONS = {
     "clean": Action(N_("Clean a copied link"), "Writing", "edit-clear"),
     "color": Action(N_("Pick a screen color"), "Capture", "color-picker"),
     "screenshot": Action(N_("Screenshot and annotate"), "Capture", "spectacle", ("spectacle", "-r")),
-    "ocr": Action(N_("Read text or a QR code from the screen"), "Capture", "edit-select-text"),
+    "ocr": Action(N_("Read text or a QR code from the screen"), "Capture copy OCR screenshot barcode clipboard", "edit-select-text"),
     "record": Action(N_("Record a screen region"), "Capture", "media-record"),
     "recordings": Action(N_("Screen recorder and editor"), "Capture video trim crop MP4 GIF", "video-x-generic"),
     "camera": Action(N_("Camera mirror"), "Capture", "camera-web"),
