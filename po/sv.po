@@ -89,7 +89,7 @@ msgstr "Dina, utanför dina appar"
 #: linux/share/ksysguard/sensorfaces/org.monet.applications/contents/ui/Apps.qml:119 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:64 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:69
 #: linux/share/monet/games/Apps.qml:194 linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:37
 msgid "System"
-msgstr ""
+msgstr "System"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.applications/contents/ui/Apps.qml:120
 msgid "Services and the kernel"
@@ -163,7 +163,7 @@ msgstr ""
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/CompactRepresentation.qml:10 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:27 linux/share/ksysguard/sensorfaces/org.monet.totals/contents/ui/FullRepresentation.qml:21
 msgid "CPU"
-msgstr ""
+msgstr "CPU"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:26 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:42 linux/share/ksysguard/sensorfaces/org.monet.system/contents/ui/SystemDetails.qml:79
 msgid "Logical processors"
@@ -242,11 +242,11 @@ msgstr ""
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:70 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:36 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/SummaryReadings.qml:16
 msgid "Read"
-msgstr ""
+msgstr "Läsning"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:70 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/Performance.qml:36 linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/SummaryReadings.qml:16
 msgid "Write"
-msgstr ""
+msgstr "Skrivning"
 
 #: linux/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/DeviceDetails.qml:71 linux/libexec/monet-files-tools:621
 msgid "Capacity"
@@ -14282,7 +14282,7 @@ msgstr ""
 
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:184
 msgid "Time"
-msgstr ""
+msgstr "Tid"
 
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:195
 msgid "File shelf"
@@ -18814,3 +18814,99 @@ msgstr "Wi-Fi ({interface})"
 #: linux/share/monet/utilities/network_activity.py:90
 msgid "Ethernet ({interface})"
 msgstr "Ethernet ({interface})"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:363
+msgid "Show your choice of system readings directly on this bar."
+msgstr "Visa valda mätvärden direkt i aktivitetsfältet."
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/config/config.qml:6
+msgid "Home Bar readings"
+msgstr "Mätvärden i aktivitetsfältet"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ConfigReadings.qml:27
+msgid "Display style"
+msgstr "Visningsläge"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ConfigReadings.qml:28
+msgid "Numbers"
+msgstr "Siffror"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ConfigReadings.qml:29
+msgid "Usage bars"
+msgstr "Staplar"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ConfigReadings.qml:30
+msgid "Numbers and usage bars"
+msgstr "Siffror och staplar"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ConfigReadings.qml:36
+msgid "On the bar"
+msgstr "I aktivitetsfältet"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ConfigReadings.qml:66
+msgid "Remove %1"
+msgstr "Ta bort %1"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ConfigReadings.qml:75
+msgid "Add a reading"
+msgstr "Lägg till ett mätvärde"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingCell.qml:36
+msgid "To full"
+msgstr "Till fulladdat"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingCell.qml:36
+msgid "Time left"
+msgstr "Tid kvar"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingCell.qml:39
+msgid "RAM"
+msgstr "RAM"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:8
+msgid "CPU temperature"
+msgstr "Processortemperatur"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:9
+msgid "Disk usage"
+msgstr "Diskanvändning"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:12
+msgid "Disk read speed"
+msgstr "Diskens läshastighet"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:13
+msgid "Disk write speed"
+msgstr "Diskens skrivhastighet"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:14
+msgid "Battery charge"
+msgstr "Batterinivå"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:15
+msgid "Battery time"
+msgstr "Batteritid"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:20
+msgid "GPU %1"
+msgstr "GPU %1"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:20
+msgid "GPU %1 temperature"
+msgstr "Temperatur för GPU %1"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:22
+msgid "Fan %1 (%2)"
+msgstr "Fläkt %1 (%2)"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:27
+msgid "CPU °"
+msgstr "CPU °"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:33
+msgid "Fan %1"
+msgstr "Fläkt %1"
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:47 linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:276
+msgid "Choose Home Bar readings"
+msgstr "Välj mätvärden för aktivitetsfältet"

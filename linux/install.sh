@@ -246,6 +246,7 @@ for applet in org.monet.weather org.monet.calendar org.monet.nowplaying org.mone
     org.monet.played org.monet.timer org.monet.worldclock org.monet.network org.monet.storage org.monet.batteries org.monet.stacks; do
     install -m 644 "$SRC/share/monet/widgets/Glass.qml" "$DATADIR/plasma/plasmoids/$applet/contents/ui/Glass.qml"
 done
+install -m 644 "$SRC/share/ksysguard/sensorfaces/org.monet.performance/contents/ui/SensorCatalog.qml" "$DATADIR/plasma/plasmoids/org.monet.system/contents/ui/SensorCatalog.qml"
 # The Calendar and the bar's clock share the month, the day's note and the notes themselves.
 for applet in org.monet.calendar org.monet.clock org.monet.notch; do
     for part in Month DayNotes NoteStore NotesPopup; do

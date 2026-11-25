@@ -18531,3 +18531,99 @@ msgstr ""
 #: linux/share/monet/utilities/network_activity.py:90
 msgid "Ethernet ({interface})"
 msgstr ""
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:363
+msgid "Show your choice of system readings directly on this bar."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/config/config.qml:6
+msgid "Home Bar readings"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ConfigReadings.qml:27
+msgid "Display style"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ConfigReadings.qml:28
+msgid "Numbers"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ConfigReadings.qml:29
+msgid "Usage bars"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ConfigReadings.qml:30
+msgid "Numbers and usage bars"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ConfigReadings.qml:36
+msgid "On the bar"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ConfigReadings.qml:66
+msgid "Remove %1"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ConfigReadings.qml:75
+msgid "Add a reading"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingCell.qml:36
+msgid "To full"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingCell.qml:36
+msgid "Time left"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingCell.qml:39
+msgid "RAM"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:8
+msgid "CPU temperature"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:9
+msgid "Disk usage"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:12
+msgid "Disk read speed"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:13
+msgid "Disk write speed"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:14
+msgid "Battery charge"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:15
+msgid "Battery time"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:20
+msgid "GPU %1"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:20
+msgid "GPU %1 temperature"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:22
+msgid "Fan %1 (%2)"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:27
+msgid "CPU °"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/ReadingNames.qml:33
+msgid "Fan %1"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:47 linux/share/plasma/plasmoids/org.monet.system/contents/ui/main.qml:276
+msgid "Choose Home Bar readings"
+msgstr ""

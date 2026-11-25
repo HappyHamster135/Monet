@@ -237,6 +237,9 @@ def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None, native_bundle
                     if source.suffix in {'.qml', '.js'} else source.read_bytes())
         for source in (ROOT / 'linux/share/monet/widgets').iterdir():
             if source.is_file(): add(dest / 'contents/ui' / source.name, render(source, local_helpers=True))
+    sensor_catalog = Path('ksysguard/sensorfaces/org.monet.performance/contents/ui/SensorCatalog.qml')
+    add(DATA / 'plasma/plasmoids/org.monet.system/contents/ui/SensorCatalog.qml',
+        (ROOT / 'linux/share' / sensor_catalog).read_bytes())
     # A shell package is resolved as a unit. Copy the installed package so this
     # account can use the updated gallery without masking unrelated shell files.
     shell = Path('plasma/shells/org.kde.plasma.desktop')

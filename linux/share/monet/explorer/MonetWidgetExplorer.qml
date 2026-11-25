@@ -45,7 +45,7 @@ Item {
     readonly property color lily: smoke ? "#4DB4A0" : "#357F72"
     // Adding to a panel: the bar's widgets; to the desktop: the desktop's.
     readonly property bool forBar: containment !== null && (containment.containmentType === 1 || containment.containmentType === 128)
-    readonly property string mineIds: forBar ? "clock|games|menu|quick|sound|transfers" : "batteries|calendar|frame|network|notes|nowplaying|placard|played|stacks|storage|system|timer|weather|worldclock"
+    readonly property string mineIds: forBar ? "clock|games|menu|quick|sound|system|transfers" : "batteries|calendar|frame|network|notes|nowplaying|placard|played|stacks|storage|system|timer|weather|worldclock"
 
     signal closed()
 
@@ -359,7 +359,8 @@ Item {
                                 big: gallery.shown !== "all"
                                 pluginName: model.pluginName
                                 name: model.name
-                                description: model.description
+                                description: gallery.forBar && model.pluginName === "org.monet.system"
+                                    ? i18nd("monet", "Show your choice of system readings directly on this bar.") : model.description
                                 sign: model.decoration
                                 screenshot: model.screenshot || ""
                                 running: gallery.containment?.applets?.filter(a => a.pluginName === pluginName).length || 0

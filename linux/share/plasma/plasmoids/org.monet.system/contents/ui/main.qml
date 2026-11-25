@@ -7,6 +7,7 @@
  * reads; a part the PC can't measure (graphics in a virtual machine) leaves.
  */
 import QtQuick
+import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import QtQuick.Shapes
 import org.kde.plasma.plasmoid
@@ -16,7 +17,15 @@ import org.kde.ksysguard.sensors as Sensors
 
 PlasmoidItem {
     id: root
-    SessionActivity { id: activity; viewVisible: root.visible }
+    readonly property bool sideBar: Plasmoid.formFactor === PlasmaCore.Types.Vertical
+    readonly property bool onBar: sideBar || Plasmoid.formFactor === PlasmaCore.Types.Horizontal
+    readonly property var readings: Array.from(Plasmoid.configuration.readings || [])
+    readonly property bool dashboardSampling: activity.active && (!onBar || expanded)
+    SessionActivity {
+        id: activity
+        viewVisible: root.visible
+        observePower: root.onBar && root.readings.some(key => key.startsWith("battery/"))
+    }
 
     // Degrees the way this PC's region counts them.
     readonly property bool fahrenheit: Qt.locale().measurementSystem === Locale.ImperialUSSystem
@@ -35,8 +44,21 @@ PlasmoidItem {
     TaskManagerAction { id: taskManager; menuApplet: Plasmoid }
     Plasmoid.contextualActions: taskManager.showInAppletMenu ? [taskManager] : []
     toolTipMainText: i18nd("monet", "System")
-    toolTipSubText: i18nd("monet", "Double-click to open Task Manager")
-    preferredRepresentation: fullRepresentation
+    toolTipSubText: onBar ? (compactRepresentationItem?.summary || i18nd("monet", "Choose Home Bar readings")) :
+        i18nd("monet", "Double-click to open Task Manager")
+    preferredRepresentation: onBar ? compactRepresentation : fullRepresentation
+    compactRepresentation: ReadingStrip {
+        readings: root.readings
+        style: Plasmoid.configuration.readingStyle
+        vertical: root.sideBar
+        power: activity.powerReady ? activity.batteryState : ({})
+        sampling: activity.active
+        enabled: !Plasmoid.containment?.corona.editMode
+        onPressedReading: {
+            if (root.readings.length) root.expanded = !root.expanded
+            else Plasmoid.internalAction("configure").trigger()
+        }
+    }
 
     component Reading: Sensors.Sensor {
         required property bool sampling
@@ -44,17 +66,17 @@ PlasmoidItem {
         updateRateLimit: 1500
     }
 
-    Reading { sampling: root.visible && activity.active; id: cpu; sensorId: "cpu/all/usage" }
-    Reading { sampling: root.visible && activity.active; id: cpuHeat; sensorId: "cpu/all/maximumTemperature" }
-    Reading { sampling: root.visible && activity.active; id: memory; sensorId: "memory/physical/usedPercent" }
-    Reading { sampling: root.visible && activity.active; id: memoryUsed; sensorId: "memory/physical/used" }
-    Reading { sampling: root.visible && activity.active; id: download; sensorId: "network/all/download" }
-    Reading { sampling: root.visible && activity.active; id: upload; sensorId: "network/all/upload" }
+    Reading { sampling: root.dashboardSampling; id: cpu; sensorId: "cpu/all/usage" }
+    Reading { sampling: root.dashboardSampling; id: cpuHeat; sensorId: "cpu/all/maximumTemperature" }
+    Reading { sampling: root.dashboardSampling; id: memory; sensorId: "memory/physical/usedPercent" }
+    Reading { sampling: root.dashboardSampling; id: memoryUsed; sensorId: "memory/physical/used" }
+    Reading { sampling: root.dashboardSampling; id: download; sensorId: "network/all/download" }
+    Reading { sampling: root.dashboardSampling; id: upload; sensorId: "network/all/upload" }
     // Each graphics chip: the busier one is the one a game runs on (a laptop has two).
-    Reading { sampling: root.visible && activity.active; id: gpu0; sensorId: "gpu/gpu0/usage" }
-    Reading { sampling: root.visible && activity.active; id: gpu1; sensorId: "gpu/gpu1/usage" }
-    Reading { sampling: root.visible && activity.active; id: gpuHeat0; sensorId: "gpu/gpu0/temperature" }
-    Reading { sampling: root.visible && activity.active; id: gpuHeat1; sensorId: "gpu/gpu1/temperature" }
+    Reading { sampling: root.dashboardSampling; id: gpu0; sensorId: "gpu/gpu0/usage" }
+    Reading { sampling: root.dashboardSampling; id: gpu1; sensorId: "gpu/gpu1/usage" }
+    Reading { sampling: root.dashboardSampling; id: gpuHeat0; sensorId: "gpu/gpu0/temperature" }
+    Reading { sampling: root.dashboardSampling; id: gpuHeat1; sensorId: "gpu/gpu1/temperature" }
     readonly property bool second: ready(gpu1) && (!ready(gpu0) || gpu1.value > gpu0.value)
     readonly property var gpu: second ? gpu1 : gpu0
     readonly property var gpuHeat: second ? gpuHeat1 : gpuHeat0
@@ -147,7 +169,7 @@ PlasmoidItem {
         Layout.minimumWidth: Kirigami.Units.gridUnit * 14
         Layout.minimumHeight: Kirigami.Units.gridUnit * 8
         Layout.preferredWidth: Kirigami.Units.gridUnit * 19
-        Layout.preferredHeight: Kirigami.Units.gridUnit * 9
+        Layout.preferredHeight: Kirigami.Units.gridUnit * (root.onBar ? 12 : 9)
 
         TapHandler {
             acceptedButtons: Qt.LeftButton
@@ -247,6 +269,13 @@ PlasmoidItem {
                         font.features: { "tnum": 1 }
                         Accessible.name: i18nc("%1 is a speed", "Uploading %1", upload.formattedValue)
                     }
+                }
+                Controls.Button {
+                    visible: root.onBar
+                    Layout.alignment: Qt.AlignRight
+                    text: i18nd("monet", "Choose Home Bar readings")
+                    icon.name: "configure"
+                    onClicked: Plasmoid.internalAction("configure").trigger()
                 }
             }
         }

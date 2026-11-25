@@ -2663,13 +2663,16 @@ class EverydayScreens(unittest.TestCase):
                      # Done ends the editing: the desktop comes back to full size.
                      "containment.corona.editMode = false"):
             self.assertIn(part, gallery)
-        # Its lists name every Monet widget once: the desktop's and the bar's.
+        # System has both a desktop dashboard and a compact panel view. The notch
+        # has its own managed top-center panel in Customize Home Bar.
         lists = re.search(r'mineIds: forBar \? "([^"]+)" : "([^"]+)"', gallery)
-        named = lists.group(1).split("|") + lists.group(2).split("|")
-        widgets = sorted(f.name.removeprefix("org.monet.") for f in (PLASMA / "plasmoids").iterdir())
-        self.assertEqual(sorted(named), widgets)
-        # Every one of them brings a picture of itself, in mist and in smoke.
-        for name in named:
+        bar, desktop = (group.split("|") for group in lists.groups())
+        self.assertEqual(set(bar) & set(desktop), {"system"})
+        widgets = {p.name.removeprefix("org.monet.") for p in (PLASMA / "plasmoids").iterdir()}
+        self.assertEqual(set(bar + desktop), widgets - {"notch"})
+        for names in (bar, desktop):
+            self.assertEqual(len(names), len(set(names)))
+        for name in set(bar + desktop):
             for picture in ("screenshot.png", "screenshot-smoke.png"):
                 self.assertTrue((PLASMA / "plasmoids" / f"org.monet.{name}" / "contents" / picture).is_file(), (name, picture))
         install = (ROOT / "linux/install.sh").read_text()
