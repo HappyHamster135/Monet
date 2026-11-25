@@ -141,6 +141,15 @@ class SettingsNavigation(unittest.TestCase):
         QTest.keyClick(self.window, Qt.Key_Return)
         self.assertIn(["helper", "utilities", "wheel-scrolling"], self.helper.commands)
 
+    def test_mouse_settings_opens_extra_click_preferences(self):
+        from PySide6.QtQuick import QQuickItem
+        select_settings_page(self.window, "input")
+        row = self.window.findChild(QQuickItem, "extraClickSettings")
+        self.assertIsNotNone(row)
+        row.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertIn(["helper", "utilities", "extra-clicks"], self.helper.commands)
+
     def test_default_apps_opens_last_window_preferences(self):
         from PySide6.QtQuick import QQuickItem
         select_settings_page(self.window, "apps")

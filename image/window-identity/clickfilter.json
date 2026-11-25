@@ -1,0 +1,8 @@
+{
+  "KPlugin": {
+    "Name": "Monet mouse click filter",
+    "Description": "Ignore extra clicks from selected mouse buttons",
+    "License": "GPL-3.0-or-later",
+    "EnabledByDefault": true
+  }
+}

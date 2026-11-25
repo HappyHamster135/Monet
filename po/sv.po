@@ -16414,3 +16414,77 @@ msgstr "Avsluta när sista fönstret stängs"
 msgctxt "what a part of Monet is, in KDE's lists"
 msgid "Quit selected applications after their last window closes"
 msgstr "Avsluta valda appar när deras sista fönster har stängts"
+
+#: linux/share/monet/settings-app/SettingsInput.qml:99 linux/share/monet/utilities/actions.py:35
+msgid "Extra click filter"
+msgstr "Filter för extraklick"
+
+#: linux/share/monet/settings-app/SettingsInput.qml:100
+msgid "Filter rapid extra clicks from a worn mouse button."
+msgstr "Filtrera snabba extraklick från en sliten musknapp."
+
+#: linux/share/monet/utilities/extra_clicks.py:25
+msgid "Test mouse buttons"
+msgstr "Testa musknappar"
+
+#: linux/share/monet/utilities/extra_clicks.py:38
+msgid "Primary %1 · Secondary %2 · Middle %3"
+msgstr "Primär %1 · Sekundär %2 · Mitten %3"
+
+#: linux/share/monet/utilities/extra_clicks.py:73
+msgid "Filter accidental extra clicks"
+msgstr "Filtrera oavsiktliga extraklick"
+
+#: linux/share/monet/utilities/extra_clicks.py:76
+msgid ""
+"Use this if one mouse click sometimes registers twice. The first click is delivered immediately."
+msgstr ""
+"Använd detta om ett musklick ibland registreras två gånger. Det första klicket skickas direkt."
+
+#: linux/share/monet/utilities/extra_clicks.py:84
+msgid "Mouse model"
+msgstr "Musmodell"
+
+#: linux/share/monet/utilities/extra_clicks.py:90
+msgid "Ignore repeats within"
+msgstr "Ignorera upprepningar inom"
+
+#: linux/share/monet/utilities/extra_clicks.py:93
+msgid "Primary"
+msgstr "Primär"
+
+#: linux/share/monet/utilities/extra_clicks.py:93
+msgid "Secondary"
+msgstr "Sekundär"
+
+#: linux/share/monet/utilities/extra_clicks.py:93
+msgid "Middle"
+msgstr "Mitten"
+
+#: linux/share/monet/utilities/extra_clicks.py:101
+msgid "Click in the box to test each button."
+msgstr "Klicka i rutan för att testa varje knapp."
+
+#: linux/share/monet/utilities/extra_clicks.py:105
+msgid "Reset count"
+msgstr "Nollställ räknaren"
+
+#: linux/share/monet/utilities/extra_clicks.py:161
+msgid "All mice"
+msgstr "Alla möss"
+
+#: linux/share/monet/utilities/extra_clicks.py:165
+msgid "%1 (disconnected)"
+msgstr "%1 (frånkopplad)"
+
+#: linux/share/monet/utilities/extra_clicks.py:173
+msgid "The mouse click filter is unavailable in this session."
+msgstr "Filtret för extraklick är inte tillgängligt i den här sessionen."
+
+#: linux/share/monet/utilities/extra_clicks.py:175
+msgid "Select a mouse button to start filtering."
+msgstr "Välj en musknapp för att börja filtrera."
+
+#: linux/share/monet/utilities/extra_clicks.py:188
+msgid "Could not save mouse click settings."
+msgstr "Det gick inte att spara inställningarna för musklick."

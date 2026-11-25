@@ -19,8 +19,9 @@ install -m 755 "$work/build/monet_window_identity.so" "$out/monet_window_identit
 install -m 755 "$work/build/monet_plain_paste.so" "$out/monet_plain_paste.so"
 install -m 755 "$work/build/monet_quit_guard.so" "$out/monet_quit_guard.so"
 install -m 755 "$work/build/monet_wheel_scroll.so" "$out/monet_wheel_scroll.so"
+install -m 755 "$work/build/monet_click_filter.so" "$out/monet_click_filter.so"
 mkdir "$work/monet-window-identity"
-for name in CMakeLists.txt identity.cpp controls.cpp controls.h metadata.json plainpaste.cpp plainpaste.json quitguard.cpp quitguard.json wheelscroll.cpp wheelscroll.json bundle.py build.sh README.md LICENSE; do
+for name in CMakeLists.txt identity.cpp controls.cpp controls.h metadata.json plainpaste.cpp plainpaste.json quitguard.cpp quitguard.json wheelscroll.cpp wheelscroll.json clickfilter.cpp clickfilter.json bundle.py build.sh README.md LICENSE; do
     cp "$here/$name" "$work/monet-window-identity/"
 done
 cp "$out/runtime.json" "$work/monet-window-identity/"

@@ -32,6 +32,7 @@ ACTIONS = {
     "notes": Action(N_("Scratchpad"), "Writing notes pads Markdown", "accessories-text-editor"),
     "snippets": Action(N_("Text snippets"), "Writing", "edit-paste"),
     "clipboard": Action(N_("Clipboard history"), "Writing", "edit-paste", ("qdbus-qt6", "org.kde.klipper", "/klipper", "org.kde.klipper.klipper.showKlipperPopupMenu")),
+    "extra-clicks": Action(N_("Extra click filter"), "Mouse buttons double repeat bounce primary secondary middle", "input-mouse"),
     "wheel-scrolling": Action(N_("Mouse wheel scrolling"), "Input mouse smooth linear horizontal sideways scroll", "input-mouse"),
     "quit-on-close": Action(N_("Quit on last window"), "Close last window background apps tray quit application", "application-exit"),
     "quit-protection": Action(N_("Quit and close protection"), "Input keyboard shortcut Ctrl+Q Ctrl+W", "preferences-desktop-keyboard"),

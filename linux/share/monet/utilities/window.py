@@ -443,6 +443,9 @@ class Window(QMainWindow):
         elif key == "media-keys":
             from media_keys import MediaKeys
             self.page(key, MediaKeys)
+        elif key == "extra-clicks":
+            from extra_clicks import ExtraClicks
+            self.page(key, ExtraClicks)
         elif key == "wheel-scrolling":
             from wheel_scrolling import WheelScrolling
             self.page(key, WheelScrolling)

@@ -67,3 +67,11 @@ when focus changes or a mouse button is pressed. For the integration check, buil
 `tests/fixtures/wheel-input.c` with `pkg-config --cflags --libs libei-1.0`, then
 run `python3 tests/fixtures/wheel-scrolling-wayland.py --driver /path/to/wheel-input`.
 Repeat with `--platform xcb` for XWayland.
+
+The extra-click filter suppresses a complete repeated press and release from a
+selected mouse button at the same position and window. It forwards the first
+press immediately. The filter starts off and installs no idle timer. A settings
+change or focus switch clears the click history. An outstanding suppressed
+press still owns its release. Test with the same libei driver using
+`python3 tests/fixtures/extra-click-wayland.py --driver /path/to/wheel-input`.
+Repeat with `--platform xcb` and with `--saved` to check saved preferences.

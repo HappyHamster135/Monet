@@ -25,3 +25,7 @@ pkg_check_modules(WaylandServer REQUIRED IMPORTED_TARGET wayland-server)
 add_library(monet_wheel_scroll MODULE wheelscroll.cpp)
 target_link_libraries(monet_wheel_scroll PRIVATE KWin::kwin Qt6::GuiPrivate Qt6::DBus PkgConfig::XKBCOMMON PkgConfig::WaylandServer)
 set_target_properties(monet_wheel_scroll PROPERTIES PREFIX "")
+
+add_library(monet_click_filter MODULE clickfilter.cpp)
+target_link_libraries(monet_click_filter PRIVATE KWin::kwin Qt6::GuiPrivate Qt6::DBus)
+set_target_properties(monet_click_filter PROPERTIES PREFIX "")
