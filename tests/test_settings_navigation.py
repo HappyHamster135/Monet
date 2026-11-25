@@ -103,6 +103,10 @@ class SettingsNavigation(unittest.TestCase):
         # Store, panel and transfer fixtures also borrow this visual-tree finder.
         if self.window.metaObject().indexOfProperty("pageReady") >= 0:
             select_settings_page(self.window, self.window.property("page"))
+        from PySide6.QtQuick import QQuickItem
+        named = self.window.findChild(QQuickItem, name)
+        if named is not None:
+            return named
         pending = [self.window.contentItem()]
         while pending:
             item = pending.pop()

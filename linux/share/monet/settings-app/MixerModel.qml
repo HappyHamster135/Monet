@@ -18,6 +18,10 @@ QtObject {
     }
     property var layout: ({pins: [], order: []})
 
+    // Closing the mixer also cancels updates queued by the file and stream models.
+    readonly property Timer layoutUpdate: Timer { interval: 0; onTriggered: mixer.reload() }
+    readonly property Timer streamUpdate: Timer { interval: 0; onTriggered: mixer.reconcile() }
+
     function readLayout() {
         prefs.sync()
         try {
@@ -79,8 +83,8 @@ QtObject {
         folder: StandardPaths.writableLocation(StandardPaths.ConfigLocation) + "/monet"
         nameFilters: ["mixer.ini"]
         showDirs: false
-        onDataChanged: Qt.callLater(mixer.reload)
-        onCountChanged: Qt.callLater(mixer.reload)
+        onDataChanged: mixer.layoutUpdate?.restart()
+        onCountChanged: mixer.layoutUpdate?.restart()
     }
     function save(edit) {
         if (saving) return
@@ -134,12 +138,12 @@ QtObject {
             readonly property int gain: model.Volume
             readonly property int deviceIndex: model.DeviceIndex
             readonly property bool writable: model.VolumeWritable
-            onEligibleChanged: Qt.callLater(mixer.reconcile)
-            onAppKeyChanged: Qt.callLater(mixer.reconcile)
-            onLabelChanged: Qt.callLater(mixer.reconcile)
+            onEligibleChanged: mixer.streamUpdate?.restart()
+            onAppKeyChanged: mixer.streamUpdate?.restart()
+            onLabelChanged: mixer.streamUpdate?.restart()
         }
-        onObjectAdded: (i,s) => { mixer.streams = mixer.streams.concat([s]); Qt.callLater(mixer.reconcile) }
-        onObjectRemoved: (i,s) => { mixer.streams = mixer.streams.filter(o => o && o !== s); Qt.callLater(mixer.reconcile) }
+        onObjectAdded: (i,s) => { mixer.streams = mixer.streams.concat([s]); mixer.streamUpdate?.restart() }
+        onObjectRemoved: (i,s) => { mixer.streams = mixer.streams.filter(o => o && o !== s); mixer.streamUpdate?.restart() }
     }
     readonly property Instantiator outputs: Instantiator {
         model: Audio.SinkModel {}
