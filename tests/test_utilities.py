@@ -276,20 +276,57 @@ class DesktopTools(unittest.TestCase):
             self.assertEqual(expansion_table(settings), ({}, set()))
             with patch.object(QInputDialog, "getText", return_value=("hello", True)):
                 page.edit_shortcut()
-            self.assertEqual(expansion_table(settings)[0], {";hello;": "Hej 🌷"})
+            self.assertEqual(expansion_table(settings)[0], {";hello;": ("Hej 🌷", False)})
             page.names.setCurrentRow(1)
             with patch.object(QInputDialog, "getText", side_effect=[("hello", True), ("my sig", True), ("sig", True)]), \
                     patch.object(QMessageBox, "information") as validation:
                 page.edit_shortcut()
             self.assertEqual(validation.call_count, 2)
             page = Snippets(settings)
-            self.assertEqual(expansion_table(settings)[0][";sig;"], "Ada")
+            self.assertEqual(expansion_table(settings)[0][";sig;"], ("Ada", False))
             page.remove()
-            self.assertEqual(expansion_table(settings)[0], {";sig;": "Ada"})
+            self.assertEqual(expansion_table(settings)[0], {";sig;": ("Ada", False)})
             with patch.object(QInputDialog, "getText", return_value=("", True)):
                 page.edit_shortcut()
             self.assertEqual(expansion_table(settings), ({}, set()))
             self.assertEqual(page.edit.toPlainText(), "Ada")
+
+    def test_snippet_variables_preserve_old_templates_and_expand_at_use(self):
+        from PySide6.QtCore import QDateTime, QLocale, QSettings, Qt
+        from PySide6.QtWidgets import QApplication
+        from pages import Snippets
+        from snippet_variables import expand
+        clock = QDateTime.fromString("2026-08-01T23:30:00Z", Qt.ISODate)
+        clipboard = Mock(return_value="{{date}} / Ω")
+        pattern = "{{date-tz(Europe/Stockholm):yyyy-MM-dd HH:mm}} {{unknown}} {{clipboard}} {{clipboard}}"
+        self.assertEqual(expand(pattern, clipboard, now=clock, locale=QLocale.c()),
+                         "2026-08-02 01:30 {{unknown}} {{date}} / Ω {{date}} / Ω")
+        clipboard.assert_called_once_with()
+        self.assertEqual(expand("{{time-tz(No/SuchZone):HH:mm}}", clipboard, now=clock),
+                         "{{time-tz(No/SuchZone):HH:mm}}")
+        clipboard.assert_called_once_with()
+        with tempfile.TemporaryDirectory() as root:
+            settings = QSettings(str(Path(root, "snippets.ini")), QSettings.IniFormat)
+            settings.setValue("snippets", json.dumps({"Template": "{{clipboard}}"}))
+            page = Snippets(settings)
+            page.copy()
+            self.assertEqual(QApplication.clipboard().text(), "{{clipboard}}")
+            page.edit.selectAll()
+            action = next(item for item in page.variables_menu.actions() if item.text() == "Clipboard text")
+            action.trigger()
+            self.assertTrue(page.expand_action.isChecked())
+            page = Snippets(settings)
+            self.assertTrue(page.expand_action.isChecked())
+            page.edit.insertPlainText("New ")
+            QApplication.clipboard().setText("first line\n{{time}}")
+            page.copy()
+            self.assertEqual(QApplication.clipboard().text(), "New first line\n{{time}}")
+            page.expand_action.trigger()
+            page.copy()
+            self.assertEqual(QApplication.clipboard().text(), "New {{clipboard}}")
+            page.enable_variables(True)
+            page.remove()
+            self.assertEqual(json.loads(settings.value("snippetVariables")), {})
 
     def test_named_pad_selection_preview_export_and_confirmed_deletion(self):
         from PySide6.QtCore import QSettings

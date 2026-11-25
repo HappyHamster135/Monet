@@ -12,6 +12,7 @@ def expansion_table(settings):
     if "snippets" in stored(settings, "hidden", []):
         return {}, set()
     entries = stored(settings, "snippets", {})
+    variables = stored(settings, "snippetVariables", {})
     rules = {}
     duplicates = set()
     for name, shortcut in stored(settings, "snippetShortcuts", {}).items():
@@ -21,7 +22,7 @@ def expansion_table(settings):
         trigger = ";" + shortcut + ";"
         if trigger in rules:
             duplicates.add(trigger)
-        rules[trigger] = body
+        rules[trigger] = (body, variables.get(name) is True)
     for trigger in duplicates:
         del rules[trigger]
     prefixes = {trigger[:i] for trigger in rules for i in range(1, len(trigger))}

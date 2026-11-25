@@ -287,6 +287,7 @@ class Snippets(QWidget):
         layout = QVBoxLayout(self)
         self.entries = stored(settings, "snippets", {})
         self.shortcuts = stored(settings, "snippetShortcuts", {})
+        self.variables = stored(settings, "snippetVariables", {})
         self.names = QListWidget()
         self.names.addItems(list(self.entries))
         layout.addWidget(self.names, 1)
@@ -297,7 +298,21 @@ class Snippets(QWidget):
         layout.addWidget(self.edit, 2)
         self.shortcut = QPushButton()
         self.shortcut.clicked.connect(self.edit_shortcut)
-        layout.addWidget(self.shortcut)
+        options = QHBoxLayout()
+        options.addWidget(self.shortcut, 1)
+        self.variables_button = QPushButton(tr("Variables"))
+        self.variables_menu = QMenu(self.variables_button)
+        self.expand_action = self.variables_menu.addAction(tr("Expand variables in this snippet"))
+        self.expand_action.setCheckable(True)
+        self.expand_action.triggered.connect(self.enable_variables)
+        self.variables_menu.addSeparator()
+        for label, token in ((tr("Current date"), "{{date}}"), (tr("Current time"), "{{time}}"),
+                             (tr("Date and time"), "{{datetime}}"), (tr("Clipboard text"), "{{clipboard}}")):
+            self.variables_menu.addAction(label, lambda checked=False, value=token: self.insert_variable(value))
+        self.variables_menu.addAction(tr("Custom date or time…"), self.custom_format)
+        self.variables_button.setMenu(self.variables_menu)
+        options.addWidget(self.variables_button)
+        layout.addLayout(options)
         row(layout, (tr("New snippet…"), self.add), (tr("Copy"), self.copy), (tr("Remove"), self.remove),
             (tr("Set up typing…"), self.setup))
         self.select("")
@@ -314,12 +329,33 @@ class Snippets(QWidget):
         self.current = name or None
         self.edit.setEnabled(bool(name))
         self.shortcut.setEnabled(bool(name))
+        self.variables_button.setEnabled(bool(name))
+        self.expand_action.setChecked(self.variables.get(name) is True)
         trigger = self.shortcuts.get(name)
         self.shortcut.setText(tr("Typing shortcut: %s") % (";" + trigger + ";")
                               if isinstance(trigger, str) and trigger else tr("Add typing shortcut…"))
         self.edit.blockSignals(True)
         self.edit.setPlainText(self.entries.get(name, ""))
         self.edit.blockSignals(False)
+
+    def enable_variables(self, enabled):
+        if self.current:
+            if enabled:
+                self.variables[self.current] = True
+            else:
+                self.variables.pop(self.current, None)
+            self.settings.setValue("snippetVariables", json.dumps(self.variables))
+            self.expand_action.setChecked(enabled)
+
+    def insert_variable(self, token):
+        if self.current and token:
+            self.enable_variables(True)
+            self.edit.insertPlainText(token)
+            self.edit.setFocus()
+
+    def custom_format(self):
+        from snippet_format import choose_format
+        self.insert_variable(choose_format(self))
 
     def edit_shortcut(self):
         from snippet_rules import valid_shortcut
@@ -411,11 +447,24 @@ class Snippets(QWidget):
     def copy(self):
         from PySide6.QtWidgets import QApplication
         if self.current:
-            QApplication.clipboard().setText(self.edit.toPlainText())
+            clipboard = QApplication.clipboard()
+            text = self.edit.toPlainText()
+            if self.expand_action.isChecked():
+                from snippet_variables import ClipboardUnavailable, current_text, expand
+                try:
+                    # An offer owned by this window cannot answer a Wayland
+                    # reader while this GUI thread is waiting for it.
+                    local = clipboard.ownsClipboard() or QGuiApplication.platformName() != "wayland"
+                    text = expand(text, clipboard.text if local else current_text)
+                except ClipboardUnavailable:
+                    QMessageBox.information(self, tr("Text snippets"), tr("Copy some text first."))
+                    return
+            clipboard.setText(text)
 
     def remove(self):
         if self.current:
             del self.entries[self.current]
+            self.enable_variables(False)
             self.shortcuts.pop(self.current, None)
             self.settings.setValue("snippetShortcuts", json.dumps(self.shortcuts))
             self.names.takeItem(self.names.currentRow())

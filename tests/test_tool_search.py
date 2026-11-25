@@ -175,6 +175,14 @@ def fixture():
         clip_entries.remove(original)
         run(runner, clip[0])
         assert len(copied) == 2
+        config.setValue("snippets", json.dumps({"Report": "Week of {{date:yyyy-MM-dd}}"}))
+        config.sync()
+        report, = runner.Match("snippet: report")
+        config.setValue("snippetVariables", json.dumps({"Report": True}))
+        config.sync()
+        run(runner, report[0])
+        from PySide6.QtCore import QDate
+        assert copied[-1] == "Week of " + QDate.currentDate().toString("yyyy-MM-dd")
         rocket = runner.Match("emoji: rocket")[0]
         assert rocket[0] == "emoji/🚀", rocket
         run(runner, rocket[0])

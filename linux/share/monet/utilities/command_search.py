@@ -294,8 +294,17 @@ def copy_result(key, hidden, settings, bus):
             # The index can change while the chooser is open. Match the exact text again.
             value = next((text for text in history(bus) if identity(text) == digest), "")
     elif scope == "snippet":
-        value = next((body for name, body in stored(settings, "snippets", {}).items()
-                      if identity(name) == ref and isinstance(body, str)), "")
+        for name, body in stored(settings, "snippets", {}).items():
+            if identity(name) == ref and isinstance(body, str):
+                value = body
+                if stored(settings, "snippetVariables", {}).get(name) is True:
+                    from snippet_variables import ClipboardUnavailable, expand
+                    try:
+                        value = expand(body)
+                    except ClipboardUnavailable:
+                        notify(bus, tr("Copy some text first."))
+                        return
+                break
     elif scope == "emoji":
         entry = emoji_index().get(ref)
         if entry and entry[0] == ref:

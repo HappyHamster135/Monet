@@ -72,6 +72,30 @@ def editor(toolkit):
     GLib.MainLoop().run()
 
 
+def clipboard_donor():
+    from PySide6.QtCore import QMimeData, QTimer
+    from PySide6.QtWidgets import QApplication, QWidget
+    home = Path.home()
+    assert home.parent.name.startswith("monet-tests-")
+    class DelayedText(QMimeData):
+        def retrieveData(self, mime, kind):
+            if mime.startswith("text/plain") and (home / "arm").is_file():
+                (home / "arm").unlink()
+                (home / "reading").touch()
+                time.sleep(.23)
+            return super().retrieveData(mime, kind)
+    app = QApplication([])
+    window = QWidget()
+    window.show()
+    def copy():
+        data = DelayedText()
+        data.setText("Donor {{time}}")
+        app.clipboard().setMimeData(data)
+        (home / "copied").touch()
+    QTimer.singleShot(180, copy)
+    app.exec()
+
+
 def snapshot(home, texts, focus):
     name = os.environ.get("MONET_FIXTURE_ENTRY", "entry")
     temporary = home / (name + ".tmp")
@@ -127,12 +151,19 @@ def worker():
             if shift:
                 code = 51
                 pointer.key(42, True)
+                time.sleep(.02)
             pointer.key(code, True)
+            if os.environ["MONET_FIXTURE_SYSTEM_KEYMAP"] == "1":
+                time.sleep(.018)
             pointer.key(code, False)
             if shift:
+                time.sleep(.02)
                 pointer.key(42, False)
+                time.sleep(.02)
             if os.environ["MONET_FIXTURE_SYSTEM_KEYMAP"] == "1":
-                time.sleep(.004)
+                # IBus and KWin forward the physical key and its modifiers
+                # separately when using the system keymap.
+                time.sleep(.016)
     for toolkit in ("qt", "gtk"):
         path.unlink(missing_ok=True)
         client = subprocess.Popen([sys.executable, __file__, toolkit])
@@ -163,6 +194,21 @@ def worker():
             settings.sync()
             type_keys(";hi;")
             last += "Changed\nΔ"
+            check(["Hello, Åsa! ;hx ", ";hi;", last], 2)
+            settings.setValue("snippetVariables", json.dumps({"Greeting": True}))
+            settings.setValue("snippets", json.dumps({"Greeting": "{{clipboard}} / {{date:yyyy}}"}))
+            settings.sync()
+            assert Path.home().parent.name.startswith("monet-tests-")
+            sample = "Klipp {{time}} 🌷"
+            subprocess.run(["wl-copy", "--type", "text/plain;charset=utf-8"], input=sample.encode(), check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            type_keys(";hi;")
+            last += sample + " / " + time.strftime("%Y")
+            check(["Hello, Åsa! ;hx ", ";hi;", last], 2)
+            assert subprocess.check_output(["wl-paste", "--no-newline"]).decode() == sample
+            subprocess.run(["wl-copy", "--clear"], check=True)
+            type_keys(";hi;")
+            last += ";hi;"
             check(["Hello, Åsa! ;hx ", ";hi;", last], 2)
             type_keys(";h")
             time.sleep(.12)
@@ -198,7 +244,35 @@ def worker():
         finally:
             client.terminate()
             client.wait(timeout=3)
-    print("Verified Qt and GTK expansion, password and private fields, live edits, backspace, literal typing and focus changes.", flush=True)
+    settings.setValue("snippetVariables", json.dumps({"Greeting": True}))
+    settings.setValue("snippets", json.dumps({"Greeting": "{{clipboard}}"}))
+    settings.sync()
+    path.unlink(missing_ok=True)
+    donor = subprocess.Popen([sys.executable, __file__, "donor"])
+    try:
+        wait(lambda: (home / "copied").exists(), "Slow clipboard owner did not start")
+        client = subprocess.Popen([sys.executable, __file__, "qt"])
+        try:
+            check(["", "", ""], 0)
+            (home / "arm").touch()
+            type_keys(";hi;")
+            wait(lambda: (home / "reading").exists(), "No clipboard request")
+            type_keys("x;hi;")
+            check(["Donor {{time}}xDonor {{time}}", "", ""], 0)
+            (home / "reading").unlink()
+            (home / "arm").touch()
+            type_keys(";hi;")
+            wait(lambda: (home / "reading").exists(), "No second clipboard request")
+            type_keys(["tab"])
+            time.sleep(.4)
+            check(["Donor {{time}}xDonor {{time}};hi;", "", ""], 1)
+        finally:
+            client.terminate()
+            client.wait(timeout=3)
+    finally:
+        donor.terminate()
+        donor.wait(timeout=3)
+    print("Verified Qt and GTK snippets, private fields, date and clipboard expansion, slow selection owners, typing order and focus changes.", flush=True)
     (home / "passed").touch()
 
 
@@ -257,6 +331,8 @@ if __name__ == "__main__":
         parser.add_argument("--system-keymap", action="store_true")
         args = parser.parse_args()
         run(args.installed, args.layout, args.system_keymap)
+    elif sys.argv[1] == "donor":
+        clipboard_donor()
     elif sys.argv[1] == "worker":
         worker()
     else:

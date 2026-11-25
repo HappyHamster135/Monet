@@ -21,6 +21,7 @@ class SnippetInput(IBus.EngineSimple):
         self.rules, self.prefixes = {}, set()
         self.prefix = ""
         self.releases = set()
+        self.pending = None
 
     def refresh(self):
         try:
@@ -43,16 +44,19 @@ class SnippetInput(IBus.EngineSimple):
         self.commit_text(IBus.Text.new_from_string(text))
 
     def do_reset(self):
+        self.pending = None
         self.prefix = ""
         IBus.EngineSimple.do_reset(self)
 
     def do_focus_out(self):
         # The client owns focus-out commitment of the displayed composition.
+        self.pending = None
         self.prefix = ""
         self.releases.clear()
         IBus.EngineSimple.do_focus_out(self)
 
     def do_disable(self):
+        self.pending = None
         self.prefix = ""
         self.releases.clear()
         IBus.EngineSimple.do_disable(self)
@@ -63,12 +67,50 @@ class SnippetInput(IBus.EngineSimple):
                 and not hints & (IBus.InputHints.HIDDEN_TEXT | IBus.InputHints.PRIVATE)
                 and self.client_capabilities & IBus.Capabilite.PREEDIT_TEXT)
 
+    def expand_clipboard(self, candidate, text):
+        # Returning to IBus lets the editor that owns the clipboard answer
+        # the transfer and lets focus-out cancel an outstanding composition.
+        from threading import Thread
+        from snippet_variables import ClipboardUnavailable, expand
+        request = object()
+        self.pending = request
+        self.preedit(candidate)
+
+        def deliver(result):
+            if self.pending is request:
+                self.pending = None
+                suffix = self.prefix[len(candidate):]
+                self.finish(result)
+                for index, char in enumerate(suffix):
+                    if self.pending is not None:
+                        self.preedit(self.prefix + suffix[index:])
+                        break
+                    if not self.type_character(char):
+                        self.commit_text(IBus.Text.new_from_string(char))
+            return False
+
+        def read():
+            try:
+                result = expand(text)
+            except ClipboardUnavailable:
+                result = candidate
+            GLib.idle_add(deliver, result)
+
+        Thread(target=read, daemon=True).start()
+
     def type_character(self, character):
         if character == ";":
             self.refresh()
         candidate = self.prefix + character
         if candidate in self.rules:
-            self.finish(self.rules[candidate])
+            text, variables = self.rules[candidate]
+            if variables:
+                if "{{clipboard}}" in text:
+                    self.expand_clipboard(candidate, text)
+                    return True
+                from snippet_variables import expand
+                text = expand(text)
+            self.finish(text)
             return True
         if candidate in self.prefixes:
             self.preedit(candidate)
@@ -99,6 +141,7 @@ class SnippetInput(IBus.EngineSimple):
             if keyval != IBus.KEY_semicolon:
                 return False
         if not self.accepts_shortcut():
+            self.pending = None
             if self.prefix:
                 self.preedit("")
             return False
@@ -107,6 +150,17 @@ class SnippetInput(IBus.EngineSimple):
         modified = state & (IBus.ModifierType.CONTROL_MASK | IBus.ModifierType.MOD1_MASK |
                             IBus.ModifierType.SUPER_MASK | IBus.ModifierType.MOD4_MASK |
                             IBus.ModifierType.META_MASK | IBus.ModifierType.HYPER_MASK)
+        if self.pending is not None:
+            character = IBus.keyval_to_unicode(keyval)
+            if not modified and character and character.isprintable() and len(self.prefix) < 256:
+                self.preedit(self.prefix + character)
+                self.releases.add(keycode)
+                return True
+            # Navigation and edits apply to the literal preedit if the
+            # clipboard owner has not answered yet.
+            self.pending = None
+            self.finish(self.prefix)
+            return base(self, keyval, keycode, state)
         if not modified and self.prefix and keyval in (IBus.KEY_BackSpace, IBus.KEY_Escape):
             self.preedit(self.prefix[:-1] if keyval == IBus.KEY_BackSpace else "")
         else:
