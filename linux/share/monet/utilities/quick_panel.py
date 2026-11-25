@@ -263,11 +263,15 @@ class QuickPanel(QDialog):
         else:
             self.hide()
 
+    def closeEvent(self, event):
+        self.hide()
+        event.accept()
+
     def changeEvent(self, event):
         super().changeEvent(event)
         if event.type() == QEvent.ActivationChange and self.isVisible() and not self.isActiveWindow():
             # A combo menu is its own native window. Let Qt finish the focus transfer.
-            QTimer.singleShot(0, self.dismiss_if_inactive)
+            QTimer.singleShot(0, self, self.dismiss_if_inactive)
 
     def dismiss_if_inactive(self):
         if self.isVisible() and not self.isActiveWindow() and not QApplication.activePopupWidget():

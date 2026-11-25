@@ -173,7 +173,7 @@ done
 for icon in monet monet-windows monet-quick-symbolic; do
     rm -f "$PREFIX/share/icons/hicolor/scalable/apps/$icon.svg"
 done
-rm -f "$PREFIX/libexec/monet-utilities" "$PREFIX/share/applications/monet-utilities.desktop" "$PREFIX/share/applications/org.monet.QuickPanel.desktop" "$PREFIX/share/applications/monet-windows.desktop" "$PREFIX/share/applications/monet-settings.desktop" "$PREFIX/share/applications/monet-passwords.desktop" \
+rm -f "$PREFIX/libexec/monet-utilities" "$PREFIX/share/applications/monet-utilities.desktop" "$PREFIX/share/applications/org.monet.QuickPanel.desktop" "$PREFIX/share/applications/org.monet.FavoritesWheel.desktop" "$PREFIX/share/applications/monet-windows.desktop" "$PREFIX/share/applications/monet-settings.desktop" "$PREFIX/share/applications/monet-passwords.desktop" \
     "$PREFIX/share/applications/monet-archive.desktop" \
     "$PREFIX/share/kio/servicemenus/monet-local-app.desktop" \
     "$PREFIX/share/kio/servicemenus/monet-folder-tools.desktop" \

@@ -13,7 +13,7 @@ sys.path.insert(0, str(MODULES))
 from actions import ACTIONS, find_tools, preferences
 
 try:
-    from PySide6.QtCore import QSettings, Qt, QTimer
+    from PySide6.QtCore import QEvent, QSettings, Qt, QTimer
     from PySide6.QtTest import QTest
     from PySide6.QtWidgets import QApplication, QDialogButtonBox, QTreeWidget
     from quick_panel import QuickPanel
@@ -46,7 +46,18 @@ class Panel(unittest.TestCase):
 
     def setUp(self):
         self.panel = QuickPanel()
-        self.addCleanup(self.panel.close)
+        self.addCleanup(self.dispose, self.panel)
+
+    def dispose(self, widget):
+        widget.close()
+        widget.deleteLater()
+        self.app.sendPostedEvents(None, QEvent.DeferredDelete)
+
+    def test_close_in_editor_dismisses_the_panel(self):
+        self.panel.present(["shelf", "notes"], [])
+        self.panel.edit()
+        self.assertTrue(self.panel.close())
+        self.assertFalse(self.panel.isVisible())
 
     def test_single_click_keyboard_and_hidden_tools(self):
         keys = ["ports", "notes", "shelf", "quick-panel"]
@@ -119,7 +130,7 @@ class Panel(unittest.TestCase):
             window.Open(["quick-panel"])
             self.assertIsNone(window.quick_panel)
             self.assertFalse(window.isVisible())
-            window.close()
+            self.dispose(window)
 
     def test_narrow_panel_keeps_last_tile_reachable_by_keyboard(self):
         tools = [key for key in ACTIONS if key != "quick-panel"]

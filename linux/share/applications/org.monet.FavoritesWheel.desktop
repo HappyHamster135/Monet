@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Favorite actions wheel
+Name[sv]=Hjul med favoritåtgärder
+Icon=view-more
+Exec=@LIBEXECDIR@/monet-utilities wheel
+NoDisplay=true
+StartupNotify=true
+X-KDE-Shortcuts=Meta+Alt+W

@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 """Launch Monet's on-demand desktop utilities."""
+import os
 from pathlib import Path
 import sys
 
@@ -8,11 +9,35 @@ if not modules.is_absolute():
     modules = Path(__file__).resolve().parents[1] / "share/monet/utilities"
 sys.path.insert(0, str(modules))
 
+def activate_panel(key):
+    """Forward a shortcut to a running receiver without starting a second Qt GUI."""
+    try:
+        import dbus
+    except ImportError:
+        return None
+    service = "org.monet.Utilities"
+    request = dbus.lowlevel.MethodCallMessage(service, "/Utilities", service, "OpenTool")
+    request.set_auto_start(False)
+    request.append(key, os.environ.get("XDG_ACTIVATION_TOKEN", ""), signature="ss")
+    try:
+        dbus.SessionBus().send_message_with_reply_and_block(request, 2)
+    except dbus.DBusException as error:
+        # The receiver may already have accepted a toggle when a reply times out.
+        if error.get_dbus_name() in ("org.freedesktop.DBus.Error.NoReply", "org.freedesktop.DBus.Error.Timeout"):
+            return 1
+        return None
+    return 0
+
+
 if __name__ == "__main__":
     if sys.argv[1:2] == ["paste-plain"]:
         from plain_paste import main
         if len(sys.argv) == 4 and sys.argv[2].isdecimal() and sys.argv[3] in ("commit", "edit"):
             sys.exit(main(int(sys.argv[2]), sys.argv[3]))
         sys.exit(2)
+    if sys.argv[1:] in (["quick-panel"], ["wheel"]):
+        status = activate_panel(sys.argv[1])
+        if status is not None:
+            sys.exit(status)
     from window import main
     sys.exit(main(sys.argv, "@LIBEXECDIR@"))

@@ -14,6 +14,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   Dropping files on it adds them to the shelf. Music levels and accessory alerts are optional.
 - **Homebrew packages.** Search for formulae and casks, install or remove individual packages, and review and apply updates from Monet Utilities.
 - **Cleaning mode.** Pause input for up to two minutes while you wipe the keyboard or display. Keep your apps visible, darken every display or lock the session. Visible and darkened cleaning both return to the desktop when time runs out, when you click **Finish cleaning**, or when you press Esc five times.
+- **Favorites wheel.** Press Super+Alt+W to open your first eight favorites around the pointer. Click an action or use the arrow keys and Enter.
 - **Quick Panel.** Press Super+Alt+U to open your favorite tools. Add and remove favorites in the panel, and drag them into the order you want. The favorites wheel and tool search follow that order.
 - **Desktop actions.** Pin appearance, keyboard backlight, screen lock, display power and Empty Trash to your Quick Panel, or run them from tool search. Empty Trash asks before permanently deleting files.
 - **Find Utilities from anywhere.** Press Super+Alt+Space for the tool search and your favorites, or search from the Home Bar or Super+R. Select a result to open it directly.

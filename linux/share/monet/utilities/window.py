@@ -1,16 +1,15 @@
 import json
-import math
 import os
 from pathlib import Path
 import re
 import sys
 import tempfile
-from PySide6.QtCore import (QObject, QProcess, QSettings, QSize, Qt, QTimer, QUrl, Signal, Slot)
+from PySide6.QtCore import (QObject, QProcess, QSettings, Qt, QTimer, QUrl, Signal, Slot)
 from PySide6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusServiceWatcher, QDBusVirtualObject
-from PySide6.QtGui import QAction, QCursor, QIcon, QKeySequence, QShortcut
+from PySide6.QtGui import QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QInputDialog,
-    QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMenu, QMessageBox, QPlainTextEdit,
-    QPushButton, QStackedWidget, QToolButton, QVBoxLayout, QWidget, QWidgetAction)
+    QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox, QPlainTextEdit,
+    QPushButton, QStackedWidget, QToolButton, QVBoxLayout, QWidget)
 from actions import ACTIONS, DIRECT_ACTIONS, clean_url, find_tools, preferences, tr
 from pages import Downloads, Shelf, Snippets, row
 
@@ -20,7 +19,7 @@ SERVICE = "org.monet.Utilities"
 class Window(QMainWindow):
     panelDismissed = Signal()
 
-    def __init__(self, helpers):
+    def __init__(self, helpers, defer_catalog=False):
         super().__init__()
         self.helpers = Path(helpers)
         self.settings = QSettings("Monet", "Utilities")
@@ -29,6 +28,10 @@ class Window(QMainWindow):
         self.notch_previews = {}
         self.floating_pads = set()
         self.quick_panel = None
+        self.favorites_wheel = None
+        self.wheel_request = None
+        self.wheel_serial = 0
+        self.wheel_placement = None
         self.direct_actions = None
         self.pad_store = None
         self.agent_feed = None
@@ -81,7 +84,16 @@ class Window(QMainWindow):
         self.status.setSizeGripEnabled(False)
         QShortcut(QKeySequence("Ctrl+K"), self, activated=self.home)
         QShortcut(QKeySequence("Alt+Left"), self, activated=self.home)
-        self.home()
+        self.catalog_pending = defer_catalog
+        if defer_catalog:
+            self.setWindowTitle(tr("Monet Utilities"))
+        else:
+            self.home()
+
+    def showEvent(self, event):
+        if self.catalog_pending and self.stack.currentIndex() == 0:
+            self.home()
+        super().showEvent(event)
 
     def session_feed(self):
         if self.agent_feed is None:
@@ -90,6 +102,7 @@ class Window(QMainWindow):
         return self.agent_feed
 
     def filter(self):
+        self.catalog_pending = False
         self.catalog.clear()
         for key, _ in find_tools(self.search.text(), self.favorites, self.hidden):
             action = ACTIONS[key]
@@ -216,34 +229,69 @@ class Window(QMainWindow):
                 self.Open([key])
 
     def wheel(self):
+        if self.favorites_wheel and self.favorites_wheel.isVisible():
+            self.favorites_wheel.hide()
+            return
+        if self.wheel_request is not None:
+            self.wheel_request = None
+            if self.wheel_placement:
+                self.wheel_placement.stop()
+            self.panelDismissed.emit()
+            return
+        self.settings.sync()
+        self.favorites, self.hidden = preferences(self.settings)
+        if "wheel" in self.hidden:
+            self.panelDismissed.emit()
+            return
+        modal = QApplication.activeModalWidget()
+        if modal:
+            modal.raise_()
+            modal.activateWindow()
+            return
         keys = [k for k in self.favorites if k in ACTIONS and k not in self.hidden and k != "wheel"][:8]
         if not keys:
-            self.customize()
+            if "quick-panel" not in self.hidden:
+                if not (self.quick_panel and self.quick_panel.isVisible()):
+                    self.toggle_panel()
+                self.quick_panel.edit()
+            else:
+                self.customize()
+                self.panelDismissed.emit()
             return
-        menu = QMenu(self)
-        wheel = QWidget()
-        wheel.setFixedSize(320, 320)
-        for i, key in enumerate(keys):
-            angle = 2 * math.pi * i / len(keys) - math.pi / 2
-            button = QToolButton(wheel)
-            button.setGeometry(round(116 + 101 * math.cos(angle)), round(132 + 116 * math.sin(angle)), 88, 56)
-            button.setIcon(QIcon.fromTheme(ACTIONS[key].icon))
-            button.setText(ACTIONS[key].name)
-            button.setToolTip(ACTIONS[key].name)
-            button.setAccessibleName(ACTIONS[key].name)
-            button.setToolButtonStyle(Qt.ToolButtonIconOnly)
-            button.setIconSize(QSize(30, 30))
-            def choose(checked=False, key=key):
-                menu.close()
-                QTimer.singleShot(0, lambda: self.run_tool(key))
-            button.clicked.connect(choose)
-        host = QWidgetAction(menu)
-        host.setDefaultWidget(wheel)
-        menu.addAction(host)
-        center = QCursor.pos()
-        from PySide6.QtCore import QPoint
-        menu.exec(center - QPoint(160, 160))
-        menu.deleteLater()
+        if self.favorites_wheel is None:
+            from favorites_wheel import FavoritesWheel
+            self.favorites_wheel = FavoritesWheel()
+            self.favorites_wheel.chosen.connect(self.open_favorite)
+            self.favorites_wheel.dismissed.connect(self.wheel_dismissed)
+        self.wheel_serial += 1
+        token = str(self.wheel_serial)
+        self.wheel_request = (token, keys)
+        if QApplication.platformName().startswith("wayland"):
+            # KWin arms its windowAdded handler before asking us to map the wheel.
+            # A compositor without the KWin service can still open a normal chooser.
+            from wheel_position import WheelPlacement
+            try:
+                self.wheel_placement = WheelPlacement(self, token, self.favorites_wheel.windowTitle())
+            except OSError:
+                self.show_wheel(token)
+        else:
+            self.show_wheel(token)
+
+    def wheel_dismissed(self):
+        if self.wheel_placement:
+            self.wheel_placement.stop()
+        self.panelDismissed.emit()
+
+    def show_wheel(self, token, available=0):
+        if self.wheel_request is None or self.wheel_request[0] != token:
+            return False
+        _, keys = self.wheel_request
+        self.wheel_request = None
+        if available <= 0:
+            area = self.favorites_wheel.screen().availableGeometry()
+            available = min(area.width(), area.height())
+        self.favorites_wheel.present(keys, available)
+        return True
 
     def issue(self, text):
         self.status.showMessage(text[:500], 12000)
@@ -651,6 +699,9 @@ class Window(QMainWindow):
             else:
                 self.panelDismissed.emit()
             return
+        if key == "wheel" and len(args) == 1:
+            self.wheel()
+            return
         if key == "quick-panel" and len(args) == 1:
             self.toggle_panel()
             return
@@ -752,6 +803,18 @@ class Receiver(QObject):
         else:
             QApplication.quit()
 
+    @Slot(str)
+    def WheelPlaced(self, token):
+        placement = self.window.wheel_placement
+        if placement and placement.token == token:
+            placement.stop()
+
+    @Slot(str, str, result=bool)
+    def ShowWheel(self, token, available):
+        if not available.isascii() or not available.isdecimal() or len(available) > 5:
+            return False
+        return self.window.show_wheel(token, int(available))
+
     @Slot(str, str)
     def OpenTool(self, key, token):
         self.window.settings.sync()
@@ -851,16 +914,17 @@ def main(argv, helpers):
         if args == ["--pad-service"]:
             return True
         from PySide6.QtDBus import QDBus
-        if args == ["quick-panel"] and activation_token:
+        if args in (["quick-panel"], ["wheel"]) and activation_token:
             msg = QDBusMessage.createMethodCall(SERVICE, "/Utilities", SERVICE, "OpenTool")
-            msg.setArguments(["quick-panel", activation_token])
+            msg.setArguments([args[0], activation_token])
         else:
             msg = QDBusMessage.createMethodCall(SERVICE, "/Utilities", SERVICE, "Present")
             msg.setArguments([json.dumps(args)])
         return bus.call(msg, QDBus.Block, 3000).type() != QDBusMessage.ErrorMessage
     if bus.isConnected() and bus.interface().isServiceRegistered(SERVICE).value() and forward():
         return 0
-    window = Window(helpers if Path(helpers).is_absolute() else "/usr/libexec")
+    window = Window(helpers if Path(helpers).is_absolute() else "/usr/libexec",
+                    defer_catalog=args in (["wheel"], ["quick-panel"]))
     receiver = Receiver(window)
     if bus.isConnected():
         if not bus.registerObject("/Utilities", SERVICE, receiver, QDBusConnection.ExportAllSlots):
@@ -878,4 +942,9 @@ def main(argv, helpers):
         receiver.idle.start()
     else:
         QTimer.singleShot(0, lambda: window.Open(args))
+    def dispose_windows():
+        for widget in (window.favorites_wheel, window.quick_panel, window):
+            if widget:
+                widget.deleteLater()
+    app.aboutToQuit.connect(dispose_windows)
     return app.exec()
