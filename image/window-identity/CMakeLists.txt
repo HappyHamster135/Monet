@@ -33,3 +33,7 @@ set_target_properties(monet_click_filter PROPERTIES PREFIX "")
 add_library(monet_cleaning MODULE cleaning.cpp)
 target_link_libraries(monet_cleaning PRIVATE KWin::kwin Qt6::GuiPrivate Qt6::DBus Qt6::Widgets KF6::I18n PkgConfig::XKBCOMMON)
 set_target_properties(monet_cleaning PROPERTIES PREFIX "")
+
+add_library(monet_app_menu MODULE appmenu.cpp)
+target_link_libraries(monet_app_menu PRIVATE KWin::kwin Qt6::DBus)
+set_target_properties(monet_app_menu PROPERTIES PREFIX "")

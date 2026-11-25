@@ -1,0 +1,8 @@
+{
+  "KPlugin": {
+    "Name": "Monet Command Bar window",
+    "Description": "Identify the window whose menu was requested from desktop search",
+    "License": "GPL-3.0-or-later",
+    "EnabledByDefault": true
+  }
+}

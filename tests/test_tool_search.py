@@ -182,6 +182,8 @@ def fixture():
             assert not runner.Match(prefix + ":")
             run(runner, key)
         assert len(copied) == 3 and len(history_reads) == reads
+        from tests.fixtures.exported_menu import check_menu_search
+        check_menu_search(bus, runner, second, call, config)
     finally:
         child.terminate()
         child.wait(timeout=3)

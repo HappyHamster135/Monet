@@ -83,3 +83,10 @@ button, session lock or loss of the Utilities owner releases the input filter.
 The standard Plasma locker handles **Lock the session** independently.
 Exercise the two-output flow with
 `python3 tests/fixtures/visible-cleaning-wayland.py --plugin /path/to/monet_cleaning.so`.
+
+The Command Bar uses `monet_app_menu.so` to identify the window that was active
+before desktop search opened. When the search provider asks, KWin supplies that
+window's ID, process, title and exported menu address. The provider reads the
+menu on demand and checks the window again before invoking a selection.
+Test duplicate actions, focus changes and disabled commands with
+`python3 tests/fixtures/app-menu-wayland.py --plugin /path/to/monet_app_menu.so`.

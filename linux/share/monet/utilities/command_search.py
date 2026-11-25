@@ -14,7 +14,7 @@ import dbus
 from actions import stored, tr, words
 
 KLIPPER = "org.kde.klipper"
-SCOPES = {"snippet": "snippets", "clip": "clipboard", "emoji": "emoji"}
+SCOPES = {"snippet": "snippets", "clip": "clipboard", "emoji": "emoji", "menu": "command-bar"}
 
 
 def command_query(query, tool_prefixes):
@@ -25,7 +25,7 @@ def command_query(query, tool_prefixes):
     prefix, space, keyword = head.rpartition(" ")
     if space and words(prefix) in tool_prefixes:
         head = keyword
-    aliases = {tr("snippet").casefold(): "snippet", tr("clip").casefold(): "clip"}
+    aliases = {tr("snippet").casefold(): "snippet", tr("clip").casefold(): "clip", tr("menu").casefold(): "menu"}
     scope = aliases.get(head.casefold(), head.casefold())
     if scope in SCOPES:
         return scope, tail.strip()
@@ -243,6 +243,10 @@ def copy_result(key, hidden, settings, bus):
                 except (OSError, subprocess.SubprocessError):
                     pass
         notice = tr("Could not copy this search result.")
+    notify(bus, notice)
+
+
+def notify(bus, notice):
     try:
         service = "org.freedesktop.Notifications"
         proxy = bus.get_object(service, "/org/freedesktop/Notifications", introspect=False)

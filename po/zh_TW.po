@@ -17679,7 +17679,7 @@ msgid "Could not copy this search result."
 msgstr ""
 
 #: linux/share/monet/utilities/actions.py:101
-msgid "Search apps, windows, files and tools"
+msgid "Search apps and files, or type menu: for commands in the active app"
 msgstr ""
 
 #: linux/share/monet/utilities/actions.py:102
@@ -17692,4 +17692,16 @@ msgstr ""
 
 #: linux/share/monet/utilities/actions.py:104
 msgid "Type emoji: and a name to copy an emoji"
+msgstr ""
+
+#: linux/share/monet/utilities/tool_search.py:130
+msgid "This menu command is no longer available."
+msgstr ""
+
+#: linux/share/monet/utilities/command_search.py:28
+msgid "menu"
+msgstr ""
+
+#: linux/share/monet/utilities/menu_commands.py:202
+msgid "App menu"
 msgstr ""

@@ -118,7 +118,7 @@ class WindowIdentityBundle(unittest.TestCase):
                 copy.assert_not_called()
 
     def test_newest_plugin_is_verified_before_installing_any_plugin(self):
-        for schema, plugin in ((3, bundle.QUIT_PLUGIN), (4, bundle.WHEEL_PLUGIN), (6, bundle.CLEANING_PLUGIN)):
+        for schema, plugin in ((3, bundle.QUIT_PLUGIN), (4, bundle.WHEEL_PLUGIN), (6, bundle.CLEANING_PLUGIN), (7, bundle.MENU_PLUGIN)):
             with self.subTest(schema=schema), tempfile.TemporaryDirectory() as temp:
                 folder = Path(temp)
                 self.make_bundle(folder, schema=schema)

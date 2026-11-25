@@ -21,6 +21,7 @@ class ToolSearch(dbus.service.Object):
         self.loop = loop
         self.settings = QSettings("Monet", "Utilities")
         self.tokens = {}
+        self.menu_search = None
         self.clip_search = None
         self.prefixes = {"tools", words(tr("tools")), "monet tools", words(tr("Monet Utilities"))}
         self.timeout = 0
@@ -39,15 +40,25 @@ class ToolSearch(dbus.service.Object):
     @dbus.service.method(INTERFACE, sender_keyword="sender")
     def Teardown(self, sender=None):
         self.tokens.pop(sender, None)
+        self.menu_search = None
         self.close_clip_search()
+
+    def desktop_search(self, sender):
+        for name in ("org.kde.krunner", "org.kde.plasmashell"):
+            try:
+                if self.bus.get_name_owner(name) == sender:
+                    return True
+            except dbus.DBusException:
+                continue
+        return False
 
     @dbus.service.method(INTERFACE, out_signature="a(sss)")
     def Actions(self):
         self.touch()
         return []
 
-    @dbus.service.method(INTERFACE, in_signature="s", out_signature="a(sssida{sv})")
-    def Match(self, query):
+    @dbus.service.method(INTERFACE, in_signature="s", out_signature="a(sssida{sv})", sender_keyword="sender")
+    def Match(self, query, sender=None):
         self.touch()
         raw = str(query[:256]).strip()
         query = words(raw)
@@ -57,6 +68,7 @@ class ToolSearch(dbus.service.Object):
                 scoped, query = True, query[len(prefix):].strip()
                 break
         if not scoped and len(query) < 3:
+            self.menu_search = None
             self.close_clip_search()
             return []
         self.settings.sync()
@@ -65,6 +77,16 @@ class ToolSearch(dbus.service.Object):
         if ":" in raw:
             from command_search import command_query, matches as command_matches
             direct = command_query(raw, self.prefixes)
+            if direct and direct[0] == "menu":
+                self.close_clip_search()
+                if "command-bar" in hidden or not self.desktop_search(sender):
+                    self.menu_search = None
+                    return []
+                if self.menu_search is None:
+                    from menu_commands import MenuSearch
+                    self.menu_search = MenuSearch(self.bus)
+                return self.menu_search.matches(direct[1])
+            self.menu_search = None
             if direct:
                 if direct[0] == "clip" and "clipboard" not in hidden:
                     if self.clip_search is None:
@@ -74,6 +96,7 @@ class ToolSearch(dbus.service.Object):
                     self.close_clip_search()
                 return command_matches(*direct, hidden, self.settings, self.clip_search)
         self.close_clip_search()
+        self.menu_search = None
         matches = find_tools(query, favorites, hidden)
         if scoped and not query:
             matches = [(key, score) for key, score in matches if key in favorites]
@@ -99,6 +122,14 @@ class ToolSearch(dbus.service.Object):
         token, expiry = self.tokens.pop(sender, ("", 0))
         self.settings.sync()
         _, hidden = preferences(self.settings)
+        if not action and str(key).startswith("menu/"):
+            if "command-bar" not in hidden and self.desktop_search(sender):
+                from menu_commands import MenuSearch
+                from command_search import notify
+                if not MenuSearch(self.bus).run(key):
+                    notify(self.bus, tr("This menu command is no longer available."))
+            self.menu_search = None
+            return
         if not action and str(key).startswith(("snippet/", "clip/", "emoji/")):
             from command_search import copy_result
             copy_result(str(key), hidden, self.settings, self.bus)
