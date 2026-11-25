@@ -92,7 +92,7 @@ ACTIONS = {
     "process-control": Action(N_("End or restart a process"), "System process tree PID force quit", "system-run"),
     "ports": Action(N_("Listening ports"), "System TCP UDP network process tree search quit", "network-wired"),
     "processes": Action(N_("Processes and system monitors"), "System", "utilities-system-monitor", ("plasma-systemmonitor",)),
-    "fans": Action(N_("Fan speeds and supported controllers"), "System", "preferences-system-power-management"),
+    "fans": Action(N_("Fan speeds and supported controllers"), "System cooling RPM manual temperature curves PWM", "preferences-system-power-management"),
     "devices": Action(N_("USB devices and fan sensors"), "System", "computer"),
     "bluetooth": Action(N_("Bluetooth accessories"), "System", "preferences-system-bluetooth", ("@monet-settings", "bluetooth")),
     "quick-panel": Action(N_("Quick Panel"), "Favorite tools floating launcher grid", "view-grid"),

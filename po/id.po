@@ -18081,3 +18081,209 @@ msgstr ""
 #: linux/share/monet/utilities/script_search.py:240
 msgid "Running script…"
 msgstr ""
+
+#: linux/share/monet/utilities/fan_control.py:60
+msgid "{device} fan {number}"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_control.py:64
+msgid "Manual"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_control.py:134 linux/share/monet/utilities/fan_control.py:138
+msgid "The local cooling service is unavailable."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_control.py:149
+msgid ""
+"A CoolerControl access token with the appropriate permissions is required."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_control.py:151
+msgid "CoolerControl returned HTTP {status}."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_control.py:154
+msgid "The cooling service returned too much data."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_control.py:157
+msgid "The cooling service connection was interrupted."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_control.py:204
+msgid "Use between {low} and {high} points."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_control.py:208
+msgid "Each point needs a temperature and a speed from 0 to 100%."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_control.py:210
+msgid "This sensor supports temperatures from {low} to {high} °C."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_control.py:213
+msgid "Temperatures must increase and fan speeds must stay level or rise."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_curve.py:17
+msgid "Fan speed by temperature"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_curve.py:18
+msgid "Drag a point or edit its values in the table."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_curve.py:104
+msgid "Temperature curve"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_curve.py:109
+msgid "Curve name"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_curve.py:119
+msgid "Temperature sensor"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_curve.py:122
+msgid "Temperature (°C)"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_curve.py:122
+msgid "Fan speed (%)"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_curve.py:129
+msgid "Curve points"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_curve.py:137
+msgid "Add point"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_curve.py:138
+msgid "Remove point"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_curve.py:195
+msgid "Choose a name and a temperature sensor."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:39
+msgid "Fan"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:39
+msgid "Speed"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:39
+msgid "Target RPM"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:39
+msgid "Driver mode"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:39
+msgid "Fan duty"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:51
+msgid "Control fan"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:54
+msgid "Cooling mode"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:58
+msgid "Fan speed"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:62
+msgid "New curve…"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:63
+msgid "Edit curve…"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:76
+msgid "Use access token…"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:77 linux/share/monet/utilities/fan_page.py:131
+msgid "Set up fan control…"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:131 linux/share/monet/utilities/fan_page.py:158
+msgid "Open CoolerControl"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:139
+msgid ""
+"This ThinkPad uses firmware cooling. Its driver reports fan control is disabled."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:140
+msgid "For adjustable fans, connect a local CoolerControl service."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:168
+msgid "CoolerControl reports no adjustable fans."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:206
+msgid "{value} RPM"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:217
+msgid "No fan speed sensors reported."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:236
+msgid "Hardware default"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:237
+msgid "Fixed speed"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:272
+msgid "Fan setting applied."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:295
+msgid "Update temperature curve"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:296
+msgid "Save changes for every fan using this curve?"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:303 linux/share/monet/utilities/fan_page.py:310
+msgid "This curve changed. Refresh before editing it again."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:305
+msgid "A profile with this name already exists. Refresh to see it."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:321
+msgid "Curve updated."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:321
+msgid "Curve saved. Choose Apply to use it on this fan."
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:325
+msgid "Connect to CoolerControl"
+msgstr ""
+
+#: linux/share/monet/utilities/fan_page.py:326
+msgid "Enter an access token from CoolerControl → Access Protection."
+msgstr ""

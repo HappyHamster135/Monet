@@ -372,14 +372,8 @@ class Window(QMainWindow):
             return box
         box = self.page("devices", make)
         def loaded(usb):
-            fans = []
-            for entry in sorted(Path("/sys/class/hwmon").glob("hwmon*/fan*_input")):
-                try:
-                    label = entry.with_name(entry.name.replace("input", "label"))
-                    name = label.read_text().strip() if label.exists() else entry.parent.joinpath("name").read_text().strip()
-                    fans.append(f"{name}  {int(entry.read_text())} RPM")
-                except (OSError, ValueError):
-                    continue
+            from fan_control import hardware_fans
+            fans = [f"{fan.name}  {fan.rpm} RPM" for fan in hardware_fans() if fan.rpm is not None]
             box.setPlainText("Fans\n" + ("\n".join(fans) or "No fan speed sensors reported.") + "\n\nUSB\n" + usb.strip())
         self.worker(["lsusb"], loaded)
 
@@ -616,12 +610,8 @@ class Window(QMainWindow):
             from ports import ProcessBrowser
             self.page(key, lambda: ProcessBrowser(self, key == "ports")).refresh()
         elif key == "fans":
-            import shutil
-            if shutil.which("coolercontrol"):
-                QProcess.startDetached("coolercontrol", [])
-            else:
-                self.show_devices()
-                self.issue("Fan speeds are managed by this PC’s firmware. CoolerControl can manage supported fan controllers.")
+            from fan_page import Fans
+            self.page(key, Fans)
         elif key == "homebrew":
             from brew_page import BrewPage
             self.page(key, lambda: BrewPage(self)).open()

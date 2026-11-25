@@ -4320,7 +4320,7 @@ msgstr ""
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5620 linux/share/plasma/plasmoids/org.monet.quick/contents/ui/QuickOptions.qml:256
 msgid "Automatic"
-msgstr ""
+msgstr "Automatisk"
 
 #: linux/share/monet/settings-app/MonetSettings.qml:5620
 msgid "Uses more power when needed and saves energy during lighter work"
@@ -18172,3 +18172,212 @@ msgstr "Skriptet blev klart. Dess utdata var för stora för att kopiera."
 #: linux/share/monet/utilities/script_search.py:240
 msgid "Running script…"
 msgstr "Kör skript…"
+
+#: linux/share/monet/utilities/fan_control.py:60
+msgid "{device} fan {number}"
+msgstr "{device}, fläkt {number}"
+
+#: linux/share/monet/utilities/fan_control.py:64
+msgid "Manual"
+msgstr "Manuell"
+
+#: linux/share/monet/utilities/fan_control.py:134 linux/share/monet/utilities/fan_control.py:138
+msgid "The local cooling service is unavailable."
+msgstr "Den lokala fläktstyrningstjänsten är inte tillgänglig."
+
+#: linux/share/monet/utilities/fan_control.py:149
+msgid ""
+"A CoolerControl access token with the appropriate permissions is required."
+msgstr "Du behöver en åtkomsttoken för CoolerControl med rätt behörigheter."
+
+#: linux/share/monet/utilities/fan_control.py:151
+msgid "CoolerControl returned HTTP {status}."
+msgstr "CoolerControl svarade med HTTP {status}."
+
+#: linux/share/monet/utilities/fan_control.py:154
+msgid "The cooling service returned too much data."
+msgstr "Fläktstyrningstjänsten skickade för mycket data."
+
+#: linux/share/monet/utilities/fan_control.py:157
+msgid "The cooling service connection was interrupted."
+msgstr "Anslutningen till fläktstyrningstjänsten avbröts."
+
+#: linux/share/monet/utilities/fan_control.py:204
+msgid "Use between {low} and {high} points."
+msgstr "Använd mellan {low} och {high} punkter."
+
+#: linux/share/monet/utilities/fan_control.py:208
+msgid "Each point needs a temperature and a speed from 0 to 100%."
+msgstr "Varje punkt behöver en temperatur och en hastighet från 0 till 100 %."
+
+#: linux/share/monet/utilities/fan_control.py:210
+msgid "This sensor supports temperatures from {low} to {high} °C."
+msgstr "Den här sensorn stöder temperaturer från {low} till {high} °C."
+
+#: linux/share/monet/utilities/fan_control.py:213
+msgid "Temperatures must increase and fan speeds must stay level or rise."
+msgstr ""
+"Temperaturerna måste öka. Fläkthastigheten får vara oförändrad eller öka."
+
+#: linux/share/monet/utilities/fan_curve.py:17
+msgid "Fan speed by temperature"
+msgstr "Fläkthastighet vid olika temperaturer"
+
+#: linux/share/monet/utilities/fan_curve.py:18
+msgid "Drag a point or edit its values in the table."
+msgstr "Dra en punkt eller ändra dess värden i tabellen."
+
+#: linux/share/monet/utilities/fan_curve.py:104
+msgid "Temperature curve"
+msgstr "Temperaturkurva"
+
+#: linux/share/monet/utilities/fan_curve.py:109
+msgid "Curve name"
+msgstr "Kurvans namn"
+
+#: linux/share/monet/utilities/fan_curve.py:119
+msgid "Temperature sensor"
+msgstr "Temperatursensor"
+
+#: linux/share/monet/utilities/fan_curve.py:122
+msgid "Temperature (°C)"
+msgstr "Temperatur (°C)"
+
+#: linux/share/monet/utilities/fan_curve.py:122
+msgid "Fan speed (%)"
+msgstr "Fläkthastighet (%)"
+
+#: linux/share/monet/utilities/fan_curve.py:129
+msgid "Curve points"
+msgstr "Kurvpunkter"
+
+#: linux/share/monet/utilities/fan_curve.py:137
+msgid "Add point"
+msgstr "Lägg till punkt"
+
+#: linux/share/monet/utilities/fan_curve.py:138
+msgid "Remove point"
+msgstr "Ta bort punkt"
+
+#: linux/share/monet/utilities/fan_curve.py:195
+msgid "Choose a name and a temperature sensor."
+msgstr "Välj ett namn och en temperatursensor."
+
+#: linux/share/monet/utilities/fan_page.py:39
+msgid "Fan"
+msgstr "Fläkt"
+
+#: linux/share/monet/utilities/fan_page.py:39
+msgid "Speed"
+msgstr "Hastighet"
+
+#: linux/share/monet/utilities/fan_page.py:39
+msgid "Target RPM"
+msgstr "Målvarvtal"
+
+#: linux/share/monet/utilities/fan_page.py:39
+msgid "Driver mode"
+msgstr "Drivrutinsläge"
+
+#: linux/share/monet/utilities/fan_page.py:39
+msgid "Fan duty"
+msgstr "Fläktpådrag"
+
+#: linux/share/monet/utilities/fan_page.py:51
+msgid "Control fan"
+msgstr "Fläkt att styra"
+
+#: linux/share/monet/utilities/fan_page.py:54
+msgid "Cooling mode"
+msgstr "Kylläge"
+
+#: linux/share/monet/utilities/fan_page.py:58
+msgid "Fan speed"
+msgstr "Fläkthastighet"
+
+#: linux/share/monet/utilities/fan_page.py:62
+msgid "New curve…"
+msgstr "Ny kurva…"
+
+#: linux/share/monet/utilities/fan_page.py:63
+msgid "Edit curve…"
+msgstr "Redigera kurva…"
+
+#: linux/share/monet/utilities/fan_page.py:76
+msgid "Use access token…"
+msgstr "Använd åtkomsttoken…"
+
+#: linux/share/monet/utilities/fan_page.py:77 linux/share/monet/utilities/fan_page.py:131
+msgid "Set up fan control…"
+msgstr "Konfigurera fläktstyrning…"
+
+#: linux/share/monet/utilities/fan_page.py:131 linux/share/monet/utilities/fan_page.py:158
+msgid "Open CoolerControl"
+msgstr "Öppna CoolerControl"
+
+#: linux/share/monet/utilities/fan_page.py:139
+msgid ""
+"This ThinkPad uses firmware cooling. Its driver reports fan control is disabled."
+msgstr ""
+"Den här datorns inbyggda programvara styr fläkten. Enligt ThinkPad-drivrutinen är manuell styrning avstängd."
+
+#: linux/share/monet/utilities/fan_page.py:140
+msgid "For adjustable fans, connect a local CoolerControl service."
+msgstr ""
+"Anslut till en lokal CoolerControl-tjänst för att styra justerbara fläktar."
+
+#: linux/share/monet/utilities/fan_page.py:168
+msgid "CoolerControl reports no adjustable fans."
+msgstr "CoolerControl hittar inga justerbara fläktar."
+
+#: linux/share/monet/utilities/fan_page.py:206
+msgid "{value} RPM"
+msgstr "{value} varv/min"
+
+#: linux/share/monet/utilities/fan_page.py:217
+msgid "No fan speed sensors reported."
+msgstr "Inga sensorer för fläkthastighet hittades."
+
+#: linux/share/monet/utilities/fan_page.py:236
+msgid "Hardware default"
+msgstr "Hårdvarans standardläge"
+
+#: linux/share/monet/utilities/fan_page.py:237
+msgid "Fixed speed"
+msgstr "Fast hastighet"
+
+#: linux/share/monet/utilities/fan_page.py:272
+msgid "Fan setting applied."
+msgstr "Fläktinställningen har tillämpats."
+
+#: linux/share/monet/utilities/fan_page.py:295
+msgid "Update temperature curve"
+msgstr "Uppdatera temperaturkurvan"
+
+#: linux/share/monet/utilities/fan_page.py:296
+msgid "Save changes for every fan using this curve?"
+msgstr "Vill du spara ändringarna för alla fläktar som använder kurvan?"
+
+#: linux/share/monet/utilities/fan_page.py:303 linux/share/monet/utilities/fan_page.py:310
+msgid "This curve changed. Refresh before editing it again."
+msgstr "Kurvan har ändrats. Uppdatera innan du redigerar den igen."
+
+#: linux/share/monet/utilities/fan_page.py:305
+msgid "A profile with this name already exists. Refresh to see it."
+msgstr "Det finns redan en profil med det namnet. Uppdatera för att visa den."
+
+#: linux/share/monet/utilities/fan_page.py:321
+msgid "Curve updated."
+msgstr "Kurvan har uppdaterats."
+
+#: linux/share/monet/utilities/fan_page.py:321
+msgid "Curve saved. Choose Apply to use it on this fan."
+msgstr "Kurvan har sparats. Välj Verkställ för att styra fläkten med den."
+
+#: linux/share/monet/utilities/fan_page.py:325
+msgid "Connect to CoolerControl"
+msgstr "Anslut till CoolerControl"
+
+#: linux/share/monet/utilities/fan_page.py:326
+msgid "Enter an access token from CoolerControl → Access Protection."
+msgstr "Ange en åtkomsttoken från CoolerControl → Access Protection."
