@@ -19164,3 +19164,20 @@ msgstr ""
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:551
 msgid "Clipboard history is unavailable."
 msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NotchSearch.qml:28
+msgid "Search apps, files and commands"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NotchSearch.qml:86
+msgid "No results"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NotchSearch.qml:87
+msgid ""
+"Find an app, run a calculation, or type tools to see your favorite actions."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:455
+msgid "Open Command Bar"
+msgstr ""

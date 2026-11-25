@@ -54,7 +54,8 @@ private:
     void remember(Window *w)
     {
         // Opening the launcher or a panel temporarily takes focus away from the app.
-        if (!w || w->isDock() || w->isPopupWindow() || w->desktopFileName() == QLatin1String("org.kde.krunner")
+        if (!w || w->isDock() || w->isAppletPopup() || w->isPopupWindow()
+            || w->desktopFileName() == QLatin1String("org.kde.krunner")
             || w->resourceClass() == QLatin1String("krunner")) {
             return;
         }

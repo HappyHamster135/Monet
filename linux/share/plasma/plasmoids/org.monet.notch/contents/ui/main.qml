@@ -61,6 +61,9 @@ PlasmoidItem {
     property bool draggingShelf: false
     // Wayland destinations can read the URI list after the pointer leaves the popup.
     hideOnWindowDeactivate: !draggingShelf
+    property bool searching: false
+    readonly property bool offerSearch: tools.offers("command-bar")
+    onOfferSearchChanged: if (!offerSearch) searching = false
     property bool viewingShelf: false
     readonly property bool displayShelf: offerShelf && (viewingShelf || (!visibleTabs.length && !showingWatch))
     ShelfModel {
@@ -265,7 +268,7 @@ PlasmoidItem {
     }
     Component.onCompleted: { selectVisibleTab(); refreshTime() }
     onExpandedChanged: {
-        if (!root.expanded) { requestedNotice = 0; viewingDownloads = false; viewingShelf = false; return }
+        if (!root.expanded) { searching = false; requestedNotice = 0; viewingDownloads = false; viewingShelf = false; return }
         tools.reload()
         agendaDay = new Date()
         refreshTime()
@@ -403,15 +406,76 @@ PlasmoidItem {
     }
 
     fullRepresentation: ColumnLayout {
+        id: pages
+        Shortcut {
+            sequence: "Ctrl+K"
+            enabled: root.expanded && root.offerSearch && !root.searching && !root.draggingShelf
+            onActivated: root.searching = true
+        }
+        C.Popup {
+            id: searchPopup
+            parent: pages
+            width: pages.width; height: pages.height
+            padding: Kirigami.Units.smallSpacing
+            background: Rectangle {
+                radius: Kirigami.Units.cornerRadius
+                color: Qt.alpha(Kirigami.Theme.backgroundColor, 0.92)
+            }
+            popupType: C.Popup.Item
+            modal: true; dim: false; focus: true
+            closePolicy: C.Popup.CloseOnEscape
+            visible: root.expanded && root.searching
+            onClosed: {
+                root.searching = false
+                if (root.expanded && searchButton.visible) searchButton.forceActiveFocus(Qt.BacktabFocusReason)
+            }
+            readonly property var session: power.nativeState ?? searchLock.item
+            readonly property bool unlocked: !!session?.lockKnown && !session.locked
+            onUnlockedChanged: if (visible && session?.lockKnown && session.locked) root.expanded = false
+            Loader {
+                id: searchLock
+                active: searchPopup.visible && !power.nativeState
+                sourceComponent: Component { CameraLock {} }
+            }
+            contentItem: Loader {
+                id: commandView
+                active: searchPopup.visible && searchPopup.unlocked && power.active
+                source: "NotchSearch.qml"
+                focus: true
+                onLoaded: item.focusSearch()
+            }
+            Connections {
+                target: commandView.item
+                function onBackRequested() { root.searching = false }
+                function onActivated() { root.expanded = false }
+            }
+            C.Button {
+                anchors.centerIn: parent
+                visible: commandView.status === Loader.Error || !searchPopup.unlocked
+                text: searchPopup.unlocked ? i18n("Open Command Bar") : i18n("Back")
+                onClicked: {
+                    if (!searchPopup.unlocked) { root.searching = false; return }
+                    root.expanded = false
+                    DBus.SessionBus.asyncCall({service: "org.kde.krunner", path: "/App",
+                        iface: "org.kde.krunner.App", member: "display"})
+                }
+            }
+        }
         // The popup may still lack its own screen while its first layout runs.
         // Use the already-mapped panel so the tab row starts at its final width.
         Layout.preferredWidth: Math.min(422, Math.max(250, (root.Screen.width || 454) - 32))
-        Layout.preferredHeight: root.visibleTabs.length || root.displayShelf || root.showingWatch
+        Layout.preferredHeight: root.searching || root.visibleTabs.length || root.displayShelf || root.showingWatch
             ? Math.min(370, Math.max(200, Screen.height - 80)) : implicitHeight
         spacing: Kirigami.Units.smallSpacing
+        // The overlay is outside the layout. Keep the full reading area while its tabs are hidden.
+        Item {
+            visible: root.searching
+            Layout.fillWidth: true; Layout.fillHeight: true
+            Layout.minimumHeight: pages.Layout.preferredHeight
+        }
         RowLayout {
             id: navigation
-            visible: !root.viewingShelf && root.visibleTabs.length > 0
+            visible: !root.searching && !root.viewingShelf && root.visibleTabs.length > 0
             Layout.fillWidth: true
             spacing: Kirigami.Units.smallSpacing
             NotchTabs {
@@ -454,8 +518,8 @@ PlasmoidItem {
         }
         Loader {
             Layout.fillWidth: true; Layout.fillHeight: true
-            visible: root.visibleTabs.length > 0 || root.displayShelf || root.showingWatch
-            active: root.expanded && visible
+            visible: active && !root.searching
+            active: root.expanded && (root.visibleTabs.length > 0 || root.displayShelf || root.showingWatch)
             sourceComponent: root.displayShelf ? shelfPage : root.showingWatch ? watchPage
                 : root.tab === 1 && root.viewingDownloads ? downloadsPage
                 : root.tab === 3 && root.viewingAgenda ? agendaPage
@@ -465,22 +529,19 @@ PlasmoidItem {
                 : root.tab === 4 ? (padController.item ? padPage : null) : [musicPage, activityPage, timerPage, calendarPage][root.tab] ?? null
         }
         RowLayout {
-            visible: !root.viewingShelf || !root.visibleTabs.length
+            visible: !root.searching && (!root.viewingShelf || !root.visibleTabs.length)
             Layout.fillWidth: true
             C.Button { visible: root.offerShelf && root.visibleTabs.length > 0; text: i18n("File shelf"); icon.name: "folder-open"; onClicked: root.showShelf() }
             Item { Layout.fillWidth: true }
             C.ToolButton {
-                visible: tools.offers("command-bar")
+                id: searchButton
+                visible: root.offerSearch
                 icon.name: "system-search"
                 text: i18n("Command Bar")
                 display: C.AbstractButton.IconOnly
                 C.ToolTip.visible: hovered
                 C.ToolTip.text: text
-                onClicked: {
-                    root.expanded = false
-                    DBus.SessionBus.asyncCall({service: "org.kde.krunner", path: "/App",
-                        iface: "org.kde.krunner.App", member: "display"})
-                }
+                onClicked: root.searching = true
             }
             C.Button { text: i18n("Utilities"); icon.name: "applications-utilities"; onClicked: root.openTool("tools") }
         }
@@ -539,7 +600,7 @@ PlasmoidItem {
             Loader {
                 id: history
                 anchors.fill: parent
-                active: clipboardView.unlocked && power.active
+                active: !root.searching && clipboardView.unlocked && power.active
                 source: "NotchClipboard.qml"
                 focus: true
                 onLoaded: item.forceActiveFocus(Qt.OtherFocusReason)
@@ -561,7 +622,7 @@ PlasmoidItem {
     Component {
         id: cameraPage
         CameraMirror {
-            presented: root.expanded && power.active
+            presented: root.expanded && !root.searching && power.active
             session: power.nativeState
         }
     }
