@@ -94,7 +94,7 @@ def choose_sink(name):
                    stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=5)
 
 
-def start_server():
+def start_server(select_default=True):
     global server, core
     if core is None:
         core = subprocess.Popen(['pipewire', '-c', str(config)], stdout=subprocess.DEVNULL, stderr=log)
@@ -108,7 +108,8 @@ def start_server():
             pactl('info')
             module_ids['one'] = pactl('load-module', 'module-null-sink', 'sink_name=monet_one', 'sink_properties=device.description=First')
             module_ids['two'] = pactl('load-module', 'module-null-sink', 'sink_name=monet_two', 'sink_properties=device.description=Second')
-            choose_sink('monet_one')
+            if select_default:
+                choose_sink('monet_one')
             return
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
             QTest.qWait(50)
@@ -824,10 +825,12 @@ def notch_levels():
     from contextlib import ExitStack
     from math import sin, tau
 
-    # Drive the two virtual speakers even on machines with no audio hardware.
-    config.write_text(config.read_text().replace("context.objects = [", """context.objects = [
-        { factory = spa-node-factory args = { factory.name = support.node.driver node.name = Dummy-Driver } }"""))
-    start_server()
+    # Drive the virtual speakers. WirePlumber publishes the routing metadata
+    # here, unlike the fixtures that run without a session manager.
+    config.write_text(config.read_text().replace(
+        "{ factory = metadata args = { metadata.name = default } }",
+        "{ factory = spa-node-factory args = { factory.name = support.node.driver node.name = Dummy-Driver } }"))
+    start_server(select_default=False)
     ui = Path(os.environ.get("MONET_NOTCH_LEVEL_UI", ROOT / "linux/share/plasma/plasmoids/org.monet.notch/contents/ui"))
     qml = TEMP / "PlayerLevelCheck.qml"
     qml.write_text('import QtQuick\nimport org.kde.plasma.private.mpris as Mpris\nimport "' + ui.as_uri() + '''" as Monet
@@ -860,7 +863,11 @@ Item {
     scene = component.create()
     assert scene, warnings
     tone = TEMP / "tone.raw"
-    tone.write_bytes(array("h", (int(23000 * sin(tau * i / 32)) for i in range(32))).tobytes() * 15000)
+    cycle = array("h", (int(23000 * sin(tau * i / 32)) for i in range(32))).tobytes()
+    tone.write_bytes(cycle * 15000)
+    pulses = TEMP / "pulses.raw"
+    section = cycle * 75
+    pulses.write_bytes((section + bytes(len(section))) * 100)
 
     with ExitStack() as stack:
         def launch(args):
@@ -891,8 +898,10 @@ Item {
 
         launch(["wireplumber", "--profile=policy"])
         wait_for(lambda: "route-settings" in subprocess.check_output(["pw-metadata", "-l"], text=True), "audio graph")
+        choose_sink("monet_one")
+        wait_for(lambda: pactl("get-default-sink") == "monet_one", "private default output")
         first = play("fixture.radio", "Radio", "monet_one", "/dev/zero")
-        second = play("fixture.video", "Video", "monet_one", tone)
+        second = play("fixture.video", "Video", "monet_one", pulses)
         wait_for(lambda: len(streams()) == 2, "two players on the same output")
         scene.select(second.pid, "fixture.video", "Video")
         wait_for(lambda: scene.property("level") > .4, "tone from selected player")
@@ -900,11 +909,23 @@ Item {
         quiet("silent player while the other app plays on the same speakers")
         scene.select(0, "fixture.video.desktop", "Video")
         wait_for(lambda: scene.property("level") > .4, "desktop ID of a player with a separate audio process")
-        index = str(next(s["index"] for s in streams() if s["properties"]["application.id"] == "fixture.video"))
-        old_monitor, = monitors()
-        pactl("move-sink-input", index, "monet_two")
-        wait_for(lambda: len(current := monitors()) == 1 and current[0]["index"] != old_monitor["index"]
-                 and scene.property("level") > .4, "monitor follows the player to the nondefault output")
+        video = next(s for s in streams() if s["properties"]["application.id"] == "fixture.video")
+        index = str(video["index"])
+        sink = next(s for s in json.loads(pactl("-f", "json", "list", "sinks")) if s["name"] == "monet_two")
+        source_node = int(video["properties"]["object.id"])
+        sink_node = int(sink["properties"]["object.id"])
+        subprocess.run(["pw-metadata", "-n", "default", str(source_node), "target.object",
+                        str(sink["properties"]["object.serial"]), "Spa:Id"], stdout=log, stderr=log, check=True, timeout=5)
+        def moved():
+            graph = json.loads(subprocess.check_output(["pw-dump"], text=True, timeout=4))
+            return any(n["type"] == "PipeWire:Interface:Link" and n["info"]["output-node-id"] == source_node
+                       and n["info"]["input-node-id"] == sink_node for n in graph)
+        wait_for(moved, "audio graph linked the player's output to the second speaker")
+        # PipeWire can keep the direct tap on the same stream across a route change.
+        # Verify new samples on the new route, including an actual silent interval.
+        wait_for(lambda: scene.property("level") > .4, "tone on the new output")
+        wait_for(lambda: scene.property("level") <= .01, "silence on the new output")
+        wait_for(lambda: scene.property("level") > .4, "next pulse on the new output")
         pactl("set-sink-input-mute", index, "1")
         quiet("muted selection")
         pactl("set-sink-input-mute", index, "0")
