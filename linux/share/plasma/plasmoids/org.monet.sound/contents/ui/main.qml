@@ -614,7 +614,7 @@ PlasmoidItem {
                         PlasmaComponents.Slider {
                             Layout.fillWidth: true
                             from: 0
-                            to: 100
+                            to: 200
                             stepSize: 1
                             value: modelData.volume
                             Accessible.name: modelData.name

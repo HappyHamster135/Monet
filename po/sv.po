@@ -19405,3 +19405,20 @@ msgstr "Volymgräns (%1%)"
 msgid "speaker limit; unplug headphones; headphone disconnect volume"
 msgstr ""
 "volymgräns för högtalare; koppla ur hörlurar; volym när hörlurarna kopplas från"
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:145
+msgid "Volume percentage for %1"
+msgstr "Volym i procent för %1"
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:149
+msgid "%"
+msgstr "%"
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:164
+msgid "Reset volume to 100%"
+msgstr "Återställ volymen till 100 %"
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:203
+msgid "100% is normal volume. Higher levels boost this app."
+msgstr ""
+"100 % är normal volym. Högre nivåer förstärker ljudet från den här appen."

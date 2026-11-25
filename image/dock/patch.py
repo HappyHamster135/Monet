@@ -272,6 +272,18 @@ def patch_audio(applet):
     replace(tooltip, '                    stream.model.Volume = v',
             '''                    root.monetRemember(stream, Math.max(from, value))
                     stream.model.Volume = v''')
+    replace(tooltip, 'readonly property int displayValue: Math.round(value / to * 100)',
+            'readonly property int displayValue: Math.round(value / pulseAudio.item.normalVolume * 100)')
+    replace(tooltip, 'to: pulseAudio.item.normalVolume\n                value: loudestVolume\n                stepSize: to / 100',
+            'to: 2 * pulseAudio.item.normalVolume\n                value: loudestVolume\n                stepSize: pulseAudio.item.normalVolume / 100')
+    prepend(tooltip, '                readonly property int displayValue:', """                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.top: parent.top
+                    width: 2; height: Math.min(5, parent.height / 4)
+                    color: Kirigami.Theme.textColor; opacity: 0.65
+                    Accessible.ignored: true
+                }
+""")
     (applet/'qml/MonetAppVolume.qml').write_bytes(Path(__file__).with_name('MonetAppVolume.qml').read_bytes())
 
 def patch_preview_snap(applet):

@@ -4,6 +4,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 ### New in 0.9.8-9: Startup and Settings polish (in development)
 
+- **Boost a quiet app.** In the volume mixer, drag past the 100% mark or enter a percentage up to 200%. The Home Bar also remembers boosted levels between tracks.
 - **Lower speakers when headphones disconnect.** In Settings → Sound → Preferred output order, choose a speaker volume limit for unplugging headphones. You can still switch outputs and change the volume yourself.
 - **Keep awake from the notch.** Under Time, choose a duration or a local end time today or tomorrow. Click the remaining minutes in the closed notch to change or stop the session. Settings and Utilities follow the same timer. If the Keep awake service restarts, your timer resumes with its original deadline.
 - **Calculate with measurements.** The desktop and notch Command Bars handle rates, mixed units and area. Enter copies the result, and `ans` reuses it in your next calculation.

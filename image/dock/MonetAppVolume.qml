@@ -10,7 +10,7 @@ QtObject {
     // (-1: unknown). The Home Bar fills these in from its task list.
     property var windows: () => []
     property var parentOf: pid => -1
-    // A window's own level while it is open, by window id: {level: 0 to 1, app: key}.
+    // A window's own level while it is open, by window id: {level: 0 to 2, app: key}.
     property var windowLevels: ({})
     readonly property Settings settings: Settings {
         location: StandardPaths.writableLocation(StandardPaths.ConfigLocation) + "/monet/app-volume.ini"
@@ -34,7 +34,7 @@ QtObject {
     }
 
     function clamp(value) {
-        return Math.max(0, Math.min(1, value / normalVolume));
+        return Math.max(0, Math.min(2, value / normalVolume));
     }
 
     function save(app, value) {
@@ -116,12 +116,12 @@ QtObject {
         return window && windowLevels[window.id] ? window : null;
     }
 
-    // What the Home Bar keeps for a stream, from 0 to 1 (-1: nothing).
+    // What the Home Bar keeps for a stream, from 0 to 2 (-1: nothing).
     function level(stream) {
         const window = windowOf(stream);
         if (window) return windowLevels[window.id].level;
         const value = levels()[key(stream)];
-        return Number.isFinite(value) && value >= 0 && value <= 1 ? value : -1;
+        return Number.isFinite(value) && value >= 0 && value <= 2 ? value : -1;
     }
 
     // False until the stream plays and says which app it is, so the caller

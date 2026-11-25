@@ -750,14 +750,14 @@ QtObject {
             first = play(); players.append(first)
             wait_for(lambda: at(first, 100), 'first track initial volume')
             wait_for(lambda: obj.hasStream(first.pid), 'first track appears in Home Bar')
-            obj.setProperty('requested', 83)
-            wait_for(lambda: at(first, 83), 'Home Bar changed active track')
+            obj.setProperty('requested', 175)
+            wait_for(lambda: at(first, 175), 'Home Bar boosted active track')
             first.terminate(); first.wait(timeout=5)
             wait_for(lambda: stream(first) is None, 'first track removed')
             second = play(); players.append(second)
-            wait_for(lambda: at(second, 83), 'next track retained app volume')
+            wait_for(lambda: at(second, 175), 'next track retained boosted app volume')
             QTest.qWait(300)
-            assert at(second, 83), 'player initial volume overwrote the saved choice'
+            assert at(second, 175), 'player initial volume overwrote the saved boost'
             other = play('Monet Other Player', 'org.monet.other-player'); players.append(other)
             wait_for(lambda: at(other, 100), 'unrelated app kept its volume')
             obj.setProperty('requested', 0)
@@ -947,12 +947,16 @@ C.ApplicationWindow {
         anchors.fill: parent
         outputNames: [{ key: "6d6f6e65745f74776f", name: "Desk speakers" }]
     }
-    function locate(text, label) {
+    function locate(text, label, level) {
         function find(item) {
             if (!item || !item.visible || !item.enabled) return null
+            if (item instanceof T.SpinBox && item.Accessible.name === text) {
+                const p = item.contentItem.mapToItem(window.contentItem, item.contentItem.width / 2, item.contentItem.height / 2)
+                return [Math.round(p.x), Math.round(p.y)]
+            }
             if (item instanceof T.Slider && item.Accessible.name === text) {
                 const handle = item.handle.width
-                const x = item.leftPadding + handle / 2 + (item.availableWidth - handle) * 0.37
+                const x = item.leftPadding + handle / 2 + (item.availableWidth - handle) * (level - item.from) / (item.to - item.from)
                 const p = item.mapToItem(window.contentItem, x, item.height / 2)
                 return [Math.round(p.x), Math.round(p.y)]
             }
@@ -985,13 +989,13 @@ C.ApplicationWindow {
         assert not expr.hasError(), expr.error().toString()
         return val.toVariant() if hasattr(val, "toVariant") else val
 
-    def point(text, label=False):
-        result = win.locate(text, label)
+    def point(text, label=False, level=37):
+        result = win.locate(text, label, level)
         return result.toVariant() if hasattr(result, "toVariant") else result
 
-    def choose(text):
-        wait_for(lambda: point(text), text)
-        QTest.mouseClick(win, Qt.LeftButton, Qt.NoModifier, QPoint(*point(text)))
+    def choose(text, level=37):
+        wait_for(lambda: point(text, level=level), text)
+        QTest.mouseClick(win, Qt.LeftButton, Qt.NoModifier, QPoint(*point(text, level=level)))
         QTest.qWait(80)
 
     def state():
@@ -1025,6 +1029,26 @@ C.ApplicationWindow {
         play("test.event", "Alerts", True)
         wait_for(lambda: state() == [["id:test.browser", False, 1], ["id:test.music", False, 2]], "grouped apps without notification")
         wait_for(lambda: js("devices.filter(d=>d.available).length") == 2, "both outputs")
+        master_before = pactl("get-sink-volume", "monet_one")
+        def music_at(percent):
+            streams = inputs("test.music")
+            return len(streams) == 2 and all(next(iter(s["volume"].values()))["value_percent"] == f"{percent}%" for s in streams)
+        choose("Volume for Music", level=180)
+        wait_for(lambda: music_at(180), "both music streams boosted")
+        choose("Volume percentage for Music")
+        QTest.keyClick(win, Qt.Key_A, Qt.ControlModifier)
+        for key in (Qt.Key_1, Qt.Key_7, Qt.Key_5, Qt.Key_Return):
+            QTest.keyClick(win, key)
+        wait_for(lambda: music_at(175), "editable percent applied")
+        choose("Mute Music")
+        wait_for(lambda: all(s["mute"] for s in inputs("test.music")), "boosted app muted")
+        choose("Unmute Music")
+        wait_for(lambda: music_at(175) and not any(s["mute"] for s in inputs("test.music")), "boost survived mute")
+        choose("Options for Music")
+        choose("Reset volume to 100%")
+        wait_for(lambda: music_at(100), "reset to normal volume")
+        assert next(iter(inputs("test.browser")[0]["volume"].values()))["value_percent"] == "100%"
+        assert pactl("get-sink-volume", "monet_one") == master_before
         choose("Volume for Music")
         wait_for(lambda: all(next(iter(s["volume"].values()))["value_percent"] == "37%" for s in inputs("test.music")), "both sliders")
         assert next(iter(inputs("test.browser")[0]["volume"].values()))["value_percent"] == "100%"

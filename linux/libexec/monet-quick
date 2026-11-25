@@ -46,7 +46,7 @@
     monet-quick keep-awake off|30|60|on  pause idle screen/lock/sleep timers temporarily
     monet-quick keep-awake-status        connection-owned inhibition and remaining seconds
     monet-quick apps-sound               the apps playing sound and each one's volume, as JSON
-    monet-quick app-volume ID[,ID...] 0-100  an app's streams (a browser has one for each tab)
+    monet-quick app-volume ID[,ID...] 0-200  an app's streams (a browser has one for each tab)
     monet-quick microphones              the microphones to record from, each input of an interface by name
     monet-quick brightness 0-100
     monet-quick keyboard LEVEL           the keyboard's backlight, 0 (off) to its brightest step
@@ -11048,7 +11048,7 @@ def main(argv):
         run("wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "1" if args[0] == "on" else "0")
     elif cmd == "app-volume" and len(args) == 2 and re.fullmatch(r"\d+(?:,\d+){0,63}", args[0]) and args[1].isdigit():
         for ident in args[0].split(","):
-            run("wpctl", "set-volume", ident, f"{min(int(args[1]), 100)}%")
+            run("wpctl", "set-volume", ident, f"{min(int(args[1]), 200)}%")
     elif cmd == "output" and len(args) in (1, 2) and args[0].isdigit() and all(AUDIO_KEY.fullmatch(key) for key in args[1:]):
         emit(output_action(int(args[0]), *args[1:]))
     elif cmd == "brightness" and args and args[0].isdigit():

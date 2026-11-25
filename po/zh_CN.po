@@ -19057,3 +19057,19 @@ msgstr ""
 #: linux/libexec/monet-quick:9357
 msgid "speaker limit; unplug headphones; headphone disconnect volume"
 msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:145
+msgid "Volume percentage for %1"
+msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:149
+msgid "%"
+msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:164
+msgid "Reset volume to 100%"
+msgstr ""
+
+#: linux/share/monet/settings-app/VolumeMixer.qml:203
+msgid "100% is normal volume. Higher levels boost this app."
+msgstr ""

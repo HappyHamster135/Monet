@@ -9,6 +9,7 @@ QtObject {
     id: mixer
     readonly property bool ready: Audio.Context.state === Audio.Context.Ready
     readonly property var output: Audio.PreferredDevice.sink
+    readonly property int maxAppPercent: 200
     readonly property int normal: Audio.PulseAudio.NormalVolume
     property var streams: []
     property var devices: []
@@ -112,7 +113,7 @@ QtObject {
     }
     function matching(key) { return streams.filter(s => s && s.eligible && s.appKey === key) }
     function level(key, percent) {
-        const gain = Math.round(Math.max(0, Math.min(100,percent)) * normal / 100)
+        const gain = Math.round(Math.max(0, Math.min(maxAppPercent,percent)) * normal / 100)
         for (const s of matching(key)) if (s.model.VolumeWritable) s.model.Volume = gain
     }
     function mute(key, on) { for (const s of matching(key)) s.model.Muted = on }

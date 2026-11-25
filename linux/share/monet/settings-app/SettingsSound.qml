@@ -231,7 +231,7 @@ ColumnLayout {
                 tone: look
                 divider: index > 0
                 title: modelData.name
-                value: modelData.volume
+                to: 200; value: modelData.volume
                 onHeld: down => sheet.dragging = down
                 onMoved: value => sheet.queue("app-volume " + (modelData.ids || [modelData.id]).join(","), value)
             }

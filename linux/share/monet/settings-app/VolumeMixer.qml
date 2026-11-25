@@ -93,6 +93,7 @@ ColumnLayout {
             required property bool pinned
             readonly property var channels: sound.matching(appKey)
             readonly property bool online: channels.length > 0
+            readonly property bool writable: channels.some(s => s.writable)
             readonly property bool muted: online && channels.every(s => s.muted)
             readonly property int gain: channels.reduce((max,s) => Math.max(max,s.gain),0)
             readonly property int percent: Math.round(gain * 100 / sound.normal)
@@ -136,7 +137,18 @@ ColumnLayout {
                     }
                 }
                 Kirigami.Icon { visible: row.pinned; source: "pin"; implicitWidth: 14; implicitHeight: 14; Accessible.name: i18n("Pinned") }
-                C.Label { text: row.online ? i18n("%1%",row.percent) : i18n("Not playing"); opacity: 0.8 }
+                C.SpinBox {
+                    id: appPercent
+                    visible: row.online; enabled: row.writable
+                    editable: true; from: 0; to: sound.maxAppPercent
+                    value: row.percent
+                    Accessible.name: i18n("Volume percentage for %1", row.label)
+                    onValueModified: sound.level(row.appKey, value)
+                }
+                C.Label {
+                    text: row.online ? i18n("%") : i18n("Not playing")
+                    color: row.percent > 100 ? Kirigami.Theme.neutralTextColor : Kirigami.Theme.textColor
+                }
                 SoundButton {
                     id: more
                     text: i18n("Options for %1",row.label); icon.name: "overflow-menu"
@@ -147,6 +159,11 @@ ColumnLayout {
                             text: row.pinned ? i18n("Unpin app") : i18n("Pin app")
                             enabled: row.stable && !sound.saving
                             onTriggered: sound.pin(row.appKey,row.label,!row.pinned)
+                        }
+                        C.MenuItem {
+                            text: i18n("Reset volume to 100%")
+                            enabled: row.channels.some(s => s.writable && s.gain !== sound.normal)
+                            onTriggered: sound.level(row.appKey, 100)
                         }
                         C.MenuItem { text: i18n("Move up"); enabled: row.canStep(-1); onTriggered: sound.step(row.index,-1) }
                         C.MenuItem { text: i18n("Move down"); enabled: row.canStep(1); onTriggered: sound.step(row.index,1) }
@@ -179,10 +196,19 @@ ColumnLayout {
             }
             C.Slider {
                 Layout.fillWidth: true; visible: row.online
-                enabled: row.channels.some(s => s.writable)
+                id: appVolume
+                enabled: row.writable
                 Accessible.name: i18n("Volume for %1",row.label)
-                from: 0; to: 100; stepSize: 1; value: row.percent
+                from: 0; to: sound.maxAppPercent; stepSize: 1; value: row.percent
+                Accessible.description: i18n("100% is normal volume. Higher levels boost this app.")
                 onMoved: sound.level(row.appKey,value)
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.top: parent.top
+                    width: 2; height: Math.min(5, parent.height / 4)
+                    color: Kirigami.Theme.textColor; opacity: 0.65
+                    Accessible.ignored: true
+                }
             }
         }
     }
