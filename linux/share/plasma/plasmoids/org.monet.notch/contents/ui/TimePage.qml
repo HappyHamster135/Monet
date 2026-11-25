@@ -33,8 +33,16 @@ TimeScrollView {
         }
         C.Label {
             Layout.alignment: Qt.AlignHCenter
+            Layout.maximumWidth: page.availableWidth
+            horizontalAlignment: Text.AlignHCenter; wrapMode: Text.Wrap
             font.pointSize: 23
-            text: page.timer.active ? page.formatDuration(Math.ceil(page.timer.remaining(page.now) / 1000)) : i18n("Timer")
+            text: page.timer.completion || (page.timer.active ? page.formatDuration(Math.ceil(page.timer.remaining(page.now) / 1000)) : i18n("Timer"))
+        }
+        C.Button {
+            Layout.alignment: Qt.AlignHCenter
+            visible: !!page.timer.completion
+            text: i18n("Dismiss")
+            onClicked: { page.timer.dismiss(); primary.forceActiveFocus(Qt.OtherFocusReason) }
         }
         RowLayout {
             Layout.alignment: Qt.AlignHCenter

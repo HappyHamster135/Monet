@@ -91,6 +91,7 @@ QtObject {
         self.assertEqual(self.alerts, ["Focus session finished", "Break finished"] * 2 + ["Focus rounds finished"])
         self.assertEqual(self.quiet[1::2], [0, 0, 0])
         self.assertEqual(len(self.quiet), 6)
+        self.assertEqual(t.property("completion"), "Focus rounds finished")
 
     def test_cancel_and_resume_restore_quiet_only_for_running_work(self):
         t = self.timer
@@ -102,6 +103,29 @@ QtObject {
         self.assertEqual(self.quiet, [61, 0, 65, 0])
         self.assertEqual(self.alerts, [])
         self.assertFalse(t.property("active"))
+
+    def test_completion_can_be_dismissed_after_reload_without_a_second_ring(self):
+        t = self.timer
+        t.start(False, 1000)
+        t.finishIfDue(61000)
+        self.assertEqual(t.property("completion"), "Timer finished")
+        self.assertEqual(self.settings.property("timerResult"), "timer")
+        saved = self.settings.property("timerResult")
+        t.dismiss()
+        self.assertEqual(t.property("completion"), "")
+        new_root = self.component.create()
+        self.assertIsNotNone(new_root, self.component.errorString())
+        self.addCleanup(new_root.deleteLater)
+        new_root.findChild(QObject, "settings").setProperty("timerResult", saved)
+        t = new_root.findChild(QObject, "timer")
+        t.finished.connect(self.alerts.append)
+        t.finishIfDue(62000)
+        self.assertEqual(t.property("completion"), "Timer finished")
+        self.assertEqual(self.alerts, ["Timer finished"])
+        t.start(True, 71000)
+        self.assertEqual(t.property("completion"), "")
+        t.cancel()
+        self.assertEqual(t.property("completion"), "")
 
     def test_legacy_focus_deadline_remains_a_single_session_even_when_overdue(self):
         self.settings.setProperty("focusSessions", 4)

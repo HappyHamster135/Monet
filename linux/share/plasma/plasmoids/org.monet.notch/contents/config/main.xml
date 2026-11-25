@@ -19,6 +19,8 @@
         <entry name="alerts" type="Bool"><default>true</default></entry>
         <entry name="warnedDevices" type="String"><default>{}</default></entry>
         <entry name="deadline" type="String"><default></default></entry>
+        <entry name="countdown" type="Bool"><default>true</default></entry>
+        <entry name="timerResult" type="String"><default></default></entry>
         <entry name="timerPaused" type="Double"><default>0</default></entry>
         <entry name="focusRound" type="Int"><default>0</default></entry>
         <entry name="timerMinutes" type="Int"><default>25</default><min>1</min><max>1440</max></entry>

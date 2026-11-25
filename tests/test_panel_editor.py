@@ -86,7 +86,7 @@ if sys.argv[1] == "panel-notch":
     if choice == "tab-clipboard-show": tabs.append("clipboard")
     if choice == "tab-music-hide": tabs.remove("music")
     if choice == "tab-activity-earlier": tabs[:2] = ["activity", "music"]
-    print(json.dumps(dict(ok=True, mode="compact", tabs=tabs, options=dict(previews=choice == "previews-on"))))
+    print(json.dumps(dict(ok=True, mode="compact", tabs=tabs, options=dict(previews=choice == "previews-on", countdown=choice != "countdown-off"))))
 elif sys.argv[1] == "panel-icons":
     actions = dict(active=1, group=0, middle=2)
     if "-" in choice:
@@ -198,6 +198,16 @@ Window {
             QTest.qWait(160)
             self.assertEqual(self.item('monetPanelEditor').property('notchOptions').toVariant()['previews'], enabled)
             self.assertEqual(option.property('checked'), enabled)
+
+    def test_running_timer_checkbox_defaults_on_and_can_be_switched_off(self):
+        name = 'notchOption-countdown'
+        choice = self.item(name)
+        self.assertTrue(choice.isVisible() and choice.property('checked'))
+        for enabled in (False, True):
+            self.click(name)
+            QTest.qWait(160)
+            self.assertEqual(self.item('monetPanelEditor').property('notchOptions').toVariant()['countdown'], enabled)
+            self.assertEqual(choice.property('checked'), enabled)
 
     def test_notch_tab_editor_checks_and_moves_with_the_keyboard(self):
         toggle = self.item('editNotchTabs')

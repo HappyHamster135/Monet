@@ -19338,3 +19338,7 @@ msgstr "%1 min kvar"
 #: linux/share/monet/utilities/awake_page.py:29
 msgid "Custom end time"
 msgstr "Egen sluttid"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:399
+msgid "Show running timers in the closed notch"
+msgstr "Visa pågående tidtagningar i den stängda skärmskåran"

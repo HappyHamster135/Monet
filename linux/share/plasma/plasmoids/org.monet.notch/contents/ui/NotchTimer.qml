@@ -13,6 +13,12 @@ QtObject {
     readonly property int phaseMinutes: onBreak
         ? (longBreak ? settings.longBreakMinutes : settings.shortBreakMinutes) : settings.timerMinutes
 
+    readonly property string completion: settings.timerResult === "rounds" ? i18n("Focus rounds finished")
+        : settings.timerResult === "focus" ? i18n("Focus session finished")
+        : settings.timerResult === "timer" ? i18n("Timer finished") : ""
+
+    function dismiss() { settings.timerResult = "" }
+
     signal quietRequested(double until)
     signal finished(string message)
 
@@ -28,6 +34,7 @@ QtObject {
     }
     function start(focus, now) {
         if (active) return
+        dismiss()
         settings.focus = focus
         settings.focusRound = focus ? 1 : 0
         runFor(settings.timerMinutes * 60000, now)
@@ -71,7 +78,8 @@ QtObject {
         } else {
             const multiple = work && round > 1
             reset()
-            finished(multiple ? i18n("Focus rounds finished") : work ? i18n("Focus session finished") : i18n("Timer finished"))
+            settings.timerResult = multiple ? "rounds" : work ? "focus" : "timer"
+            finished(completion)
         }
     }
 }

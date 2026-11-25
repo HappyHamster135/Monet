@@ -30,8 +30,11 @@ PlasmoidItem {
     readonly property bool offerAgents: tools.offers("agents")
     readonly property bool offerAwake: tools.offers("awake") && visibleTabs.includes(2)
     property bool viewingAwake: false
+    readonly property bool timerStrip: visibleTabs.includes(2) && (!!countdown.completion || countdown.waiting
+        || (Plasmoid.configuration.countdown && countdown.active))
+    readonly property bool timePageVisible: expanded && !searching && !displayShelf && !showingWatch && !viewingAwake && tab === 2
     readonly property bool awakeStrip: !!(Plasmoid.configuration.awake && awakeModel.item?.active
-        && !countdown.active && !watch.registered && (awakeModel.item.state.duration || !playing))
+        && !timerStrip && !watch.registered && (awakeModel.item.state.duration || !playing))
     onOfferAwakeChanged: if (!offerAwake) viewingAwake = false
     Loader {
         id: awakeModel
@@ -194,7 +197,7 @@ PlasmoidItem {
     }
     toolTipMainText: i18n("Monet Notch")
     toolTipSubText: preview.item?.title ? [preview.item.sender, preview.item.title].filter(Boolean).join(" · ")
-        : countdown.active ? timerSummary : watch.registered ? i18n("Watching a window")
+        : timerStrip ? timerSummary : watch.registered ? i18n("Watching a window")
         : awakeStrip ? i18n("Keep awake") + " · " + awakeModel.item.statusText : media?.track || i18n("Music, activity and tools")
     Repeater {
         id: players
@@ -213,7 +216,7 @@ PlasmoidItem {
         }
         onBatteryStateChanged: trackPlug()
         onCompanionPowerChanged: trackPlug()
-        onActiveChanged: trackPlug()
+        onActiveChanged: { trackPlug(); if (active && root.endTime) Qt.callLater(root.refreshTime) }
         observePower: Plasmoid.configuration.alerts || root.expanded || companionPower
         onBatteriesChanged: if (power.powerReady && Plasmoid.configuration.alerts) root.checkCharge()
         onPowerReadyChanged: {
@@ -242,8 +245,8 @@ PlasmoidItem {
         return (s >= 3600 ? Math.floor(s / 3600) + ":" : "") +
             String(Math.floor(s / 60) % 60).padStart(s >= 3600 ? 2 : 1, "0") + ":" + String(s % 60).padStart(2, "0")
     }
-    readonly property string timerSummary: countdown.waiting ? (countdown.onBreak ? i18n("Break ready") : i18n("Focus ready"))
-        : duration(Math.ceil(countdown.remaining(now) / 1000))
+    readonly property string timerSummary: countdown.completion || (countdown.waiting ? (countdown.onBreak ? i18n("Break ready") : i18n("Focus ready"))
+        : duration(Math.ceil(countdown.remaining(now) / 1000)))
     function hex(text) {
         return Array.from(unescape(encodeURIComponent(text)), c => c.charCodeAt(0).toString(16).padStart(2, "0")).join("")
     }
@@ -279,11 +282,18 @@ PlasmoidItem {
         now = Date.now()
         countdown.finishIfDue(now)
     }
+    // Draw seconds only when someone can see them. A hidden timer schedules
+    // its deadline and checks the wall clock at most once a minute until then.
+    readonly property bool showSeconds: power.active && (timePageVisible
+        || (timerStrip && !preview.item?.noticeId))
     Timer {
-        interval: 1000; repeat: true
-        running: !!root.endTime || (root.expanded && !root.displayShelf && !root.showingWatch && root.tab === 2 && !!root.watchStart)
+        id: clockTick
+        interval: root.showSeconds ? 1000 : Math.max(1, Math.min(60000, root.endTime - root.now))
+        repeat: true
+        running: !!root.endTime || (root.timePageVisible && power.active && !!root.watchStart)
         onTriggered: root.refreshTime()
     }
+    onShowSecondsChanged: if (showSeconds && (endTime || watchStart)) Qt.callLater(refreshTime)
     Component.onCompleted: { selectVisibleTab(); refreshTime() }
     onExpandedChanged: {
         if (!root.expanded) { viewingAwake = false; searching = false; requestedNotice = 0; viewingDownloads = false; viewingShelf = false; return }
@@ -291,7 +301,7 @@ PlasmoidItem {
         agendaDay = new Date()
         refreshTime()
         if (requestedNotice || viewingShelf) return
-        if (countdown.active && visibleTabs.includes(2)) tab = 2
+        if (timerStrip) { viewingWatch = false; tab = 2 }
         else if (watch.registered) {
             viewingWatch = true
             if (hasActivity) tab = 1
@@ -373,7 +383,7 @@ PlasmoidItem {
                 visible: !companionLoader.item?.showing
                 Layout.preferredHeight: 17; Layout.preferredWidth: 17
                 source: shelfDrop.containsDrag ? "folder-add" : preview.item?.noticeId ? "notifications"
-                    : countdown.paused ? "media-playback-pause" : countdown.active ? "chronometer" : watch.registered ? "view-visible"
+                    : root.timerStrip ? (countdown.paused ? "media-playback-pause" : "chronometer") : watch.registered ? "view-visible"
                     : root.awakeStrip ? "system-suspend-inhibited" : root.media ? "audio-x-generic" : "applications-utilities"
                 color: "#9dd9c9"; isMask: true
             }
@@ -384,7 +394,7 @@ PlasmoidItem {
             }
             C.Label {
                 Layout.fillWidth: true; color: "#f6f3e9"; textFormat: Text.PlainText; elide: Text.ElideRight
-                text: shelfDrop.containsDrag ? i18n("Shelf") : preview.item?.title || (countdown.active ? root.timerSummary
+                text: shelfDrop.containsDrag ? i18n("Shelf") : preview.item?.title || (root.timerStrip ? (countdown.completion && !Plasmoid.configuration.wide ? i18n("Done") : root.timerSummary)
                     : watch.registered ? i18n("Watching") : root.awakeStrip ? awakeModel.item.compactText : root.media?.track || i18n("Tools"))
             }
             Item {
