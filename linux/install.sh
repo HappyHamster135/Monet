@@ -750,7 +750,16 @@ TMP
     if [ -f "$configuration/PanelConfiguration.qml" ]; then
         [ -f "$configuration/KdePanelConfiguration.qml" ] || mv "$configuration/PanelConfiguration.qml" "$configuration/KdePanelConfiguration.qml"
         put 644 "$SRC/share/monet/panel/MonetPanelConfiguration.qml" "$configuration/MonetPanelConfiguration.qml"
-        put 644 "$SRC/share/monet/panel/PanelConfiguration.qml" "$configuration/PanelConfiguration.qml"
+        # Plasma can retain compiled pages and directory listings for the whole login.
+        # A fresh URL also lets a running shell load the editor after a live update.
+        editor_hash=$(sha256sum "$configuration/MonetPanelConfiguration.qml")
+        editor_page="monet-editor/${editor_hash%% *}/MonetPanelConfiguration.qml"
+        install -d "$configuration/${editor_page%/*}"
+        ln -sfn ../../MonetPanelConfiguration.qml "$configuration/$editor_page"
+        wrapper="$configuration/PanelConfiguration.qml"
+        sed "s|@PANEL_EDITOR@|$editor_page|g" "$SRC/share/monet/panel/PanelConfiguration.qml" > "$wrapper.tmp"
+        chmod 644 "$wrapper.tmp"
+        mv -f "$wrapper.tmp" "$wrapper"
     fi
     # The password prompt: KDE's agent built with Monet's page (image/password),
     # started instead of KDE's build. Without it, KDE's prompt stays.

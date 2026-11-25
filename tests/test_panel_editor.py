@@ -57,8 +57,13 @@ class PanelEditor(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
         folder = Path(self.temp.name)
         source = ROOT / 'linux/share/monet/panel'
+        # Mirror the installed editor URL so Advanced exercises its shell-relative page.
+        editor_page = 'monet-editor/test-revision/MonetPanelConfiguration.qml'
         for p in source.glob('*.qml'):
-            (folder / p.name).write_text(p.read_text().replace('@LIBEXECDIR@', str(folder)))
+            (folder / p.name).write_text(p.read_text().replace('@LIBEXECDIR@', str(folder))
+                                         .replace('@PANEL_EDITOR@', editor_page))
+        (folder / editor_page).parent.mkdir(parents=True)
+        (folder / editor_page).symlink_to('../../MonetPanelConfiguration.qml')
         helper = folder / 'monet-quick'
         helper.write_text("""#!/usr/bin/python3
 import json

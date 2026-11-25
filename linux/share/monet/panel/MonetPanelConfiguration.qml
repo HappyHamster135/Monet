@@ -12,6 +12,7 @@ Item {
     id: editor
     objectName: "monetPanelEditor"
     required property QtObject panelConfiguration
+    property url advancedPage: Qt.resolvedUrl("KdePanelConfiguration.qml")
     property Item panelRuler: advanced.item ? advanced.item.panelRuler : null
     signal closeContextMenu
     onCloseContextMenu: if (advanced.item) advanced.item.closeContextMenu()
@@ -683,7 +684,7 @@ Item {
                     Layout.fillWidth: true
                     active: editor.showAdvanced
                     visible: active
-                    onActiveChanged: if (active) setSource(Qt.resolvedUrl("KdePanelConfiguration.qml"), {panelConfiguration: editor.panelConfiguration})
+                    onActiveChanged: if (active) setSource(editor.advancedPage, {panelConfiguration: editor.panelConfiguration})
                 }
             }
         }
