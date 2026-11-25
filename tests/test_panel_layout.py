@@ -103,9 +103,26 @@ class PanelLayouts(unittest.TestCase):
         self.assertTrue(self.choose('right','one')['ok'])
         self.assertEqual(notch('right')['mode'], 'wide')
         self.assertTrue(self.choose('right','three')['ok'])
+        standard = ['music', 'activity', 'time', 'calendar', 'notes']
+        self.assertEqual(notch('right')['tabs'], standard)
+        self.assertEqual(notch('right', 'tab-activity-earlier')['tabs'][:2], ['activity', 'music'])
+        self.assertEqual(notch('right', 'tab-activity-earlier')['tabs'][:2], ['activity', 'music'])
+        self.assertEqual(notch('right', 'tab-time-hide')['tabs'], ['activity', 'music', 'calendar', 'notes'])
+        self.assertFalse(notch('right', 'tab-new-show')['ok'])
+        saved = notch('right')
         self.assertTrue(notch('right', 'off')['ok'])
         self.assertEqual(notch('other')['mode'], 'compact')
         self.assertTrue(self.js('!panelById(notchPanel.id)').toBool())
+        self.assertEqual(notch('other')['tabs'], standard)
+        self.assertTrue(self.choose('right', 'one')['ok'])
+        self.assertEqual(notch('right', 'wide'), saved)
+        for key in saved['tabs']:
+            last = notch('right', 'tab-' + key + '-hide')
+        self.assertEqual(last['tabs'], [])
+        self.assertEqual(notch('right', 'tab-notes-show')['tabs'], ['notes'])
+        self.assertEqual(notch('right', 'tab-notes-show')['tabs'], ['notes'])
+        self.js("var n=all.find(p=>p.screen===right.screen&&p.widgets('org.monet.notch').length).widgets()[0]; n.currentConfigGroup=['General']; n.writeConfig('tabs','music,music,bad');")
+        self.assertEqual(notch('right')['tabs'], standard)
 
     def test_switch_from_side_bar_round_trip_keeps_id_pins_widgets_and_other_screens(self):
         self.assertEqual(self.choose('right')['layout'], 'three')

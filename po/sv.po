@@ -17024,3 +17024,15 @@ msgstr "Det gick inte att uppdatera filhyllan."
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/ShelfModel.qml:49
 msgid "Some files are no longer available."
 msgstr "Några filer är inte längre tillgängliga."
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:406
+msgid "Edit notch tabs"
+msgstr "Redigera flikarna i skärmens urtag"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:432
+msgid "Move %1 earlier"
+msgstr "Flytta %1 tidigare"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:440
+msgid "Move %1 later"
+msgstr "Flytta %1 senare"

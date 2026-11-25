@@ -16991,3 +16991,15 @@ msgstr ""
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/ShelfModel.qml:49
 msgid "Some files are no longer available."
 msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:406
+msgid "Edit notch tabs"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:432
+msgid "Move %1 earlier"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:440
+msgid "Move %1 later"
+msgstr ""

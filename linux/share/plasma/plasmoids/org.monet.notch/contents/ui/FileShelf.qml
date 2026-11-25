@@ -7,6 +7,7 @@ ColumnLayout {
     id: page
     required property var shelf
     property bool dragging: false
+    property bool canGoBack: true
     signal backRequested()
     signal detachRequested()
     property var selected: []
@@ -23,7 +24,7 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         C.ToolButton {
-            icon.name: "go-previous"; Accessible.name: i18n("Back")
+            visible: page.canGoBack; icon.name: "go-previous"; Accessible.name: i18n("Back")
             onClicked: page.backRequested()
         }
         C.Label { text: i18n("File shelf"); font.bold: true; Layout.fillWidth: true }

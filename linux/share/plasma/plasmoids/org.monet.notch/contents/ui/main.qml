@@ -19,14 +19,28 @@ PlasmoidItem {
     readonly property double endTime: Number(Plasmoid.configuration.deadline) || 0
     readonly property double watchStart: Number(Plasmoid.configuration.watchStart) || 0
     property double now: Date.now()
+    readonly property var tabNames: ["music", "activity", "time", "calendar", "notes"]
+    readonly property var tabLabels: [i18n("Music"), i18n("Activity"), i18n("Time"), i18n("Calendar"), i18n("Notes")]
+    readonly property var visibleTabs: {
+        const value = Plasmoid.configuration.tabs || ""
+        if (value === "none") return []
+        const ids = value.split(",").map(key => tabNames.indexOf(key))
+        return ids.every((id, index) => id >= 0 && ids.indexOf(id) === index) ? ids : [0, 1, 2, 3, 4]
+    }
+    readonly property bool hasActivity: visibleTabs.includes(1)
     property int tab: 0
+    function selectVisibleTab() {
+        if (!expanded || !visibleTabs.includes(tab)) tab = visibleTabs[0] ?? -1
+    }
+    onVisibleTabsChanged: selectVisibleTab()
     property bool draggingShelf: false
     // Wayland destinations can read the URI list after the pointer leaves the popup.
     hideOnWindowDeactivate: !draggingShelf
     property bool viewingShelf: false
+    readonly property bool displayShelf: viewingShelf || (!visibleTabs.length && !showingWatch)
     ShelfModel {
         id: fileShelf
-        shown: root.expanded && root.viewingShelf
+        shown: root.expanded && root.displayShelf
         dragging: root.draggingShelf
     }
     function showShelf() {
@@ -36,7 +50,7 @@ PlasmoidItem {
     property int requestedNotice: 0
     Loader {
         id: preview
-        active: (!root.expanded || root.requestedNotice > 0) && Plasmoid.configuration.previews && power.active
+        active: (!root.expanded || root.requestedNotice > 0) && root.hasActivity && Plasmoid.configuration.previews && power.active
                 && !!power.nativeState?.lockKnown && !power.nativeState.locked && !NM.Server.inhibited
         source: "NoticePreview.qml"
         onLoaded: item.watching = Qt.binding(() => !root.expanded)
@@ -51,15 +65,14 @@ PlasmoidItem {
         expanded = !expanded
     }
     property bool padsOpened: false
-    onTabChanged: {
-        if (tab === 4) padsOpened = true
-        if (tab !== 1) requestedNotice = 0
-    }
+    readonly property bool padShown: expanded && !viewingShelf && !showingWatch && tab === 4
+    onPadShownChanged: if (padShown) padsOpened = true
+    onTabChanged: if (tab !== 1) requestedNotice = 0
     Loader {
         id: padController
         active: root.padsOpened
         sourceComponent: PadModel {
-            shown: root.expanded && !root.viewingShelf && root.tab === 4
+            shown: root.padShown
             onDetached: root.expanded = false
         }
     }
@@ -68,6 +81,7 @@ PlasmoidItem {
     property bool viewingAgenda: false
     property date agendaDay: new Date()
     property bool viewingWatch: false
+    readonly property bool showingWatch: !viewingShelf && viewingWatch && watch.registered && (tab === 1 || !hasActivity)
     readonly property string watchPath: "/WindowWatch/n" + Plasmoid.id
     DBus.DBusServiceWatcher {
         id: watch
@@ -75,7 +89,7 @@ PlasmoidItem {
         watchedService: "org.monet.WindowWatch.n" + Plasmoid.id
         onRegisteredChanged: {
             root.viewingWatch = registered
-            if (registered) root.tab = 1
+            if (registered && root.hasActivity) root.tab = 1
         }
     }
     Component.onDestruction: {
@@ -191,14 +205,17 @@ PlasmoidItem {
         running: !!root.endTime || (root.expanded && root.tab === 2 && !!root.watchStart)
         onTriggered: root.refreshTime()
     }
-    Component.onCompleted: refreshTime()
+    Component.onCompleted: { selectVisibleTab(); refreshTime() }
     onExpandedChanged: {
         if (!root.expanded) { requestedNotice = 0; viewingDownloads = false; viewingShelf = false; return }
         agendaDay = new Date()
         refreshTime()
         if (requestedNotice || viewingShelf) return
-        if (endTime) tab = 2
-        else if (watch.registered) { viewingWatch = true; tab = 1 }
+        if (endTime && visibleTabs.includes(2)) tab = 2
+        else if (watch.registered) {
+            viewingWatch = true
+            if (hasActivity) tab = 1
+        }
     }
     P5.DataSource {
         id: runner
@@ -301,29 +318,25 @@ PlasmoidItem {
         Layout.preferredWidth: Math.min(422, Math.max(250, Screen.width - 32))
         Layout.preferredHeight: Math.min(370, Math.max(200, Screen.height - 80))
         spacing: Kirigami.Units.smallSpacing
-        C.TabBar {
-            visible: !root.viewingShelf
+        NotchTabs {
+            visible: !root.viewingShelf && tabs.length > 0
             Layout.fillWidth: true
-            currentIndex: root.tab
-            onCurrentIndexChanged: root.tab = currentIndex
-            Repeater {
-                model: [i18n("Music"), i18n("Activity"), i18n("Time"), i18n("Calendar"), i18n("Notes")]
-                C.TabButton { required property string modelData; text: modelData }
-            }
+            tabs: root.visibleTabs; labels: root.tabLabels; page: root.tab
+            onChosen: tab => { root.viewingWatch = false; root.tab = tab }
         }
         Loader {
             Layout.fillWidth: true; Layout.fillHeight: true
             active: root.expanded
-            sourceComponent: root.viewingShelf ? shelfPage : root.tab === 1 && root.viewingWatch && watch.registered ? watchPage
+            sourceComponent: root.displayShelf ? shelfPage : root.showingWatch ? watchPage
                 : root.tab === 1 && root.viewingDownloads ? downloadsPage
                 : root.tab === 3 && root.viewingAgenda ? agendaPage
                 : root.tab === 0 && root.musicView === 3 ? mixerPage
-                : root.tab === 4 ? (padController.item ? padPage : null) : [musicPage, activityPage, timerPage, calendarPage][root.tab]
+                : root.tab === 4 ? (padController.item ? padPage : null) : [musicPage, activityPage, timerPage, calendarPage][root.tab] ?? null
         }
         RowLayout {
-            visible: !root.viewingShelf
+            visible: !root.viewingShelf || !root.visibleTabs.length
             Layout.fillWidth: true
-            C.Button { text: i18n("File shelf"); icon.name: "folder-open"; onClicked: root.showShelf() }
+            C.Button { visible: root.visibleTabs.length > 0; text: i18n("File shelf"); icon.name: "folder-open"; onClicked: root.showShelf() }
             Item { Layout.fillWidth: true }
             C.Button { text: i18n("Utilities"); icon.name: "applications-utilities"; onClicked: root.openTool("tools") }
         }
@@ -332,6 +345,7 @@ PlasmoidItem {
         id: shelfPage
         FileShelf {
             shelf: fileShelf
+            canGoBack: root.visibleTabs.length > 0
             onDraggingChanged: root.draggingShelf = dragging
             Component.onDestruction: root.draggingShelf = false
             onBackRequested: root.viewingShelf = false

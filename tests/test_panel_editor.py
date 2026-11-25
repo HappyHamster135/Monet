@@ -65,7 +65,10 @@ import json
 import sys
 choice = sys.argv[3] if len(sys.argv) > 3 else ""
 if sys.argv[1] == "panel-notch":
-    print(json.dumps(dict(ok=True, mode="compact", options=dict(previews=choice == "previews-on"))))
+    tabs = ["music", "activity", "time", "calendar", "notes"]
+    if choice == "tab-music-hide": tabs.remove("music")
+    if choice == "tab-activity-earlier": tabs[:2] = ["activity", "music"]
+    print(json.dumps(dict(ok=True, mode="compact", tabs=tabs, options=dict(previews=choice == "previews-on"))))
 else:
     print(json.dumps(dict(ok=True, available=True, layout=choice or "three", alignment=choice or "start")))
 """)
@@ -171,6 +174,21 @@ Window {
             QTest.qWait(160)
             self.assertEqual(self.item('monetPanelEditor').property('notchOptions').toVariant()['previews'], enabled)
             self.assertEqual(option.property('checked'), enabled)
+
+    def test_notch_tab_editor_checks_and_moves_with_the_keyboard(self):
+        toggle = self.item('editNotchTabs')
+        toggle.forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Return)
+        self.assertTrue(toggle.property('checked'))
+        self.click('notchEarlier-activity')
+        editor = self.item('monetPanelEditor')
+        self.assertEqual(editor.property('notchTabs').toVariant()[:2], ['activity', 'music'])
+        music = self.item('notchTab-music')
+        music.forceActiveFocus(Qt.TabFocusReason)
+        QTest.keyClick(self.window, Qt.Key_Return)
+        QTest.qWait(200)
+        self.assertFalse(music.property('checked'))
+        self.assertFalse(self.item('notchEarlier-music').isEnabled())
 
     def test_one_and_three_bar_choices_use_layout_helper(self):
         self.assertTrue(self.item('panelThreeBars').property('checked'))

@@ -41,6 +41,27 @@ Item {
     property string notchMode: ""
     property bool notchBusy: false
     property var notchOptions: ({})
+    property var notchTabs: []
+    readonly property var tabTitles: ({music:i18nd("monet", "Music"), activity:i18nd("monet", "Activity"),
+        time:i18nd("monet", "Time"), calendar:i18nd("monet", "Calendar"), notes:i18nd("monet", "Notes")})
+    ListModel {
+        id: tabRows
+        ListElement { key: "music" }
+        ListElement { key: "activity" }
+        ListElement { key: "time" }
+        ListElement { key: "calendar" }
+        ListElement { key: "notes" }
+    }
+    onNotchTabsChanged: {
+        const order = notchTabs.concat(Object.keys(tabTitles).filter(key => !notchTabs.includes(key)))
+        order.forEach((key, index) => {
+            for (let i = index; i < tabRows.count; ++i) {
+                if (tabRows.get(i).key !== key) continue
+                if (i !== index) tabRows.move(i, index, 1)
+                break
+            }
+        })
+    }
     property bool layoutBusy: false
     property bool busy: false
     property string problem: ""
@@ -150,7 +171,7 @@ Item {
         if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && (event.modifiers & ~Qt.KeypadModifier) === Qt.NoModifier) {
             const item = editor.Window.window ? editor.Window.window.activeFocusItem : null
             if (item instanceof T.AbstractButton && item.visible && item.enabled) {
-                if (!event.isAutoRepeat) item.clicked()
+                if (!event.isAutoRepeat) item.click()
                 event.accepted = true
             }
         }
@@ -180,6 +201,7 @@ Item {
                 if (!result.ok) throw new Error()
                 editor.notchMode = result.mode
                 editor.notchOptions = result.options || ({})
+                editor.notchTabs = result.tabs || []
             } catch (error) {
                 editor.problem = i18nd("monet", "Could not read or change the notch on this screen.")
             }
@@ -375,6 +397,52 @@ Item {
                             text: modelData.label; enabled: !editor.notchBusy
                             checked: !!editor.notchOptions[modelData.key]
                             onClicked: editor.requestNotch(modelData.key + (checked ? "-on" : "-off"))
+                        }
+                    }
+                    C.Button {
+                        id: editTabs
+                        objectName: "editNotchTabs"
+                        visible: editor.notchMode === "compact" || editor.notchMode === "wide"
+                        text: i18nd("monet", "Edit notch tabs")
+                        checkable: true
+                        icon.name: checked ? "arrow-down" : "arrow-right"
+                    }
+                    ColumnLayout {
+                        visible: editTabs.visible && editTabs.checked
+                        Layout.fillWidth: true
+                        Repeater {
+                            model: tabRows
+                            RowLayout {
+                                id: tabRow
+                                required property string key
+                                required property int index
+                                readonly property bool shown: editor.notchTabs.includes(key)
+                                Layout.fillWidth: true
+                                C.CheckBox {
+                                    objectName: "notchTab-" + tabRow.key
+                                    Layout.fillWidth: true
+                                    text: editor.tabTitles[tabRow.key]
+                                    checked: tabRow.shown
+                                    enabled: !editor.notchBusy
+                                    onClicked: editor.requestNotch("tab-" + tabRow.key + (checked ? "-show" : "-hide"))
+                                }
+                                C.ToolButton {
+                                    objectName: "notchEarlier-" + tabRow.key
+                                    icon.name: "arrow-up"
+                                    Accessible.name: i18nd("monet", "Move %1 earlier", editor.tabTitles[tabRow.key])
+                                    C.ToolTip.text: Accessible.name; C.ToolTip.visible: hovered
+                                    enabled: tabRow.shown && tabRow.index > 0 && !editor.notchBusy
+                                    onClicked: editor.requestNotch("tab-" + tabRow.key + "-earlier")
+                                }
+                                C.ToolButton {
+                                    objectName: "notchLater-" + tabRow.key
+                                    icon.name: "arrow-down"
+                                    Accessible.name: i18nd("monet", "Move %1 later", editor.tabTitles[tabRow.key])
+                                    C.ToolTip.text: Accessible.name; C.ToolTip.visible: hovered
+                                    enabled: tabRow.shown && tabRow.index < editor.notchTabs.length - 1 && !editor.notchBusy
+                                    onClicked: editor.requestNotch("tab-" + tabRow.key + "-later")
+                                }
+                            }
                         }
                     }
                     Heading { text: i18nd("monet", "Bar shape") }
