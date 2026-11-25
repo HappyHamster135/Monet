@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from tools.test import private_session, stop
 from wayland_pointer import Pointer
+from mouse_test_app import other_active_app
 
 
 def worker(helper, saved):
@@ -23,6 +24,7 @@ def worker(helper, saved):
     from tests.test_resume import r
     assert os.environ["WAYLAND_DISPLAY"] == "extra-click-test"
     app = QApplication([])
+    app.setDesktopFileName("org.monet.MouseTarget")
     def pump(seconds):
         until = time.monotonic() + seconds
         while time.monotonic() < until:
@@ -120,6 +122,26 @@ def worker(helper, saved):
             return
         panel.interval.setValue(100)
         panel.enable.setChecked(True)
+        pump(.13)
+        # Exclusions use the receiving app, including its first click while inactive.
+        panel.exceptions.save(["org.monet.MouseTarget.desktop"])
+        pump(.08)
+        with other_active_app(pump, r.kwin_script):
+            click(one); click(one)
+            check(first, pairs(L, L))
+        panel.exceptions.save(["org.monet.MousePeer.desktop"])
+        pump(.10)
+        click(one); click(one)
+        check(first, pairs(L))
+        # A deliberate pointer excursion starts a new sequence, even if it
+        # returns to the original pixel within the switch-bounce interval.
+        pump(.11)
+        click(one)
+        pointer.point(196, 160); pump(.008)
+        pointer.point(170, 160); pump(.008)
+        click(one)
+        check(first, pairs(L, L))
+        panel.exceptions.save([])
         pump(.13)
         # The app sees the accepted press while the physical button is still down.
         button(one, left, True)

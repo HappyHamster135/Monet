@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT), str(ROOT / "linux/share/monet/utilities")]
 from tools.test import private_session, stop
 from wayland_pointer import Pointer
+from mouse_test_app import other_active_app
 
 
 def worker(helper):
@@ -21,6 +22,7 @@ def worker(helper):
     from wheel_scrolling import WheelScrolling
 
     app = QApplication([])
+    app.setDesktopFileName("org.monet.MouseTarget")
     class Area(QScrollArea):
         def __init__(self, title):
             super().__init__()
@@ -129,6 +131,15 @@ def worker(helper):
         count = len(first.events)
         pump(.25)
         assert len(first.events) == count
+        with other_active_app(pump, r.kwin_script):
+            panel.exceptions.save(["org.monet.MouseTarget.desktop"])
+            pump(.08)
+            assert scroll(120, settle=.31) == baseline
+            panel.exceptions.save(["org.monet.MousePeer.desktop"])
+            pump(.08)
+            assert len(scroll(120, settle=.31)) > 1
+        panel.exceptions.save([])
+        pump(.08)
         # Reversing removes the pending tail of the first direction.
         scroll(120, settle=.06)
         reverse = scroll(-120, settle=.35)

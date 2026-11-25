@@ -19005,3 +19005,23 @@ msgid ""
 "A manual timer keeps the screen on and delays automatic locking and sleep until it ends."
 msgstr ""
 "En manuell timer håller skärmen på och skjuter upp automatisk låsning och vila tills tiden har gått ut."
+
+#: linux/share/monet/utilities/mouse_exceptions.py:24
+msgid "Use standard mouse controls in"
+msgstr "Använd vanliga muskontroller i"
+
+#: linux/share/monet/utilities/mouse_exceptions.py:25 linux/share/monet/utilities/mouse_exceptions.py:52
+msgid "Selected apps receive clicks and wheel scrolling directly."
+msgstr "Valda appar tar emot klick och rullning med mushjulet direkt."
+
+#: linux/share/monet/utilities/mouse_exceptions.py:36
+msgid "1 app selected"
+msgstr "1 app vald"
+
+#: linux/share/monet/utilities/mouse_exceptions.py:36
+msgid "%1 apps selected"
+msgstr "%1 appar valda"
+
+#: linux/share/monet/utilities/mouse_exceptions.py:50
+msgid "Could not save mouse settings."
+msgstr "Det gick inte att spara musinställningarna."

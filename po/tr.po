@@ -18925,3 +18925,23 @@ msgstr ""
 msgid ""
 "A manual timer keeps the screen on and delays automatic locking and sleep until it ends."
 msgstr ""
+
+#: linux/share/monet/utilities/mouse_exceptions.py:24
+msgid "Use standard mouse controls in"
+msgstr ""
+
+#: linux/share/monet/utilities/mouse_exceptions.py:25 linux/share/monet/utilities/mouse_exceptions.py:52
+msgid "Selected apps receive clicks and wheel scrolling directly."
+msgstr ""
+
+#: linux/share/monet/utilities/mouse_exceptions.py:36
+msgid "1 app selected"
+msgstr ""
+
+#: linux/share/monet/utilities/mouse_exceptions.py:36
+msgid "%1 apps selected"
+msgstr ""
+
+#: linux/share/monet/utilities/mouse_exceptions.py:50
+msgid "Could not save mouse settings."
+msgstr ""

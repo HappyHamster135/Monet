@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "mouseexceptions.h"
 #include <plugin.h>
 #include <input.h>
 #include <input_event.h>
@@ -98,6 +99,8 @@ public:
         connect(waylandServer(), &WaylandServer::lockStateChanged, this, &WheelScroll::stop);
         QDBusConnection::sessionBus().connect({}, "/org/monet/WheelScrolling", "org.monet.WheelScrolling",
                                               "Changed", this, SLOT(reload()));
+        QDBusConnection::sessionBus().connect({}, "/org/monet/MouseEnhancements", "org.monet.MouseEnhancements",
+                                              "Changed", this, SLOT(reload()));
         reload();
     }
 
@@ -106,6 +109,7 @@ private Q_SLOTS:
     {
         QSettings s("Monet", "WheelScrolling");
         s.sync();
+        exceptions.reload();
         const auto mode = s.value("profile").toString();
         profile = mode == "smooth" ? Profile::Smooth : mode == "linear" ? Profile::Linear : Profile::System;
         const auto key = s.value("sideways").toString();
@@ -126,6 +130,8 @@ private Q_SLOTS:
     }
 
 private:
+    MouseExceptions exceptions;
+
     SurfaceInterface *destination() const
     {
         auto *server = waylandServer();
@@ -134,7 +140,7 @@ private:
         auto *seat = server->seat();
         if (!w || w != p->hover() || w->isDeleted() || !(w->isNormalWindow() || w->isDialog())
             || w->isInteractiveMove() || w->isInteractiveResize() || p->decoration() || p->isConstrained() || p->areButtonsPressed()
-            || !seat->pointer() || seat->isDrag() || server->isScreenLocked() || input()->isSelectingWindow()
+            || !seat->pointer() || seat->isDrag() || server->isScreenLocked() || input()->isSelectingWindow() || exceptions.matches(w)
             || (effects && effects->isMouseInterception()) || server->isKeyboardShortcutsInhibited()) {
             return nullptr;
         }

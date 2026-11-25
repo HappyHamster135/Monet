@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "mouseexceptions.h"
 #include <plugin.h>
 #include <core/inputdevice.h>
 #include <input.h>
@@ -58,6 +59,7 @@ public:
     {
         if (!waylandServer()) return;
         auto bus = QDBusConnection::sessionBus();
+        bus.connect({}, "/org/monet/MouseEnhancements", "org.monet.MouseEnhancements", "Changed", this, SLOT(Reload()));
         bus.registerObject("/org/monet/ExtraClicks", this, QDBusConnection::ExportScriptableSlots | QDBusConnection::ExportScriptableSignals);
         connect(input(), &InputRedirection::deviceAdded, this, [this](InputDevice *d) {
             if (d->isPointer()) add(d);
@@ -88,6 +90,7 @@ public Q_SLOTS:
     {
         QSettings settings("Monet", "ExtraClicks");
         settings.sync();
+        exceptions.reload();
         const bool enabled = settings.value("enabled", false).toBool();
         for (size_t i = 0; i < keys.size(); ++i)
             selected[i] = enabled && settings.value(keys[i], i == 0).toBool();
@@ -206,7 +209,7 @@ private:
         if (!selected[i] || !mouse->enabled) return forward(event, b, pressed);
         auto *target = input()->pointer()->hover();
         if (!target || waylandServer()->isScreenLocked() || waylandServer()->seat()->isDrag()
-            || input()->isSelectingWindow()) {
+            || input()->isSelectingWindow() || exceptions.matches(target)) {
             b.armed = b.acceptedDown = false;
             return forward(event, b, pressed);
         }
@@ -221,7 +224,7 @@ private:
         if (b.acceptedDown) return true; // Keep the eventual release for the original press.
         correctButtons(event->buttons);
         const auto elapsed = event->timestamp - b.released;
-        const bool repeat = b.armed && elapsed >= 0us && elapsed < interval && b.window == target
+        const bool repeat = b.armed && target == workspace()->activeWindow() && elapsed >= 0us && elapsed < interval && b.window == target
             && (event->position - b.position).manhattanLength() <= 3 && event->modifiers == b.modifiers
             && !(event->buttons & ~event->button);
         if (repeat) {
@@ -242,15 +245,16 @@ private:
         // Wayland sends motion separately. Internal and decorated windows
         // also receive a Qt buttons mask; a discarded click must not drag.
         correctButtons(event->buttons);
-        if (event->buttons != Qt::NoButton) {
-            for (auto &mouse : devices)
-                for (auto &b : mouse.buttonsState)
-                    if (b.acceptedDown && (event->position - b.position).manhattanLength() > 3)
-                        b.acceptedDown = false;
+        for (auto &mouse : devices) {
+            for (auto &b : mouse.buttonsState) {
+                if ((b.armed || b.acceptedDown) && (event->position - b.position).manhattanLength() > 3)
+                    b.armed = b.acceptedDown = false;
+            }
         }
         return false;
     }
 
+    MouseExceptions exceptions;
     QHash<InputDevice *, Mouse> devices;
     std::array<bool, buttons.size()> selected{};
     QString model;

@@ -6,6 +6,7 @@ from PySide6.QtDBus import QDBusConnection, QDBusMessage, QDBusPendingCallWatche
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QFormLayout, QFrame, QHBoxLayout, QLabel,
                                QPushButton, QSpinBox, QVBoxLayout, QWidget)
 from actions import tr
+from mouse_exceptions import MouseExceptions
 
 SERVICE = "org.kde.KWin"
 PATH = "/org/monet/ExtraClicks"
@@ -105,6 +106,8 @@ class ExtraClicks(QWidget):
         reset = QPushButton(tr("Reset count"))
         reset.clicked.connect(self.test_area.reset)
         layout.addWidget(reset, 0, Qt.AlignLeft)
+        self.exceptions = MouseExceptions()
+        layout.addWidget(self.exceptions)
         self.status = QLabel()
         self.status.setWordWrap(True)
         layout.addWidget(self.status)

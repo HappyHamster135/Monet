@@ -4,6 +4,7 @@ from PySide6.QtDBus import QDBusConnection, QDBusMessage, QDBusPendingCallWatche
 from PySide6.QtWidgets import QComboBox, QFormLayout, QLabel, QSpinBox, QVBoxLayout, QWidget
 
 from actions import tr
+from mouse_exceptions import MouseExceptions
 
 
 class WheelScrolling(QWidget):
@@ -23,6 +24,8 @@ class WheelScrolling(QWidget):
         self.duration = self.number("duration", tr("Glide duration"), 160, 60, 400, tr(" ms"))
         self.sideways = self.choice("sideways", tr("Hold to scroll sideways"), [
             ("off", tr("Off")), ("shift", "Shift"), ("ctrl", "Ctrl"), ("alt", "Alt"), ("meta", tr("Super"))])
+        self.exceptions = MouseExceptions()
+        layout.addWidget(self.exceptions)
         self.status = QLabel()
         self.status.setWordWrap(True)
         layout.addWidget(self.status)

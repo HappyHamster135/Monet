@@ -60,6 +60,11 @@ application so it can show its usual unsaved-document prompt. Run
 `python3 tests/fixtures/quit-protection-wayland.py` and repeat with
 `--platform xcb` to check both window systems in an isolated session.
 
+Both mouse modules use the shared application list in `Monet/MouseEnhancements`.
+They match the window under the pointer using its desktop entry or unambiguous
+startup class. Updating the list cancels any glide already in progress. An
+already discarded mouse press always retains its release.
+
 The wheel scrolling module reads its settings when KWin starts and when the
 preferences page changes them. The input filter runs only when a wheel option
 is enabled. A smooth scroll schedules frames while the wheel is moving and stops
