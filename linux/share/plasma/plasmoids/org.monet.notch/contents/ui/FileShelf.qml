@@ -11,14 +11,20 @@ ColumnLayout {
     signal backRequested()
     signal detachRequested()
     property var selected: []
-    function toggle(url) {
-        selected = selected.includes(url) ? selected.filter(other => other !== url) : [...selected, url]
+    function toggle(key) {
+        selected = selected.includes(key) ? selected.filter(other => other !== key) : [...selected, key]
+    }
+    function dragData(row) {
+        const group = selected.includes(row.key) ? shelf.rows.filter(r => selected.includes(r.key)) : [row]
+        const mime = {"text/plain": group.map(r => r.path).join("\n"), "application/x-monet-shelf-drag": "1"}
+        if (group.every(r => r.url)) mime["text/uri-list"] = group.map(r => r.url).join("\r\n")
+        return mime
     }
     Connections {
         target: page.shelf
         function onRowsChanged() {
-            const urls = new Set(page.shelf.rows.map(row => row.url))
-            page.selected = page.selected.filter(url => urls.has(url))
+            const keys = new Set(page.shelf.rows.map(row => row.key))
+            page.selected = page.selected.filter(key => keys.has(key))
         }
     }
     RowLayout {
@@ -47,10 +53,10 @@ ColumnLayout {
                     id: file
                     required property var modelData
                     width: list.width
-                    highlighted: page.selected.includes(modelData.url)
-                    Accessible.name: modelData.path
+                    highlighted: page.selected.includes(modelData.key)
+                    Accessible.name: modelData.kind === "text" ? modelData.name : modelData.path
                     Accessible.checkable: true; Accessible.checked: highlighted
-                    onClicked: page.toggle(modelData.url)
+                    onClicked: page.toggle(modelData.key)
                     contentItem: RowLayout {
                         Kirigami.Icon {
                             Layout.preferredWidth: 22; Layout.preferredHeight: 22
@@ -63,7 +69,7 @@ ColumnLayout {
                                 textFormat: Text.PlainText; elide: Text.ElideMiddle
                             }
                             C.Label {
-                                Layout.fillWidth: true; text: file.modelData.path
+                                Layout.fillWidth: true; text: file.modelData.kind === "text" ? i18n("Text") : file.modelData.path
                                 textFormat: Text.PlainText; elide: Text.ElideLeft
                                 color: Kirigami.Theme.disabledTextColor; font: Kirigami.Theme.smallFont
                             }
@@ -74,7 +80,7 @@ ColumnLayout {
                     Drag.onDragStarted: page.dragging = true
                     Drag.onDragFinished: page.dragging = false
                     Drag.proposedAction: Qt.CopyAction
-                    Drag.mimeData: ({"text/uri-list": (highlighted ? page.selected : [modelData.url]).join("\r\n")})
+
                     DragHandler {
                         id: handle
                         target: null
@@ -83,6 +89,7 @@ ColumnLayout {
                             if (!active) { file.Drag.active = false; return }
                             file.contentItem.grabToImage(result => {
                                 if (!handle.active) return
+                                file.Drag.mimeData = page.dragData(file.modelData)
                                 file.Drag.imageSource = result.url
                                 file.Drag.active = true
                             })
@@ -95,7 +102,7 @@ ColumnLayout {
             anchors.centerIn: parent; width: parent.width - 16
             horizontalAlignment: Text.AlignHCenter; wrapMode: Text.Wrap
             visible: !list.count
-            text: page.shelf.pending ? i18n("Loading…") : i18n("Drop files or folders here.")
+            text: page.shelf.pending ? i18n("Loading…") : i18n("Drop files, folders, links or selected text here.")
         }
         Rectangle {
             anchors.fill: parent; radius: 6; color: "transparent"
@@ -105,25 +112,21 @@ ColumnLayout {
             id: incoming
             anchors.fill: parent
             onEntered: drag => { drag.accepted = page.shelf.accepts(drag) }
-            onDropped: drop => {
-                if (!page.shelf.accepts(drop)) return
-                page.shelf.change("add", Array.from(drop.urls))
-                drop.accept(Qt.CopyAction)
-            }
+            onDropped: drop => page.shelf.addDrop(drop)
         }
     }
     C.Label {
         Layout.fillWidth: true; wrapMode: Text.Wrap
         visible: text.length > 0
         text: page.shelf.message || (page.shelf.rows.length && !page.selected.length
-            ? i18n("Drag a file out, or select several to drag together.") : "")
+            ? i18n("Drag an item out, or select several to drag together.") : "")
     }
     RowLayout {
         visible: page.selected.length > 0 || !!page.shelf.message
         C.Button {
             visible: page.selected.length > 0
             text: i18n("Remove from shelf"); icon.name: "list-remove"
-            onClicked: page.shelf.change("remove", page.selected)
+            onClicked: page.shelf.change({action: "remove", keys: page.selected, urls: page.selected.filter(key => key.startsWith("file:///"))})
         }
         C.Button {
             visible: !!page.shelf.message

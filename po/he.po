@@ -16876,14 +16876,6 @@ msgstr ""
 msgid "Open shelf in Utilities"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:94
-msgid "Drop files or folders here."
-msgstr ""
-
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:115
-msgid "Drag a file out, or select several to drag together."
-msgstr ""
-
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:121
 msgid "Remove from shelf"
 msgstr ""
@@ -19040,4 +19032,30 @@ msgstr ""
 
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:764
 msgid "Choose an action"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:105
+msgid "Drop files, folders, links or selected text here."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:122
+msgid "Drag an item out, or select several to drag together."
+msgstr ""
+
+#: image/dock/patch.py:217 image/dock/patch.py:218
+msgctxt "@info:tooltip Close this window"
+msgid "Close window"
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:199
+msgid ""
+"Drop files, links or selected text here. Drag them out to use them in another app."
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:204
+msgid "Paste"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/ShelfModel.qml:80
+msgid "Reopen Utilities to use text and links on the shelf."
 msgstr ""

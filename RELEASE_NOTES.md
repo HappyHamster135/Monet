@@ -4,6 +4,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 ### New in 0.9.8-9: Startup and Settings polish (in development)
 
+- **Keep text and links on the shelf.** Drop a web link or selected text on the notch and drag it into another app later. The shelf in Utilities shares the same entries.
 - **Snap from the Home Bar.** Open an app’s window previews and choose **Snap layouts** beside the window you want to arrange.
 - **Monet Utilities and the notch.** Open Utilities from the app menu for the file shelf,
   scratchpad, searchable desktop tools and favorites. In Customize Home Bar, choose

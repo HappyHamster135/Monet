@@ -1,12 +1,14 @@
-"""On-demand tools. A file shelf holds references to files, including directories."""
+"""On-demand desktop tools."""
 import json
 import os
 from pathlib import Path
-from PySide6.QtCore import QFileSystemWatcher, QTimer, QMimeData, QMimeDatabase, QProcess, QStandardPaths, Qt, QUrl, Signal
-from PySide6.QtGui import QDesktopServices, QDrag, QIcon
+from html import escape
+from PySide6.QtCore import QFileSystemWatcher, QTimer, QMimeDatabase, QProcess, QStandardPaths, Qt, QUrl, Signal
+from PySide6.QtGui import QDesktopServices, QDrag, QGuiApplication, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (QAbstractItemView, QDialog, QDialogButtonBox, QFileDialog, QFileSystemModel, QHBoxLayout, QInputDialog, QLabel,
     QListWidget, QListWidgetItem, QMenu, QMessageBox, QPlainTextEdit, QPushButton, QTreeView, QVBoxLayout, QWidget)
 from actions import stored, tr
+from shelf_content import ShelfEntry, from_mime, to_mime
 
 def row(layout, *actions):
     bar = QHBoxLayout()
@@ -29,52 +31,80 @@ class ShelfList(QListWidget):
         self.setDefaultDropAction(Qt.CopyAction)
         self.setAlternatingRowColors(True)
         self.setSortingEnabled(False)
-        self.add_paths(stored(settings, "shelf", []), restore=True)
-        self.itemDoubleClicked.connect(lambda item: QDesktopServices.openUrl(QUrl.fromLocalFile(item.data(Qt.UserRole))))
+        self.add_entries((ShelfEntry.restore(record) for record in stored(settings, "shelf", [])), restore=True)
+        self.itemActivated.connect(self.open_item)
+        QShortcut(QKeySequence.Copy, self, activated=self.copy_selection, context=Qt.WidgetShortcut)
+        QShortcut(QKeySequence.Paste, self, activated=self.paste, context=Qt.WidgetShortcut)
 
-    def paths(self):
+    def entries(self):
         return [self.item(i).data(Qt.UserRole) for i in range(self.count())]
 
+    def paths(self):
+        return [entry.value for entry in self.entries() if entry.kind == "file"]
+
     def save(self):
-        self.settings.setValue("shelf", json.dumps(self.paths()))
+        self.settings.setValue("shelf", json.dumps([entry.record() for entry in self.entries()]))
         self.changed.emit()
 
-    def add_paths(self, paths, restore=False):
-        known = set(self.paths())
+    def add_paths(self, paths):
+        self.add_entries(ShelfEntry.file(path) for path in paths)
+
+    def add_entries(self, entries, restore=False):
+        known = set(self.entries())
         before = self.count()
-        for value in paths:
-            if not isinstance(value, str) or not os.path.isabs(value) or "\0" in value:
+        for entry in entries:
+            if not entry or entry in known:
                 continue
-            path = os.path.normpath(value)
-            if path in known or (not restore and not os.path.exists(path)):
-                continue
-            icon = "folder" if os.path.isdir(path) else self.mime_types.mimeTypeForFile(path, QMimeDatabase.MatchExtension).iconName()
-            item = QListWidgetItem(QIcon.fromTheme(icon), Path(path).name or path)
+            if entry.kind == "file":
+                if not restore and not os.path.exists(entry.value):
+                    continue
+                icon = "folder" if os.path.isdir(entry.value) else self.mime_types.mimeTypeForFile(entry.value, QMimeDatabase.MatchExtension).iconName()
+            else:
+                icon = "internet-web-browser" if entry.kind == "link" else "edit-paste"
+            item = QListWidgetItem(QIcon.fromTheme(icon), entry.name())
+            item.setData(Qt.UserRole, entry)
             item.setData(Qt.UserRole + 1, icon)
-            item.setToolTip(path)
-            item.setData(Qt.UserRole, path)
+            item.setToolTip("<qt>" + escape(entry.value[:500]).replace("\n", "<br>") + "</qt>")
             self.addItem(item)
-            known.add(path)
+            known.add(entry)
         if not restore and self.count() != before:
             self.save()
 
-    def remove_paths(self, paths):
+    def remove_keys(self, keys):
         before = self.count()
         for i in reversed(range(before)):
-            if self.item(i).data(Qt.UserRole) in paths:
+            if self.item(i).data(Qt.UserRole).key in keys:
                 self.takeItem(i)
         if before != self.count():
             self.save()
 
     def forget(self):
-        self.remove_paths({item.data(Qt.UserRole) for item in self.selectedItems()})
+        self.remove_keys({item.data(Qt.UserRole).key for item in self.selectedItems()})
+
+    def open_item(self, item):
+        entry = item.data(Qt.UserRole)
+        if entry.kind != "text":
+            QDesktopServices.openUrl(QUrl(entry.uri()))
+            return
+        dialog = QDialog(self)
+        dialog.setWindowTitle(tr("Text"))
+        layout = QVBoxLayout(dialog)
+        preview = QPlainTextEdit()
+        preview.setPlainText(entry.value)
+        preview.setReadOnly(True)
+        layout.addWidget(preview)
+        buttons = QDialogButtonBox(QDialogButtonBox.Close)
+        buttons.rejected.connect(dialog.reject)
+        copy = buttons.addButton(tr("Copy"), QDialogButtonBox.ActionRole)
+        copy.clicked.connect(lambda: QGuiApplication.clipboard().setText(entry.value))
+        layout.addWidget(buttons)
+        dialog.resize(480, 300)
+        dialog.exec()
 
     @staticmethod
     def local_path(url):
-        path = url.toLocalFile()
-        if url.isValid() and url.isLocalFile() and not url.host() and os.path.isabs(path) and "\0" not in path:
-            return os.path.normpath(path)
-        return None
+        entry = ShelfEntry.from_url(url)
+        return entry.value if entry and entry.kind == "file" else None
 
     def for_notch(self, payload):
         try:
@@ -84,51 +114,81 @@ class ShelfList(QListWidget):
         if not isinstance(request, dict) or request.get("action") not in ("view", "add", "remove"):
             return "{}"
         action = request["action"]
+        modern = request.get("version") == 2
         urls = request.get("urls", [])
         if not isinstance(urls, list) or (action == "add" and len(urls) > 100):
             return "{}"
-        paths = []
+        entries = []
         for url in urls:
-            path = self.local_path(QUrl(url)) if isinstance(url, str) else None
-            if path is None:
+            entry = ShelfEntry.from_url(QUrl(url)) if isinstance(url, str) else None
+            if not entry or (not modern and entry.kind != "file"):
                 return "{}"
-            paths.append(path)
+            entries.append(entry)
+        if modern and "text" in request:
+            entry = ShelfEntry.from_text(request["text"])
+            if not entry or entries or action != "add":
+                return "{}"
+            entries.append(entry)
         if action == "add":
-            self.add_paths(paths)
+            self.add_entries(entries)
         elif action == "remove":
-            self.remove_paths(set(paths))
+            keys = request.get("keys", []) if modern else []
+            if not isinstance(keys, list) or not all(isinstance(k, str) for k in keys):
+                return "{}"
+            self.remove_keys(set(keys).union(entry.key for entry in entries))
         rows = []
         for i in range(self.count()):
             item = self.item(i)
-            path = item.data(Qt.UserRole)
-            rows.append({"name": item.text(), "path": path, "icon": item.data(Qt.UserRole + 1),
-                         "url": QUrl.fromLocalFile(path).toString(QUrl.FullyEncoded)})
-        missing = bool(action == "add" and set(paths).difference(self.paths()))
-        return json.dumps({"rows": rows, "missing": missing})
+            entry = item.data(Qt.UserRole)
+            if not modern and entry.kind != "file":
+                continue
+            row = {"name": item.text(), "icon": item.data(Qt.UserRole + 1), "url": entry.uri(), "path": entry.value}
+            if modern:
+                row.update(key=entry.key, kind=entry.kind)
+            rows.append(row)
+        missing = bool(action == "add" and set(entries).difference(self.entries()))
+        return json.dumps({"version": 2, "rows": rows, "missing": missing})
 
     def dragEnterEvent(self, event):
-        if (event.possibleActions() & Qt.CopyAction and event.mimeData().hasUrls()
-                and all(self.local_path(url) for url in event.mimeData().urls())):
+        mime = event.mimeData()
+        if (event.source() is not self and not mime.hasFormat("application/x-monet-shelf-drag")
+                and event.possibleActions() & Qt.CopyAction and from_mime(mime)):
             event.setDropAction(Qt.CopyAction)
             event.accept()
         else:
             event.ignore()
 
     def dragMoveEvent(self, event):
-        self.dragEnterEvent(event)
+        if event.source() is self or not event.possibleActions() & Qt.CopyAction:
+            event.ignore()
+        else:
+            event.setDropAction(Qt.CopyAction)
+            event.accept()
 
     def dropEvent(self, event):
         self.dragEnterEvent(event)
-        if not event.isAccepted():
-            return
-        self.add_paths([self.local_path(url) for url in event.mimeData().urls()])
+        if event.isAccepted():
+            self.add_entries(from_mime(event.mimeData()))
+
+    def selected_entries(self):
+        return [item.data(Qt.UserRole) for item in sorted(self.selectedItems(), key=self.row)]
+
+    def copy_selection(self):
+        entries = self.selected_entries()
+        if entries:
+            QGuiApplication.clipboard().setMimeData(to_mime(entries))
+
+    def paste(self):
+        mime = QGuiApplication.clipboard().mimeData()
+        if mime:
+            self.add_entries(from_mime(mime))
 
     def startDrag(self, actions):
-        urls = [QUrl.fromLocalFile(item.data(Qt.UserRole)) for item in self.selectedItems()]
-        if urls:
-            mime = QMimeData()
-            mime.setUrls(urls)
+        entries = self.selected_entries()
+        if entries:
             drag = QDrag(self)
+            mime = to_mime(entries)
+            mime.setData("application/x-monet-shelf-drag", b"1")
             drag.setMimeData(mime)
             drag.exec(Qt.CopyAction)
 
@@ -136,13 +196,16 @@ class Shelf(QWidget):
     def __init__(self, settings):
         super().__init__()
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Drop files here. Drag them out to attach or copy them."))
+        hint = QLabel(tr("Drop files, links or selected text here. Drag them out to use them in another app."))
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
         self.files = ShelfList(settings)
         layout.addWidget(self.files)
-        row(layout, ("Add files…", self.choose), (tr("Remove from shelf"), self.files.forget))
+        row(layout, (tr("Add files…"), self.choose), (tr("Paste"), self.files.paste),
+            (tr("Remove from shelf"), self.files.forget))
 
     def choose(self):
-        paths, _ = QFileDialog.getOpenFileNames(self, "Add to file shelf")
+        paths, _ = QFileDialog.getOpenFileNames(self, tr("Add files…"))
         self.files.add_paths(paths)
 
 class Downloads(QWidget):

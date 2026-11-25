@@ -16999,14 +16999,6 @@ msgstr "Rulla för att öppna skärmens urtag eller byta spår"
 msgid "Open shelf in Utilities"
 msgstr "Öppna filhyllan i Verktyg"
 
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:94
-msgid "Drop files or folders here."
-msgstr "Släpp filer eller mappar här."
-
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:115
-msgid "Drag a file out, or select several to drag together."
-msgstr "Dra ut en fil eller markera flera och dra dem tillsammans."
-
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:121
 msgid "Remove from shelf"
 msgstr "Ta bort från filhyllan"
@@ -19193,3 +19185,30 @@ msgstr "Flytta fönster till det här skrivbordet"
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:764
 msgid "Choose an action"
 msgstr "Välj en åtgärd"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:105
+msgid "Drop files, folders, links or selected text here."
+msgstr "Släpp filer, mappar, länkar eller markerad text här."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:122
+msgid "Drag an item out, or select several to drag together."
+msgstr "Dra ut ett objekt eller markera flera och dra dem tillsammans."
+
+#: image/dock/patch.py:217 image/dock/patch.py:218
+msgctxt "@info:tooltip Close this window"
+msgid "Close window"
+msgstr "Stäng fönstret"
+
+#: linux/share/monet/utilities/pages.py:199
+msgid ""
+"Drop files, links or selected text here. Drag them out to use them in another app."
+msgstr ""
+"Släpp filer, länkar eller markerad text här. Dra ut dem när du vill använda dem i en annan app."
+
+#: linux/share/monet/utilities/pages.py:204
+msgid "Paste"
+msgstr "Klistra in"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/ShelfModel.qml:80
+msgid "Reopen Utilities to use text and links on the shelf."
+msgstr "Öppna Verktyg igen för att använda text och länkar på filhyllan."

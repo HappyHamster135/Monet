@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDia
     QPushButton, QStackedWidget, QToolButton, QVBoxLayout, QWidget)
 from actions import ACTIONS, DIRECT_ACTIONS, SEARCH_HINTS, clean_url, find_tools, preferences, tr
 from pages import Downloads, Shelf, ShelfList, Snippets, row
+from shelf_content import ShelfEntry
 
 MODULES = Path(__file__).resolve().parent
 SERVICE = "org.monet.Utilities"
@@ -739,7 +740,7 @@ class Window(QMainWindow):
         elif key == "shelf":
             shelf = self.page(key, self.file_shelf)
             urls = [QUrl(arg) for arg in args[1:101]]
-            shelf.files.add_paths([shelf.files.local_path(url) for url in urls])
+            shelf.files.add_entries(ShelfEntry.from_url(url) for url in urls)
         elif key == "agents" and len(args) == 2 and args[1] in ("codex", "claude", "session"):
             from agent_page import AgentUsage
             page = self.ensure_page(key, lambda: AgentUsage(self))

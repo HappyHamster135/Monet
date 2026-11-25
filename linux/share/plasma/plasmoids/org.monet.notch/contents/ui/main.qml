@@ -396,11 +396,7 @@ PlasmoidItem {
             anchors.fill: parent
             onEntered: drag => { drag.accepted = fileShelf.accepts(drag) }
             onDropped: drop => {
-                if (fileShelf.accepts(drop)) {
-                    fileShelf.change("add", Array.from(drop.urls))
-                    root.showShelf()
-                    drop.accept(Qt.CopyAction)
-                }
+                if (fileShelf.addDrop(drop)) root.showShelf()
             }
         }
     }

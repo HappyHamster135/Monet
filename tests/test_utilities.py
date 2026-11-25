@@ -175,6 +175,72 @@ class DesktopTools(unittest.TestCase):
             receiver.idle.stop()
             window.close()
 
+    def test_shelf_text_and_web_links_survive_a_restart_and_export_native_formats(self):
+        from PySide6.QtCore import QMimeData, QSettings, QUrl
+        from pages import ShelfList
+        from shelf_content import from_mime, to_mime
+        with tempfile.TemporaryDirectory() as directory:
+            file = Path(directory, "Målning #1.png")
+            file.touch()
+            config = QSettings(str(Path(directory, "settings")), QSettings.IniFormat)
+            config.setValue("shelf", json.dumps([str(file)]))
+            shelf = ShelfList(config)
+            text = "  A line\n\nAnother <b>line</b> å\t"
+            link = "https://example.org/a%2Fb?q=a%26b#top"
+            def request(action, **values):
+                return json.loads(shelf.for_notch(json.dumps(dict(action=action, version=2, **values))))
+            request("add", text=text)
+            request("add", urls=[link])
+            request("add", text=link)
+            shelf = ShelfList(config)
+            entries = shelf.entries()
+            self.assertEqual([(e.kind, e.value) for e in entries], [("file", str(file)), ("text", text), ("link", link)])
+            self.assertEqual(to_mime(entries[1:2]).text(), text)
+            uris = to_mime([entries[0], entries[2]])
+            self.assertEqual([u.toString(QUrl.FullyEncoded) for u in uris.urls()], [file.as_uri(), link])
+            mixed = to_mime(entries)
+            self.assertFalse(mixed.hasUrls())
+            self.assertEqual(mixed.text(), "\n".join([str(file), text, link]))
+            self.assertEqual(from_mime(uris), [entries[0], entries[2]])
+            mime = QMimeData()
+            mime.setText(text)
+            self.assertEqual(from_mime(mime), [entries[1]])
+            for unsupported in ("javascript:alert(1)", "file://server/private"):
+                mime.setUrls([QUrl(unsupported)])
+                self.assertEqual(from_mime(mime), [])
+                self.assertEqual(request("add", urls=[link, unsupported]), {})
+            legacy = json.loads(shelf.for_notch('{"action":"view"}'))
+            self.assertEqual([row["url"] for row in legacy["rows"]], [file.as_uri()])
+            rows = request("view")["rows"]
+            self.assertEqual(len({row["key"] for row in rows}), 3)
+            request("remove", keys=[rows[1]["key"]])
+            self.assertEqual([e.kind for e in ShelfList(config).entries()], ["file", "link"])
+            self.assertTrue(file.is_file())
+
+    def test_shelf_keyboard_paste_and_copy_preserve_selected_text_and_link_spelling(self):
+        from PySide6.QtCore import QSettings, Qt
+        from PySide6.QtGui import QGuiApplication
+        from PySide6.QtTest import QTest
+        from pages import ShelfList
+        with tempfile.TemporaryDirectory() as directory:
+            settings = QSettings(str(Path(directory, "shelf.ini")), QSettings.IniFormat)
+            shelf = ShelfList(settings)
+            shelf.show()
+            shelf.setFocus()
+            QTest.qWait(20)
+            clipboard = QGuiApplication.clipboard()
+            self.addCleanup(clipboard.clear)
+            values = ["a\n\nline\t", "HTTPS://Example.org/%7e?q=a%2fb#part"]
+            for value in values:
+                clipboard.setText(value)
+                QTest.keyClick(shelf, Qt.Key_V, Qt.ControlModifier)
+            self.assertEqual([e.value for e in ShelfList(settings).entries()], values)
+            self.assertEqual(shelf.entries()[1].kind, "link")
+            shelf.selectAll()
+            QTest.keyClick(shelf, Qt.Key_C, Qt.ControlModifier)
+            self.assertEqual(clipboard.text(), "\n".join(values))
+            shelf.close()
+
     def test_migrated_scratchpad_and_named_snippets_survive_reopening(self):
         from PySide6.QtCore import QSettings
         from scratchpads import Pads
