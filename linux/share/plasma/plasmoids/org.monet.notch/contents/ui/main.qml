@@ -14,7 +14,7 @@ PlasmoidItem {
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     preferredRepresentation: compactRepresentation
     readonly property string helper: "@LIBEXECDIR@/monet-quick"
-    readonly property var media: players.count ? players.itemAt(0)?.model ?? null : null
+    readonly property var media: players.currentPlayer
     readonly property bool playing: media?.playbackStatus === Mpris.PlaybackStatus.Playing
     readonly property double endTime: countdown.deadline
     readonly property double watchStart: Number(Plasmoid.configuration.watchStart) || 0
@@ -199,11 +199,7 @@ PlasmoidItem {
     toolTipSubText: preview.item?.title ? [preview.item.sender, preview.item.title].filter(Boolean).join(" · ")
         : timerStrip ? timerSummary : watch.registered ? i18n("Watching a window")
         : awakeStrip ? i18n("Keep awake") + " · " + awakeModel.item.statusText : media?.track || i18n("Music, activity and tools")
-    Repeater {
-        id: players
-        model: Mpris.MultiplexerModel {}
-        delegate: Item { required property var model; visible: false }
-    }
+    Mpris.Mpris2Model { id: players }
     SessionActivity {
         id: power
         readonly property bool companionPower: Plasmoid.configuration.companion && Plasmoid.configuration.companionReactions === "on"
@@ -354,7 +350,7 @@ PlasmoidItem {
         expanded: root.expanded
         onExpansionRequested: open => { if (open !== root.expanded) root.openPill() }
         onTrackRequested: next => {
-            const player = root.media?.container
+            const player = root.media
             if (next && player?.canGoNext) player.Next()
             else if (!next && player?.canGoPrevious) player.Previous()
         }
@@ -701,7 +697,8 @@ PlasmoidItem {
     Component {
         id: musicPage
         Music {
-            media: root.media; playing: root.playing; view: root.musicView
+            player: root.media; sources: players; playing: root.playing; view: root.musicView
+            formatDuration: root.duration
             gestures: notchGestures
             offerDetails: root.offerMediaDetails; offerMixer: root.offerMixer
             onViewRequested: index => root.musicView = index

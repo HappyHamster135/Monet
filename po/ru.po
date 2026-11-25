@@ -19747,3 +19747,27 @@ msgstr ""
 #: linux/share/monet/utilities/favorites_wheel.py:178
 msgid "Release to choose"
 msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:229 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:231
+msgid "Playback source"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:277
+msgid "Playback position"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:312
+msgid "Shuffle"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:331
+msgid "Repeat track"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:332
+msgid "Repeat playlist"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:332
+msgid "Repeat off"
+msgstr ""

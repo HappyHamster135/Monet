@@ -19803,3 +19803,27 @@ msgstr ""
 #: linux/share/monet/utilities/favorites_wheel.py:178
 msgid "Release to choose"
 msgstr "Släpp för att välja"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:229 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:231
+msgid "Playback source"
+msgstr "Uppspelningskälla"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:277
+msgid "Playback position"
+msgstr "Uppspelningsposition"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:312
+msgid "Shuffle"
+msgstr "Blanda"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:331
+msgid "Repeat track"
+msgstr "Upprepa spår"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:332
+msgid "Repeat playlist"
+msgstr "Upprepa spellistan"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Music.qml:332
+msgid "Repeat off"
+msgstr "Upprepning av"

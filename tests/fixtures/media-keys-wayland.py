@@ -30,6 +30,7 @@ def player(name):
         with (Path.home() / "events").open("a") as f:
             f.write(f"{name} {action}\n")
     class Service(dbus.service.Object):
+        track_id = "/sample"
         state = "Playing" if name in ("Video", "Monitor") else "Paused"
 
         @dbus.service.method("org.freedesktop.DBus.Properties", in_signature="s", out_signature="a{sv}")
@@ -41,7 +42,8 @@ def player(name):
             return {"PlaybackStatus": self.state, "CanControl": name != "Monitor", "CanPlay": name != "Monitor", "CanPause": name != "Monitor",
                     "CanSeek": True, "CanGoNext": True, "CanGoPrevious": True, "Volume": .5, "Rate": 1.,
                     "MinimumRate": 1., "MaximumRate": 1., "Position": dbus.Int64(0),
-                    "Metadata": dbus.Dictionary({"xesam:title": "Fixture", "mpris:trackid": dbus.ObjectPath("/sample")}, signature="sv")}
+                    "Metadata": dbus.Dictionary({"xesam:title": "Fixture", "mpris:trackid": dbus.ObjectPath(self.track_id),
+                                                 "mpris:length": dbus.Int64(120_000_000)}, signature="sv")}
 
         @dbus.service.method("org.freedesktop.DBus.Properties", in_signature="ss", out_signature="v")
         def Get(self, interface, key):
@@ -63,6 +65,12 @@ def player(name):
         @dbus.service.method(PLAYER)
         def Next(self):
             record("Next")
+            self.track_id = "/other" if self.track_id == "/sample" else "/sample"
+            self.PropertiesChanged(PLAYER, {"Metadata": self.GetAll(PLAYER)["Metadata"]}, [])
+
+        @dbus.service.method(PLAYER, in_signature="ox")
+        def SetPosition(self, track, position):
+            record(f"SetPosition {track} {position}")
 
         @dbus.service.method(PLAYER)
         def Play(self):

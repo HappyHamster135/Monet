@@ -116,8 +116,10 @@ def snapshots(selection=None):
                                          introspect=False), "org.freedesktop.DBus")
     matches = []
     owners = set()
-    for name in sorted(bus.list_names()):
-        if not name.startswith(MPRIS + "."):
+    selected_service = selection.get("service") if selection else None
+    names = [selected_service] if selected_service else sorted(bus.list_names())
+    for name in names:
+        if not isinstance(name, str) or not name.startswith(MPRIS + "."):
             continue
         try:
             owner = bus.get_name_owner(name)
@@ -129,7 +131,7 @@ def snapshots(selection=None):
             meta = props.Get(PLAYER, "Metadata", timeout=1)
             if not isinstance(meta, dict):
                 continue
-            if selection and (identity != selection["identity"] or track_title(meta) != selection["title"]
+            if selection and not selected_service and (identity != selection["identity"] or track_title(meta) != selection["title"]
                               or track_artist(meta) != selection["artist"]):
                 continue
             playing = props.Get(PLAYER, "PlaybackStatus", timeout=1) == "Playing"
@@ -139,7 +141,7 @@ def snapshots(selection=None):
             continue
     if selection and len(matches) != 1:
         return []
-    return [{"service": name, "identity": identity, "title": track_title(meta), "playing": playing,
+    return [{"service": name, "trackId": str(meta.get("mpris:trackid", "")), "identity": identity, "title": track_title(meta), "playing": playing,
              "lyrics": track_lyrics(meta), "queue": upcoming(obj, props, meta)}
             for name, obj, props, meta, identity, playing in matches]
 

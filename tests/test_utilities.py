@@ -12,7 +12,7 @@ MODULE = Path(__file__).resolve().parents[1] / "linux/share/monet/utilities"
 sys.path.insert(0, str(MODULE))
 from actions import clean_url
 from agents import summary
-from player import MAX_LYRICS, parse_lyrics, track_lyrics, upcoming
+from player import MAX_LYRICS, parse_lyrics, snapshots, track_lyrics, upcoming
 
 class Tools(unittest.TestCase):
     def test_clean_link_preserves_real_parameters_and_signed_links(self):
@@ -108,6 +108,28 @@ class PlayerDetails(unittest.TestCase):
                 self.assertEqual(track_lyrics(meta)["text"], "Player words")
 
     @unittest.skipUnless(importlib.util.find_spec("dbus"), "needs desktop D-Bus bindings")
+    def test_selected_service_identifies_a_player_that_shares_its_process(self):
+        import dbus
+        from player import MPRIS, OBJECT, PLAYER
+        name = MPRIS + ".browser.tab2"
+        bus = Mock()
+        bus.get_name_owner.return_value = ":1.41"
+        daemon, player = Mock(), Mock()
+        bus.get_object.side_effect = lambda owner, path, **_: daemon if path != OBJECT else player
+        daemon.GetConnectionUnixProcessID.return_value = 42
+        meta = {"mpris:trackid": "/song/2", "xesam:title": "Song", "xesam:asText": "Second tab"}
+        values = {(MPRIS, "Identity"): "Browser", (PLAYER, "Metadata"): meta, (PLAYER, "PlaybackStatus"): "Playing"}
+        player.Get.side_effect = lambda iface, key, **_: values[(iface, key)]
+        # Plasma can display a different name or derive its title from a URL.
+        selected = {"service": name, "pid": 42, "identity": "Browser integration", "title": "Tab", "artist": ""}
+        with patch("dbus.SessionBus", return_value=bus), patch.object(dbus, "Interface", side_effect=lambda obj, _: obj), \
+                patch("player.upcoming", return_value=[]):
+            result, = snapshots(selected)
+            self.assertEqual((result["service"], result["trackId"], result["lyrics"]["text"]), (name, "/song/2", "Second tab"))
+            bus.list_names.assert_not_called()
+            bus.get_name_owner.assert_called_once_with(name)
+            self.assertEqual(snapshots(dict(selected, pid=43)), [])
+
     def test_queue_uses_playlist_order_and_only_upcoming_tracks(self):
         obj, props = Mock(), Mock()
         ids = ["/tracks/t" + str(n) for n in range(40)]
