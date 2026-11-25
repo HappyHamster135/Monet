@@ -19790,3 +19790,62 @@ msgstr ""
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NotchQueue.qml:140
 msgid "Nothing else is queued."
 msgstr ""
+
+#: linux/libexec/monet-files-tools:58
+msgid "Installation canceled."
+msgstr ""
+
+#: linux/libexec/monet-files-tools:69
+msgid "The portable data contains a file that cannot be copied."
+msgstr ""
+
+#: linux/libexec/monet-files-tools:77
+msgid "Choose an AppImage file."
+msgstr ""
+
+#: linux/libexec/monet-files-tools:81
+msgid ""
+"The installation folder is a link. Choose another application filename."
+msgstr ""
+
+#: linux/libexec/monet-files-tools:96
+msgid ""
+"A different app already uses this filename. Rename the download or remove the installed app in Apps."
+msgstr ""
+
+#: linux/libexec/monet-files-tools:116
+msgid "The portable data contains the installation folder."
+msgstr ""
+
+#: linux/libexec/monet-files-tools:119
+msgid "The download changed during installation. Try again when it finishes."
+msgstr ""
+
+#: linux/libexec/monet-files-tools:678
+msgid "Install AppImage"
+msgstr ""
+
+#: linux/libexec/monet-files-tools:685
+msgid "Install a personal copy you can open from the application menu."
+msgstr ""
+
+#: linux/libexec/monet-files-tools:706
+msgid "Move original download to Trash after installation"
+msgstr ""
+
+#: linux/libexec/monet-files-tools:712
+msgid "Installing app…"
+msgstr ""
+
+#: linux/libexec/monet-files-tools:740
+msgid "Installation failed."
+msgstr ""
+
+#: linux/libexec/monet-files-tools:758
+msgid "App installed"
+msgstr ""
+
+#: linux/libexec/monet-files-tools:758
+msgid ""
+"Your app is installed. The original download could not be moved to Trash."
+msgstr ""

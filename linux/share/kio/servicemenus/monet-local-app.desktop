@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Service
-MimeType=application/x-executable;application/x-pie-executable;application/x-shellscript;application/x-appimage;
+MimeType=application/x-executable;application/x-pie-executable;application/x-shellscript;application/x-appimage;application/vnd.appimage;application/x-iso9660-appimage;
 Actions=add
 X-KDE-Priority=TopLevel
 X-KDE-RequiredNumberOfUrls=1

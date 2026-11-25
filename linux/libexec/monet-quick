@@ -2405,12 +2405,17 @@ def native_arguments(text):
     return arguments
 
 
-def native_shortcut(path, name, apps=None, arguments=""):
-    """Create one menu entry, without importing downloaded desktop commands or MIME defaults."""
-    path = native_executable(path)
+def native_app_name(name):
     name = name.strip()
     if not name or len(name) > 128 or any(ord(c) < 32 or ord(c) == 127 for c in name):
         raise ValueError(tr("Choose a short application name without line breaks."))
+    return name
+
+
+def native_shortcut(path, name, apps=None, arguments=""):
+    """Create one menu entry, without importing downloaded desktop commands or MIME defaults."""
+    path = native_executable(path)
+    name = native_app_name(name)
     argv = native_arguments(arguments)
     encoded = json.dumps(argv, ensure_ascii=False, separators=(",", ":")) if argv else ""
     apps = apps if apps is not None else DATA_HOME / "applications"
@@ -2431,8 +2436,11 @@ def native_shortcut(path, name, apps=None, arguments=""):
             raise FileExistsError(tr("A shortcut for this application already exists. Edit it in the application menu."))
         return entry
     # Exclusive creation preserves any existing personal menu entry.
-    with entry.open("x", encoding="utf-8") as stream:
-        stream.write(text + class_line)
+    import tempfile
+    with tempfile.NamedTemporaryFile(dir=apps, mode="w", encoding="utf-8") as pending:
+        pending.write(text + class_line)
+        pending.flush()
+        os.link(pending.name, entry)
     return entry
 
 
@@ -2499,16 +2507,15 @@ def native_shortcut_metadata(path, data_home, identity):
 
 def native_shortcut_dialog(path):
     try:
-        executable = native_executable(path)
+        executable = Path(path).absolute()
         name = run(sys.executable, str(Path(__file__).resolve().with_name("monet-files-tools")),
-                   "add", str(executable), timeout=600)
+                   "add", str(executable), timeout=None)
         if name is None:
             return False
         name = name.strip()
     except (OSError, ValueError) as error:
         run("kdialog", "--title", tr("Add to apps"), "--error", tr(str(error)), timeout=600)
         return False
-    run("kbuildsycoca6", "--noincremental", timeout=30)
     run("notify-send", "--app-name=Monet", "--icon=application-x-executable",
         tr("Added to apps"), name)
     return True

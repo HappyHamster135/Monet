@@ -1,15 +1,19 @@
 #!/usr/bin/python3
 """On-demand Files actions. No index, background service or downloaded-code execution."""
+import fcntl
 import gettext
+import hashlib
 import json
 import os
 from pathlib import Path
 import re
 import shlex
+import shutil
 import signal
 import stat
 import subprocess
 import sys
+import tempfile
 import time
 import uuid
 
@@ -33,6 +37,118 @@ def drive_space(path):
                 free=info.f_bavail * info.f_frsize,
                 reserved=max(0, info.f_bfree - info.f_bavail) * info.f_frsize,
                 readonly=bool(info.f_flag & os.ST_RDONLY))
+
+
+def appimage_header(data):
+    return data.startswith(b"\x7fELF") and data[8:11] in (b"AI\x01", b"AI\x02")
+
+
+def file_identity(info):
+    return info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns
+
+
+def install_appimage(quick, path, name, arguments="", interrupted=lambda: False):
+    """Publish the executable and portable data before making the app visible in the menu."""
+    path = Path(path).absolute()
+    root = quick.DATA_HOME / "monet/appimages"
+    directory = root / hashlib.sha256(os.fsencode(path.name)).hexdigest()[:24]
+    target = directory / path.name
+    def check_cancel():
+        if interrupted():
+            raise InterruptedError(tr("Installation canceled."))
+
+    def copy_stream(src, dest):
+        while chunk := src.read(1024 * 1024):
+            check_cancel()
+            dest.write(chunk)
+
+    def copy_sidecar(src, dest):
+        check_cancel()
+        with open(src, "rb", opener=lambda p, flags: os.open(p, flags | os.O_NONBLOCK)) as reader:
+            if not stat.S_ISREG(os.fstat(reader.fileno()).st_mode):
+                raise ValueError(tr("The portable data contains a file that cannot be copied."))
+            with open(dest, "xb") as writer:
+                copy_stream(reader, writer)
+        shutil.copystat(src, dest)
+
+    with open(path, "rb", opener=lambda p, flags: os.open(p, flags | os.O_NONBLOCK)) as source:
+        original = os.fstat(source.fileno())
+        if not stat.S_ISREG(original.st_mode) or not appimage_header(source.read(11)):
+            raise ValueError(tr("Choose an AppImage file."))
+        source.seek(0)
+        directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if directory.is_symlink():
+            raise ValueError(tr("The installation folder is a link. Choose another application filename."))
+        lock = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            # Separate installs of the same filename share a lock, including on retry.
+            while True:
+                check_cancel()
+                try:
+                    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    break
+                except BlockingIOError:
+                    time.sleep(0.05)
+            published = []
+            with tempfile.TemporaryDirectory(dir=directory) as tmp:
+                stage = Path(tmp)
+                if os.path.lexists(target):
+                    conflict = tr("A different app already uses this filename. Rename the download or remove the installed app in Apps.")
+                    if target.is_symlink() or not target.is_file() or original.st_size != target.stat().st_size:
+                        raise FileExistsError(conflict)
+                    with target.open("rb") as current:
+                        while chunk := source.read(1024 * 1024):
+                            check_cancel()
+                            if chunk != current.read(len(chunk)):
+                                raise FileExistsError(conflict)
+                else:
+                    with (stage / path.name).open("xb") as output:
+                        copy_stream(source, output)
+                    (stage / path.name).chmod(0o700)
+                    for suffix in (".home", ".config"):
+                        old = path.with_name(path.name + suffix)
+                        if not old.is_dir() or os.path.lexists(directory / old.name):
+                            continue  # Keep data retained by Apps during a previous uninstall.
+                        if old.is_symlink():
+                            (stage / old.name).symlink_to(old.resolve(strict=True), target_is_directory=True)
+                        else:
+                            if stage.resolve().is_relative_to(old.resolve()):
+                                raise ValueError(tr("The portable data contains the installation folder."))
+                            shutil.copytree(old, stage / old.name, symlinks=True, copy_function=copy_sidecar)
+                if file_identity(original) != file_identity(path.stat()):
+                    raise ValueError(tr("The download changed during installation. Try again when it finishes."))
+                check_cancel()
+                try:
+                    for item in stage.iterdir():
+                        dest = directory / item.name
+                        item.rename(dest)
+                        published.append(dest)
+                    entry = quick.native_shortcut(target, name, arguments=arguments)
+                except BaseException:
+                    for item in published:
+                        if item.is_dir() and not item.is_symlink():
+                            shutil.rmtree(item)
+                        else:
+                            item.unlink()
+                    raise
+        finally:
+            os.close(lock)
+    return entry, file_identity(original)
+
+
+def can_trash_download(quick, path):
+    try:
+        return (not path.is_symlink() and path.resolve(strict=True).is_relative_to(quick.downloads_dir().resolve())
+                and not path.resolve().is_relative_to((quick.DATA_HOME / "monet/appimages").resolve()))
+    except OSError:
+        return False
+
+
+def trash_installed_download(quick, path, identity):
+    from PySide6.QtCore import QFile
+    if can_trash_download(quick, path) and file_identity(path.stat()) == identity:
+        return QFile(str(path)).moveToTrash()
+    return False
 
 
 def scan_apps(folder, max_entries=6000, max_depth=6, seconds=2.0):
@@ -94,10 +210,12 @@ def scan_apps(folder, max_entries=6000, max_depth=6, seconds=2.0):
                         if ".so" in path.name or path.name.startswith("."):
                             continue
                         with path.open("rb") as stream:
-                            header = stream.read(4)
-                        if suffix == ".exe" and header[:2] == b"MZ" or suffix == ".msi" and header == b"\xd0\xcf\x11\xe0":
+                            header = stream.read(11)
+                        if suffix == ".exe" and header[:2] == b"MZ" or suffix == ".msi" and header.startswith(b"\xd0\xcf\x11\xe0"):
                             kind = "windows"
-                        elif header == b"\x7fELF" or header[:2] == b"#!":
+                        elif appimage_header(header):
+                            kind = "appimage"
+                        elif header.startswith(b"\x7fELF") or header[:2] == b"#!":
                             kind = "native" if executable else "permission"
                         else:
                             continue
@@ -533,21 +651,38 @@ def make_extract_dialog(path, find_apps=True, background=False):
 
 
 def make_shortcut_dialog(path, name=None, parent=None):
-    from PySide6.QtCore import Qt
+    from PySide6.QtCore import Qt, QThread
     from PySide6.QtGui import QIcon
     from PySide6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox, QFormLayout,
-                                  QLabel, QLineEdit, QVBoxLayout, QWidget)
+                                  QLabel, QLineEdit, QMessageBox, QProgressBar, QVBoxLayout, QWidget)
     quick = quick_helper()
-    path = quick.native_executable(path)
-    dialog = QDialog(parent)
-    dialog.setWindowTitle(tr("Add to apps"))
+    path = Path(path).absolute()
+    if not path.is_file():
+        raise ValueError(tr("Choose an executable application file."))
+    with open(path, "rb", opener=lambda p, flags: os.open(p, flags | os.O_NONBLOCK)) as stream:
+        image = appimage_header(stream.read(11))
+    if not image:
+        path = quick.native_executable(path)
+
+    class InstallDialog(QDialog):
+        worker = None
+
+        def reject(self):
+            if self.worker:
+                self.worker.requestInterruption()
+            else:
+                super().reject()
+
+    dialog = InstallDialog(parent)
+    dialog.setWindowTitle(tr("Install AppImage") if image else tr("Add to apps"))
     dialog.setWindowIcon(QIcon.fromTheme("application-x-executable"))
     dialog.resize(540, 240)
     dialog.saved_name = ""
     layout = QVBoxLayout(dialog)
     layout.setContentsMargins(20, 20, 20, 20)
     layout.setSpacing(12)
-    note = QLabel(tr("Keep the application folder in place.") + "\n\n" + str(path))
+    note = QLabel((tr("Install a personal copy you can open from the application menu.") if image else
+                   tr("Keep the application folder in place.")) + "\n\n" + str(path))
     note.setTextFormat(Qt.PlainText); note.setWordWrap(True)
     note.setTextInteractionFlags(Qt.TextSelectableByMouse); layout.addWidget(note)
     form = QFormLayout(); layout.addLayout(form)
@@ -566,24 +701,91 @@ def make_shortcut_dialog(path, name=None, parent=None):
     advanced.toggled.connect(options_box.setVisible)
     error = QLabel(); error.setObjectName("shortcutError"); error.setTextFormat(Qt.PlainText)
     error.setWordWrap(True); error.hide(); layout.addWidget(error)
+    if image:
+        trash = QCheckBox(tr("Move original download to Trash after installation"))
+        trash.setObjectName("trashDownload")
+        trash.setVisible(can_trash_download(quick, path))
+        layout.addWidget(trash)
+        progress = QProgressBar()
+        progress.setRange(0, 0)
+        progress.setAccessibleName(tr("Installing app…"))
+        layout.addWidget(progress)
+        progress.hide()
     buttons = QDialogButtonBox(QDialogButtonBox.Cancel)
-    add = buttons.addButton(tr("Add to apps"), QDialogButtonBox.AcceptRole)
-    add.setObjectName("saveShortcut"); add.setDefault(True)
+    add = buttons.addButton(tr("Install") if image else tr("Add to apps"), QDialogButtonBox.AcceptRole)
+    add.setObjectName("saveShortcut")
     buttons.rejected.connect(dialog.reject); layout.addWidget(buttons)
+    buttons.button(QDialogButtonBox.Cancel).setAutoDefault(False)
+    add.setDefault(True)
+
+    class InstallWorker(QThread):
+        problem = ""
+        canceled = False
+        original_kept = False
+
+        def run(self):
+            try:
+                _, identity = install_appimage(quick, path, self.name, self.arguments, self.isInterruptionRequested)
+                if self.clean:
+                    try:
+                        self.original_kept = not trash_installed_download(quick, path, identity)
+                    except OSError:
+                        self.original_kept = True
+            except InterruptedError:
+                self.canceled = True
+            except Exception as problem:
+                # QThread does not propagate exceptions to the dialog.
+                self.canceled = self.isInterruptionRequested()
+                self.problem = str(problem) or tr("Installation failed.")
+
+    def installed():
+        worker = dialog.worker
+        dialog.worker = None
+        worker.deleteLater()
+        if worker.canceled:
+            dialog.reject()
+            return
+        if worker.problem:
+            error.setText(worker.problem)
+            error.show()
+            progress.hide()
+            add.setText(tr("Install"))
+            for widget in (title, advanced, options_box, trash, add):
+                widget.setEnabled(True)
+            return
+        dialog.saved_name = worker.name
+        if worker.original_kept:
+            QMessageBox.information(dialog, tr("App installed"), tr("Your app is installed. The original download could not be moved to Trash."))
+        dialog.accept()
 
     def save():
-        if dialog.saved_name:
+        if dialog.saved_name or dialog.worker:
             return
         try:
-            quick.native_shortcut(path, title.text(), arguments=arguments.text() if advanced.isChecked() else "")
+            options = arguments.text() if advanced.isChecked() else ""
+            if image:
+                quick.native_app_name(title.text())
+                quick.native_arguments(options)
+                worker = InstallWorker(dialog)
+                worker.name = title.text().strip()
+                worker.arguments = options
+                worker.clean = trash.isChecked()
+                dialog.worker = worker
+                for widget in (title, advanced, options_box, trash, add):
+                    widget.setEnabled(False)
+                error.hide()
+                progress.show()
+                add.setText(tr("Installing app…"))
+                worker.finished.connect(installed)
+                worker.start()
+                return
+            quick.native_shortcut(path, title.text(), arguments=options)
         except (OSError, ValueError) as problem:
             error.setText(str(problem)); error.show()
             return
         dialog.saved_name = title.text().strip()
         dialog.accept()
     buttons.accepted.connect(save)
-    title.returnPressed.connect(save)
-    arguments.returnPressed.connect(save)
     title.selectAll(); title.setFocus()
     return dialog
 
@@ -667,7 +869,7 @@ def make_dialog(mode, path):
 
     def changed():
         item = selected()
-        add.setEnabled(bool(item and item["kind"] == "native"))
+        add.setEnabled(bool(item and item["kind"] in {"native", "appimage"}))
         show.setEnabled(bool(item))
         show.setToolTip(item["path"] if item else "")
         add.setToolTip(tr("Windows programs use Run in Monet in Files.") if item and item["kind"] == "windows"
@@ -696,7 +898,7 @@ def make_dialog(mode, path):
 
     def register():
         item = selected()
-        if not item or item["kind"] != "native": return
+        if not item or item["kind"] not in {"native", "appimage"}: return
         try:
             editor = make_shortcut_dialog(item["path"], item["name"], dialog)
             accepted = editor.exec() == QDialog.Accepted
@@ -709,7 +911,7 @@ def make_dialog(mode, path):
     add.clicked.connect(register)
 
     worker = QProcess(dialog); worker.setObjectName("appScanner")
-    names = {"native": tr("Linux application"), "windows": tr("Windows program"), "permission": tr("Needs permission")}
+    names = {"appimage": "AppImage", "native": tr("Linux application"), "windows": tr("Windows program"), "permission": tr("Needs permission")}
 
     def finished(code, _status):
         if code != 0:
@@ -820,7 +1022,8 @@ def main():
         try:
             dialog = make_shortcut_dialog(path)
         except (OSError, ValueError) as error:
-            print(str(error), file=sys.stderr)
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(None, tr("Couldn't add application"), str(error))
             return 1
         if dialog.exec():
             print(dialog.saved_name)
