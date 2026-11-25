@@ -155,6 +155,29 @@ class SettingsNavigation(unittest.TestCase):
         self.wait_for(lambda: bool(self.window.property("inputInfo").toVariant().get("touchpads")))
         self.assertEqual(self.window.property("currentAnchor"), "touchpad-clicks")
 
+    def test_focus_controls_open_from_utilities_and_preserve_custom_hover_delay(self):
+        from PySide6.QtQuick import QQuickItem
+        state = dict(policy="FocusUnderMouse", first="custom", delay=457)
+        self.helper.replies["input"] = json.dumps(dict(windowFocus=state))
+        self.open("input#window-focus")
+        policy = self.window.findChild(QQuickItem, "windowFocusPolicy")
+        delay = self.window.findChild(QQuickItem, "windowFocusDelay")
+        first = self.window.findChild(QQuickItem, "windowFirstClick")
+        self.wait_for(lambda: delay.isVisible() and delay.property("currentIndex") >= 0)
+        self.assertEqual(delay.property("times").toVariant()[delay.property("currentIndex")], 457)
+        self.assertEqual(policy.property("current"), "")
+        self.assertEqual(first.property("current"), "custom")
+        self.assertFalse(any(c[1] == "window-focus" for c in self.helper.commands))
+        self.helper.replies["window-focus"] = json.dumps(dict(ok=True, state=dict(state, policy="ClickToFocus")))
+        click = next(item for item in policy.childItems()[0].childItems()
+                     if (item.property("modelData") or [""])[0] == "click")
+        click.forceActiveFocus()
+        QTest.keyClick(self.window, Qt.Key_Space)
+        self.wait_for(lambda: policy.property("current") == "click")
+        self.assertFalse(delay.isVisible())
+        self.assertEqual(first.property("current"), "custom")
+        self.assertIn(["helper", "window-focus", "policy", "click"], self.helper.commands)
+
     def test_visible_touchpad_list_follows_native_hotplug_signals(self):
         from PySide6.QtDBus import QDBusConnection, QDBusMessage
 

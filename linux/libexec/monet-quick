@@ -123,7 +123,8 @@
     monet-quick power-button|power-lid ACTION   PowerDevil's number for what it does
     monet-quick power-mode automatic|power-saver|balanced|performance
     monet-quick battery-saver automatic|off|threshold PERCENT
-    monet-quick input                    mouse, touchpad and keyboard layouts, as JSON
+    monet-quick input                    pointer devices, window focus and keyboard layouts, as JSON
+    monet-quick window-focus policy click|hover | first pass|focus | delay 0|150|300|600|1000
     monet-quick pointer mouse|touchpad speed 0-100 | natural|left|tap|typing on|off
     monet-quick layouts-known            every keyboard layout there is, as JSON
     monet-quick layouts CODE[,CODE…]     the keyboard layouts, the first one first
@@ -274,6 +275,7 @@ KDE_PAGES = {
     "sound": "kcm_pulseaudio",
     "input": "kcm_mouse",
     "touchpad": "kcm_touchpad",
+    "window-focus": "kcm_kwinoptions",
     "power": "kcm_powerdevilprofilesconfig",
     "notifications": "kcm_notifications",
     "datetime": "kcm_clock",
@@ -3504,6 +3506,59 @@ def change_touchpad(key, setting, value):
     elif result["ok"]:
         result["problem"] = ""
     return result
+
+
+FOCUS_POLICIES = {"click": "ClickToFocus", "hover": "FocusFollowsMouse"}
+# KWin also supports bringing the window forward on release, or leaving its
+# stacking order alone. Opening Settings must preserve these native choices.
+PASS_CLICK = ("Activate, raise and pass click", "Activate and pass click",
+              "Activate, pass click and raise on release")
+FOCUS_ONLY = ("Activate and raise", "Activate")
+
+
+def first_click_behavior(command):
+    action = command.lower()
+    if action in (item.lower() for item in PASS_CLICK):
+        return "pass"
+    if action in (item.lower() for item in FOCUS_ONLY):
+        return "focus"
+    return "custom"
+
+
+def window_focus():
+    policy, command, delay = kread_values([
+        ("kwinrc", "Windows", "FocusPolicy", "ClickToFocus"),
+        ("kwinrc", "MouseBindings", "CommandWindow1", PASS_CLICK[2]),
+        ("kwinrc", "Windows", "DelayFocusInterval", "300"),
+    ])
+    delay = int(delay) if re.fullmatch(r"[0-9]{1,9}", delay) else None
+    return dict(policy=policy, first=first_click_behavior(command), command=command, delay=delay)
+
+
+def change_window_focus(setting, choice):
+    group = "Windows"
+    if setting == "policy" and choice in FOCUS_POLICIES:
+        key, value = "FocusPolicy", FOCUS_POLICIES[choice]
+    elif setting == "first" and choice in ("pass", "focus"):
+        group, key = "MouseBindings", "CommandWindow1"
+        command = kread("kwinrc", group, key, PASS_CLICK[2])
+        commands = PASS_CLICK if choice == "pass" else FOCUS_ONLY
+        if choice == first_click_behavior(command):
+            value = command
+        else:
+            leave_order = command.lower() in (PASS_CLICK[1].lower(), FOCUS_ONLY[1].lower())
+            value = commands[1] if leave_order else commands[0]
+    elif setting == "delay" and choice in ("0", "150", "300", "600", "1000"):
+        key, value = "DelayFocusInterval", choice
+    else:
+        return dict(ok=False, problem="request", state=window_focus())
+    saved = kwrite("kwinrc", group, key, value)
+    state = window_focus()
+    field = "command" if setting == "first" else setting
+    if not saved or str(state[field]) != value:
+        return dict(ok=False, problem="save", state=state)
+    applied = busctl("call", "org.kde.KWin", "/KWin", "org.kde.KWin", "reconfigure") is not None
+    return dict(ok=applied, problem="" if applied else "reload", state=state)
 
 
 def pointer_state(devices):
@@ -9203,6 +9258,9 @@ def search_catalog():
          "storage#disks", "drive-harddisk"),
         ("battery-limit", tr("Battery charge limit"), tr("Power & Sleep · Protect the battery"),
          N_("battery limit; battery charge limit; charge limit; protect battery; stop charging at 80; battery protection"), "power#battery-limit", "battery"),
+        ("window-focus", tr("Window focus"), tr("Mouse & Keyboard"),
+         N_("focus follows mouse; focus follows pointer; click to focus; hover delay; first click; inactive window"),
+         "input#window-focus", "preferences-system-windows"),
         ("touchpad-clicks", tr("Touchpad clicks"), tr("Mouse & Keyboard"),
          N_("touchpad clicks; trackpad; three finger middle click; two finger tap; clickfinger; tap and drag; test clicks"),
          "input#touchpad-clicks", "input-touchpad"),
@@ -11099,7 +11157,11 @@ def main(argv):
         return 0 if result.get("ok") else 1
     elif cmd == "input":
         devices = input_devices()
-        emit(dict(pointer_state(devices), touchpads=[pad for _, pad in touchpad_rows(devices)], **keyboard_state()))
+        emit(dict(pointer_state(devices), windowFocus=window_focus(), touchpads=[pad for _, pad in touchpad_rows(devices)], **keyboard_state()))
+    elif cmd == "window-focus" and len(args) == 2:
+        result = change_window_focus(*args)
+        emit(result)
+        return 0 if result["ok"] else 1
     elif cmd == "touchpad-click" and len(args) == 3 and re.fullmatch(r"[0-9a-f]{64}", args[0]):
         result = change_touchpad(*args)
         emit(result)

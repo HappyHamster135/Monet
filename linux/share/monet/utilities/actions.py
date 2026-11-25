@@ -72,7 +72,7 @@ ACTIONS = {
     "lock": Action(N_("Cleaning mode"), "Display keyboard mouse lock screen cleaning", "input-keyboard"),
     "mouse": Action(N_("Mouse buttons, scroll direction and acceleration"), "Input", "input-mouse", ("kcmshell6", "kcm_mouse")),
     "touchpad": Action(N_("Trackpad clicks and gestures"), "Input touchpad three finger middle click tap test", "input-touchpad", ("@monet-settings", "input#touchpad-clicks")),
-    "windows": Action(N_("Window focus and click behavior"), "Input", "preferences-system-windows", ("kcmshell6", "kcm_kwinoptions")),
+    "windows": Action(N_("Window focus and click behavior"), "Input focus follows mouse pointer inactive window first click", "preferences-system-windows", ("@monet-settings", "input#window-focus")),
     "remap": Action(N_("Remap mouse buttons, scroll modifiers and keys"), "Input", "input-keyboard", ("input-remapper-gtk",)),
     "shortcuts": Action(N_("Keyboard shortcuts"), "Input", "input-keyboard", ("kcmshell6", "kcm_keys")),
     "debounce": Action(N_("Keyboard bounce and sticky keys"), "Input", "preferences-desktop-accessibility", ("kcmshell6", "kcm_access")),

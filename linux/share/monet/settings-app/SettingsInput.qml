@@ -76,6 +76,7 @@ ColumnLayout {
         }
     }
     TouchpadClicks { host: sheet; tone: look }
+    WindowFocus { host: sheet; tone: look }
     SettingsControls.Card {
         tone: look
         SettingsControls.SettingRow {

@@ -402,6 +402,8 @@ Shared.MonetWindow {
     property int inputRevision: 0
     property bool padChanging: false
     property string padProblem: ""
+    property bool focusChanging: false
+    property string focusProblem: ""
     property var knownLayouts: []
     property var notifyInfo: ({})
     property string notifyBusy: ""
@@ -1796,7 +1798,7 @@ Shared.MonetWindow {
 
     function loadInputDevices() {
         if (page !== "input" || !pollingActive) return
-        if (inputReading || padChanging) { inputReadAgain = true; return }
+        if (inputReading || padChanging || focusChanging) { inputReadAgain = true; return }
         inputReading = true
         inputReadAgain = false
         const revision = inputRevision
@@ -1804,6 +1806,21 @@ Shared.MonetWindow {
             sheet.inputReading = false
             if (revision === sheet.inputRevision) sheet.inputInfo = sheet.json(out, sheet.inputInfo)
             if (sheet.inputReadAgain) sheet.loadInputDevices()
+        })
+    }
+    function changeWindowFocus(setting, value) {
+        if (focusChanging) return
+        inputRevision++
+        focusChanging = true
+        focusProblem = ""
+        ask("window-focus " + setting + " " + value, (out, code) => {
+            const result = sheet.json(out, {})
+            sheet.focusChanging = false
+            if (result.state) sheet.inputInfo = sheet.changed(sheet.inputInfo, ["windowFocus"], result.state)
+            if (code !== 0 || !result.ok)
+                sheet.focusProblem = result.problem === "reload" ? i18n("Saved. The change will take effect at your next sign-in.")
+                    : i18n("Couldn’t save the window focus setting.")
+            if (sheet.inputReadAgain || !result.state) sheet.loadInputDevices()
         })
     }
     function changePad(id, setting, value) {

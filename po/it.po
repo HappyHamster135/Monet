@@ -17183,3 +17183,81 @@ msgstr ""
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CameraMirror.qml:46
 msgid "The camera is off."
 msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1821
+msgid "Saved. The change will take effect at your next sign-in."
+msgstr ""
+
+#: linux/share/monet/settings-app/MonetSettings.qml:1822
+msgid "Couldn’t save the window focus setting."
+msgstr ""
+
+#: linux/share/monet/settings-app/WindowFocus.qml:18 linux/libexec/monet-quick:9251
+msgid "Window focus"
+msgstr ""
+
+#: linux/share/monet/settings-app/WindowFocus.qml:25
+msgid "Switch windows by"
+msgstr ""
+
+#: linux/share/monet/settings-app/WindowFocus.qml:27
+msgid "An advanced focus policy is active."
+msgstr ""
+
+#: linux/share/monet/settings-app/WindowFocus.qml:27
+msgid "Choose which window receives your typing."
+msgstr ""
+
+#: linux/share/monet/settings-app/WindowFocus.qml:32
+msgid "Click"
+msgstr ""
+
+#: linux/share/monet/settings-app/WindowFocus.qml:32
+msgid "Hover"
+msgstr ""
+
+#: linux/share/monet/settings-app/WindowFocus.qml:40 linux/share/monet/settings-app/WindowFocus.qml:46
+msgid "Hover delay"
+msgstr ""
+
+#: linux/share/monet/settings-app/WindowFocus.qml:41
+msgid "How long the pointer rests on a window before it gets focus."
+msgstr ""
+
+#: linux/share/monet/settings-app/WindowFocus.qml:54
+msgid "Immediately"
+msgstr ""
+
+#: linux/share/monet/settings-app/WindowFocus.qml:54
+msgid "%1 ms"
+msgstr ""
+
+#: linux/share/monet/settings-app/WindowFocus.qml:63
+msgid "Click in an inactive window"
+msgstr ""
+
+#: linux/share/monet/settings-app/WindowFocus.qml:64
+msgid "A custom mouse action is active."
+msgstr ""
+
+#: linux/share/monet/settings-app/WindowFocus.qml:65
+msgid ""
+"Use the button under the pointer on the first click, or select the window first."
+msgstr ""
+
+#: linux/share/monet/settings-app/WindowFocus.qml:70
+msgid "Use first click"
+msgstr ""
+
+#: linux/share/monet/settings-app/WindowFocus.qml:70
+msgid "Focus only"
+msgstr ""
+
+#: linux/share/monet/settings-app/WindowFocus.qml:78
+msgid "Advanced window behavior"
+msgstr ""
+
+#: linux/libexec/monet-quick:9252
+msgid ""
+"focus follows mouse; focus follows pointer; click to focus; hover delay; first click; inactive window"
+msgstr ""
