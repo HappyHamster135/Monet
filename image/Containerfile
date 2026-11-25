@@ -217,6 +217,7 @@ COPY image/patch-shell-profiles.py /tmp/monet-shell-profiles.py
 RUN --mount=type=bind,from=build,source=/out,target=/tmp/monet-build-package,ro \
     --mount=type=bind,from=password,source=/out,target=/tmp/monet-build-password,ro \
     --mount=type=bind,from=dock,source=/usr/lib64/qt6/libexec/qmlcachegen,target=/tmp/monet-qmlcachegen,ro \
+    --mount=type=bind,source=image/command-bar,target=/tmp/monet-command-bar,ro \
     --mount=type=bind,source=image/precompile-qml.py,target=/tmp/monet-precompile-qml.py,ro \
     --mount=type=bind,source=image/nvidia-flatpak,target=/tmp/monet-nvidia-flatpak,ro \
     --mount=type=bind,source=image/install-update-trust.py,target=/tmp/monet-install-update-trust.py,ro \
@@ -235,5 +236,7 @@ RUN --mount=type=bind,from=build,source=/out,target=/tmp/monet-build-package,ro 
  && rm /tmp/monet-finish-image \
  && rm -rf /tmp/monet-boot-build \
  && python3 /tmp/monet-install-update-trust.py /tmp/monet-update.pub \
+ && python3 /tmp/monet-command-bar/install.py /usr/lib64/qt6/qml/org/kde/milou \
  && python3 /tmp/monet-precompile-qml.py --compiler /tmp/monet-qmlcachegen \
+    --extra-source /usr/lib64/qt6/qml/org/kde/milou/MonetResultsView.qml \
  && bootc container lint

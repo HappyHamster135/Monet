@@ -22,6 +22,7 @@ class ToolSearch(dbus.service.Object):
         self.settings = QSettings("Monet", "Utilities")
         self.tokens = {}
         self.menu_search = None
+        self.menu_waiters = {}
         self.script_searches = {}
         self.clip_search = None
         self.prefixes = {"tools", words(tr("tools")), "monet tools", words(tr("Monet Utilities"))}
@@ -46,6 +47,7 @@ class ToolSearch(dbus.service.Object):
 
     @dbus.service.method(INTERFACE, sender_keyword="sender")
     def Teardown(self, sender=None):
+        self.finish_menu(sender)
         self.tokens.pop(sender, None)
         if sender in self.script_searches:
             self.script_searches[sender].leave()
@@ -147,6 +149,31 @@ class ToolSearch(dbus.service.Object):
         if token and len(token) <= 4096:
             self.tokens[sender] = (str(token), now + 5)
 
+    @dbus.service.method(SERVICE, in_signature="s", out_signature="b", sender_keyword="sender",
+                         async_callbacks=("reply", "error"))
+    def WaitForMenu(self, key, reply, error, sender=None):
+        if not key.startswith("menu/") or len(key) > 200 or not self.desktop_search(sender):
+            reply(False)
+            return
+        self.touch()
+        # Both requests use the launcher's session-bus connection. The view queues
+        # its wait before asking KRunner to dispatch the action with its Wayland token.
+        self.finish_menu(sender)
+
+        def expire():
+            self.menu_waiters.pop(sender, None)
+            reply(False)
+            return False
+
+        self.menu_waiters[sender] = (key, GLib.timeout_add(3500, expire), reply)
+
+    def finish_menu(self, sender, key=None):
+        pending = self.menu_waiters.get(sender)
+        if pending and (key is None or key == pending[0]):
+            self.menu_waiters.pop(sender)
+            GLib.source_remove(pending[1])
+            pending[2](key is not None)
+
     @dbus.service.method(INTERFACE, in_signature="ss", sender_keyword="sender")
     def Run(self, key, action, sender=None):
         self.touch()
@@ -159,12 +186,15 @@ class ToolSearch(dbus.service.Object):
                 self.script_searches[sender].run(str(key))
             return
         if not action and str(key).startswith("menu/"):
-            if "command-bar" not in hidden and self.desktop_search(sender):
-                from menu_commands import MenuSearch
-                from command_search import notify
-                if not MenuSearch(self.bus).run(key):
-                    notify(self.bus, tr("This menu command is no longer available."))
-            self.menu_search = None
+            try:
+                if "command-bar" not in hidden and self.desktop_search(sender):
+                    from menu_commands import MenuSearch
+                    from command_search import notify
+                    if not MenuSearch(self.bus).run(key):
+                        notify(self.bus, tr("This menu command is no longer available."))
+                self.menu_search = None
+            finally:
+                self.finish_menu(sender, key)
             return
         if not action and str(key).startswith(("snippet/", "clip/", "emoji/")):
             from command_search import copy_result

@@ -36,13 +36,13 @@ def sources(share):
     return sorted(files)
 
 
-def compile_sources(share, compiler):
+def compile_sources(share, compiler, extra_sources=()):
     from PySide6.QtCore import qVersion
     version = subprocess.run([str(compiler), '--version'], check=True,
                              capture_output=True, text=True).stdout.strip()
     if version != 'qmlcachegen ' + qVersion():
         raise RuntimeError(f'QML compiler/runtime mismatch: {version}, Qt {qVersion()}')
-    files = sources(share)
+    files = sorted(set(sources(share)).union(extra_sources))
     if not files:
         raise RuntimeError(f'No installed Monet QML sources in {share}')
     # Normalize every source before compiling: imports may consult each other.
@@ -66,8 +66,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--share', type=Path, default=Path('/usr/share'))
     parser.add_argument('--compiler', type=Path, required=True)
+    parser.add_argument('--extra-source', type=Path, action='append', default=[])
     args = parser.parse_args()
-    print(f'Precompiled {compile_sources(args.share, args.compiler)} Monet QML/JavaScript files')
+    print(f'Precompiled {compile_sources(args.share, args.compiler, args.extra_source)} Monet QML/JavaScript files')
 
 
 if __name__ == '__main__':

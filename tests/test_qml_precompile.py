@@ -64,6 +64,14 @@ print(engine.rootObjects()[0].property("value"))
         self.assertEqual(self.read(), 'new image')
         self.assertEqual(self.source.stat().st_mtime_ns, 0)
 
+    def test_extra_source_outside_the_share_tree_is_cached(self):
+        self.write('main')
+        extra = self.root / 'qml' / 'MonetResultsView.qml'
+        extra.parent.mkdir()
+        extra.write_text('import QtQml\nQtObject {}\n')
+        self.assertEqual(precompile.compile_sources(self.share, self.compiler, [extra]), 2)
+        self.assertTrue(Path(str(extra) + 'c').is_file())
+
     def test_damaged_bytecode_falls_back_to_source(self):
         self.write('cached')
         precompile.compile_sources(self.share, self.compiler)

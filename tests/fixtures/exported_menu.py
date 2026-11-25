@@ -52,9 +52,29 @@ def check_menu_search(bus, runner, other, call, config):
     assert "File · Ctrl+S" in rows[0][-1]["subtext"]
     key = rows[0][0]
     assert key != rows[1][0] and "save" not in key.casefold()
+    barrier = bus.get_object("org.monet.ToolSearch", "/runner").get_dbus_method("WaitForMenu", "org.monet.ToolSearch")
+    untrusted = dbus.SessionBus(private=True)
+    assert not untrusted.call_blocking("org.monet.ToolSearch", "/runner", "org.monet.ToolSearch",
+                                       "WaitForMenu", "s", (key,))
+    assert not barrier("other")
+    replies = []
+    errors = []
+
+    def wait_for(key):
+        barrier(key, reply_handler=lambda completed: replies.append((bool(completed), list(clicks))),
+                error_handler=errors.append)
+
+    wait_for(rows[1][0])
+    wait_for(key)
     call(other.Run, key, "")
-    assert not clicks
+    assert replies == [(False, [])] and not clicks
     call(runner.Run, key, "")
+    assert replies == [(False, []), (True, [(3, "clicked")])] and not errors
+    # Closing a search disarms its wait. A missing native Run also has a deadline.
+    wait_for(key)
+    call(runner.Teardown)
+    assert replies[-1] == (False, [(3, "clicked")])
+    assert not barrier(key, timeout=6)
     assert clicks == [(3, "clicked")]
     window["id"] = "second"
     call(runner.Run, key, "")
