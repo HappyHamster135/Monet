@@ -54,6 +54,7 @@ Item {
     property var lastClient: null
     property QtObject mouseMove: null
     Component.onCompleted: {
+        bar.updatePanels(Workspace.stackingOrder)
         // The image supplies a bridge built against its exact KWin runtime.
         // Generic tarballs can still use KWin's scripting-only move action.
         try {
@@ -112,12 +113,12 @@ Item {
         if (busy()) {
             return null
         }
-        return Hover.aimedAt(p, root.topWindow, root.canShow)
+        return Hover.aimedAt(p, root.topWindow, root.canShow, bar.panels)
     }
 
     function atClientEdge(w, p) {
         return w && !w.deleted && w.managed && (w.normalWindow || w.dialog || w.utility)
-            && w.output && Hover.atTop(w.clientGeometry, w.output.geometry, p)
+            && w.output && Hover.atTop(w.clientGeometry, w.output.geometry, p, bar.panels)
     }
 
     function nearEdge(p) {
@@ -186,14 +187,14 @@ Item {
             root.queueEvaluation()
         }
         function onWindowAdded(w) {
-            if (bar.visible && w && w.dock) bar.updatePanels(Workspace.stackingOrder)
+            if (w && w.dock) bar.updatePanels(Workspace.stackingOrder)
             if (root.hovering && w && w.normalWindow && w.managed && !w.popupWindow && !w.transient) {
                 root.newWindow = w
                 introduce.restart()
             }
         }
         function onWindowRemoved(w) {
-            if (bar.visible && w && w.dock) bar.updatePanels(Workspace.stackingOrder)
+            if (w && w.dock) bar.updatePanels(Workspace.stackingOrder)
             if (w && !root.ours(w)) root.edgeChanged()
         }
         function onWindowActivated(w) {

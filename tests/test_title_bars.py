@@ -82,6 +82,16 @@ class Arithmetic(unittest.TestCase):
         self.assertEqual(self.run_js("barLayout(screen,screen,[Object.assign({},dock,{hidden:true})]).main"),
                          self.run_js("barRect(screen,screen)"))
 
+    def test_only_the_obscured_windows_exposed_edge_reveals_below_the_notch(self):
+        self.js.evaluate("""
+            var screen=rect(0,0,1280,900), small=rect(565,0,150,320);
+            var dock={dock:true,frameGeometry:rect(539,0,202,44)};
+        """)
+        self.assertTrue(self.run_js("atTop(small,screen,{x:640,y:44},[dock])"))
+        self.assertFalse(self.run_js("atTop(small,screen,{x:640,y:50},[dock])"))
+        self.assertFalse(self.run_js("atTop(screen,screen,{x:640,y:44},[dock])"))
+        self.assertFalse(self.run_js("atTop(small,screen,{x:640,y:44},[])"))
+
     def test_the_bar_lies_over_the_windows_top_at_every_scale(self):
         screen = "rect(0, 0, 1920, 1080)"
         self.assertEqual(self.run_js(f"barRect(rect(100, 100, 800, 600), {screen})"),
@@ -517,6 +527,16 @@ class Behaviour(unittest.TestCase):
         self.point(860, 200, 750)
         self.assertIsNone(self.shown_for())
 
+    def test_a_narrow_title_reserves_space_to_grab_beside_its_buttons(self):
+        self.js("scene.app.frameGeometry=Qt.rect(100,100,100,240)")
+        self.stack("app")
+        self.point(130, 102, 350)
+        self.assertEqual(self.shown_for(), "Files")
+        self.assertEqual(self.bar.findChild(QObject, "titleClose").property("width"), 25)
+        QTest.mousePress(self.bar, Qt.LeftButton, Qt.NoModifier, QPoint(12, 18))
+        self.assertTrue(self.bar.property("dragHeld"))
+        QTest.mouseRelease(self.bar, Qt.LeftButton, Qt.NoModifier, QPoint(12, 18))
+
     def test_never_over_a_menu_or_another_window(self):
         self.stack("app", "popup")
         self.point(500, 102, 400)
@@ -783,7 +803,7 @@ class Script(unittest.TestCase):
         self.assertIn("flags: Qt.ToolTip | Qt.FramelessWindowHint | Qt.BypassWindowManagerHint | Qt.WindowDoesNotAcceptFocus", bar)
         # The pointer is KWin's API: the cursor, the window under it, the active window's move and menu.
         for piece in ("function onCursorPosChanged()", "Workspace.windowAt(Qt.point(p.x, p.y), 2)",
-                      "Hover.aimedAt(p, root.topWindow, root.canShow)", "Workspace.slotWindowMove()",
+                      "Hover.aimedAt(p, root.topWindow, root.canShow, bar.panels)", "Workspace.slotWindowMove()",
                       "Workspace.slotWindowOperations()", 'KWin.readConfig("Hover", true)', "target: Options",
                       "Workspace.isEffectActive(\"overview\")", "Kirigami.Units.longDuration / 200"):
             self.assertIn(piece, main)

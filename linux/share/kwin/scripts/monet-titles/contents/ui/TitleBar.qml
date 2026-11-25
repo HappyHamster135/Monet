@@ -52,7 +52,7 @@ Window {
     height: area.height
 
     // KWin can create the notch after this script loads. Take a fresh list on
-    // reveal and when a dock arrives or leaves while the title is visible.
+    // reveal and when a dock arrives or leaves.
     function updatePanels(stack) {
         panels = stack.filter(w => w && w.dock && !w.deleted)
     }
@@ -325,7 +325,8 @@ Window {
         required property color ink
         signal activated()
         readonly property bool held: press.pressed
-        width: Math.min(Hover.BUTTON_WIDTH, bar.width / 3)
+        // Even the narrowest title keeps a grip beside its three buttons.
+        width: Math.min(Hover.BUTTON_WIDTH, bar.width / 4)
         height: bar.height
         Accessible.role: Accessible.Button
         Accessible.name: name

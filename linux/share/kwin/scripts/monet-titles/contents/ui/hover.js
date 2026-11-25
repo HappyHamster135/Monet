@@ -75,21 +75,32 @@ function barLayout(client, screen, stack) {
 
 // The pointer at a window's top: within its reveal band. For a window
 // that fills the screen, that's the screen's top edge, where the pointer stops by itself.
-function atTop(client, screen, p) {
+function atTop(client, screen, p, panels) {
     var top = visibleTop(client, screen)
     var depth = top === screen.y ? EDGE_DEPTH : FLOATING_DEPTH
     var start = Math.max(screen.y, top - ABOVE)
-    return p.x >= client.x && p.x < client.x + client.width
-        && p.y >= start && p.y < top + Math.min(depth, (client.y + client.height - top) / 3)
+    if (p.x < client.x || p.x >= client.x + client.width || p.y < start) return false
+    if (p.y < top + Math.min(depth, (client.y + client.height - top) / 3)) return true
+    // Where a panel covers the actual top, its lower edge is the first part
+    // of the client the pointer can reach. Only a relocated bar reveals here.
+    for (const dock of panels || []) {
+        if (!dock || dock.deleted || dock.hidden || dock.minimized) continue
+        const d = dock.frameGeometry
+        const edge = Math.ceil(d.y + d.height)
+        if (Math.abs(d.y - screen.y) > 1 || top >= edge || p.x < d.x || p.x >= d.x + d.width
+                || p.y < edge || p.y >= edge + EDGE_DEPTH || p.y >= client.y + client.height) continue
+        return barLayout(client, screen, [dock]).main.y === edge
+    }
+    return false
 }
 
 // Most pointer movement is inside app content. Reject that cheap geometry case
 // before eligibility walks KWin's window stack to check occlusion.
-function aimedAt(p, pick, eligible) {
+function aimedAt(p, pick, eligible, panels) {
     var w = pick(p)
     if (!w || w.desktopWindow) w = pick({ x: p.x, y: p.y + ABOVE })
     if (!w || w.move || w.resize || !w.output
-            || !atTop(w.clientGeometry, w.output.geometry, p)) return null
+            || !atTop(w.clientGeometry, w.output.geometry, p, panels)) return null
     return eligible(w) ? w : null
 }
 
