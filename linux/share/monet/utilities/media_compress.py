@@ -205,14 +205,17 @@ def encode_gif(source, output, info, quality, edge, limit, progress):
     raise ValueError(tr("The animation could not fit this limit. Try a larger size."))
 
 
-def encode_picture(source, output, info, quality, edge, limit):
+def encode_picture(source, output, info, quality, edge, limit, preview=False):
     from PIL import Image, ImageOps
+    from picture_edit import frame_picture, picture_geometry, watermark
+    options = info.get("picture_options", {})
+    full_size = picture_geometry((info["width"], info["height"]), options, edge)
+    width, height = dimensions(*full_size, 440) if preview else full_size
     if info["kind"] == "video":
         still = output.parent / "frame.png"
         transcode(ffmpeg(source) + ["-map", f"0:{info['stream']}", "-frames:v", "1", "-threads", "1", str(still)],
                   0, lambda _: None)
         source = still
-    width, height = dimensions(info["width"], info["height"], edge)
     if info.get("reader") == "qt":
         from PySide6.QtGui import QImage
         reader = qt_reader(source)
@@ -227,19 +230,25 @@ def encode_picture(source, output, info, quality, edge, limit):
                                   "raw", mode, native.bytesPerLine(), 1)
     else:
         with Image.open(source) as image:
-            if edge and image.format == "JPEG":
+            if image.format == "JPEG" and (edge or options.get("size") or preview):
                 image.draft(image.mode, (max(width, height),) * 2)
             picture = ImageOps.exif_transpose(image)
             profile = image.info.get("icc_profile") if image.mode in ("RGB", "RGBA") else None
             transparent = "A" in picture.getbands() or "transparency" in picture.info
             picture = picture.convert("RGBA" if transparent else "RGB")
-    if output_suffix(output) in (".jpg", ".pdf") and transparent:
-        background = Image.new("RGB", picture.size, "white")
-        background.paste(picture, mask=picture.getchannel("A"))
-        picture = background
     initial_quality = (62, 80, 93)[quality]
+    frame = None
     for _ in range(8):
-        frame = picture.resize((width, height), Image.Resampling.LANCZOS) if picture.size != (width, height) else picture
+        if frame is None or frame.size != (width, height):
+            frame = frame_picture(picture, (width, height), options)
+            frame = watermark(frame, options, min(width / full_size[0], height / full_size[1]))
+            if output_suffix(output) in (".jpg", ".pdf") and frame.mode == "RGBA":
+                background = Image.new("RGB", frame.size, "white")
+                background.paste(frame, mask=frame.getchannel("A"))
+                frame = background
+        if preview:
+            frame.save(output, format="PNG")
+            return
         args = {"icc_profile": profile} if profile else {}
         if output_suffix(output) == ".png":
             args["compress_level"] = 7
@@ -262,6 +271,11 @@ def encode_picture(source, output, info, quality, edge, limit):
         actual = output.stat().st_size
         if not limit or actual <= limit:
             return
+        if options.get("size"):
+            if output_suffix(output) == ".png" or initial_quality <= 12:
+                break
+            initial_quality = max(12, min(initial_quality - 10, round(initial_quality * limit / actual)))
+            continue
         factor = min(.85, .94 * math.sqrt(limit / actual))
         width, height = dimensions(width, height, max(1, int(max(width, height) * factor)))
     raise ValueError(tr("The picture could not fit this limit. Try a larger size."))
@@ -306,6 +320,11 @@ def main(argv):
     same_video_format = suffix == ".mp4" and info.get("compatible_mp4") and (audio or not info["audio"])
     original_fits = ((same_picture_format or same_video_format) and (not edge or max(info["width"], info["height"]) <= edge)
                      and (not limit or info["size"] <= limit))
+    if argv[0] == "preview":
+        encode_picture(source, output, info, quality, edge, 0, preview=True)
+        return
+    if info.get("picture_options") and suffix not in (".mp4", ".gif"):
+        original_fits = False
     if original_fits and limit:
         shutil.copyfile(source, output)
         return

@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDoubleS
 
 from actions import tr
 from recording_export import ExportFile
+from picture_options import PictureOptions
 from media_compress import output_suffix, source_signature
 
 WORKER = Path(__file__).with_name("media_compress.py")
@@ -49,6 +50,7 @@ class CompressPage(QWidget):
         self.entries = {}
         self.job = None
         self.plans = deque()
+        self.picture_options = {}
         self.exporting = False
         self.cancelled = False
         self.closing = False
@@ -105,6 +107,9 @@ class CompressPage(QWidget):
         self.edge.setSpecialValueText(tr("Automatic"))
         self.edge.setSuffix(" px")
         form.addRow(tr("Longest edge"), self.edge)
+        self.edit_pictures = QPushButton(tr("Picture options…"))
+        self.edit_pictures.clicked.connect(self.edit_picture_options)
+        form.addRow(self.edit_pictures)
         self.limited = QCheckBox(tr("Maximum file size"))
         self.limit = QDoubleSpinBox()
         self.limit.setAccessibleName(self.limited.text())
@@ -160,7 +165,14 @@ class CompressPage(QWidget):
         self.add.setEnabled(not self.exporting)
         self.options.setVisible(bool(ready))
         self.options.setEnabled(not self.exporting)
+        picture_formats = formats - {".gif", ".mp4"}
+        fixed_size = bool(self.picture_options.get("size"))
+        self.edit_pictures.setVisible(bool(picture_formats))
+        self.edit_pictures.setText(tr("Picture options (edited)…") if self.picture_options else tr("Picture options…"))
+        self.edge.setEnabled(not fixed_size or bool(formats & {".mp4", ".gif"}))
         self.fit_note.setVisible(self.limited.isChecked() and bool(formats - {".mp4"}))
+        self.fit_note.setText(tr("Pictures keep their chosen dimensions. Copies that cannot fit will be skipped.")
+                              if picture_formats and fixed_size else tr("Pictures and GIFs can be resized to fit."))
         self.audio.setVisible(any(e.info["audio"] and self.suffix(e) == ".mp4" for e in ready))
         # For videos above the cap, the byte budget sets the bitrate.
         limit = round(self.limit.value() * 1000000) if self.limited.isChecked() else 0
@@ -174,6 +186,17 @@ class CompressPage(QWidget):
         self.save.setEnabled(bool(ready) and not self.job)
         self.cancel.setVisible(self.exporting)
         self.progress.setVisible(self.exporting)
+
+    def edit_picture_options(self):
+        ready = [e for e in self.entries.values() if e.info and self.suffix(e) not in (".gif", ".mp4")]
+        if not ready or self.exporting:
+            return
+        entry = next((e for e in ready if e.row.isSelected()), ready[0])
+        dialog = PictureOptions(self, entry, self.suffix(entry), self.picture_options, self.edge.value())
+        if dialog.exec() == PictureOptions.Accepted:
+            self.picture_options = dialog.values()
+        dialog.deleteLater()
+        self.update_controls()
 
     def selection_changed(self):
         self.update_controls()
@@ -390,7 +413,7 @@ class CompressPage(QWidget):
                 self.export_next()
             self.worker(["encode", entry.path, output.file, self.quality.currentIndex(), self.edge.value(),
                          limit, int(self.audio.isChecked()), "--source-info"], saved, line_received=progress,
-                        input_data=json.dumps(entry.info).encode())
+                        input_data=json.dumps(dict(entry.info, picture_options=self.picture_options)).encode())
             return
         self.exporting = False
         if self.cancelled:

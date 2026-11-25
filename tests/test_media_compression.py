@@ -17,6 +17,7 @@ try:
     from PySide6.QtTest import QTest
     from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
     from window import Window
+    from picture_options import PictureOptions
 except ImportError:
     Window = None
 
@@ -125,6 +126,105 @@ class MediaCompression(unittest.TestCase):
         self.assertEqual(subprocess.check_output(["ffprobe", "-v", "error", "-select_streams", "a",
                          "-show_entries", "stream=index", "-of", "csv=p=0", str(muted)]), b"")
         self.assertEqual(reference.read_bytes(), original)
+
+    def test_exact_size_watermark_preview_and_export_agree(self):
+        source = self.folder / "blue.png"
+        logo = self.folder / "logo.png"
+        Image.new("RGB", (40, 20), "blue").save(source)
+        Image.new("RGBA", (7, 7), (255, 0, 0, 255)).save(logo)
+        self.add_files(source)
+        self.page.format.setCurrentIndex(self.page.format.findData(".png"))
+        captured = []
+        def edit(dialog):
+            dialog.show()
+            dialog.size_mode.setCurrentIndex(dialog.size_mode.findData("exact"))
+            dialog.width_px.setValue(64)
+            dialog.height_px.setValue(64)
+            dialog.set_logo(str(logo))
+            dialog.position.setCurrentIndex(dialog.position.findData("top-left"))
+            dialog.opacity.setValue(100)
+            dialog.margin.setValue(1)
+            dialog.scale.setValue(10)
+            dialog.preview_button.click()
+            self.wait(lambda: dialog.job is None)
+            rendered = dialog.sample.pixmap().toImage()
+            pixel = round(rendered.width() * 3 / 64)
+            captured.append(rendered.pixelColor(pixel, pixel).getRgb())
+            dialog.accept()
+            return dialog.result()
+        with patch.object(PictureOptions, "exec", edit):
+            self.page.edit_pictures.click()
+        self.assertEqual(captured, [(255, 0, 0, 255)])
+        self.assertFalse(self.page.edge.isEnabled())
+        self.page.limited.setChecked(True)
+        self.save(self.folder / "marked.png")
+        with Image.open(self.folder / "marked.png") as output:
+            self.assertEqual(output.size, (64, 64))
+            self.assertEqual(output.getpixel((3, 3)), captured[0])
+            self.assertEqual(output.getpixel((60, 3))[-1], 0)
+            self.assertEqual(output.getpixel((30, 30)), (0, 0, 255, 255))
+        settings = dict(self.page.picture_options)
+        def reset_but_cancel(dialog):
+            dialog.reset()
+            self.assertEqual(dialog.values(), {})
+            return PictureOptions.Rejected
+        with patch.object(PictureOptions, "exec", reset_but_cancel):
+            self.page.edit_pictures.click()
+        self.assertEqual(self.page.picture_options, settings)
+        self.page.format.setCurrentIndex(self.page.format.findData(".mp4"))
+        self.assertTrue(self.page.edit_pictures.isHidden())
+        self.assertTrue(self.page.edge.isEnabled())
+
+    def test_svg_logo_with_text_renders_in_the_background_worker(self):
+        logo = self.folder / "brand.svg"
+        logo.write_text('<svg xmlns="http://www.w3.org/2000/svg" width="50" height="20">'
+                        '<rect width="50" height="20" fill="red"/><text x="3" y="15">Monet</text></svg>')
+        self.add_files(self.picture)
+        self.page.picture_options = dict(logo=str(logo), position="top-left", margin=0, opacity=100, scale=40)
+        self.page.format.setCurrentIndex(self.page.format.findData(".png"))
+        target = self.folder / "branded.png"
+        self.save(target)
+        self.assertEqual(self.page.saved, 1, self.page.message.text())
+        with Image.open(target) as marked:
+            self.assertEqual(marked.getpixel((1, 1)), (255, 0, 0, 255))
+            self.assertEqual(marked.getpixel((135, 95))[-1], 0)
+
+    def test_fixed_size_does_not_shrink_under_an_impossible_limit(self):
+        src = self.folder / "noise.png"
+        Image.effect_noise((300, 200), 120).save(src)
+        self.add_files(src)
+        self.page.picture_options = dict(size="width", width=300)
+        self.page.format.setCurrentIndex(self.page.format.findData(".png"))
+        self.page.limited.setChecked(True)
+        self.page.limit.setValue(.01)
+        target = self.folder / "fixed.png"
+        self.save(target)
+        self.assertEqual(self.page.failed, 1)
+        self.assertFalse(target.exists())
+        self.page.limited.setChecked(False)
+        self.page.picture_options = dict(size="height", height=100, text="Monet", position="center", opacity=90)
+        self.save(target)
+        with Image.open(target) as output:
+            self.assertEqual(output.size, (150, 100))
+
+    def test_crop_stretch_and_text_watermark(self):
+        from PIL import ImageChops
+        from picture_edit import frame_picture, picture_geometry, watermark
+        pic = Image.new("RGB", (60, 20), "blue")
+        pic.paste("red", (20, 0, 40, 20))
+        cropped = frame_picture(pic, (20, 20), dict(size="exact", framing="fill"))
+        stretched = frame_picture(pic, (20, 20), dict(size="exact", framing="stretch"))
+        self.assertEqual(cropped.getpixel((2, 2)), (255, 0, 0))
+        self.assertEqual(stretched.getpixel((2, 2)), (0, 0, 255))
+        blank = Image.new("RGB", (200, 80), "navy")
+        marked = watermark(blank, dict(text="Monét", position="bottom-left", margin=3, scale=28, opacity=65), 1)
+        box = ImageChops.difference(blank, marked.convert("RGB")).getbbox()
+        self.assertIsNotNone(box)
+        self.assertGreaterEqual(box[0], 3)
+        self.assertLessEqual(box[2], 59)
+        self.assertGreater(box[1], 25)
+        with self.assertRaises(ValueError):
+            picture_geometry((300, 120), dict(size="exact", width=10000, height=10000), 0)
 
     def test_collision_during_export_preserves_file_and_retry_works(self):
         self.add_files(self.video)

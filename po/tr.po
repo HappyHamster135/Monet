@@ -17506,3 +17506,125 @@ msgstr ""
 #: linux/share/monet/utilities/media_compress.py:277 linux/share/monet/utilities/compress_page.py:363
 msgid "The source changed. Review the file and save again."
 msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:110 linux/share/monet/utilities/compress_page.py:171
+msgid "Picture options…"
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:171
+msgid "Picture options (edited)…"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:21
+msgid "Picture options"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:29
+msgid "Resize"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:30
+msgid "Use longest edge"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:30
+msgid "Set width"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:30
+msgid "Set height"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:31
+msgid "Exact dimensions"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:32
+msgid "Width"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:33
+msgid "Height"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:34
+msgid "Frame"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:35
+msgid "Fit with padding"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:35
+msgid "Crop to fill"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:35
+msgid "Stretch to fit"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:39
+msgid "Watermark"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:42
+msgid "Text"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:53
+msgid "Logo"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:56
+msgid "Top left"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:57
+msgid "Bottom left"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:57
+msgid "Bottom right"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:59
+msgid "Watermark width"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:60
+msgid "Margin"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:61
+msgid "Preview picture"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:112
+msgid "Choose a watermark image"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:160
+msgid "Choose an available watermark image."
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:176
+msgid "Preparing preview…"
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:190
+msgid "Couldn’t preview this picture."
+msgstr ""
+
+#: linux/share/monet/utilities/picture_edit.py:22
+msgid ""
+"Choose picture dimensions under 48 megapixels and 32,768 pixels per side."
+msgstr ""
+
+#: linux/share/monet/utilities/compress_page.py:174
+msgid ""
+"Pictures keep their chosen dimensions. Copies that cannot fit will be skipped."
+msgstr ""
+
+#: linux/share/monet/utilities/picture_options.py:68
+msgid "Preview"
+msgstr ""

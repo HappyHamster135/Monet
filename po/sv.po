@@ -17568,3 +17568,126 @@ msgstr "Avbryt de återstående kopiorna och stäng Verktyg?"
 #: linux/share/monet/utilities/media_compress.py:277 linux/share/monet/utilities/compress_page.py:363
 msgid "The source changed. Review the file and save again."
 msgstr "Källfilen har ändrats. Kontrollera filen och spara igen."
+
+#: linux/share/monet/utilities/compress_page.py:110 linux/share/monet/utilities/compress_page.py:171
+msgid "Picture options…"
+msgstr "Bildalternativ…"
+
+#: linux/share/monet/utilities/compress_page.py:171
+msgid "Picture options (edited)…"
+msgstr "Bildalternativ (ändrade)…"
+
+#: linux/share/monet/utilities/picture_options.py:21
+msgid "Picture options"
+msgstr "Bildalternativ"
+
+#: linux/share/monet/utilities/picture_options.py:29
+msgid "Resize"
+msgstr "Ändra storlek"
+
+#: linux/share/monet/utilities/picture_options.py:30
+msgid "Use longest edge"
+msgstr "Använd längsta sidan"
+
+#: linux/share/monet/utilities/picture_options.py:30
+msgid "Set width"
+msgstr "Ange bredd"
+
+#: linux/share/monet/utilities/picture_options.py:30
+msgid "Set height"
+msgstr "Ange höjd"
+
+#: linux/share/monet/utilities/picture_options.py:31
+msgid "Exact dimensions"
+msgstr "Exakta mått"
+
+#: linux/share/monet/utilities/picture_options.py:32
+msgid "Width"
+msgstr "Bredd"
+
+#: linux/share/monet/utilities/picture_options.py:33
+msgid "Height"
+msgstr "Höjd"
+
+#: linux/share/monet/utilities/picture_options.py:34
+msgid "Frame"
+msgstr "Bildanpassning"
+
+#: linux/share/monet/utilities/picture_options.py:35
+msgid "Fit with padding"
+msgstr "Anpassa med utfyllnad"
+
+#: linux/share/monet/utilities/picture_options.py:35
+msgid "Crop to fill"
+msgstr "Beskär för att fylla"
+
+#: linux/share/monet/utilities/picture_options.py:35
+msgid "Stretch to fit"
+msgstr "Sträck ut för att fylla"
+
+#: linux/share/monet/utilities/picture_options.py:39
+msgid "Watermark"
+msgstr "Vattenstämpel"
+
+#: linux/share/monet/utilities/picture_options.py:42
+msgid "Text"
+msgstr "Text"
+
+#: linux/share/monet/utilities/picture_options.py:53
+msgid "Logo"
+msgstr "Logotyp"
+
+#: linux/share/monet/utilities/picture_options.py:56
+msgid "Top left"
+msgstr "Uppe till vänster"
+
+#: linux/share/monet/utilities/picture_options.py:57
+msgid "Bottom left"
+msgstr "Nere till vänster"
+
+#: linux/share/monet/utilities/picture_options.py:57
+msgid "Bottom right"
+msgstr "Nere till höger"
+
+#: linux/share/monet/utilities/picture_options.py:59
+msgid "Watermark width"
+msgstr "Vattenstämpelns bredd"
+
+#: linux/share/monet/utilities/picture_options.py:60
+msgid "Margin"
+msgstr "Marginal"
+
+#: linux/share/monet/utilities/picture_options.py:61
+msgid "Preview picture"
+msgstr "Förhandsvisa bild"
+
+#: linux/share/monet/utilities/picture_options.py:112
+msgid "Choose a watermark image"
+msgstr "Välj en bild för vattenstämpeln"
+
+#: linux/share/monet/utilities/picture_options.py:160
+msgid "Choose an available watermark image."
+msgstr "Välj en tillgänglig bild för vattenstämpeln."
+
+#: linux/share/monet/utilities/picture_options.py:176
+msgid "Preparing preview…"
+msgstr "Förbereder förhandsvisning…"
+
+#: linux/share/monet/utilities/picture_options.py:190
+msgid "Couldn’t preview this picture."
+msgstr "Det gick inte att förhandsvisa bilden."
+
+#: linux/share/monet/utilities/picture_edit.py:22
+msgid ""
+"Choose picture dimensions under 48 megapixels and 32,768 pixels per side."
+msgstr "Välj bildmått på högst 48 megapixlar och 32 768 pixlar per sida."
+
+#: linux/share/monet/utilities/compress_page.py:174
+msgid ""
+"Pictures keep their chosen dimensions. Copies that cannot fit will be skipped."
+msgstr ""
+"Bilder behåller de valda måtten. Kopior som inte får plats hoppas över."
+
+#: linux/share/monet/utilities/picture_options.py:68
+msgid "Preview"
+msgstr "Förhandsvisning"
