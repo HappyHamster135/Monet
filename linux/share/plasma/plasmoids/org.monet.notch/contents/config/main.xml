@@ -3,6 +3,7 @@
     <kcfgfile name=""/>
     <group name="General">
         <entry name="wide" type="Bool"><default>false</default></entry>
+        <entry name="gestures" type="Bool"><default>true</default></entry>
         <entry name="levels" type="Bool"><default>false</default></entry>
         <entry name="previews" type="Bool"><default>false</default></entry>
         <entry name="companion" type="Bool"><default>false</default></entry>

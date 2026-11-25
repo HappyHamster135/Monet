@@ -16728,3 +16728,7 @@ msgstr ""
 #: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:677
 msgid "Brightness on %1"
 msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:366
+msgid "Scroll to open the notch or skip tracks"
+msgstr ""

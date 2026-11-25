@@ -8,6 +8,7 @@ import org.kde.plasma.workspace.dbus as DBus
 ColumnLayout {
     id: page
     required property var media
+    property var gestures: null
     required property bool playing
     required property int view // 0: now playing, 1: lyrics, 2: upcoming tracks
     signal viewRequested(int index)
@@ -136,25 +137,35 @@ ColumnLayout {
         Layout.rightMargin: Kirigami.Units.smallSpacing
         spacing: Kirigami.Units.largeSpacing
         Item {
-            Layout.preferredWidth: page.view ? 36 : 66
-            Layout.preferredHeight: Layout.preferredWidth
-            Kirigami.Icon { anchors.centerIn: parent; width: parent.width * 0.7; height: width; visible: cover.status !== Image.Ready; source: "audio-headphones" }
-            Image {
-                id: cover; anchors.fill: parent; asynchronous: true; fillMode: Image.PreserveAspectFit
-                sourceSize: Qt.size(width * Screen.devicePixelRatio, height * Screen.devicePixelRatio)
-                source: page.media?.artUrl || ""
+            Layout.fillWidth: true
+            implicitHeight: trackInfo.implicitHeight
+            RowLayout {
+                id: trackInfo
+                anchors.fill: parent
+                spacing: Kirigami.Units.largeSpacing
+                Item {
+                    Layout.preferredWidth: page.view ? 36 : 66
+                    Layout.preferredHeight: Layout.preferredWidth
+                    Kirigami.Icon { anchors.centerIn: parent; width: parent.width * 0.7; height: width; visible: cover.status !== Image.Ready; source: "audio-headphones" }
+                    Image {
+                        id: cover; anchors.fill: parent; asynchronous: true; fillMode: Image.PreserveAspectFit
+                        sourceSize: Qt.size(width * Screen.devicePixelRatio, height * Screen.devicePixelRatio)
+                        source: page.media?.artUrl || ""
+                    }
+                }
+                ColumnLayout {
+                    Layout.fillWidth: true; spacing: 0
+                    C.Label {
+                        Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight; font.bold: true
+                        text: page.media?.track || i18n("Nothing playing")
+                    }
+                    C.Label {
+                        Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight
+                        text: page.media?.artist || page.media?.identity || i18n("Start a song or video in a media player.")
+                    }
+                }
             }
-        }
-        ColumnLayout {
-            Layout.fillWidth: true; spacing: 0
-            C.Label {
-                Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight; font.bold: true
-                text: page.media?.track || i18n("Nothing playing")
-            }
-            C.Label {
-                Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight
-                text: page.media?.artist || page.media?.identity || i18n("Start a song or video in a media player.")
-            }
+            NotchGestureSurface { gestures: page.gestures }
         }
         C.ToolButton {
             visible: page.view !== 0

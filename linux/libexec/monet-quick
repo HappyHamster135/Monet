@@ -8233,7 +8233,7 @@ print(JSON.stringify({ok:true, available:tasks.length > 0,
 def panel_notch(ident, choice=None):
     modes = {None, "compact", "wide", "off"}
     if not re.fullmatch(r"[0-9]{1,10}", str(ident)) or (choice not in modes and
-            not re.fullmatch(r"(levels|companion|alerts|previews)-(on|off)", choice)):
+            not re.fullmatch(r"(levels|companion|alerts|previews|gestures)-(on|off)", choice)):
         return {"ok": False}
     try:
         script = (Path(DATADIR) / "monet/panel-notch.js").read_text(encoding="utf-8")

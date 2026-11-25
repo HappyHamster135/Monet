@@ -223,17 +223,17 @@ PlasmoidItem {
             }
         }
     }
-    function wheelAction(wheel) {
-        if (Math.abs(wheel.angleDelta.x) > Math.abs(wheel.angleDelta.y)) {
-            if (gesture.running) return
-            if (wheel.angleDelta.x < 0 && media?.canGoNext) media.container.Next()
-            if (wheel.angleDelta.x > 0 && media?.canGoPrevious) media.container.Previous()
-            gesture.restart()
-        } else if (wheel.angleDelta.y) {
-            expanded = wheel.angleDelta.y < 0
+    NotchGestures {
+        id: notchGestures
+        enabled: Plasmoid.configuration.gestures
+        expanded: root.expanded
+        onExpansionRequested: open => { if (open !== root.expanded) root.openPill() }
+        onTrackRequested: next => {
+            const player = root.media?.container
+            if (next && player?.canGoNext) player.Next()
+            else if (!next && player?.canGoPrevious) player.Previous()
         }
     }
-    Timer { id: gesture; interval: 450 }
     compactRepresentation: C.AbstractButton {
         id: pill
         Layout.minimumWidth: Plasmoid.configuration.wide ? 176 : 96
@@ -270,7 +270,7 @@ PlasmoidItem {
                 text: shelfDrop.containsDrag ? i18n("Shelf") : preview.item?.title || (root.endTime ? root.remaining() : watch.registered ? i18n("Watching") : root.media?.track || i18n("Tools"))
             }
         }
-        WheelHandler { onWheel: event => root.wheelAction(event) }
+        NotchGestureSurface { gestures: notchGestures }
         DropArea {
             id: shelfDrop
             anchors.fill: parent
@@ -346,6 +346,7 @@ PlasmoidItem {
         id: musicPage
         Music {
             media: root.media; playing: root.playing; view: root.musicView
+            gestures: notchGestures
             onViewRequested: index => root.musicView = index
         }
     }
