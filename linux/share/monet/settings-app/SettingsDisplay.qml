@@ -13,7 +13,19 @@ import "FocusNavigation.js" as FocusNavigation
 
 
 ColumnLayout {
+    id: page
     spacing: 20
+    readonly property var power: typeof displayPower !== "undefined" ? displayPower : null
+    readonly property bool watching: visible && sheet.pollingActive
+    onWatchingChanged: if (power) power.observe(watching)
+    Component.onCompleted: if (power) power.observe(watching)
+    Component.onDestruction: if (power) power.observe(false)
+    Loader {
+        id: brightnessBackend
+        active: page.watching
+        source: "DisplayBrightness.qml"
+        visible: false
+    }
     SettingsControls.PageTitle {
         tone: look
         entry: sheet.entry("display")
@@ -28,12 +40,33 @@ ColumnLayout {
         problem: sheet.scaleProblem
         onPicked: (name, percent) => sheet.changeScreenSize(name, percent)
     }
+    SettingsControls.Caption {
+        tone: look
+        visible: brightnessRows.count > 1
+        text: i18n("Brightness")
+    }
     SettingsControls.Card {
         tone: look
+        Repeater {
+            id: brightnessRows
+            model: brightnessBackend.item?.displays ?? null
+            SettingsControls.SliderRow {
+                required property var model
+                required property int index
+                objectName: "brightness-" + model.displayName
+                tone: look
+                divider: index > 0
+                enabled: model.maxBrightness > 0
+                title: brightnessRows.count > 1 ? model.label || model.displayName : i18n("Brightness")
+                value: model.maxBrightness > 0 ? Math.round(model.brightness * 100 / model.maxBrightness) : 0
+                onMoved: percent => brightnessBackend.item?.setBrightness(model.displayName, Math.round(percent * model.maxBrightness / 100))
+            }
+        }
         SettingsControls.SliderRow {
+            id: defaultBrightness
             tone: look
             divider: false
-            visible: typeof sheet.info.brightness === "number"
+            visible: !brightnessRows.count && (brightnessBackend.status === Loader.Error || sheet.info.legacyBrightness === true) && typeof sheet.info.brightness === "number"
             title: i18n("Brightness")
             from: 1
             value: sheet.info.brightness ?? 50
@@ -42,7 +75,7 @@ ColumnLayout {
         }
         SettingsControls.SettingRow {
             tone: look
-            divider: typeof sheet.info.brightness === "number"
+            divider: brightnessRows.count > 0 || defaultBrightness.visible
             tappable: true
             title: i18n("Night Light")
             detail: i18n("Warmer colors from sunset to sunrise, easier on the eyes")
@@ -50,6 +83,55 @@ ColumnLayout {
             SettingsControls.Switch {
                 tone: look
                 active: sheet.info.night === true
+            }
+        }
+    }
+    SettingsControls.Caption {
+        tone: look
+        visible: powerRows.count > 0
+        text: i18n("Display power")
+    }
+    SettingsControls.Card {
+        tone: look
+        visible: powerRows.count > 0
+        Repeater {
+            id: powerRows
+            model: page.power
+            SettingsControls.SettingRow {
+                id: screenPowerRow
+                required property int index
+                required property var model
+                objectName: "power-" + model.connector
+                property bool waiting: false
+                property bool failed: false
+                readonly property bool awake: model.powered
+                onAwakeChanged: {
+                    ack.stop()
+                    waiting = false
+                    failed = false
+                }
+                Timer {
+                    id: ack
+                    interval: 3000
+                    onTriggered: { screenPowerRow.waiting = false; screenPowerRow.failed = true }
+                }
+                divider: index > 0
+                tone: look
+                title: model.displayLabel || model.connector
+                detail: failed ? i18n("The display did not confirm the change.") : model.connector
+                SettingsControls.Pill {
+                    tone: look
+                    enabledPill: !screenPowerRow.waiting
+                    text: screenPowerRow.waiting ? i18n("Changing…")
+                        : screenPowerRow.awake ? i18n("Sleep display") : i18n("Wake display")
+                    Accessible.name: i18n("%1, %2", text, screenPowerRow.title)
+                    onClicked: {
+                        screenPowerRow.failed = !page.power.setPower(screenPowerRow.model.outputId,
+                            screenPowerRow.model.connector, !screenPowerRow.awake)
+                        screenPowerRow.waiting = !screenPowerRow.failed
+                        if (screenPowerRow.waiting) ack.restart()
+                    }
+                }
             }
         }
     }

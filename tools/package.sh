@@ -46,6 +46,7 @@ case "$KIND" in
             cp "$ROOT/browser/monet-passwords/$source" "$OUT/share/doc/monet/passwords-connector/"
         done
         sh "$ROOT/linux/clipboard/build.sh" "$OUT/share/monet/utilities/libmonetclipboard.so"
+        sh "$ROOT/linux/display-power/build.sh" "$OUT/share/monet/monet_runtime/libmonetdisplaypower.so"
         bash "$ROOT/tools/build-settings-style.sh" "$OUT/lib/monet/qt"
         # What's new, for Settings → Updates and the note after an update (monet-quick whats-new).
         cp "$ROOT/RELEASE_NOTES.md" "$OUT/share/monet/release-notes.md"

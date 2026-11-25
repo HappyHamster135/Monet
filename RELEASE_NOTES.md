@@ -12,6 +12,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   In Calendar → Upcoming appointments, link calendar files or follow subscriptions. The agenda shows recurring meetings, schedule changes and all-day events, including a saved copy when offline.
   In Activity → Watch, pin a window region and get an alert when it changes, settles, or shows a phrase.
   Dropping files on it adds them to the shelf. Music levels and accessory alerts are optional.
+- **Monitor controls.** Adjust brightness for each supported screen in Quick Settings or Settings → Display. The Display page also lets you put an individual monitor to sleep or wake it.
 - **Homebrew packages.** Search for formulae and casks, install or remove individual packages, and review and apply updates from Monet Utilities.
 - **Cleaning mode.** Pause input for up to two minutes while you wipe the keyboard or display. Keep your apps visible, darken every display or lock the session. Visible and darkened cleaning both return to the desktop when time runs out, when you click **Finish cleaning**, or when you press Esc five times.
 - **Favorites wheel.** Press Super+Alt+W to open your first eight favorites around the pointer. Click an action or use the arrow keys and Enter.

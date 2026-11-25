@@ -31,6 +31,8 @@ def own(name):
 
 if len(sys.argv) > 1:
     internal = sys.argv[1]
+    names = ["display0", internal]
+    named = "--named" in sys.argv[2:]
     state = dict(level=1000, external=750, calls=[], steps=[])
     root_xml = '''<node><interface name="org.kde.ScreenBrightness">
     <property name="DisplaysDBusNames" type="as" access="read"/>
@@ -48,6 +50,7 @@ if len(sys.argv) > 1:
     test_xml = '''<node><interface name="org.monet.BrightnessTest">
     <method name="Snapshot"><arg type="s" direction="out"/></method>
     <method name="Change"><arg type="s" direction="in"/><arg type="i" direction="in"/><arg type="s" direction="in"/></method>
+    <method name="SetExternalConnected"><arg type="b" direction="in"/></method>
     <method name="Reset"/></interface></node>'''
 
     def emit(name, level, context, client=':1.99'):
@@ -56,7 +59,7 @@ if len(sys.argv) > 1:
         bus.emit_signal(None, OBJECT, SERVICE, 'BrightnessChanged', GLib.Variant('(siss)', (name, level, client, context)))
 
     def prop(_bus, _sender, path, interface, name):
-        if name == 'DisplaysDBusNames': return GLib.Variant('as', ['display0', internal])
+        if name == 'DisplaysDBusNames': return GLib.Variant('as', names)
         if name == 'IsInternal': return GLib.Variant('b', path.endswith('/'+internal))
         if name == 'Label': return GLib.Variant('s', 'Built-in Screen' if path.endswith('/'+internal) else 'External Screen')
         if name == 'MaxBrightness': return GLib.Variant('i', 1000)
@@ -67,9 +70,14 @@ if len(sys.argv) > 1:
         if name == 'Snapshot':
             invocation.return_value(GLib.Variant('(s)', (json.dumps(state),))); return
         if name == 'SetBrightnessWithContext':
-            assert path.endswith('/'+internal), 'external monitor was changed'
-            state['calls'].append(list(values))
-            emit(internal, values[0], values[2], sender)
+            display = path.rsplit('/', 1)[-1]
+            assert display in names and (named or display == internal), 'unexpected display'
+            state['calls'].append([display, *values] if named else list(values))
+            emit(display, values[0], values[2], sender)
+        elif name == 'SetExternalConnected':
+            names[:] = ['display0', internal] if values[0] else [internal]
+            bus.emit_signal(None, OBJECT, 'org.freedesktop.DBus.Properties', 'PropertiesChanged',
+                            GLib.Variant('(sa{sv}as)', (SERVICE, {'DisplaysDBusNames': GLib.Variant('as', names)}, [])))
         elif name in ('AdjustBrightnessStepWithContext','AdjustBrightnessStep'):
             state['steps'].append(list(values))
             emit(internal, max(0,min(1000,state['level'] + (50 if values[0] in (0,2) else -50))), values[2] if len(values)>2 else '', sender)

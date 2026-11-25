@@ -235,6 +235,7 @@ for applet in org.monet.notch org.monet.sound; do
         install -m 644 "$SRC/share/monet/settings-app/$part.qml" "$DATADIR/plasma/plasmoids/$applet/contents/ui/$part.qml"
     done
 done
+install -m 644 "$SRC/share/monet/settings-app/DisplayBrightness.qml" "$DATADIR/plasma/plasmoids/org.monet.quick/contents/ui/DisplayBrightness.qml"
 # The desktop widgets share one glass.
 put 644 "$SRC/share/monet/bar-defaults.js" "$DATADIR/monet/bar-defaults.js"
 put 644 "$SRC/share/monet/panel-notch.js" "$DATADIR/monet/panel-notch.js"
@@ -465,6 +466,9 @@ if [ -d "$SRC/share/monet/agenda-wheels" ]; then
 fi
 tree "$SRC/share/monet/monet_files" "$DATADIR/monet/monet_files"
 tree "$SRC/share/monet/monet_runtime" "$DATADIR/monet/monet_runtime"
+if [ ! -f "$SRC/share/monet/monet_runtime/libmonetdisplaypower.so" ]; then
+    sh "$SRC/display-power/build.sh" "$DATADIR/monet/monet_runtime/libmonetdisplaypower.so"
+fi
 put 644 "$SRC/share/monet/stacks.js" "$DATADIR/monet/stacks.js"
 put 644 "$SRC/share/monet/transfers.js" "$DATADIR/monet/transfers.js"
 cp -r "$SRC/share/monet/winpe" "$DATADIR/monet/winpe"

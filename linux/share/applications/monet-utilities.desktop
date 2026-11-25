@@ -36,6 +36,7 @@ Exec=@LIBEXECDIR@/monet-utilities notes
 
 [Desktop Action Wheel]
 Name=Favorite actions wheel
+Name[sv]=Hjul med favoritåtgärder
 Icon=view-more
 Exec=@LIBEXECDIR@/monet-utilities wheel
 

@@ -51,7 +51,12 @@ def main():
     area = games.WindowArea()
     clock = games.BootClock()
     games.answer(server, helper)
+    sys.path.insert(0, f"{DATADIR}/monet")
+    from monet_runtime.display_power import DisplayPower
+    power = DisplayPower(app)
+    app.aboutToQuit.connect(power.close)
     engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("displayPower", power)
     engine.rootContext().setContextObject(words)
     engine.rootContext().setContextProperty("helper", helper)
     engine.rootContext().setContextProperty("windowActivity", activity)

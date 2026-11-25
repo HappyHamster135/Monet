@@ -1119,18 +1119,19 @@ def brightness_display():
     return (inside + paths + [None])[0]
 
 
-def brightness_state():
+def brightness_info():
     path = brightness_display()
     now = busctl("get-property", SCREENS[0], path, DISPLAY, "Brightness") if path else None
     top = busctl("get-property", SCREENS[0], path, DISPLAY, "MaxBrightness") if path else None
-    if not now or not top:
+    legacy = not now or not top
+    if legacy:
         now = busctl("call", *OLD_BRIGHTNESS, "brightness")
         top = busctl("call", *OLD_BRIGHTNESS, "brightnessMax")
     try:
         now, top = int(now.split()[1]), int(top.split()[1])
     except (AttributeError, IndexError, ValueError):
-        return None
-    return round(now * 100 / top) if top > 0 else None
+        return {"brightness": None, "legacyBrightness": False}
+    return {"brightness": round(now * 100 / top) if top > 0 else None, "legacyBrightness": legacy}
 
 
 def set_brightness(percent):
@@ -10542,7 +10543,7 @@ def status(scope="all"):
     if scope in ("all", "bluetooth"):
         result["bluetooth"] = bluetooth_state()
     if scope in ("all", "display"):
-        result.update(night=kread("kwinrc", "NightColor", "Active", "false") == "true", brightness=brightness_state())
+        result.update(night=kread("kwinrc", "NightColor", "Active", "false") == "true", **brightness_info())
     if scope == "all":
         result.update(quiet_state())
         result["keyboard"] = keyboard_light()

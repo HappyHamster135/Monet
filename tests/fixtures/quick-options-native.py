@@ -23,7 +23,7 @@ from pathlib import Path
 args=sys.argv[1:]
 with open(os.environ['MONET_QUICK_CALLS'],'a') as stream: stream.write(json.dumps(args)+'\\n')
 info=dict(wifi=True,bluetooth=True,night=False,quiet=False,quietUntil=0,quietIndefinite=False,lanConnected=False,
-          brightness=60,volume=50,light='auto',battery=72,plugged=False,charging=False,minutes=90)
+          brightness=60,legacyBrightness=True,volume=50,light='auto',battery=72,plugged=False,charging=False,minutes=90)
 result={}
 if args and args[0]=='status': result=info
 elif args==['outputs']: result=[]
@@ -43,6 +43,7 @@ print(json.dumps(result))
         package = Path(env['XDG_DATA_HOME']) / 'plasma/plasmoids/org.monet.quick'
         shutil.copytree(ROOT / 'linux/share/plasma/plasmoids/org.monet.quick', package)
         ui = package / 'contents/ui'
+        shutil.copyfile(ROOT / 'linux/share/monet/settings-app/DisplayBrightness.qml', ui / 'DisplayBrightness.qml')
         for common in (ROOT / 'linux/share/monet/widgets').glob('*.qml'):
             shutil.copyfile(common, ui / common.name)
         for source in ui.glob('*.qml'):

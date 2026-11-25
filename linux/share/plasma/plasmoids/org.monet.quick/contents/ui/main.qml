@@ -19,6 +19,12 @@ import org.kde.kirigami as Kirigami
 PlasmoidItem {
     id: root
     ClockFormat { id: clockFormat }
+    Loader {
+        id: brightnessBackend
+        active: root.expanded && activity.active && root.optionsPage === ""
+        source: "DisplayBrightness.qml"
+        visible: false
+    }
     PanelFit { helper: root.helper }
     SessionActivity {
         id: activity
@@ -66,7 +72,7 @@ PlasmoidItem {
     property var optionRequests: ({})
     property int optionsRevision: 0
     property int statusOptionsRevision: 0
-    onExpandedChanged: if (!expanded) closeOptions()
+    onExpandedChanged: if (!root.expanded) root.closeOptions()
 
     function askOptions(command, callback) {
         const source = requestSource(command)
@@ -622,7 +628,7 @@ PlasmoidItem {
                 Layout.preferredHeight: sliders.implicitHeight + 28
                 radius: 18
                 color: root.smoke ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.34)
-                visible: typeof root.info.volume === "number" || typeof root.info.brightness === "number"
+                visible: brightnessRows.count > 0 || typeof root.info.volume === "number" || typeof root.info.brightness === "number"
 
                 GlassRim {
                     smoke: root.smoke
@@ -636,8 +642,50 @@ PlasmoidItem {
                     anchors.margins: 14
                     spacing: 10
 
+                    PlasmaComponents.ComboBox {
+                        id: brightnessPicker
+                        objectName: "brightnessPicker"
+                        implicitWidth: Kirigami.Units.gridUnit * 12
+                        implicitHeight: Kirigami.Units.gridUnit * 2
+                        Layout.fillWidth: true
+                        visible: count > 1
+                        Accessible.name: i18n("Display brightness")
+                        model: brightnessBackend.item?.displays ?? null
+                        textRole: "label"
+                        valueRole: "displayName"
+                        property string chosen: ""
+                        onActivated: chosen = currentValue
+                        onCountChanged: Qt.callLater(restoreChoice)
+                        function restoreChoice() {
+                            const found = indexOfValue(chosen)
+                            currentIndex = found >= 0 ? found : count ? 0 : -1
+                        }
+                    }
+                    Repeater {
+                        id: brightnessRows
+                        model: brightnessBackend.item?.displays ?? null
+                        RowLayout {
+                            id: outputBrightness
+                            objectName: "brightness-" + model.displayName
+                            required property var model
+                            spacing: 10
+                            visible: brightnessRows.count === 1 || brightnessPicker.currentValue === model.displayName
+                            Kirigami.Icon { source: "brightness-high"; isMask: true; color: Kirigami.Theme.textColor; Layout.preferredWidth: 18; Layout.preferredHeight: 18 }
+                            PlasmaComponents.Slider {
+                                Layout.fillWidth: true
+                                enabled: outputBrightness.model.maxBrightness > 0
+                                from: 0
+                                to: 100
+                                stepSize: 1
+                                value: enabled ? Math.round(outputBrightness.model.brightness * 100 / outputBrightness.model.maxBrightness) : 0
+                                Accessible.name: i18n("Brightness on %1", outputBrightness.model.label || outputBrightness.model.displayName)
+                                onMoved: brightnessBackend.item?.setBrightness(outputBrightness.model.displayName,
+                                    Math.round(value * outputBrightness.model.maxBrightness / 100))
+                            }
+                        }
+                    }
                     RowLayout {
-                        visible: typeof root.info.brightness === "number"
+                        visible: !brightnessRows.count && (brightnessBackend.status === Loader.Error || root.info.legacyBrightness === true) && typeof root.info.brightness === "number"
                         spacing: 10
                         Kirigami.Icon { source: "brightness-high"; isMask: true; color: Kirigami.Theme.textColor; Layout.preferredWidth: 18; Layout.preferredHeight: 18 }
                         PlasmaComponents.Slider {

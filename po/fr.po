@@ -16961,3 +16961,27 @@ msgstr ""
 #: linux/share/monet/utilities/quick_actions.py:98
 msgid "The desktop could not complete this action."
 msgstr ""
+
+#: linux/share/monet/settings-app/SettingsDisplay.qml:91
+msgid "Display power"
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsDisplay.qml:119
+msgid "The display did not confirm the change."
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsDisplay.qml:124
+msgid "Sleep display"
+msgstr ""
+
+#: linux/share/monet/settings-app/SettingsDisplay.qml:124
+msgid "Wake display"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:649
+msgid "Display brightness"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml:677
+msgid "Brightness on %1"
+msgstr ""
