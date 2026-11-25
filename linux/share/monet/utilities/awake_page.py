@@ -4,7 +4,7 @@ import json
 from PySide6.QtCore import Qt, SLOT, Slot
 from PySide6.QtDBus import QDBusConnection, QDBusServiceWatcher
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QFormLayout,
-                               QLabel, QPushButton, QScrollArea, QVBoxLayout, QWidget)
+                               QLabel, QPushButton, QScrollArea, QSpinBox, QVBoxLayout, QWidget)
 
 from actions import stored, tr
 from close_rules import application_aliases
@@ -43,12 +43,28 @@ class AwakePage(QWidget):
         self.conditions = QWidget()
         options = QVBoxLayout(self.conditions)
         options.setContentsMargins(16, 0, 0, 0)
-        hint = QLabel(tr('Keep this PC awake when any of these conditions applies.'))
-        hint.setWordWrap(True)
-        options.addWidget(hint)
+        self.match = QComboBox()
+        self.match.addItem(tr('Any selected condition'), False)
+        self.match.addItem(tr('All selected conditions'), True)
+        match_row = QFormLayout()
+        match_row.setRowWrapPolicy(QFormLayout.WrapLongRows)
+        match_row.addRow(tr('Match'), self.match)
+        options.addLayout(match_row)
         self.power = QCheckBox(tr('Connected to power'))
         self.external = QCheckBox(tr('An external display is connected'))
         options.addWidget(self.power)
+        self.delay_row = QWidget()
+        delay_form = QFormLayout(self.delay_row)
+        delay_form.setRowWrapPolicy(QFormLayout.WrapLongRows)
+        delay_form.setContentsMargins(16, 0, 0, 0)
+        self.delay = QSpinBox()
+        self.delay.setRange(0, 60)
+        self.delay.setSuffix(tr(' s'))
+        self.delay.setSpecialValueText(tr('No delay'))
+        delay_form.addRow(tr('Wait for power to reconnect'), self.delay)
+        options.addWidget(self.delay_row)
+        self.delay_row.setVisible(False)
+        self.power.toggled.connect(self.delay_row.setVisible)
         options.addWidget(self.external)
         self.pick = QPushButton(tr('Choose applications…'))
         self.pick.clicked.connect(self.choose)
@@ -57,8 +73,13 @@ class AwakePage(QWidget):
         self.app_names.setTextFormat(Qt.PlainText)
         self.app_names.setWordWrap(True)
         options.addWidget(self.app_names)
-        self.display = QCheckBox(tr('Also keep the screen on and delay automatic locking'))
+        self.display = QCheckBox(tr('Also keep the screen on'))
         options.addWidget(self.display)
+        lock_hint = QLabel(tr('This also delays automatic locking.'))
+        lock_hint.setContentsMargins(16, 0, 0, 0)
+        lock_hint.setWordWrap(True)
+        self.display.setAccessibleDescription(lock_hint.text())
+        options.addWidget(lock_hint)
         choices.addWidget(self.conditions)
         choices.addStretch()
         scroll.setWidget(form)
@@ -81,6 +102,9 @@ class AwakePage(QWidget):
         self.conditions.setEnabled(self.enabled_rules.isChecked())
         for key in ('power', 'external', 'display'):
             getattr(self, key).setChecked(rules.get(key) is True)
+        self.match.setCurrentIndex(self.match.findData(rules.get('requireAll') is True))
+        delay = rules.get('powerDelay', 0)
+        self.delay.setValue(delay if type(delay) is int and 0 <= delay <= 60 else 0)
         self.list_apps()
         self.bus.connect(*self.subscription)
         self.refresh()
@@ -117,14 +141,18 @@ class AwakePage(QWidget):
         state = json.loads(text)
         seconds = state.get('duration', 0)
         self.timer.setCurrentIndex(self.timer.findData({1800:'30', 3600:'60', -1:'on'}.get(seconds, 'off')))
-        reasons = [tr('power connected') if key == 'power' else tr('external display') if key == 'external'
-                   else self.app_name(key) for key in state.get('reasons', [])]
+        matches = state.get('reasons', [])
+        labels = {'power': tr('power connected'), 'external': tr('external display')}
+        reasons = [labels.get(key) or self.app_name(key) for key in matches if key != 'power-delay']
         if seconds:
             reasons.insert(0, tr('manual timer'))
         if state.get('error'):
             self.status.setText(tr('Keep awake is unavailable. Apply your choices to retry.'))
-        elif state.get('active') and reasons:
-            self.status.setText(tr('Keeping this PC awake because of {conditions}.').format(conditions=', '.join(reasons)))
+        elif state.get('active'):
+            message = tr('Keeping this PC awake because of {conditions}.').format(conditions=', '.join(reasons)) if reasons else ''
+            if 'power-delay' in matches:
+                message = (message + ' ' + tr('Keeping the power rule active while the charger reconnects.')).strip()
+            self.status.setText(message)
         elif state.get('watching'):
             self.status.setText(tr('Waiting for a matching condition.'))
         else:
@@ -146,7 +174,8 @@ class AwakePage(QWidget):
         if enabled and not (self.external.isChecked() or self.power.isChecked() or self.selected):
             self.status.setText(tr('Choose a condition or turn off automatic rules.'))
             return
-        rules = dict(enabled=enabled, power=self.power.isChecked(), external=self.external.isChecked(),
+        rules = dict(enabled=enabled, requireAll=self.match.currentData(), powerDelay=self.delay.value(),
+                     power=self.power.isChecked(), external=self.external.isChecked(),
                      display=self.display.isChecked(), apps=application_aliases(self.selected))
         self.owner.settings.setValue('awakeRules', json.dumps(rules))
         self.owner.settings.sync()

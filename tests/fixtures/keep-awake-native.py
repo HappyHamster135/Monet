@@ -39,6 +39,7 @@ if sys.argv[1]=='fake':
     (TESTPATH,'''<node><interface name="org.monet.KeepAwakeTest">
     <method name="Snapshot"><arg type="s" direction="out"/></method>
     <method name="DropPower"/><method name="RestorePower"/>
+    <method name="DropUPower"/><method name="RestoreUPower"/>
     <method name="SetBattery"><arg type="b" direction="in"/></method>
     <method name="FailScreen"><arg type="b" direction="in"/></method></interface></node>''')]
     def method(connection,sender,path,interface,method,args,invocation):
@@ -47,7 +48,7 @@ if sys.argv[1]=='fake':
             if method=='Inhibit' and fail_screen[0]:
                 invocation.return_dbus_error('org.monet.Test.Unavailable','Screen failure'); return
             if method=='AddInhibition': assert values[0] in (1,5)
-            counter[0]+=1; cookies[counter[0]]=dict(owner=sender,kind='power' if method=='AddInhibition' else 'screen')
+            counter[0]+=1; cookies[counter[0]]=dict(cookie=counter[0],owner=sender,kind='power' if method=='AddInhibition' else 'screen')
             invocation.return_value(GLib.Variant('(u)',(counter[0],))); return
         if method in ('ReleaseInhibition','UnInhibit'):
             record=cookies.get(values[0]); assert not record or record['owner']==sender
@@ -56,6 +57,8 @@ if sys.argv[1]=='fake':
             invocation.return_value(GLib.Variant('(s)',(json.dumps(list(cookies.values())),))); return
         elif method=='DropPower': dbus('ReleaseName','(s)',(POWER[0],))
         elif method=='RestorePower': dbus('RequestName','(su)',(POWER[0],4))
+        elif method=='DropUPower': dbus('ReleaseName','(s)',('org.freedesktop.UPower',))
+        elif method=='RestoreUPower': dbus('RequestName','(su)',('org.freedesktop.UPower',4))
         elif method=='SetBattery':
             battery[0]=values[0]
             bus.emit_signal(None,'/org/freedesktop/UPower','org.freedesktop.DBus.Properties','PropertiesChanged',
@@ -143,6 +146,41 @@ else:
         assert status()['indefinite'] and len(snapshot())==2
         test_call('SetBattery','(b)',(False,))
         wait(lambda: status()['reasons']==['power'])
+        assert set_duration(0)['ok'] and len(snapshot()) == 1
+        settings.setValue('awakeRules', json.dumps(dict(enabled=True, power=True, powerDelay=2)))
+        settings.sync()
+        call(NAME, PATH, NAME, 'ReloadRules')
+        test_call('SetBattery','(b)',(True,))
+        wait(lambda: status()['reasons'] == ['power-delay'])
+        held = snapshot()
+        assert len(held) == 1
+        test_call('SetBattery','(b)',(False,))
+        wait(lambda: status()['reasons'] == ['power'])
+        time.sleep(2.1)
+        assert snapshot() == held and status()['reasons'] == ['power']
+        test_call('DropUPower')
+        wait(lambda: not snapshot())
+        test_call('SetBattery','(b)',(True,))
+        test_call('RestoreUPower')
+        assert not status()['reasons']
+        test_call('SetBattery','(b)',(False,))
+        wait(lambda: status()['reasons'] == ['power'])
+        test_call('SetBattery','(b)',(True,))
+        wait(lambda: status()['reasons'] == ['power-delay'])
+        # Observe the policy backend alone. The service must expire the hold
+        # even when there is no settings window asking for its status.
+        wait(lambda: not snapshot())
+        assert not status()['reasons']
+        test_call('SetBattery','(b)',(False,))
+        wait(lambda: status()['reasons'] == ['power'])
+        assert set_duration(1)['ok']
+        test_call('SetBattery','(b)',(True,))
+        wait(lambda: status()['reasons'] == ['power-delay'])
+        wait(lambda: len(snapshot()) == 1)
+        assert status()['duration'] == 0 and status()['reasons'] == ['power-delay']
+        wait(lambda: not snapshot())
+        test_call('SetBattery','(b)',(False,))
+        wait(lambda: status()['reasons'] == ['power'])
         settings.setValue('awakeRules',json.dumps(dict(enabled=True,power=True,display=True))); settings.sync()
         call(NAME,PATH,NAME,'ReloadRules')
         assert set_duration(0)['ok'] and len(snapshot())==2 and status()['display']

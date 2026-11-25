@@ -177,6 +177,8 @@ def main():
 
     def method_call(bus, sender, path, interface, method, args, invocation):
         if method == 'GetStatus':
+            if monitor.power_deadline and controller.clock() >= monitor.power_deadline:
+                monitor.update()
             if controller.expired():
                 arm_expiry()
                 GLib.idle_add(quit_if_idle)
@@ -226,24 +228,28 @@ def main():
         nonlocal timer
         if deadline_fd is not None:
             os.read(deadline_fd, 8)
-        if controller.expired():
-            timer = None
-            return quit_if_idle()
-        return True
+        timer = None
+        if monitor.power_deadline and controller.clock() >= monitor.power_deadline:
+            monitor.update()
+        controller.expired()
+        arm_expiry()
+        return quit_if_idle()
 
     def arm_expiry():
         nonlocal timer
         if timer is not None:
             GLib.source_remove(timer)
             timer = None
+        deadline = min((end for end in (controller.end, monitor.power_deadline) if end), default=0.)
         if deadline_fd is not None:
-            os.timerfd_settime(deadline_fd, flags=os.TFD_TIMER_ABSTIME, initial=controller.end)
-        if controller.duration > 0:
+            os.timerfd_settime(deadline_fd, flags=os.TFD_TIMER_ABSTIME, initial=deadline)
+        if deadline:
             if deadline_fd is None:
                 timer = GLib.timeout_add_seconds(1, tick)
             else:
                 timer = GLib.io_add_watch(deadline_fd, GLib.PRIORITY_DEFAULT, GLib.IO_IN, tick)
 
+    monitor.deadline_changed = arm_expiry
     info = Gio.DBusNodeInfo.new_for_xml(XML)
     registration = connection.register_object(PATH, info.interfaces[0], method_call, None, None)
     subscriptions = [connection.signal_subscribe('org.freedesktop.DBus', 'org.freedesktop.DBus',
@@ -270,6 +276,7 @@ def main():
         GLib.timeout_add_seconds(5, quit_if_idle)
         loop.run()
     finally:
+        monitor.deadline_changed = lambda: None
         if timer is not None:
             GLib.source_remove(timer)
         if deadline_fd is not None:

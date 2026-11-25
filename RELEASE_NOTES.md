@@ -4,6 +4,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 ### New in 0.9.8-9: Startup and Settings polish (in development)
 
+- **Keep awake through a dock reconnect.** In Utilities → Keep awake, choose how long to wait for the charger to return. Automatic rules can now require all selected conditions, such as power and an external display.
 - **Search inside the notch.** Click the search button or press Ctrl+K in the open notch. Search apps, files and commands, or press Escape to return to your previous tab. Ctrl+Tab and Ctrl+Shift+Tab cycle through your chosen tabs. Escape backs out of a detail page before closing the notch.
 - **Clipboard in the notch.** Add Clipboard in Customize Home Bar → Edit notch tabs. Search, star and restore copied text, pictures and files.
 - **Convert colors in the Command Bar.** Press Super+R and type `#369 to rgb`. A swatch shows the color and Enter copies the converted value.

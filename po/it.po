@@ -18861,20 +18861,12 @@ msgstr ""
 msgid "Use automatic rules"
 msgstr ""
 
-#: linux/share/monet/utilities/awake_page.py:44
-msgid "Keep this PC awake when any of these conditions applies."
-msgstr ""
-
 #: linux/share/monet/utilities/awake_page.py:47
 msgid "Connected to power"
 msgstr ""
 
 #: linux/share/monet/utilities/awake_page.py:48
 msgid "An external display is connected"
-msgstr ""
-
-#: linux/share/monet/utilities/awake_page.py:58
-msgid "Also keep the screen on and delay automatic locking"
 msgstr ""
 
 #: linux/share/monet/utilities/awake_page.py:101
@@ -19192,4 +19184,36 @@ msgstr ""
 
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:455
 msgid "Open Command Bar"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:47
+msgid "Any selected condition"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:48
+msgid "All selected conditions"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:50
+msgid "Match"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:61
+msgid "No delay"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:62
+msgid "Wait for power to reconnect"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:137
+msgid "Keeping the power rule active while the charger reconnects."
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:76
+msgid "Also keep the screen on"
+msgstr ""
+
+#: linux/share/monet/utilities/awake_page.py:78
+msgid "This also delays automatic locking."
 msgstr ""

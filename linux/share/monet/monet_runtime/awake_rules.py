@@ -27,7 +27,10 @@ def preferences(settings=None):
     apps = value.get('apps', {})
     if not isinstance(apps, dict):
         apps = {}
-    return dict(enabled=value.get('enabled') is True, power=value.get('power') is True,
+    delay = value.get('powerDelay', 0)
+    return dict(requireAll=value.get('requireAll') is True,
+                powerDelay=delay if type(delay) is int and 0 <= delay <= 60 else 0,
+                enabled=value.get('enabled') is True, power=value.get('power') is True,
                 external=value.get('external') is True, display=value.get('display') is True,
                 visible=isinstance(hidden, list) and 'awake' not in hidden,
                 apps={k: aliases for k, aliases in apps.items()
@@ -54,18 +57,27 @@ def external_connected(root=Path('/sys/class/drm')):
     return False
 
 
-def reasons(rules, plugged, external, windows, running=()):
-    hits = []
+def reasons(rules, plugged, external, windows, running=(), waiting_for_power=False):
     if not watching(rules):
-        return hits
-    if rules['power'] and plugged:
-        hits.append('power')
-    if rules['external'] and external:
-        hits.append('external')
-    for desktop, aliases in rules['apps'].items():
-        if desktop in running or desktop.removesuffix('.desktop').lower() in windows or any(alias in windows for alias in aliases):
-            hits.append(desktop)
-    return sorted(hits)
+        return []
+    hits = []
+    require_all = rules.get('requireAll', False)
+    if rules['power']:
+        if plugged or waiting_for_power:
+            hits.append('power' if plugged else 'power-delay')
+        elif require_all:
+            return []
+    if rules['external']:
+        if external:
+            hits.append('external')
+        elif require_all:
+            return []
+    apps = [desktop for desktop, aliases in rules['apps'].items()
+            if desktop in running or desktop.removesuffix('.desktop').lower() in windows
+            or any(alias in windows for alias in aliases)]
+    if require_all and rules['apps'] and not apps:
+        return []
+    return sorted(hits + apps)
 
 
 KWIN = 'org.kde.KWin'
@@ -105,12 +117,24 @@ class RuleMonitor:
         self.power = self.udev = self.rescan = self.poll = self.script = None
         self.kwin_owner = ''
         self.plugged = self.external = False
+        self.unplugged_at = None
+        self.power_deadline = 0.
+        self.deadline_changed = lambda: None
         self.windows = set()
         self.units = AppUnits(backend, Gio, GLib, self.update)
 
     def update(self):
-        self.controller.set_rules(reasons(self.rules, self.plugged, self.external, self.windows, self.units.running),
-                                  self.rules.get('display', False))
+        delay = self.rules.get('powerDelay', 0)
+        deadline = self.unplugged_at + delay if self.unplugged_at is not None and delay else 0.
+        waiting = bool(deadline and self.controller.clock() < deadline)
+        hits = reasons(self.rules, self.plugged, self.external, self.windows, self.units.running, waiting)
+        if 'power-delay' not in hits:
+            self.unplugged_at = None
+            deadline = 0.
+        self.controller.set_rules(hits, self.rules.get('display', False))
+        if self.power_deadline != deadline:
+            self.power_deadline = deadline
+            self.deadline_changed()
 
     def reload(self):
         rules = preferences()
@@ -135,6 +159,7 @@ class RuleMonitor:
                 self.power.disconnect(handler)
         self.power = None
         self.plugged = False
+        self.unplugged_at = None
         if not enable:
             return
         try:
@@ -145,7 +170,13 @@ class RuleMonitor:
             return
         def changed(*_):
             prop = self.power.get_cached_property('OnBattery')
-            self.plugged = bool(self.power.get_name_owner() and prop is not None and prop.unpack() is False)
+            known = bool(self.power.get_name_owner() and prop is not None)
+            plugged = known and prop.unpack() is False
+            if plugged or not known:
+                self.unplugged_at = None
+            elif self.plugged and self.rules.get('powerDelay') and 'power' in self.controller.reasons and self.controller.cookies is not None:
+                self.unplugged_at = self.controller.clock()
+            self.plugged = plugged
             self.update()
         self.power_handlers = [self.power.connect(key, changed) for key in ('g-properties-changed', 'notify::g-name-owner')]
         changed()

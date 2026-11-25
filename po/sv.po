@@ -18926,10 +18926,6 @@ msgstr "Tills du stänger av"
 msgid "Use automatic rules"
 msgstr "Använd automatiska regler"
 
-#: linux/share/monet/utilities/awake_page.py:44
-msgid "Keep this PC awake when any of these conditions applies."
-msgstr "Håll datorn vaken när något av dessa villkor är uppfyllt."
-
 #: linux/share/monet/utilities/awake_page.py:47
 msgid "Connected to power"
 msgstr "Strömmen är ansluten"
@@ -18937,10 +18933,6 @@ msgstr "Strömmen är ansluten"
 #: linux/share/monet/utilities/awake_page.py:48
 msgid "An external display is connected"
 msgstr "En extern skärm är ansluten"
-
-#: linux/share/monet/utilities/awake_page.py:58
-msgid "Also keep the screen on and delay automatic locking"
-msgstr "Låt även skärmen vara på och skjut upp automatisk låsning"
 
 #: linux/share/monet/utilities/awake_page.py:101
 msgid "While open: {apps}"
@@ -19266,3 +19258,35 @@ msgstr ""
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:455
 msgid "Open Command Bar"
 msgstr "Öppna kommandofältet"
+
+#: linux/share/monet/utilities/awake_page.py:47
+msgid "Any selected condition"
+msgstr "Något av de valda villkoren"
+
+#: linux/share/monet/utilities/awake_page.py:48
+msgid "All selected conditions"
+msgstr "Alla valda villkor"
+
+#: linux/share/monet/utilities/awake_page.py:50
+msgid "Match"
+msgstr "Matcha"
+
+#: linux/share/monet/utilities/awake_page.py:61
+msgid "No delay"
+msgstr "Ingen fördröjning"
+
+#: linux/share/monet/utilities/awake_page.py:62
+msgid "Wait for power to reconnect"
+msgstr "Vänta på att nätströmmen återansluts"
+
+#: linux/share/monet/utilities/awake_page.py:137
+msgid "Keeping the power rule active while the charger reconnects."
+msgstr "Strömregeln förblir aktiv medan laddaren återansluts."
+
+#: linux/share/monet/utilities/awake_page.py:76
+msgid "Also keep the screen on"
+msgstr "Låt även skärmen vara på"
+
+#: linux/share/monet/utilities/awake_page.py:78
+msgid "This also delays automatic locking."
+msgstr "Detta skjuter även upp den automatiska låsningen."

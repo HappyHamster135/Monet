@@ -35,6 +35,17 @@ class Rules(unittest.TestCase):
         self.assertEqual(reasons(rules, False, False, {'reader-tools'}, {'Different.desktop'}), [])
         self.assertEqual(reasons(dict(rules, visible=False), True, True, {'reader'}), [])
 
+    def test_all_requires_each_enabled_condition_and_accepts_either_selected_app(self):
+        rules = dict(visible=True, enabled=True, requireAll=True, power=True, external=True,
+                     apps={'Reader.desktop': ['reader'], 'Music.desktop': ['player']})
+        self.assertEqual(reasons(rules, True, True, {'player'}), ['Music.desktop', 'external', 'power'])
+        self.assertEqual(reasons(rules, True, True, set()), [])
+        self.assertEqual(reasons(rules, False, True, {'reader'}), [])
+        self.assertEqual(reasons(rules, False, True, {'reader'}, waiting_for_power=True),
+                         ['Reader.desktop', 'external', 'power-delay'])
+        self.assertEqual(reasons(rules, False, False, {'reader'}, waiting_for_power=True), [])
+        self.assertEqual(reasons(dict(rules, apps={}, external=False), True, False, set()), ['power'])
+
     @unittest.skipUnless(importlib.util.find_spec("PySide6"), "requires Qt preferences")
     def test_preferences_ignore_incomplete_rules_and_preserve_choices_while_hidden(self):
         from PySide6.QtCore import QSettings
@@ -42,6 +53,11 @@ class Rules(unittest.TestCase):
             settings = QSettings(str(Path(directory) / 'user.ini'), QSettings.IniFormat)
             settings.setValue('awakeRules', json.dumps(dict(enabled=True, apps={'/bad.desktop': [], 'ok.desktop': []})))
             self.assertTrue(watching(preferences(settings)))
+            self.assertFalse(preferences(settings)['requireAll'])
+            for delay, expected in [(60, 60), (61, 0), (-2, 0), ('5', 0), (True, 0)]:
+                saved = json.loads(settings.value('awakeRules'))
+                settings.setValue('awakeRules', json.dumps(dict(saved, powerDelay=delay)))
+                self.assertEqual(preferences(settings)['powerDelay'], expected)
             settings.setValue('hidden', '["awake"]')
             saved = preferences(settings)
             self.assertEqual(saved['apps'], {'ok.desktop': []})
