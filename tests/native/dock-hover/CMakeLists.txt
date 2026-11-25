@@ -8,4 +8,4 @@ find_package(Plasma REQUIRED)
 find_package(PlasmaQuick REQUIRED)
 add_executable(dock-hover main.cpp)
 target_link_libraries(dock-hover PRIVATE Qt6::Widgets Qt6::Quick Qt6::Test
-    KF6::ConfigCore KF6::I18n Plasma::Plasma Plasma::PlasmaQuick)
+    KF6::ConfigQml KF6::ConfigCore KF6::I18n Plasma::Plasma Plasma::PlasmaQuick)

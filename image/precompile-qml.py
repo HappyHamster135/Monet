@@ -14,6 +14,9 @@ import re
 import subprocess
 
 
+PANEL_CONFIG = Path('plasma/shells/org.kde.plasma.desktop/contents/configuration')
+
+
 def sources(share):
     roots = [share / 'monet']
     for kind in ('plasmoids', 'wallpapers', 'look-and-feel'):
@@ -23,6 +26,10 @@ def sources(share):
     roots.extend(sorted((share / 'ksysguard/sensorfaces').glob('org.monet.*')))
     files = {path for root in roots for path in root.rglob('*.qml')
              if path.is_file() and not path.is_symlink()}
+    panel = share / PANEL_CONFIG
+    if (panel / 'MonetPanelConfiguration.qml').is_file():
+        files.update(p for p in (panel / 'MonetPanelConfiguration.qml', panel / 'PanelConfiguration.qml')
+                     if p.is_file())
     # Only JavaScript imported by QML belongs to the Qt cache. Monet also ships
     # Node/browser code and dependencies, whose JavaScript uses other runtimes.
     pending = list(files)
@@ -60,6 +67,19 @@ def compile_sources(share, compiler, extra_sources=()):
         finally:
             temporary.unlink(missing_ok=True)
             Path(str(temporary) + ".aotstats").unlink(missing_ok=True)
+    # A running Plasma shell can keep an older versioned editor URL. Its QML
+    # symlink already follows the current page. Its bytecode must follow too.
+    panel = share / PANEL_CONFIG
+    for alias in (panel / 'monet-editor').glob('*/MonetPanelConfiguration.qml'):
+        if not alias.is_symlink() or alias.readlink() != Path('../../MonetPanelConfiguration.qml'):
+            continue
+        cache = alias.with_suffix('.qmlc')
+        temporary = cache.with_suffix('.tmp-link')
+        try:
+            temporary.symlink_to('../../MonetPanelConfiguration.qmlc')
+            temporary.replace(cache)
+        finally:
+            temporary.unlink(missing_ok=True)
     return len(files)
 
 

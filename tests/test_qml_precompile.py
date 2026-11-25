@@ -54,6 +54,23 @@ print(engine.rootObjects()[0].property("value"))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return result.stdout.strip()
 
+    def test_retained_panel_url_reads_the_updated_editor(self):
+        panel = self.share / precompile.PANEL_CONFIG
+        alias = panel / 'monet-editor/previous/MonetPanelConfiguration.qml'
+        alias.parent.mkdir(parents=True)
+        alias.symlink_to('../../MonetPanelConfiguration.qml')
+        self.source = panel / 'MonetPanelConfiguration.qml'
+        self.write('old editor')
+        precompile.compile_sources(self.share, self.compiler)
+        cache = alias.with_suffix('.qmlc')
+        cache.unlink()
+        shutil.copy(self.source.with_suffix('.qmlc'), cache)
+        self.write('new editor')
+        precompile.compile_sources(self.share, self.compiler)
+        self.assertEqual(cache.readlink(), Path('../../MonetPanelConfiguration.qmlc'))
+        self.source = alias
+        self.assertEqual(self.read(), 'new editor')
+
     def test_new_image_cache_overrides_a_previous_profile_cache(self):
         self.write('old image')
         os.utime(self.source, ns=(1_000_000_000, 1_000_000_000))

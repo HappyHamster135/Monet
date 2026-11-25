@@ -9,6 +9,7 @@
 #include <QTest>
 #include <QTimer>
 #include <KConfigGroup>
+#include <KConfigPropertyMap>
 #include <KLocalizedString>
 #include <Plasma/Applet>
 #include <Plasma/Containment>
@@ -98,8 +99,18 @@ int main(int argc, char **argv)
         window.show();
         for (int i = 0; i < 100 && tasks(dock).size() < 3; ++i) QTest::qWait(20);
         QTest::qWait(350); // Initial mirrored/centered layout must settle before pointer targeting.
+        // The applet can load the distribution's pins before the fixture writes
+        // its KConfig group. Update the live map just as its configuration UI does.
+        applet->configuration()->setProperty("launchers", launchers);
+        auto expectedPins = launchers;
+        expectedPins.sort();
+        require(QTest::qWaitFor([&] {
+            QStringList current;
+            for (auto item : tasks(dock)) current.append(launcher(item));
+            current.sort();
+            return current == expectedPins;
+        }, 2000), "Native applet did not load the fixture launchers");
         auto buttons = tasks(dock);
-        require(buttons.size() >= 3, "Native launcher delegates did not appear");
         require(buttons.first()->isVisible(), "Native launcher delegates are not visible");
         require(dock->property("monetMotionEnabled").toBool(), "Dock motion unexpectedly disabled");
         QTest::mouseMove(&window, QPoint(10, 10));
