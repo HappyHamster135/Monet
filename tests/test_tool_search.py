@@ -128,13 +128,17 @@ def fixture():
         run(runner, "shelf")
         assert received == [("notes", ""), ("shelf", "owned-by-first-client"), ("shelf", "")]
         assert "sound" in keys("tools MÎCrophone")
+        assert "rename-shortcut" in keys("tools rename shortcut")
+        run(runner, "rename-shortcut")
+        assert received[-1][0] == "rename-shortcut"
         config.setValue("hidden", json.dumps(["ports"]))
         config.sync()
         assert "ports" not in keys("tools listening ports")
+        accepted = list(received)
         run(runner, "ports")
         run(runner, "../bad")
         run(runner, "shelf", "unknown-action")
-        assert len(received) == 3
+        assert received == accepted
         config.setValue("favorites", "[]")
         config.sync()
         assert keys("tools") == ["customize"]

@@ -62,6 +62,7 @@ ACTIONS = {
     "watch": Action(N_("Watch a window"), "Capture", "video-display"),
     "compress": Action(N_("Compress media"), "Files images pictures photos videos GIF JPEG WebP HEIC PDF PNG MP4 size convert compression batch rename filename pattern presets watermark resize dimensions", "media-optical"),
     "trash": Action(N_("Open Trash"), "Files", "user-trash", ("dolphin", "trash:/")),
+    "rename-shortcut": Action(N_("Rename shortcut in Files"), "Files keyboard shortcut key binding F2 rename selected item file folder", "preferences-desktop-keyboard", ("monet-files", "rename-shortcut")),
     "files": Action(N_("Browse and rename files"), "Files", "system-file-manager", ("dolphin",)),
     "storage": Action(N_("Review storage and unused files"), "Files", "drive-harddisk", ("@monet-settings", "storage")),
     "apps": Action(N_("Manage and uninstall apps"), "Files", "applications-all", ("@monet-games", "--apps")),

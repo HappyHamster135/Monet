@@ -577,6 +577,12 @@ class Window(QMainWindow):
             program = str(self.helpers / program[1:]) if program.startswith("@") else program
             if key in ("clipboard", "mic"):
                 self.worker([program, *args], lambda _: self.issue(action.name))
+            elif key == "rename-shortcut":
+                def failed(_):
+                    if not self.isVisible():
+                        self.Open(["tools"])
+                    self.issue(tr("Could not open the Files shortcut editor."))
+                self.worker([program, *args], lambda _: self.panelDismissed.emit(), failed, finish_on_close=True)
             elif not QProcess.startDetached(program, args)[0]:
                 if not self.isVisible():
                     self.Open(["tools"])
@@ -704,7 +710,7 @@ class Window(QMainWindow):
             else:
                 self.panelDismissed.emit()
             return
-        if key == "camera" and len(args) == 1:
+        if key in ("camera", "rename-shortcut") and len(args) == 1:
             self.run_tool(key)
             return
         if key in DIRECT_ACTIONS:
@@ -970,7 +976,7 @@ def main(argv, helpers):
     if bus.isConnected() and bus.interface().isServiceRegistered(SERVICE).value() and forward():
         return 0
     window = Window(helpers if Path(helpers).is_absolute() else "/usr/libexec",
-                    defer_catalog=args in (["wheel"], ["quick-panel"], ["color"], ["ocr"], ["--pad-service"]))
+                    defer_catalog=args in (["wheel"], ["quick-panel"], ["color"], ["ocr"], ["rename-shortcut"], ["--pad-service"]))
     receiver = Receiver(window)
     if bus.isConnected():
         if not bus.registerObject("/Utilities", SERVICE, receiver, QDBusConnection.ExportAllSlots):

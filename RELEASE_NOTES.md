@@ -10,6 +10,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 - **Search inside the notch.** Click the search button or press Ctrl+K in the open notch. Search apps, files and commands, or press Escape to return to your previous tab. Ctrl+Tab and Ctrl+Shift+Tab cycle through your chosen tabs. Escape backs out of a detail page before closing the notch.
 - **Clipboard in the notch.** Add Clipboard in Customize Home Bar → Edit notch tabs. Search, star and restore copied text, pictures and files.
 - **Convert colors in the Command Bar.** Press Super+R and type `#369 to rgb`. A swatch shows the color and Enter copies the converted value.
+- **Choose the rename shortcut in Files.** Search Utilities for **Rename shortcut in Files** to set a primary or alternate shortcut in the file manager’s own editor.
 - **Save a copied picture in Files.** Right-click inside a folder and choose **Paste Image as PNG…**. You can save the picture even when the clipboard also contains a caption or link.
 - **Keep text and links on the shelf.** Drop a web link or selected text on the notch and drag it into another app later. The shelf in Utilities shares the same entries.
 - **Snap from the Home Bar.** Open an app’s window previews and choose **Snap layouts** beside the window you want to arrange.

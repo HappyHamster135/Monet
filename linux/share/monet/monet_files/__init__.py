@@ -4,6 +4,9 @@ import sys
 
 
 def main(args):
+    if args == ['rename-shortcut']:
+        from .rename_shortcut import main as edit_shortcut
+        return edit_shortcut()
     if args == ['this-pc']:
         from .computer import refresh
         refresh()

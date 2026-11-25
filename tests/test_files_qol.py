@@ -10,7 +10,7 @@ import sys
 import tempfile
 import time
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,6 +30,39 @@ def jobs_module():
     loader = importlib.machinery.SourceFileLoader('file_jobs', str(ROOT / 'linux/libexec/monet-file-jobs'))
     module = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader)); loader.exec_module(module)
     return module
+
+
+@unittest.skipUnless(importlib.util.find_spec("dbus"), "requires Python D-Bus bindings")
+class RenameShortcut(unittest.TestCase):
+    def test_repeat_request_only_raises_the_matching_files_dialog(self):
+        from monet_files import rename_shortcut
+        title = "Configure Keyboard Shortcuts — Dolphin"
+        dialog = Mock()
+        dialog.get_name.return_value = title
+        dialog.get_process_id.return_value = 410
+        runner, kwin = Mock(), Mock()
+        runner.Match.return_value = [("3_other", title), ("0_other", title), ("0_folder", title), ("0_editor", title)]
+        kwin.getWindowInfo.side_effect = [
+            {"pid": 411, "caption": title, "hasTransientParent": True},
+            {"pid": 410, "caption": title, "hasTransientParent": False},
+            {"pid": 410, "caption": title, "hasTransientParent": True},
+        ]
+        with patch.object(rename_shortcut.dbus, "Interface", side_effect=[runner, kwin]):
+            self.assertTrue(rename_shortcut.raise_editor(Mock(), dialog))
+        runner.Run.assert_called_once_with("0_editor", "", timeout=.5)
+
+    def test_filter_uses_localized_label_and_preserves_user_input(self):
+        from monet_files import rename_shortcut
+        field = Mock()
+        field.get_accessible_id.return_value = "editor.searchFilter.KTreeWidgetSearchLine"
+        field.get_text_iface.return_value.get_character_count.side_effect = [0, 3]
+        dialog = Mock()
+        dialog.get_accessible_id.return_value = "QApplication.KShortcutsDialog"
+        dialog.get_child_count.return_value = 1
+        dialog.get_child_at_index.return_value = field
+        for _ in range(2):
+            rename_shortcut.filter_rename(Mock(), dialog, "Byt namn")
+        field.get_editable_text_iface.return_value.set_text_contents.assert_called_once_with("Byt namn")
 
 
 @unittest.skipUnless(QApplication, 'Qt preview runtime')

@@ -19274,3 +19274,11 @@ msgstr ""
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:399
 msgid "Show running timers in the closed notch"
 msgstr ""
+
+#: linux/share/monet/utilities/actions.py:65
+msgid "Rename shortcut in Files"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:581
+msgid "Could not open the Files shortcut editor."
+msgstr ""
