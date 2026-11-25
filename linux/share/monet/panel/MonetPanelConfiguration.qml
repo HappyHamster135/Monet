@@ -43,6 +43,7 @@ Item {
     property bool notchBusy: false
     property var notchOptions: ({})
     property var notchTabs: []
+    property var companionSettings: ({})
     readonly property var tabTitles: ({music:i18nd("monet", "Music"), activity:i18nd("monet", "Activity"),
         time:i18nd("monet", "Time"), calendar:i18nd("monet", "Calendar"), notes:i18nd("monet", "Notes"),
         camera:i18nd("monet", "Camera")})
@@ -205,6 +206,7 @@ Item {
                 editor.notchMode = result.mode
                 editor.notchOptions = result.options || ({})
                 editor.notchTabs = result.tabs || []
+                editor.companionSettings = result.companionSettings || ({})
             } catch (error) {
                 editor.problem = i18nd("monet", "Could not read or change the notch on this screen.")
             }
@@ -400,6 +402,82 @@ Item {
                             text: modelData.label; enabled: !editor.notchBusy
                             checked: !!editor.notchOptions[modelData.key]
                             onClicked: editor.requestNotch(modelData.key + (checked ? "-on" : "-off"))
+                        }
+                    }
+                    C.Button {
+                        id: editCompanion
+                        objectName: "editNotchCompanion"
+                        visible: editor.notchMode !== "off" && !!editor.notchOptions.companion
+                        text: i18nd("monet", "Customize companion")
+                        checkable: true
+                        icon.name: checked ? "arrow-down" : "arrow-right"
+                    }
+                    Loader {
+                        Layout.fillWidth: true
+                        active: editCompanion.visible && editCompanion.checked
+                        visible: active
+                        sourceComponent: ColumnLayout {
+                            RowLayout {
+                                Rectangle {
+                                    Layout.preferredWidth: 74; Layout.preferredHeight: 38
+                                    radius: height / 2; color: "#202323"
+                                    Loader {
+                                        id: companionPreview
+                                        anchors.centerIn: parent; width: 34; height: 34
+                                        source: "file://@DATADIR@/plasma/plasmoids/org.monet.notch/contents/ui/NotchCompanion.qml"
+                                        onLoaded: {
+                                            item.visits = false
+                                            item.styleName = Qt.binding(() => editor.companionSettings.style || "soft")
+                                            item.shapeName = Qt.binding(() => editor.companionSettings.shape || "round")
+                                            item.paletteName = Qt.binding(() => editor.companionSettings.color || "mint")
+                                            item.side = Qt.binding(() => editor.companionSettings.side || "left")
+                                        }
+                                    }
+                                }
+                                C.Button {
+                                    objectName: "greetCompanion"
+                                    text: i18nd("monet", "Say hello")
+                                    enabled: !!companionPreview.item
+                                    onClicked: companionPreview.item.greet()
+                                }
+                            }
+                            Repeater {
+                                model: [
+                                    {key:"style", title:i18nd("monet", "Style"), keys:["soft","robot"], names:[i18nd("monet","Soft"),i18nd("monet","Robot")]},
+                                    {key:"shape", title:i18nd("monet", "Shape"), keys:["round","egg","square","pill"], names:[i18nd("monet","Round"),i18nd("monet","Egg"),i18nd("monet","Rounded square"),i18nd("monet","Capsule")]},
+                                    {key:"color", title:i18nd("monet", "Color"), keys:["mint","pearl","lemon","peach","rose","lilac","sky"], names:[i18nd("monet","Mint"),i18nd("monet","Pearl"),i18nd("monet","Lemon"),i18nd("monet","Peach"),i18nd("monet","Rose"),i18nd("monet","Lilac"),i18nd("monet","Sky")]},
+                                    {key:"side", title:i18nd("monet", "Side"), keys:["left","right"], names:[i18nd("monet","Left"),i18nd("monet","Right")]},
+                                    {key:"visits", title:i18nd("monet", "Visits"), keys:["off","rare","normal","frequent"], names:[i18nd("monet","Off"),i18nd("monet","Rare"),i18nd("monet","Regular"),i18nd("monet","Frequent")]}
+                                ]
+                                RowLayout {
+                                    id: field
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    C.Label { Layout.fillWidth: true; text: field.modelData.title; wrapMode: Text.Wrap }
+                                    C.ComboBox {
+                                        objectName: "companion-" + field.modelData.key
+                                        Accessible.name: field.modelData.title
+                                        enabled: !editor.notchBusy
+                                        model: field.modelData.names
+                                        currentIndex: field.modelData.keys.indexOf(editor.companionSettings[field.modelData.key])
+                                        onActivated: index => editor.requestNotch("companion-" + field.modelData.key + "-" + field.modelData.keys[index])
+                                    }
+                                }
+                            }
+                            C.CheckBox {
+                                objectName: "companion-reactions"
+                                text: i18nd("monet", "React to desktop activity")
+                                enabled: !editor.notchBusy
+                                checked: editor.companionSettings.reactions === "on"
+                                onClicked: editor.requestNotch("companion-reactions-" + (checked ? "on" : "off"))
+                            }
+                            C.CheckBox {
+                                objectName: "companion-rest"
+                                text: i18nd("monet", "Hide between visits and reactions")
+                                enabled: !editor.notchBusy
+                                checked: editor.companionSettings.rest === "hide"
+                                onClicked: editor.requestNotch("companion-rest-" + (checked ? "hide" : "show"))
+                            }
                         }
                     }
                     C.Button {

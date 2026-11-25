@@ -8388,7 +8388,7 @@ print(JSON.stringify({ok:true, available:tasks.length > 0,
 def panel_notch(ident, choice=None):
     modes = {None, "compact", "wide", "off"}
     if not re.fullmatch(r"[0-9]{1,10}", str(ident)) or (choice not in modes and
-            not re.fullmatch(r"(levels|companion|alerts|previews|gestures)-(on|off)|"
+            not re.fullmatch(r"(levels|companion|alerts|previews|gestures)-(on|off)|companion-[a-z]{1,10}-[a-z]{1,12}|"
                              r"tab-(music|activity|time|calendar|notes|camera)-(show|hide|earlier|later)", choice)):
         return {"ok": False}
     try:

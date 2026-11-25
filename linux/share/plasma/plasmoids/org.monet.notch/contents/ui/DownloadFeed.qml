@@ -9,6 +9,10 @@ Folder.FolderModel {
     id: feed
     required property url directory
     property var recent: []
+    property bool watchCompletions: false
+    signal downloadCompleted()
+    property var finishing: new Map()
+    onWatchCompletionsChanged: { finishing?.clear(); queueUpdate() }
     readonly property string latestFinished: recent.find(row => !row.partial)?.name ?? ""
     readonly property bool ready: status === Folder.FolderModel.Ready
     readonly property bool unavailable: !!errorString || status === Folder.FolderModel.Canceled
@@ -23,7 +27,7 @@ Folder.FolderModel {
     previews: false
 
     function collect() {
-        if (unavailable) { recent = []; return }
+        if (unavailable) { finishing?.clear(); recent = []; return }
         if (!ready) return
         const baseUrl = String(directory)
         const prefix = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/"
@@ -51,10 +55,30 @@ Folder.FolderModel {
                        size: data(idx, sizeRole)})
         }
         const emptySize = KCore.Format.formatByteSize(0)
+        if (watchCompletions) {
+            // A rename may arrive as two directory changes. Only greet a file for which
+            // this open view actually saw a partial download; ignore initial listings.
+            const now = Date.now()
+            const names = new Set(rows.filter(row => !row.partial && row.size !== emptySize).map(row => row.name))
+            let completed = false
+            for (const [name, deadline] of finishing) {
+                if (partialNames.has(name)) continue
+                if (deadline && now > deadline) {
+                    finishing.delete(name)
+                } else if (names.has(name)) {
+                    finishing.delete(name)
+                    completed = true
+                } else if (!deadline) {
+                    finishing.set(name, now + 5000)
+                }
+            }
+            for (const name of partialNames) finishing.set(name, 0)
+            if (completed) downloadCompleted()
+        }
         recent = rows.filter(row => row.partial || row.size !== emptySize || !partialNames.has(row.name)).slice(0, 12)
     }
     function queueUpdate() { Qt.callLater(collect) }
-    onDirectoryChanged: recent = []
+    onDirectoryChanged: { finishing?.clear(); recent = [] }
     onStatusChanged: queueUpdate()
     onRowsInserted: queueUpdate()
     onRowsRemoved: queueUpdate()

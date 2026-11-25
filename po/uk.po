@@ -17838,3 +17838,103 @@ msgstr ""
 #: linux/share/monet/utilities/picture_options.py:68
 msgid "Keep original modification date"
 msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:411
+msgid "Customize companion"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:439
+msgid "Say hello"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:446
+msgid "Style"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:446
+msgid "Soft"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:446
+msgid "Robot"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:447
+msgid "Shape"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:447
+msgid "Round"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:447
+msgid "Egg"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:447
+msgid "Rounded square"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:447
+msgid "Capsule"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:448
+msgid "Color"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:448
+msgid "Mint"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:448
+msgid "Pearl"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:448
+msgid "Lemon"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:448
+msgid "Peach"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:448
+msgid "Rose"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:448
+msgid "Lilac"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:448
+msgid "Sky"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:449
+msgid "Side"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:450
+msgid "Visits"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:450
+msgid "Rare"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:450
+msgid "Regular"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:450
+msgid "Frequent"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:469
+msgid "React to desktop activity"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:476
+msgid "Hide between visits and reactions"
+msgstr ""

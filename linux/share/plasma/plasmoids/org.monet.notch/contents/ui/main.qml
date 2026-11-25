@@ -19,6 +19,9 @@ PlasmoidItem {
     readonly property double endTime: countdown.deadline
     readonly property double watchStart: Number(Plasmoid.configuration.watchStart) || 0
     property double now: Date.now()
+    readonly property string playingTrack: playing ? (media?.track || " ") : ""
+    onPlayingTrackChanged: if (playingTrack) react("music")
+    signal react(string kind)
     readonly property var tabNames: ["music", "activity", "time", "calendar", "notes", "camera"]
     readonly property var tabLabels: [i18n("Music"), i18n("Activity"), i18n("Time"), i18n("Calendar"), i18n("Notes"), i18n("Camera")]
     ToolVisibility { id: tools }
@@ -63,6 +66,7 @@ PlasmoidItem {
         id: fileShelf
         shown: root.expanded && root.displayShelf
         dragging: root.draggingShelf
+        onFilesAdded: root.react("shelf")
     }
     function showShelf() {
         if (!offerShelf) return
@@ -162,7 +166,11 @@ PlasmoidItem {
     Loader {
         id: downloadFeed
         active: root.activityOpen && root.offerDownloads && root.downloadAvailable
-        sourceComponent: DownloadFeed { directory: root.downloadFolder }
+        sourceComponent: DownloadFeed {
+            directory: root.downloadFolder
+            watchCompletions: Plasmoid.configuration.companion && Plasmoid.configuration.companionReactions === "on" && power.active
+            onDownloadCompleted: root.react("download")
+        }
     }
     toolTipMainText: i18n("Monet Notch")
     toolTipSubText: preview.item?.title ? [preview.item.sender, preview.item.title].filter(Boolean).join(" · ") : countdown.active ? timerSummary : watch.registered ? i18n("Watching a window") : media?.track || i18n("Music, activity and tools")
@@ -173,9 +181,23 @@ PlasmoidItem {
     }
     SessionActivity {
         id: power
-        observePower: Plasmoid.configuration.alerts || root.expanded
+        readonly property bool companionPower: Plasmoid.configuration.companion && Plasmoid.configuration.companionReactions === "on"
+        property int previousPlug: -1
+        function trackPlug() {
+            const value = batteryState?.plugged
+            const next = active && companionPower && powerReady && batteryState?.available && typeof value === "boolean" ? Number(value) : -1
+            if (previousPlug === 0 && next === 1) root.react("charging")
+            previousPlug = next
+        }
+        onBatteryStateChanged: trackPlug()
+        onCompanionPowerChanged: trackPlug()
+        onActiveChanged: trackPlug()
+        observePower: Plasmoid.configuration.alerts || root.expanded || companionPower
         onBatteriesChanged: if (power.powerReady && Plasmoid.configuration.alerts) root.checkCharge()
-        onPowerReadyChanged: if (power.powerReady && Plasmoid.configuration.alerts) root.checkCharge()
+        onPowerReadyChanged: {
+            trackPlug()
+            if (power.powerReady && Plasmoid.configuration.alerts) root.checkCharge()
+        }
     }
     function checkCharge() {
         let warned = {}
@@ -186,6 +208,7 @@ PlasmoidItem {
             if (device.level > 25) delete warned[key]
             if (device.level <= 20 && !device.charging && !warned[key]) {
                 warned[key] = true
+                root.react("battery")
                 runner.connectSource(helper + " accessory-alert " + hex(device.name || device.kind) + " " + device.level)
             }
         }
@@ -214,8 +237,11 @@ PlasmoidItem {
             root.desiredQuiet = until
             if (!root.quietCommand) root.applyQuiet()
         }
-        onFinished: message => runner.connectSource(root.helper + " ring " + root.hex(i18n("Monet Notch")) + " " + root.hex(message))
-        onActiveChanged: root.message = ""
+        onFinished: message => {
+            root.react("finish")
+            runner.connectSource(root.helper + " ring " + root.hex(i18n("Monet Notch")) + " " + root.hex(message))
+        }
+        onActiveChanged: { root.message = ""; if (active) root.react(settings.focus ? "focus" : "timer") }
     }
     // Apply only the latest request after an in-flight helper returns. A quick
     // pause followed by Resume must never leave the newer session unmuted.
@@ -307,6 +333,7 @@ PlasmoidItem {
         Layout.maximumWidth: Layout.minimumWidth
         Layout.preferredWidth: Layout.minimumWidth
         Accessible.name: root.toolTipMainText + ". " + root.toolTipSubText
+        Accessible.description: companionLoader.item?.showing ? i18n("Notch companion") : ""
         onClicked: root.openPill()
         background: Rectangle {
             radius: height / 2
@@ -321,20 +348,45 @@ PlasmoidItem {
                 source: "MusicLevel.qml"
             }
             Kirigami.Icon {
-                visible: !Plasmoid.configuration.companion || !!preview.item?.noticeId
+                visible: !companionLoader.item?.showing
                 Layout.preferredHeight: 17; Layout.preferredWidth: 17
                 source: shelfDrop.containsDrag ? "folder-add" : preview.item?.noticeId ? "notifications" : countdown.paused ? "media-playback-pause" : countdown.active ? "chronometer" : watch.registered ? "view-visible" : root.media ? "audio-x-generic" : "applications-utilities"
                 color: "#9dd9c9"; isMask: true
             }
-            C.Label {
-                visible: Plasmoid.configuration.companion && !preview.item?.noticeId
-                text: shelfDrop.containsDrag ? "✿" : root.playing ? "♫" : "◕‿◕"
-                color: "#a8ddc8"
-                Accessible.name: i18n("Notch companion")
+            Item {
+                id: leftCompanion
+                visible: companionLoader.parent === this && !!companionLoader.item?.showing
+                Layout.preferredWidth: 22; Layout.preferredHeight: 24
             }
             C.Label {
                 Layout.fillWidth: true; color: "#f6f3e9"; textFormat: Text.PlainText; elide: Text.ElideRight
                 text: shelfDrop.containsDrag ? i18n("Shelf") : preview.item?.title || (countdown.active ? root.timerSummary : watch.registered ? i18n("Watching") : root.media?.track || i18n("Tools"))
+            }
+            Item {
+                id: rightCompanion
+                visible: companionLoader.parent === this && !!companionLoader.item?.showing
+                Layout.preferredWidth: 22; Layout.preferredHeight: 24
+            }
+        }
+        Loader {
+            id: companionLoader
+            parent: Plasmoid.configuration.companionSide === "right" ? rightCompanion : leftCompanion
+            anchors.fill: parent
+            active: Plasmoid.configuration.companion && power.active
+            sourceComponent: NotchCompanion {
+                presented: power.active && !preview.item?.noticeId && !shelfDrop.containsDrag
+                styleName: Plasmoid.configuration.companionStyle
+                shapeName: Plasmoid.configuration.companionShape
+                paletteName: Plasmoid.configuration.companionColor
+                side: Plasmoid.configuration.companionSide
+                frequency: Plasmoid.configuration.companionVisits
+                visits: frequency !== "off"
+                reactions: Plasmoid.configuration.companionReactions === "on"
+                hideIdle: Plasmoid.configuration.companionRest === "hide"
+                Connections {
+                    target: root
+                    function onReact(kind) { companionLoader.item?.react(kind) }
+                }
             }
         }
         NotchGestureSurface { gestures: notchGestures }

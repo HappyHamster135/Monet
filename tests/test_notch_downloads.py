@@ -66,7 +66,14 @@ Item {
     id: viewer
     property url directory
     property var rows: feed.recent
-    Monet.DownloadFeed { id: feed; directory: viewer.directory }
+    property int completions: 0
+    property bool observe: true
+    Monet.DownloadFeed {
+        id: feed
+        directory: viewer.directory
+        watchCompletions: viewer.observe
+        onDownloadCompleted: viewer.completions++
+    }
 }''')
         engine.setInitialProperties({"directory": QUrl.fromLocalFile(str(folder))})
         engine.load(QUrl.fromLocalFile(str(component)))
@@ -81,9 +88,21 @@ Item {
         assert "Empty.txt" in names and "Movie.mkv" not in names, names
         assert [r["name"] for r in rows() if r["partial"]] == [partial.name]
         assert names[-1] == "document 10.txt" and "New folder" not in names, names
+        assert root.property("completions") == 0
         partial.replace(folder / "Movie.mkv")
         until(lambda: any(r["name"] == "Movie.mkv" and not r["partial"] for r in rows()))
         assert not any(r["partial"] for r in rows())
+        assert root.property("completions") == 1
+        (folder / "unrelated.txt").write_text("New file")
+        until(lambda: any(r["name"] == "unrelated.txt" for r in rows()))
+        assert root.property("completions") == 1
+        root.setProperty("observe", False)
+        archive = folder / "archive.zip.crdownload"
+        archive.write_text("Archive")
+        until(lambda: any(r["partial"] for r in rows()))
+        archive.rename(folder / "archive.zip")
+        until(lambda: any(r["name"] == "archive.zip" for r in rows()))
+        assert root.property("completions") == 1
         other = base / "Reconnected #2"
         other.mkdir()
         file = other / "Photo #12 %2F.png"

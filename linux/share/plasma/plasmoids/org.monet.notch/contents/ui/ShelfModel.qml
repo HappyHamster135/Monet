@@ -7,6 +7,8 @@ QtObject {
     required property bool dragging
     property var rows: []
     property string message: ""
+    signal filesAdded()
+    property string pendingAction: ""
     property var queue: []
     property bool needsView: false
     property DBus.DBusPendingReply pending
@@ -42,6 +44,7 @@ QtObject {
         if (pending || !(queue.length || (needsView && shown && !dragging))) return
         const request = queue.shift() || {action: "view"}
         needsView = false
+        pendingAction = request.action
         pending = DBus.SessionBus.asyncCall({service: "org.monet.Utilities", path: "/FileShelf",
             iface: "org.monet.Utilities", member: "Shelf", signature: "(s)", arguments: [JSON.stringify(request)]})
         if (pending.isFinished) finish()
@@ -58,6 +61,8 @@ QtObject {
             else if (JSON.stringify(data.rows) !== JSON.stringify(rows)) rows = data.rows
             if (data.missing) message = i18n("Some files are no longer available.")
         }
+        if (pendingAction === "add" && Array.isArray(data.rows) && !data.missing) filesAdded()
+        pendingAction = ""
         pending = null
         dispatch()
     }

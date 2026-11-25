@@ -17864,3 +17864,103 @@ msgstr "Ta bort kamera- och platsinformation"
 #: linux/share/monet/utilities/picture_options.py:68
 msgid "Keep original modification date"
 msgstr "Behåll ursprungligt ändringsdatum"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:411
+msgid "Customize companion"
+msgstr "Anpassa följeslagaren"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:439
+msgid "Say hello"
+msgstr "Säg hej"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:446
+msgid "Style"
+msgstr "Stil"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:446
+msgid "Soft"
+msgstr "Mjuk"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:446
+msgid "Robot"
+msgstr "Robot"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:447
+msgid "Shape"
+msgstr "Form"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:447
+msgid "Round"
+msgstr "Rund"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:447
+msgid "Egg"
+msgstr "Ägg"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:447
+msgid "Rounded square"
+msgstr "Rundad kvadrat"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:447
+msgid "Capsule"
+msgstr "Kapsel"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:448
+msgid "Color"
+msgstr "Färg"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:448
+msgid "Mint"
+msgstr "Mintgrön"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:448
+msgid "Pearl"
+msgstr "Pärlvit"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:448
+msgid "Lemon"
+msgstr "Citrongul"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:448
+msgid "Peach"
+msgstr "Persikofärgad"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:448
+msgid "Rose"
+msgstr "Rosa"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:448
+msgid "Lilac"
+msgstr "Lila"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:448
+msgid "Sky"
+msgstr "Himmelsblå"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:449
+msgid "Side"
+msgstr "Sida"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:450
+msgid "Visits"
+msgstr "Besök"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:450
+msgid "Rare"
+msgstr "Sällan"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:450
+msgid "Regular"
+msgstr "Regelbundet"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:450
+msgid "Frequent"
+msgstr "Ofta"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:469
+msgid "React to desktop activity"
+msgstr "Reagera på skrivbordsaktivitet"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:476
+msgid "Hide between visits and reactions"
+msgstr "Dölj mellan besök och reaktioner"

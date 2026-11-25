@@ -13,6 +13,18 @@
     var defaultTabs = ["music", "activity", "time", "calendar", "notes"];
     var names = defaultTabs.concat("camera");
     var defaults = {levels:false, companion:false, alerts:true, previews:false, gestures:true};
+    var companionFields = {style:["soft","robot"], shape:["round","egg","square","pill"],
+        color:["mint","pearl","lemon","peach","rose","lilac","sky"], side:["left","right"],
+        visits:["normal","rare","frequent","off"], reactions:["on","off"], rest:["show","hide"]};
+    function companionKey(field) { return "companion" + field[0].toUpperCase() + field.slice(1); }
+    function companionOf(w) {
+        var values = {};
+        Object.keys(companionFields).forEach(function (field) {
+            var choices = companionFields[field], value = w && String(w.readConfig(companionKey(field), choices[0]));
+            values[field] = choices.indexOf(value) >= 0 ? value : choices[0];
+        });
+        return values;
+    }
     var timeDefaults = {timerMinutes:25, focusSessions:1, shortBreakMinutes:5, longBreakMinutes:15, longBreakEvery:4};
     function tabsOf(value) {
         if (value === "none") return [];
@@ -42,7 +54,10 @@
     }
     var setting = /^(levels|companion|alerts|previews|gestures)-(on|off)$/.exec(choice || "");
     var tab = /^tab-(music|activity|time|calendar|notes|camera)-(show|hide|earlier|later)$/.exec(choice || "");
-    if (tab || setting) {
+    var companion = /^companion-([a-z]+)-([a-z]+)$/.exec(choice || "");
+    if (companion && (!Object.prototype.hasOwnProperty.call(companionFields, companion[1]) ||
+            companionFields[companion[1]].indexOf(companion[2]) < 0)) { print(JSON.stringify({ok:false})); return; }
+    if (tab || setting || companion) {
         if (!widget) { print(JSON.stringify({ok:false})); return; }
         widget.currentConfigGroup = ["General"];
         if (tab) {
@@ -55,12 +70,14 @@
                 tabs.splice(next, 0, tabs.splice(index, 1)[0]);
             }
             widget.writeConfig("tabs", tabs.join(",") || "none");
-        } else widget.writeConfig(setting[1], setting[2] === "on");
+        } else if (companion) widget.writeConfig(companionKey(companion[1]), companion[2]);
+        else widget.writeConfig(setting[1], setting[2] === "on");
         widget.reloadConfig();
     } else if (choice === "off" && widget) {
         widget.currentConfigGroup = ["General"];
         removedWidget = widget.id;
         var preferences = optionsOf(widget);
+        preferences.companionSettings = companionOf(widget);
         preferences.tabs = tabsOf(widget.readConfig("tabs", "")).join(",") || "none";
         Object.keys(timeDefaults).forEach(function (key) {
             preferences[key] = Number(widget.readConfig(key, timeDefaults[key]));
@@ -89,6 +106,10 @@
                 Object.keys(defaults).forEach(function (key) {
                     if (typeof previous[key] === "boolean") widget.writeConfig(key, previous[key]);
                 });
+                Object.keys(companionFields).forEach(function (field) {
+                    var value = previous.companionSettings && previous.companionSettings[field];
+                    if (companionFields[field].indexOf(value) >= 0) widget.writeConfig(companionKey(field), value);
+                });
                 Object.keys(timeDefaults).forEach(function (key) {
                     var max = key === "focusSessions" || key === "longBreakEvery" ? 24 : 1440;
                     if (Number.isInteger(previous[key]) && previous[key] >= 1 && previous[key] <= max)
@@ -104,6 +125,7 @@
     var wide = widget && String(widget.readConfig("wide", false)) === "true";
     var visibleTabs = widget ? tabsOf(widget.readConfig("tabs", "")) : [];
     var result = {ok:true, options:optionsOf(widget), tabs:visibleTabs, mode: !widget ? "off" : wide ? "wide" : "compact"};
+    result.companionSettings = companionOf(widget);
     if (removedWidget) result.removedWidget = removedWidget;
     print(JSON.stringify(result));
 })();

@@ -12,6 +12,7 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
   In Calendar → Upcoming appointments, link calendar files or follow subscriptions. The agenda shows recurring meetings, schedule changes and all-day events, including a saved copy when offline.
   In Activity → Watch, pin a window region and get an alert when it changes, settles, or shows a phrase.
   Dropping files on it adds them to the shelf. Music levels and accessory alerts are optional.
+- **Notch companion.** In Customize Home Bar, choose a face, shape, color and side, and preview its greeting. Set how often it appears and whether it reacts to desktop activity.
 - **Compress media.** Drop photos, videos or GIFs into Utilities. Choose a maximum file size for sharing and compare the original and saved sizes. Preview exact picture dimensions, cropping, padding and text or logo watermarks before saving. Use Export options to save a preset or preview batch filenames. Names can include the final dimensions. Web and Social picture presets remove camera and location tags. Batches run one file at a time and keep the originals.
 - **Copy text from your screen.** Drag over text or QR codes to copy them from the app in front of you. Open the tool in Utilities to review and edit what it recognized.
 - **Focus rounds.** Pause or resume a countdown in the notch. In Time → Focus options, choose how many sessions to do and when to take short or long breaks. The next interval starts when you choose it.
