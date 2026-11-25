@@ -133,6 +133,33 @@ class DesktopTools(unittest.TestCase):
             restored_snips = Snippets(conf)
             self.assertEqual(restored_snips.edit.toPlainText(), "A snippet")
 
+    def test_snippet_shortcuts_are_optional_unique_and_removed_with_the_snippet(self):
+        from PySide6.QtCore import QSettings
+        from PySide6.QtWidgets import QInputDialog, QMessageBox
+        from pages import Snippets
+        from snippet_rules import expansion_table
+        with tempfile.TemporaryDirectory() as root:
+            settings = QSettings(str(Path(root, "snippets.ini")), QSettings.IniFormat)
+            settings.setValue("snippets", json.dumps({"Greeting": "Hej 🌷", "Signature": "Ada"}))
+            page = Snippets(settings)
+            self.assertEqual(expansion_table(settings), ({}, set()))
+            with patch.object(QInputDialog, "getText", return_value=("hello", True)):
+                page.edit_shortcut()
+            self.assertEqual(expansion_table(settings)[0], {";hello;": "Hej 🌷"})
+            page.names.setCurrentRow(1)
+            with patch.object(QInputDialog, "getText", side_effect=[("hello", True), ("my sig", True), ("sig", True)]), \
+                    patch.object(QMessageBox, "information") as validation:
+                page.edit_shortcut()
+            self.assertEqual(validation.call_count, 2)
+            page = Snippets(settings)
+            self.assertEqual(expansion_table(settings)[0][";sig;"], "Ada")
+            page.remove()
+            self.assertEqual(expansion_table(settings)[0], {";sig;": "Ada"})
+            with patch.object(QInputDialog, "getText", return_value=("", True)):
+                page.edit_shortcut()
+            self.assertEqual(expansion_table(settings), ({}, set()))
+            self.assertEqual(page.edit.toPlainText(), "Ada")
+
     def test_named_pad_selection_preview_export_and_confirmed_deletion(self):
         from PySide6.QtCore import QSettings
         from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox

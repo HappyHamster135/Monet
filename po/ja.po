@@ -16347,3 +16347,92 @@ msgstr ""
 msgid ""
 "Could not start cleaning. Release the pointer and try again on an unlocked desktop."
 msgstr ""
+
+#: linux/share/monet/utilities/pages.py:180
+msgid "Write a snippet…"
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:185
+msgid "New snippet…"
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:186
+msgid "Set up typing…"
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:202
+msgid "Typing shortcut: %s"
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:203
+msgid "Add typing shortcut…"
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:216 linux/share/monet/utilities/pages.py:223 linux/share/monet/utilities/pages.py:227
+msgid "Typing shortcut"
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:217
+msgid ""
+"Use a word such as hello to expand ;hello; as you type. Leave it empty to remove the shortcut."
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:224
+msgid "Use up to 40 letters, numbers, underscores or hyphens."
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:227
+msgid "Another snippet already uses this shortcut."
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:240
+msgid "Set up snippet typing"
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:242
+msgid ""
+"Choose IBus Wayland in Virtual Keyboard, then enable Monet Text Snippets. You can switch input methods in IBus Preferences."
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:247
+msgid "The input settings could not be opened."
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:248
+msgid "Virtual Keyboard"
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:249
+msgid "IBus Preferences"
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:250
+msgid "Enable Monet Text Snippets"
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:258
+msgid "Connecting to IBus…"
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:263
+msgid "Snippet typing is active."
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:265
+msgid ""
+"IBus is unavailable. Select IBus Wayland in Virtual Keyboard and apply the change."
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:267
+msgid ""
+"IBus has not loaded Monet Text Snippets yet. Reopen IBus Wayland or sign in again."
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:269
+msgid ""
+"Could not activate snippet typing. Check the input methods in IBus Preferences."
+msgstr ""
+
+#: linux/share/monet/utilities/pages.py:284
+msgid "New snippet"
+msgstr ""

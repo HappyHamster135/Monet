@@ -445,6 +445,11 @@ rm -rf "$DATADIR/monet/windows" "$DATADIR/monet/winpe" "$DATADIR/monet/textures"
     "$DATADIR/monet/gtk" "$DATADIR/monet/zen" "$DATADIR/monet/games" "$DATADIR/monet/settings-app" "$DATADIR/monet/passwords" "$DATADIR/monet/store-app"
 install -d "$DATADIR/monet"
 put 644 "$SRC/share/monet/widgets/ScrollInput.qml" "$DATADIR/monet/widgets/ScrollInput.qml"
+# IBus scans its compiled system directory unless given a component search path.
+if [ "$IMAGE" = 0 ] && [ "$DATADIR" != /usr/share ]; then
+    put 755 "$SRC/ibus-component-path" /etc/systemd/user-environment-generators/65-monet-ibus-components
+fi
+put 644 "$SRC/share/ibus/component/monet-snippets.xml" "$DATADIR/ibus/component/monet-snippets.xml"
 install -d "$DATADIR/monet/utilities"
 install -m 644 "$SRC"/share/monet/utilities/*.py "$DATADIR/monet/utilities/"
 install -Dm644 "$SRC/clipboard/ext-data-control-v1.xml" "$DATADIR/monet/utilities/ext-data-control-v1.xml"

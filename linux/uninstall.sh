@@ -229,7 +229,7 @@ rm -rf "$PREFIX/share/plasma/plasmoids/org.monet.games" "$PREFIX/share/plasma/pl
 
 echo "Monet is removed. To also remove Monet Bridge, run \"Uninstall Monet\" in Windows."
 
-rm -f "$PREFIX/share/dbus-1/services/org.monet.QuitOnClose.service" \
+rm -f /etc/systemd/user-environment-generators/65-monet-ibus-components "$PREFIX/share/ibus/component/monet-snippets.xml" "$PREFIX/share/dbus-1/services/org.monet.QuitOnClose.service" \
     "$PREFIX/share/dbus-1/services/org.monet.ToolSearch.service" \
     "$PREFIX/share/krunner/dbusplugins/monet-utilities.desktop"
 

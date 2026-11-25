@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component>
+    <name>org.freedesktop.IBus.MonetSnippets</name>
+    <description>Monet text snippets</description>
+    <exec>/usr/bin/python3 "@DATADIR@/monet/utilities/snippet_input.py"</exec>
+    <version>1.0</version>
+    <author>Monet</author>
+    <license>GPL-3.0-or-later</license>
+    <homepage>https://github.com/HappyHamster135/Monet</homepage>
+    <engines>
+        <engine>
+            <name>monet-snippets</name>
+            <longname>Monet Text Snippets</longname>
+            <description>Expand shortcuts from Monet Utilities while typing</description>
+            <language>und</language>
+            <license>GPL-3.0-or-later</license>
+            <author>Monet</author>
+            <icon>edit-paste</icon>
+            <layout>default</layout>
+            <symbol>;…;</symbol>
+            <setup>@LIBEXECDIR@/monet-utilities snippets</setup>
+        </engine>
+    </engines>
+</component>

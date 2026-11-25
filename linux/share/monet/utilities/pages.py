@@ -2,10 +2,10 @@
 import json
 import os
 from pathlib import Path
-from PySide6.QtCore import QFileSystemWatcher, QMimeData, QStandardPaths, Qt, QUrl
+from PySide6.QtCore import QFileSystemWatcher, QTimer, QMimeData, QProcess, QStandardPaths, Qt, QUrl
 from PySide6.QtGui import QDesktopServices, QDrag, QIcon
-from PySide6.QtWidgets import (QAbstractItemView, QFileDialog, QFileSystemModel, QHBoxLayout, QInputDialog, QLabel,
-    QListWidget, QListWidgetItem, QMenu, QPlainTextEdit, QPushButton, QTreeView, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QDialog, QDialogButtonBox, QFileDialog, QFileSystemModel, QHBoxLayout, QInputDialog, QLabel,
+    QListWidget, QListWidgetItem, QMenu, QMessageBox, QPlainTextEdit, QPushButton, QTreeView, QVBoxLayout, QWidget)
 from actions import stored, tr
 
 def row(layout, *actions):
@@ -170,14 +170,21 @@ class Snippets(QWidget):
         self.current = None
         layout = QVBoxLayout(self)
         self.entries = stored(settings, "snippets", {})
+        self.shortcuts = stored(settings, "snippetShortcuts", {})
         self.names = QListWidget()
         self.names.addItems(list(self.entries))
         layout.addWidget(self.names, 1)
         self.names.currentTextChanged.connect(self.select)
         self.edit = QPlainTextEdit()
-        self.edit.setPlaceholderText("Write a snippet…")
+        self.edit.setInputMethodHints(Qt.ImhSensitiveData)
+        self.edit.setPlaceholderText(tr("Write a snippet…"))
         layout.addWidget(self.edit, 2)
-        row(layout, ("New snippet…", self.add), ("Copy", self.copy), ("Remove", self.remove))
+        self.shortcut = QPushButton()
+        self.shortcut.clicked.connect(self.edit_shortcut)
+        layout.addWidget(self.shortcut)
+        row(layout, (tr("New snippet…"), self.add), (tr("Copy"), self.copy), (tr("Remove"), self.remove),
+            (tr("Set up typing…"), self.setup))
+        self.select("")
         self.names.setCurrentRow(0)
         self.edit.setEnabled(self.current is not None)
         self.edit.textChanged.connect(self.save)
@@ -190,12 +197,92 @@ class Snippets(QWidget):
     def select(self, name):
         self.current = name or None
         self.edit.setEnabled(bool(name))
+        self.shortcut.setEnabled(bool(name))
+        trigger = self.shortcuts.get(name)
+        self.shortcut.setText(tr("Typing shortcut: %s") % (";" + trigger + ";")
+                              if isinstance(trigger, str) and trigger else tr("Add typing shortcut…"))
         self.edit.blockSignals(True)
         self.edit.setPlainText(self.entries.get(name, ""))
         self.edit.blockSignals(False)
 
+    def edit_shortcut(self):
+        from snippet_rules import valid_shortcut
+        name = self.current
+        if not name:
+            return
+        current = self.shortcuts.get(name, "")
+        while True:
+            choice, ok = QInputDialog.getText(
+                self, tr("Typing shortcut"),
+                tr("Use a word such as hello to expand ;hello; as you type. Leave it empty to remove the shortcut."),
+                text=current, inputMethodHints=Qt.ImhSensitiveData)
+            if not ok:
+                return
+            current = choice.strip()
+            if current and not valid_shortcut(current):
+                QMessageBox.information(self, tr("Typing shortcut"),
+                                        tr("Use up to 40 letters, numbers, underscores or hyphens."))
+                continue
+            if current and any(key != name and value == current for key, value in self.shortcuts.items()):
+                QMessageBox.information(self, tr("Typing shortcut"), tr("Another snippet already uses this shortcut."))
+                continue
+            if current:
+                self.shortcuts[name] = current
+            else:
+                self.shortcuts.pop(name, None)
+            self.settings.setValue("snippetShortcuts", json.dumps(self.shortcuts))
+            self.settings.sync()
+            self.select(name)
+            return
+
+    def setup(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle(tr("Set up snippet typing"))
+        layout = QVBoxLayout(dialog)
+        help_text = QLabel(tr("Choose IBus Wayland in Virtual Keyboard, then enable Monet Text Snippets. You can switch input methods in IBus Preferences."))
+        help_text.setWordWrap(True)
+        layout.addWidget(help_text)
+        def launch(command, args):
+            if not QProcess.startDetached(command, args)[0]:
+                QMessageBox.information(dialog, dialog.windowTitle(), tr("The input settings could not be opened."))
+        row(layout, (tr("Virtual Keyboard"), lambda: launch("systemsettings", ["kcm_virtualkeyboard"])),
+            (tr("IBus Preferences"), lambda: launch("ibus-setup", [])))
+        enable = QPushButton(tr("Enable Monet Text Snippets"))
+        layout.addWidget(enable)
+        feedback = QLabel()
+        feedback.setWordWrap(True)
+        layout.addWidget(feedback)
+        process = QProcess(dialog)
+        def activate():
+            enable.setEnabled(False)
+            feedback.setText(tr("Connecting to IBus…"))
+            process.start("/usr/bin/python3", [str(Path(__file__).with_name("snippet_input.py")), "--activate"])
+        def result(code, status):
+            enable.setEnabled(True)
+            if status == QProcess.NormalExit and code == 0:
+                feedback.setText(tr("Snippet typing is active."))
+            elif code == 1:
+                feedback.setText(tr("IBus is unavailable. Select IBus Wayland in Virtual Keyboard and apply the change."))
+            elif code == 2:
+                feedback.setText(tr("IBus has not loaded Monet Text Snippets yet. Reopen IBus Wayland or sign in again."))
+            else:
+                feedback.setText(tr("Could not activate snippet typing. Check the input methods in IBus Preferences."))
+        deadline = QTimer(dialog)
+        deadline.setSingleShot(True)
+        deadline.timeout.connect(process.kill)
+        process.started.connect(lambda: deadline.start(10000))
+        process.finished.connect(lambda *_: deadline.stop())
+        process.finished.connect(result)
+        process.errorOccurred.connect(lambda error: result(-1, QProcess.CrashExit) if error == QProcess.FailedToStart else None)
+        enable.clicked.connect(activate)
+        buttons = QDialogButtonBox(QDialogButtonBox.Close)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        dialog.exec()
+        dialog.deleteLater()
+
     def add(self):
-        name, ok = QInputDialog.getText(self, "New snippet", "Name")
+        name, ok = QInputDialog.getText(self, tr("New snippet"), tr("Name"), inputMethodHints=Qt.ImhSensitiveData)
         name = name.strip()
         if ok and name:
             if name not in self.entries:
@@ -213,5 +300,7 @@ class Snippets(QWidget):
     def remove(self):
         if self.current:
             del self.entries[self.current]
+            self.shortcuts.pop(self.current, None)
+            self.settings.setValue("snippetShortcuts", json.dumps(self.shortcuts))
             self.names.takeItem(self.names.currentRow())
             self.settings.setValue("snippets", json.dumps(self.entries))

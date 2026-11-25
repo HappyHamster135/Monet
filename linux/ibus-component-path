@@ -1,0 +1,8 @@
+#!/bin/sh
+# The portable installation lives outside the directory compiled into IBus.
+components='@DATADIR@/ibus/component'
+search_path=${IBUS_COMPONENT_PATH:-/usr/share/ibus/component}
+case ":$search_path:" in
+    *":$components:"*) exit 0 ;;
+esac
+printf 'IBUS_COMPONENT_PATH=%s:%s\n' "$search_path" "$components"
