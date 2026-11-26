@@ -28,7 +28,7 @@ PlasmoidItem {
     readonly property bool motion: Kirigami.Units.longDuration > 1
     readonly property bool editing: !!Plasmoid.containment?.corona.editMode
     readonly property bool ownEdge: Plasmoid.location === PlasmaCore.Types.TopEdge && Plasmoid.containment?.applets.length === 1
-    readonly property int surfaceWidth: Math.min(620, Math.max(1, (root.Screen.width || 648) - 16))
+    readonly property int surfaceWidth: Math.min(464, Math.max(1, (root.Screen.width || 648) - 16))
     readonly property bool railSpace: ownEdge && root.Screen.width >= surfaceWidth + 112
     readonly property int restWidth: Plasmoid.configuration.wide ? 244 : 178
     readonly property var panelSurface: pages
@@ -45,10 +45,13 @@ PlasmoidItem {
         folding = true
         pages.animateTo(0)
     }
+    function preparePage(key) {
+        if (islandOpen && (key === "music" || key === "time"))
+            body.anticipated = key === "music" ? musicPage : timerPage
+    }
     function choose(key) {
         overview = false
         utilityPage = ""
-        showFullTime = false
         viewingShelf = false; viewingWatch = false; viewingDownloads = false; viewingAwake = false
         viewingAgenda = false; requestedNotice = 0; musicView = 0
         if (["controls","system","together","captures"].includes(key)) utilityPage = key
@@ -56,6 +59,7 @@ PlasmoidItem {
         else if (key === "downloads") { tab = 1; viewingDownloads = true }
         else if (key === "mixer") { tab = 0; musicView = 3 }
         else tab = tabNames.indexOf(key)
+        body.resolve()
     }
     readonly property var sections: {
         let rows = []
@@ -100,9 +104,6 @@ PlasmoidItem {
     readonly property bool offerAgents: tools.offers("agents")
     readonly property bool offerAwake: tools.offers("awake") && visibleTabs.includes(2)
     property bool viewingAwake: false
-    property bool showFullTime: false
-    readonly property bool timerFace: tab === 2 && !overview && !utilityPage && !viewingAwake &&
-        !displayShelf && !showingWatch && !showFullTime && !message && (!!countdown.deadline || countdown.paused)
     readonly property bool timerStrip: visibleTabs.includes(2) && (!!countdown.completion || countdown.waiting
         || (Plasmoid.configuration.countdown && countdown.active))
     readonly property bool timePageVisible: islandOpen && !overview && !utilityPage && !searching && !displayShelf && !showingWatch && !viewingAwake && tab === 2
@@ -378,7 +379,7 @@ PlasmoidItem {
     onIslandOpenChanged: {
         if (!islandOpen) {
             folding = false; pinned = false; pages.resetReveal(); overview = true; utilityPage = ""
-            viewingAwake = false; showFullTime = false; searching = false; requestedNotice = 0; viewingDownloads = false; viewingShelf = false
+            viewingAwake = false; searching = false; requestedNotice = 0; viewingDownloads = false; viewingShelf = false
             return
         }
         if (overview) prepareSections = true
@@ -465,6 +466,7 @@ PlasmoidItem {
             reveal: pages.revealProgress
             entries: [{key: "sections", label: i18n("Sections"), icon: "view-grid"}].concat(
                 root.visibleTabs.includes(2) ? [{key: "time", label: i18n("Time"), icon: "chronometer"}] : [])
+            onPreviewRequested: key => root.preparePage(key)
             onSelected: key => { if (key === "sections") pages.showSections(); else root.choose(key) }
         }
         IslandRail {
@@ -673,10 +675,13 @@ PlasmoidItem {
         mainItem: FocusScope {
         id: pages
         width: root.surfaceWidth
+        // Common pages share a native surface. Moving between tiles only changes its contents.
+        readonly property int homeHeight: Math.max(272, 52 + IslandLayout.gridHeight(root.sections.length, width - 32))
+        readonly property bool detailHeight: root.searching || (!root.overview &&
+            (root.displayShelf || root.showingWatch || root.viewingAwake || root.viewingDownloads ||
+             (!root.utilityPage && (root.tab === 1 || root.tab >= 3 || root.musicView > 0))))
         readonly property int wantedHeight: Math.min(Math.max(1, (root.Screen.height || 800) - 48),
-            root.searching ? 350 : root.overview ? 44 + IslandLayout.gridHeight(root.sections.length, width - 32) :
-            root.utilityPage === "together" ? (width >= 370 ? 178 : 320) : root.utilityPage === "system" ? 234 :
-            root.timerFace ? 106 : root.utilityPage === "controls" ? 218 : !root.utilityPage && !root.displayShelf && root.tab === 0 && root.musicView === 0 ? 206 : 344)
+            Math.max(homeHeight, detailHeight || (root.utilityPage === "together" && width < 370) ? 344 : 0))
         property real visualHeight: 1
         property real reservedHeight: 0
         height: Math.max(wantedHeight, reservedHeight)
@@ -726,7 +731,7 @@ PlasmoidItem {
             resizePage()
             if (root.motion) awaitingFrame = true
             else revealProgress = 1
-            Qt.callLater(() => { if (root.overview) sectionTiles.item?.focusFirst(); else sectionsButton.forceActiveFocus(Qt.OtherFocusReason) })
+            Qt.callLater(() => { if (root.overview) body.item?.focusFirst?.(); else sectionsButton.forceActiveFocus(Qt.OtherFocusReason) })
         }
         Connections {
             target: popup
@@ -781,7 +786,7 @@ PlasmoidItem {
                         transform: Translate { y: -5 * (1 - pages.revealProgress) }
                         spacing: 3
                         RowLayout {
-                            Layout.fillWidth: true
+                            Layout.fillWidth: true; Layout.preferredHeight: 32; Layout.maximumHeight: 32
                             IslandButton { id: sectionsButton; plain: true; icon.name: root.overview ? "window-close" : "view-grid"
                                 text: root.overview ? i18n("Close") : i18n("Sections")
                                 onClicked: { if (root.overview) root.collapse(); else pages.showSections() } }
@@ -797,35 +802,28 @@ PlasmoidItem {
                             IslandButton { plain: true; icon.name: "pin-symbolic"; text: root.pinned ? i18n("Unpin") : i18n("Keep open"); checked: root.pinned; onClicked: root.pinned = !root.pinned }
                             IslandButton { plain: true; icon.name: "application-menu"; text: i18n("Utilities"); onClicked: root.openTool("tools") }
                         }
-                        Loader {
-                            id: sectionTiles
-                            Layout.fillWidth: true; Layout.fillHeight: true
-                            visible: root.overview && !root.searching
-                            active: root.prepareSections
-                            asynchronous: true
-                            sourceComponent: sectionPage
-                            onLoaded: {
-                                if (visible && popup.active) item.focusFirst()
-                            }
-                        }
-                        Loader {
+                        IslandPages {
                             id: body
                             Layout.fillWidth: true; Layout.fillHeight: true
-                            visible: !root.overview && !root.searching
-                            active: root.islandOpen && visible
-                            asynchronous: true
-                            sourceComponent: root.utilityPage === "controls" ? controlsPage
+                            presented: root.islandOpen && !root.searching
+                            duration: root.motion && pages.revealProgress === 1 ? Kirigami.Units.shortDuration : 0
+                            prewarm: root.prepareSections ? sectionPage : null
+                            components: [sectionPage, musicPage, activityPage, timerPage, calendarPage, padPage,
+                                clipboardPage, cameraPage, shelfPage, downloadsPage, watchPage, agendaPage,
+                                awakePage, mixerPage, controlsPage, systemPage, capturesPage, pairedPage]
+                            reusable: [musicPage, timerPage]
+                            privatePages: [clipboardPage, cameraPage, padPage, activityPage, watchPage]
+                            requested: root.overview ? sectionPage : root.utilityPage === "controls" ? controlsPage
                                 : root.utilityPage === "system" ? systemPage : root.utilityPage === "captures" ? capturesPage : root.utilityPage === "together" ? pairedPage :
                                 root.displayShelf ? shelfPage : root.showingWatch ? watchPage
-                                : root.timerFace ? timerFacePage : root.tab === 2 && root.viewingAwake && awakeModel.item ? awakePage
+                                : root.tab === 2 && root.viewingAwake && awakeModel.item ? awakePage
                                 : root.tab === 1 && root.viewingDownloads ? downloadsPage
                                 : root.tab === 3 && root.viewingAgenda ? agendaPage
                                 : root.tab === 0 && root.musicView === 3 ? mixerPage
                                 : root.tab === 6 ? clipboardPage : root.tab === 5 ? cameraPage
                                 : root.tab === 4 ? (padController.item ? padPage : null)
                                 : [musicPage, activityPage, timerPage, calendarPage][root.tab] ?? null
-                            onLoaded: if (root.motion && pages.revealProgress === 1) pageEntry.restart()
-                            NumberAnimation on opacity { id: pageEntry; running: false; from: 0.55; to: 1; duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic }
+                            onPageShown: if (root.overview && popup.active) item?.focusFirst?.()
                         }
                     }
                 }
@@ -834,7 +832,8 @@ PlasmoidItem {
         function showSections() {
             root.overview = true
             root.searching = false
-            Qt.callLater(() => sectionTiles.item?.focusFirst())
+            body.resolve()
+            Qt.callLater(() => body.item?.focusFirst?.())
         }
         function cycle(direction) {
             if (!root.visibleTabs.length) return
@@ -912,7 +911,14 @@ PlasmoidItem {
         }
         }
     }
-    Component { id: sectionPage; IslandSections { entries: root.sections; onSelected: key => root.choose(key) } }
+    Component {
+        id: sectionPage
+        IslandSections {
+            entries: root.sections
+            onSelected: key => root.choose(key)
+            onPreviewRequested: key => root.preparePage(key)
+        }
+    }
     Component {
         id: capturesPage
         IslandCaptures {
@@ -959,11 +965,15 @@ PlasmoidItem {
                         Text { text: i18n("Timer"); font.weight: Font.Medium; color: "#ffb35b"; Layout.fillWidth: true; elide: Text.ElideRight }
                         IslandButton { text: i18n("Time"); icon.name: "go-next-symbolic"; implicitHeight: 25; implicitWidth: 25; onClicked: root.choose("time") }
                     }
-                    Text { text: root.timerSummary; color: "#ffb35b"; font.pixelSize: 30; Layout.fillWidth: true; elide: Text.ElideRight }
+                    Text {
+                        text: root.timerSummary; color: "#ffad53"; font.pixelSize: 43; font.weight: Font.Light
+                        font.features: ({"tnum": 1}); fontSizeMode: Text.HorizontalFit; minimumPixelSize: 17
+                        Layout.fillWidth: true; Layout.minimumWidth: 0; horizontalAlignment: Text.AlignRight
+                    }
                     Item { Layout.fillHeight: true }
-                    IslandButton { visible: countdown.active; text: countdown.paused ? i18n("Resume timer") : i18n("Pause timer")
-                        icon.name: countdown.paused ? "media-playback-start" : "media-playback-pause"; tint: "#ffb35b"
-                        onClicked: countdown.paused ? countdown.resume(Date.now()) : countdown.pause(Date.now()) }
+                    IslandButton { visible: countdown.active; text: countdown.waiting ? (countdown.onBreak ? i18n("Start break") : i18n("Start next session")) : countdown.paused ? i18n("Resume timer") : i18n("Pause timer")
+                        icon.name: countdown.deadline ? "media-playback-pause" : "media-playback-start"; tint: "#ffb35b"; base: "#4a3220"
+                        onClicked: !countdown.deadline ? countdown.resume(Date.now()) : countdown.pause(Date.now()) }
                 }
             }
         }
@@ -1053,7 +1063,7 @@ PlasmoidItem {
     Component {
         id: musicPage
         Music {
-            player: root.media; sources: players; playing: root.playing; view: root.musicView
+            player: visible ? root.media : null; sources: players; playing: visible && root.playing; view: visible ? root.musicView : 0
             playback: queuePlayback.item
             formatDuration: root.duration
             gestures: notchGestures
@@ -1156,31 +1166,6 @@ PlasmoidItem {
                     }
                 }
             }
-        }
-    }
-    Component {
-        id: timerFacePage
-        RowLayout {
-            spacing: 8
-            IslandButton {
-                text: countdown.paused ? i18n("Resume timer") : i18n("Pause timer")
-                icon.name: countdown.paused ? "media-playback-start" : "media-playback-pause"
-                tint: "#ffb063"; base: "#3c2b1f"
-                implicitWidth: 38; implicitHeight: 38
-                onClicked: countdown.paused ? countdown.resume(Date.now()) : countdown.pause(Date.now())
-            }
-            IslandButton { text: i18n("Cancel"); icon.name: "window-close"; onClicked: countdown.cancel() }
-            Item { Layout.fillWidth: true }
-            Column {
-                Layout.maximumWidth: parent.width - 150
-                Text {
-                    anchors.right: parent.right; color: "#f7b575"; font.pixelSize: 12
-                    text: countdown.onBreak ? (countdown.longBreak ? i18n("Long break") : i18n("Short break"))
-                        : Plasmoid.configuration.focus ? i18n("Focus") : i18n("Timer")
-                }
-                Text { text: root.timerSummary; color: "#ffac58"; font.pixelSize: 32; font.weight: Font.Light }
-            }
-            IslandButton { plain: true; text: i18n("Time"); icon.name: "go-next-symbolic"; onClicked: root.showFullTime = true }
         }
     }
     Component {

@@ -15,13 +15,13 @@ C.ScrollView {
     Brightness.ScreenBrightnessControl { id: display; isSilent: true }
     ColumnLayout {
         width: controls.availableWidth
-        spacing: 10
+        spacing: 12
         component Level: ColumnLayout {
             id: row
             required property string title
             required property int percent
             signal adjusted(int percent)
-            spacing: 1
+            spacing: 3
             RowLayout {
                 Text { text: row.title; textFormat: Text.PlainText; color: "white"; elide: Text.ElideRight; Layout.fillWidth: true; font.weight: Font.Medium }
                 Text { text: Math.round(slider.pressed ? slider.value : row.percent) + "%"; color: "#c2c2c7" }
@@ -31,6 +31,23 @@ C.ScrollView {
                 from: 0; to: 100; stepSize: 1; Layout.fillWidth: true
                 Accessible.name: row.title
                 value: row.percent
+                implicitHeight: 30; leftPadding: 0; rightPadding: 0
+                background: Rectangle {
+                    x: slider.leftPadding; y: (slider.height - height) / 2
+                    width: slider.availableWidth; height: 16; radius: 8
+                    color: "#37373b"; border.width: slider.visualFocus ? 1 : 0; border.color: "#a3caff"
+                    Rectangle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        x: slider.mirrored ? parent.width - width : 0
+                        width: slider.position * parent.width; height: parent.height; radius: parent.radius
+                        color: slider.pressed ? "#ffffff" : "#dedee3"
+                    }
+                }
+                handle: Rectangle {
+                    x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - width)
+                    y: (slider.height - height) / 2; implicitHeight: 16; implicitWidth: 16; radius: 8
+                    color: "#ffffff"
+                }
                 onMoved: row.adjusted(Math.round(value))
             }
         }
@@ -55,7 +72,9 @@ C.ScrollView {
             }
         }
         RowLayout {
+            Layout.fillWidth: true; spacing: 7
             IslandButton {
+                Layout.fillWidth: true; Layout.preferredWidth: 1
                 visible: !!controls.output; tile: true
                 text: controls.output?.muted ? i18n("Unmute") : i18n("Mute")
                 icon.name: controls.output?.muted ? "audio-volume-muted" : "audio-volume-high"
@@ -63,6 +82,7 @@ C.ScrollView {
                 onClicked: controls.output.muted = !controls.output.muted
             }
             IslandButton {
+                Layout.fillWidth: true; Layout.preferredWidth: 1
                 visible: !!controls.input; tile: true
                 text: i18n("Microphone"); icon.name: controls.input?.muted ? "microphone-sensitivity-muted" : "audio-input-microphone"
                 Accessible.description: controls.input?.muted ? i18n("Muted") : i18n("On")

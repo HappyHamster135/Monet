@@ -9,7 +9,7 @@ C.AbstractButton {
     property bool plain: false
     property bool caption: false
     property color tint: "#f5f5f7"
-    property color base: plain ? "transparent" : tile ? "#18ffffff" : "#29292c"
+    property color base: plain ? "transparent" : tile ? "#12ffffff" : "#29292c"
     property bool prominent: false
     implicitWidth: tile ? 95 : caption ? tag.implicitWidth + 25 : 32
     implicitHeight: tile ? IslandLayout.tileHeight : plain ? 29 : 32
@@ -34,10 +34,10 @@ C.AbstractButton {
         Column {
             width: parent.width - 6
             anchors.centerIn: parent
-            spacing: 2
+            spacing: button.tile ? 4 : 2
             K.Icon {
                 anchors.horizontalCenter: parent.horizontalCenter
-                width: button.tile ? 18 : 15; height: width
+                width: button.tile ? 21 : 15; height: width
                 visible: !button.caption
                 source: button.icon.name; isMask: true
                 color: !button.enabled ? "#77777e" : button.checked || button.prominent ? "#161618" : button.tint
@@ -45,7 +45,7 @@ C.AbstractButton {
             Text {
                 id: tag
                 width: parent.width
-                visible: button.tile || button.caption; text: button.text; color: button.checked ? "#161618" : "#f5f5f7"
+                visible: button.tile || button.caption; text: button.text; color: button.checked || button.prominent ? "#161618" : button.tile ? "#f5f5f7" : button.tint
                 textFormat: Text.PlainText; font.pixelSize: 12; font.weight: Font.Medium
                 horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight
                 wrapMode: button.tile ? Text.Wrap : Text.NoWrap; maximumLineCount: button.tile ? 2 : 1

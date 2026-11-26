@@ -11,6 +11,7 @@ PlasmaCore.Dialog {
     required property real reveal
     required property bool presented
     signal selected(string key)
+    signal previewRequested(string key)
     type: PlasmaCore.Dialog.Dock
     flags: Qt.FramelessWindowHint | Qt.WindowDoesNotAcceptFocus | Qt.WindowStaysOnTopHint
     location: PlasmaCore.Types.TopEdge
@@ -29,6 +30,7 @@ PlasmaCore.Dialog {
                 width: 33; height: 33
                 base: "#141416"; icon.name: modelData.icon; text: modelData.label
                 objectName: "island-rail-" + modelData.key
+                onHoveredChanged: if (hovered && enabled) rail.previewRequested(modelData.key)
                 onClicked: rail.selected(modelData.key)
             }
         }

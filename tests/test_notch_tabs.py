@@ -40,10 +40,10 @@ Monet.IslandSections {
             QTest.keyClick(window, Qt.Key_Right)
             QTest.keyClick(window, Qt.Key_Return)
             self.assertEqual(grid.property("chosen"), "time")
-            # Six columns fit the wide panel; narrow panels keep every row keyboard-accessible.
-            grid.setWidth(590)
+            # Four columns fit the expanded panel; narrow panels keep every row keyboard-accessible.
+            grid.setWidth(432)
             app.processEvents()
-            self.assertEqual(grid.property("columns"), 6)
+            self.assertEqual(grid.property("columns"), 4)
             grid.setWidth(282)
             app.processEvents()
             self.assertEqual(grid.property("columns"), 3)
@@ -56,6 +56,63 @@ Monet.IslandSections {
             grid.focusFirst()
             QTest.keyClick(window, Qt.Key_Space)
             self.assertEqual(grid.property("chosen"), "activity")
+
+    def test_navigation_reuses_visited_pages_and_releases_private_content(self):
+        app = QGuiApplication.instance() or QGuiApplication([])
+        with tempfile.TemporaryDirectory() as folder:
+            scene = Path(folder) / "Deck.qml"
+            scene.write_text('''import QtQuick
+import "@MONET_UI@" as Monet
+Item {
+    id: root; width: 350; height: 190
+    function i18n(text) { return text }
+    property int tab: 0
+    property bool opened: true
+    property int clocks: 0
+    property int cameras: 0
+    property string shown: deck.item?.objectName ?? ""
+    Component { id: grid; Item { objectName: "grid" } }
+    Component { id: clock; Item { objectName: "time"; Component.onCompleted: ++root.clocks } }
+    Component { id: camera; Item { objectName: "camera"; Component.onCompleted: ++root.cameras; Component.onDestruction: --root.cameras } }
+    Monet.IslandPages {
+        id: deck; anchors.fill: parent; components: [grid, clock, camera]
+        reusable: [clock]; privatePages: [camera]; prewarm: grid
+        presented: root.opened; duration: 90; requested: components[root.tab]
+    }
+}'''.replace("@MONET_UI@", UI.as_uri()))
+            window = QQuickView()
+            self.addCleanup(window.close)
+            window.setSource(QUrl.fromLocalFile(str(scene)))
+            self.assertEqual(window.status(), QQuickView.Ready, [e.toString() for e in window.errors()])
+            window.show()
+            root = window.rootObject()
+
+            def shown(name):
+                for _ in range(100):
+                    QTest.qWait(10)
+                    if root.property("shown") == name:
+                        return
+                self.fail(f"Expected to see {name!r}, got {root.property('shown')!r}")
+
+            shown("grid")
+            root.setProperty("tab", 1)
+            shown("time")
+            root.setProperty("tab", 0)
+            shown("grid")
+            root.setProperty("tab", 1)
+            shown("time")
+            self.assertEqual(root.property("clocks"), 1)
+            root.setProperty("tab", 2)
+            shown("camera")
+            root.setProperty("tab", 0)
+            shown("grid")
+            self.assertEqual(root.property("cameras"), 0)
+            root.setProperty("opened", False)
+            shown("")
+            root.setProperty("tab", 1)
+            root.setProperty("opened", True)
+            shown("time")
+            self.assertEqual(root.property("clocks"), 2)
 
     def test_keys_and_live_reordering_keep_page_and_selection_together(self):
         app = QGuiApplication.instance() or QGuiApplication([])

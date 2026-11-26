@@ -6,9 +6,11 @@ import unittest
 from xml.etree import ElementTree
 
 try:
-    from PySide6.QtCore import QObject, QUrl
+    from PySide6.QtCore import QObject, QPoint, Qt, QUrl
     from PySide6.QtGui import QGuiApplication
     from PySide6.QtQml import QQmlComponent, QQmlEngine
+    from PySide6.QtQuick import QQuickView
+    from PySide6.QtTest import QTest
 except ImportError:
     QQmlEngine = None
 
@@ -135,3 +137,34 @@ QtObject {
         self.assertEqual(self.alerts, ["Focus session finished"])
         self.assertEqual(self.quiet, [0])
         self.assertFalse(self.timer.property("active"))
+
+
+@unittest.skipUnless(QQmlEngine, "requires Qt Quick")
+class TimerRuler(unittest.TestCase):
+    def test_taps_and_drags_adjust_minutes_and_respect_the_limit(self):
+        app = QGuiApplication.instance() or QGuiApplication([])
+        with tempfile.TemporaryDirectory() as folder:
+            scene = Path(folder) / "Ruler.qml"
+            scene.write_text('import QtQuick\nimport "' + (CONTENTS / "ui").as_uri() + '''" as Monet
+Monet.MinuteRuler { width: 240; height: 54; minutes: 25; onChosen: m => minutes = m }
+''')
+            window = QQuickView()
+            self.addCleanup(window.close)
+            window.setSource(QUrl.fromLocalFile(str(scene)))
+            self.assertEqual(window.status(), QQuickView.Ready, [e.toString() for e in window.errors()])
+            window.show()
+            QTest.qWait(40)
+            ruler = window.rootObject()
+            QTest.mouseClick(window, Qt.LeftButton, Qt.NoModifier, QPoint(165, 30))
+            self.assertEqual(ruler.property("minutes"), 30)
+            QTest.mousePress(window, Qt.LeftButton, Qt.NoModifier, QPoint(130, 30))
+            for x in (103, 85, 67):
+                QTest.mouseMove(window, QPoint(x, 30), 15)
+            QTest.mouseRelease(window, Qt.LeftButton, Qt.NoModifier, QPoint(67, 30))
+            self.assertGreater(ruler.property("minutes"), 30)
+            ruler.setProperty("minutes", 1440)
+            QTest.mouseClick(window, Qt.LeftButton, Qt.NoModifier, QPoint(165, 30))
+            self.assertEqual(ruler.property("minutes"), 1440)
+            ruler.setProperty("minutes", 1)
+            QTest.mouseClick(window, Qt.LeftButton, Qt.NoModifier, QPoint(70, 30))
+            self.assertEqual(ruler.property("minutes"), 1)
