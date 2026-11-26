@@ -486,7 +486,10 @@ PlasmoidItem {
             id: overPill
             blocking: false
             onHoveredChanged: {
-                if (hovered && !root.editing) root.prepareSections = true
+                if (hovered && !root.editing) {
+                    root.prepareSections = true
+                    if (companionLoader.item?.visits && !companionLoader.item.moment) companionLoader.item.greet()
+                }
                 else if (!hovered) leavePill.restart()
             }
         }
@@ -624,13 +627,16 @@ PlasmoidItem {
                 Layout.preferredWidth: 22; Layout.preferredHeight: 24
             }
         }
+        readonly property var companion: companionLoader.item
         Loader {
             id: companionLoader
-            parent: Plasmoid.configuration.companionSide === "right" ? rightCompanion : leftCompanion
+            parent: root.islandOpen ? pages.companionSeat
+                    : Plasmoid.configuration.companionSide === "right" ? rightCompanion : leftCompanion
             anchors.fill: parent
             active: Plasmoid.configuration.companion && power.active
             sourceComponent: NotchCompanion {
-                presented: power.active && !preview.item?.noticeId && !shelfDrop.containsDrag
+                presented: power.active && (root.islandOpen || (!preview.item?.noticeId && !shelfDrop.containsDrag))
+                motionAllowed: root.motion
                 styleName: Plasmoid.configuration.companionStyle
                 shapeName: Plasmoid.configuration.companionShape
                 paletteName: Plasmoid.configuration.companionColor
@@ -639,6 +645,11 @@ PlasmoidItem {
                 visits: frequency !== "off"
                 reactions: Plasmoid.configuration.companionReactions === "on"
                 hideIdle: Plasmoid.configuration.companionRest === "hide"
+                // Only a new request from the editor plays. Restoring settings on login stays quiet.
+                property string greetingRequest: Plasmoid.configuration.companionGreeting || ""
+                property bool listeningForHello: false
+                Component.onCompleted: listeningForHello = true
+                onGreetingRequestChanged: if (listeningForHello && greetingRequest) greet()
                 Connections {
                     target: root
                     function onReact(kind) { companionLoader.item?.react(kind) }
@@ -679,6 +690,21 @@ PlasmoidItem {
         }
         mainItem: FocusScope {
         id: pages
+        readonly property Item companionSeat: Plasmoid.configuration.companionSide === "right" ? headerRight : headerLeft
+        component CompanionSeat: Item {
+            readonly property var buddy: root.compactRepresentationItem?.companion
+            visible: pages.companionSeat === this && !!buddy?.showing
+            Layout.preferredWidth: 30; Layout.preferredHeight: 28
+            activeFocusOnTab: visible
+            Accessible.role: Accessible.Button
+            Accessible.name: i18n("Say hello")
+            Accessible.description: i18n("Notch companion")
+            Accessible.onPressAction: buddy.greet()
+            Keys.onReturnPressed: buddy.greet()
+            Keys.onSpacePressed: buddy.greet()
+            TapHandler { onTapped: parent.buddy.greet() }
+            Rectangle { anchors.fill: parent; radius: 8; color: "transparent"; border.width: parent.activeFocus ? 1 : 0; border.color: "#a3ccff" }
+        }
         width: root.surfaceWidth
         // Common pages share a native surface. Moving between tiles only changes its contents.
         readonly property int homeHeight: Math.max(272, 52 + IslandLayout.gridHeight(root.sections.length, width - 32))
@@ -761,7 +787,7 @@ PlasmoidItem {
             width: pages.width; height: pages.wantedHeight
             opacity: root.ownEdge ? Math.min(1, pages.revealProgress * 4) : 1
             shoulder: root.ownEdge ? 8 : 0; chin: 22
-            topColor: "#050506"; bottomColor: "#e1222225"
+            topColor: "#050506"; bottomColor: "#121214"
             transform: Scale {
                 origin.x: pages.width / 2
                 xScale: pages.drawnWidth / pages.width
@@ -793,6 +819,7 @@ PlasmoidItem {
                         spacing: 3
                         RowLayout {
                             Layout.fillWidth: true; Layout.preferredHeight: 32; Layout.maximumHeight: 32
+                            CompanionSeat { id: headerLeft }
                             IslandButton { id: sectionsButton; plain: true; icon.name: root.overview ? "window-close" : "view-grid"
                                 text: root.overview ? i18n("Close") : i18n("Sections")
                                 onClicked: { if (root.overview) root.collapse(); else pages.showSections() } }
@@ -815,6 +842,7 @@ PlasmoidItem {
                                 Layout.preferredHeight: 28
                                 sourceComponent: active ? body.item?.outputChooser ?? null : null
                             }
+                            CompanionSeat { id: headerRight }
                             IslandButton { id: searchButton; plain: true; visible: root.offerSearch; icon.name: "system-search"; text: i18n("Command Bar"); onClicked: root.searching = true }
                             IslandButton { plain: true; icon.name: "pin-symbolic"; text: root.pinned ? i18n("Unpin") : i18n("Keep open"); checked: root.pinned; onClicked: root.pinned = !root.pinned }
                             IslandButton { plain: true; icon.name: "application-menu"; text: i18n("Utilities"); onClicked: root.openTool("tools") }
@@ -1207,20 +1235,42 @@ PlasmoidItem {
     Component {
         id: calendarPage
         ColumnLayout {
+            id: calendar
+            readonly property bool split: width >= 410 && height >= 235 && root.offerAgenda
+            spacing: 5
             NoteStore { id: notes; helper: root.helper; Component.onCompleted: refresh() }
-            Month {
-                id: month
+            RowLayout {
                 Layout.fillWidth: true; Layout.fillHeight: true
-                ink: Kirigami.Theme.textColor; dim: Kirigami.Theme.disabledTextColor; lily: Kirigami.Theme.highlightColor
-                notesButton: false; store: notes
-                Component.onCompleted: choose(root.agendaDay)
-                onOpened: day => { edit.day = day; entry.text = notes.noteFor(day); edit.open() }
+                spacing: 14
+                Month {
+                    id: month
+                    Layout.fillWidth: true; Layout.fillHeight: true
+                    Layout.preferredWidth: 225; Layout.minimumWidth: 0
+                    island: true; titleSize: 16
+                    ink: "#f5f5f7"; dim: "#aaaab1"; lily: "#ff6974"
+                    notesButton: false; store: notes
+                    Component.onCompleted: choose(root.agendaDay)
+                    onOpened: day => { edit.day = day; entry.text = notes.noteFor(day); edit.open() }
+                }
+                Rectangle {
+                    visible: calendar.split
+                    Layout.preferredWidth: 1; Layout.fillHeight: true
+                    color: "#24ffffff"
+                }
+                Loader {
+                    visible: active; active: calendar.split
+                    Layout.fillWidth: true; Layout.fillHeight: true
+                    Layout.preferredWidth: 174; Layout.minimumWidth: 0
+                    sourceComponent: Agenda {
+                        embedded: true; day: month.chosen
+                        onCalendarsRequested: root.openTool("calendars")
+                    }
+                }
             }
-            C.Button {
-                Layout.alignment: Qt.AlignHCenter
-                visible: root.offerAgenda
+            IslandButton {
+                Layout.alignment: Qt.AlignRight
+                visible: root.offerAgenda; caption: true
                 text: i18n("Upcoming appointments")
-                icon.name: "view-calendar-agenda"
                 onClicked: { root.agendaDay = month.chosen; root.viewingAgenda = true }
             }
             C.Dialog {

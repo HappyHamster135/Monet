@@ -6,6 +6,7 @@ import org.kde.plasma.plasma5support as P5
 
 ColumnLayout {
     id: page
+    property bool embedded: false
     required property date day
     signal choose(date date)
     signal monthRequested()
@@ -34,7 +35,8 @@ ColumnLayout {
         canSync = false
         commands.connectSource(reader + (force ? "sync force" : "sync"))
     }
-    onDateKeyChanged: if (ready) { state = null; list() }
+    Timer { id: dayChange; interval: 100; onTriggered: page.list() }
+    onDateKeyChanged: if (ready) { state = null; dayChange.restart() }
     property bool ready: false
     Component.onCompleted: { ready = true; list() }
     P5.DataSource {
@@ -47,6 +49,7 @@ ColumnLayout {
                 page.list()
             } else if (source === page.pending) {
                 page.pending = ""
+                if (source !== page.reader + "list " + page.dateKey) return
                 if (page.readAgain) { Qt.callLater(page.list); return }
                 try { page.state = JSON.parse(data.stdout) }
                 catch (_) { page.state = {error: true} }
@@ -55,6 +58,7 @@ ColumnLayout {
         }
     }
     RowLayout {
+        visible: !page.embedded
         Layout.fillWidth: true
         C.ToolButton { icon.name: "go-previous"; text: i18n("Month"); onClicked: page.monthRequested() }
         Item { Layout.fillWidth: true }
@@ -69,6 +73,7 @@ ColumnLayout {
         }
     }
     RowLayout {
+        visible: !page.embedded
         Layout.fillWidth: true
         C.ToolButton { icon.name: "go-previous"; Accessible.name: i18n("Previous two weeks"); onClicked: page.choose(page.shifted(-14)) }
         C.Button {
@@ -78,6 +83,11 @@ ColumnLayout {
             onClicked: page.choose(new Date())
         }
         C.ToolButton { icon.name: "go-next"; Accessible.name: i18n("Next two weeks"); onClicked: page.choose(page.shifted(14)) }
+    }
+    C.Label {
+        visible: page.embedded; Layout.fillWidth: true
+        text: Qt.locale().toString(page.day, "ddd d MMM")
+        font.weight: Font.DemiBold; font.pixelSize: 13; elide: Text.ElideRight
     }
     ListView {
         id: events
@@ -124,6 +134,11 @@ ColumnLayout {
                 : page.state.unavailable?.length ? i18n("No appointments available.")
                 : i18n("No appointments in these two weeks.")
         }
+    }
+    IslandButton {
+        visible: page.embedded && !!page.state && !page.state.sources
+        Layout.alignment: Qt.AlignHCenter; caption: true
+        text: i18n("Calendars…"); onClicked: page.calendarsRequested()
     }
     C.Label {
         Layout.fillWidth: true; visible: text.length > 0; wrapMode: Text.Wrap; textFormat: Text.PlainText

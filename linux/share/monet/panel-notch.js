@@ -75,6 +75,12 @@
         } else if (companion) widget.writeConfig(companionKey(companion[1]), companion[2]);
         else widget.writeConfig(setting[1], setting[2] === "on");
         widget.reloadConfig();
+    } else if (choice === "hello") {
+        if (!widget) { print(JSON.stringify({ok:false})); return; }
+        widget.currentConfigGroup = ["General"];
+        if (!optionsOf(widget).companion) { print(JSON.stringify({ok:false})); return; }
+        widget.writeConfig("companionGreeting", String(Date.now()));
+        widget.reloadConfig();
     } else if (choice === "off" && widget) {
         widget.currentConfigGroup = ["General"];
         removedWidget = widget.id;
@@ -103,7 +109,7 @@
                 panel.height = 32; panel.floating = false; panel.lengthMode = "fit";
                 panel.hiding = "windowsgobelow";
                 panel.currentConfigGroup = ["MonetNotch"]; panel.writeConfig("owned", "yes");
-                widget = panel.addWidget(type);
+                widget = panel.addWidget(MONET_NOTCH_PACKAGE);
                 if (!widget || widget.type !== type) throw new Error("widget");
                 widget.currentConfigGroup = ["General"];
                 Object.keys(defaults).forEach(function (key) {

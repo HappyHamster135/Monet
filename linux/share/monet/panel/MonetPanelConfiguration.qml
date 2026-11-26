@@ -819,8 +819,11 @@ Item {
                                     C.Button {
                                         objectName: "greetCompanion"
                                         text: i18nd("monet", "Say hello")
-                                        enabled: !!companionPreview.item
-                                        onClicked: companionPreview.item.greet()
+                                        enabled: !!companionPreview.item && !editor.notchBusy
+                                        onClicked: {
+                                            companionPreview.item.greet()
+                                            editor.requestNotch("hello")
+                                        }
                                     }
                                 }
                                 Repeater {

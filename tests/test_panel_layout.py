@@ -2,6 +2,8 @@
 import json
 import shutil
 import subprocess
+import tempfile
+from pathlib import Path
 import sys
 import unittest
 from unittest.mock import patch
@@ -75,6 +77,37 @@ class PanelLayouts(unittest.TestCase):
         with patch.object(self.quick, 'DATADIR', str(ROOT/'linux/share')), patch.object(self.quick, 'busjson', side_effect=bus):
             return self.quick.panel_layout(str(self.js(panel+'.id').toInt()), layout)
 
+    def test_readding_notch_loads_the_installed_package_revision(self):
+        self.js("""
+            knownWidgetTypes.push('org.monet.notch');
+            var LegacyPanel=Panel, requested;
+            Panel=function(){
+                var p=new LegacyPanel(), add=p.addWidget;
+                p.addWidget=function(pkg){
+                    requested=pkg;
+                    return add.call(p,pkg.split('/').pop());
+                };
+                return p;
+            };
+        """)
+        def bus(*args):
+            self.js(args[-1])
+            return [self.js('printed').toString()]
+        with tempfile.TemporaryDirectory() as folder, patch.object(self.quick, 'DATADIR', folder), patch.object(self.quick, 'busjson', side_effect=bus):
+            root = Path(folder) / 'monet'
+            root.mkdir()
+            source = Path(folder) / 'plasma/plasmoids/org.monet.notch'
+            source.mkdir(parents=True)
+            (source / 'metadata.json').write_text('{}')
+            package = Path(folder) / 'run/monet/notch' / ('c' * 64) / 'org.monet.notch'
+            (root / 'desktop-revision').write_text('c' * 64 + '\n')
+            shutil.copy(ROOT / 'linux/share/monet/panel-notch.js', root)
+            with patch.object(self.quick, 'RUNTIME', Path(folder) / 'run'), patch.dict('os.environ', XDG_RUNTIME_DIR=str(Path(folder) / 'run')):
+                result = self.quick.panel_notch(str(self.js('left.id').toInt()), 'add')
+            self.assertEqual((package / 'metadata.json').read_text(), '{}')
+            self.assertEqual(result['mode'], 'compact')
+            self.assertEqual(self.js('requested').toString(), str(package))
+
     def test_notch_is_independent_of_home_bar_layout_and_other_screens(self):
         self.js("knownWidgetTypes.push('org.monet.notch')")
         def notch(panel, mode=None):
@@ -93,6 +126,11 @@ class PanelLayouts(unittest.TestCase):
             self.assertTrue(notch('right')['options'][key])
             self.assertFalse(notch('left', key + '-off')['options'][key])
             self.assertFalse(notch('right')['options'][key])
+        self.assertFalse(notch('right', 'hello')['ok'])
+        self.assertTrue(notch('right', 'companion-on')['ok'])
+        self.assertTrue(notch('right', 'hello')['ok'])
+        self.assertGreater(float(self.js("notchPanel.widgets()[0].readConfig('companionGreeting')").toString()), 0)
+        self.assertTrue(notch('right', 'companion-off')['ok'])
         self.assertTrue(notch('right')['options']['countdown'])
         self.assertFalse(notch('left', 'countdown-off')['options']['countdown'])
         self.assertFalse(notch('right')['options']['countdown'])

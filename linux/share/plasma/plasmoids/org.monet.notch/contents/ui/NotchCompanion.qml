@@ -15,7 +15,7 @@ Item {
     property bool reactions: true
     property bool hideIdle: false
     property bool presented: true
-    property bool motionAllowed: Kirigami.Units.longDuration > 0
+    property bool motionAllowed: Kirigami.Units.longDuration > 1
     readonly property bool showing: presented && (!hideIdle || moment !== "")
     readonly property bool moving: hop.running
     readonly property bool waitingForVisit: visitsTimer.running
@@ -110,16 +110,33 @@ Item {
         anchors.verticalCenterOffset: buddy.lift * unit
         rotation: buddy.lean
         Rectangle {
+            visible: buddy.robot
+            width: Math.max(1.4, parent.unit * 0.065); height: parent.unit * 0.18
+            x: parent.width * 0.49; y: parent.height * 0.04
+            radius: width / 2; color: Qt.darker(buddy.coat, 1.15)
+            Rectangle { anchors.horizontalCenter: parent.horizontalCenter; width: parent.width * 2; height: width; radius: width / 2; color: buddy.coat }
+        }
+        Rectangle {
             id: body
             width: parent.unit * (buddy.shapeName === "egg" ? 0.64 : buddy.shapeName === "pill" ? 0.94 : 0.79)
             height: parent.unit * (buddy.shapeName === "egg" ? 0.86 : buddy.shapeName === "pill" ? 0.63 : 0.79)
             anchors.centerIn: parent
-            color: buddy.coat
+            gradient: Gradient {
+                GradientStop { position: 0; color: Qt.lighter(buddy.coat, 1.13) }
+                GradientStop { position: 0.57; color: buddy.coat }
+                GradientStop { position: 1; color: Qt.darker(buddy.coat, 1.25) }
+            }
             radius: buddy.shapeName === "square" ? height * 0.25 : height / 2
             Rectangle {
                 anchors.centerIn: parent
                 width: parent.width * 0.81; height: parent.height * 0.54
                 radius: height * 0.33; color: buddy.ink; visible: buddy.robot
+            }
+            Rectangle {
+                visible: !buddy.robot
+                width: parent.width * 0.28; height: Math.max(1, parent.height * 0.085)
+                x: parent.width * 0.19; y: parent.height * 0.13
+                radius: height / 2; rotation: -20; color: "#98ffffff"
             }
             Repeater {
                 model: 2

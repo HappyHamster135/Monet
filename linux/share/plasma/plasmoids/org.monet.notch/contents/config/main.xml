@@ -10,6 +10,7 @@
         <entry name="levels" type="Bool"><default>false</default></entry>
         <entry name="previews" type="Bool"><default>false</default></entry>
         <entry name="companion" type="Bool"><default>false</default></entry>
+        <entry name="companionGreeting" type="String"><default></default></entry>
         <entry name="companionStyle" type="String"><default>soft</default></entry>
         <entry name="companionShape" type="String"><default>round</default></entry>
         <entry name="companionColor" type="String"><default>mint</default></entry>

@@ -26,6 +26,7 @@ FocusScope {
     property color ink
     property color dim
     property color lily
+    property bool island: false
     property int titleSize: 20
     // A Notes button in the header, lit while the notes are out.
     property bool notesButton: true
@@ -116,7 +117,8 @@ FocusScope {
                       + (month.shown.getFullYear() !== month.today.getFullYear() ? " " + month.shown.getFullYear() : "")
                 color: month.ink
                 elide: Text.ElideRight
-                font.family: "Fraunces 72pt SuperSoft"
+                font.family: month.island ? "Inter" : "Fraunces 72pt SuperSoft"
+                font.weight: month.island ? Font.DemiBold : Font.Normal
                 font.pixelSize: month.titleSize
                 MouseArea {
                     anchors.fill: parent
@@ -296,8 +298,8 @@ FocusScope {
                         radius: width / 2
                         visible: cell.isToday
                         gradient: Gradient {
-                            GradientStop { position: 0; color: "#FF7A45" }
-                            GradientStop { position: 1; color: "#E2471F" }
+                            GradientStop { position: 0; color: month.island ? "#ff626c" : "#FF7A45" }
+                            GradientStop { position: 1; color: month.island ? "#ff626c" : "#E2471F" }
                         }
                     }
                     // The chosen day: a ring of lily (round today's sun too).
