@@ -522,10 +522,16 @@ PlasmoidItem {
             visualParent: leftAnchor
             presented: popup.visible && root.railSpace && !root.editing
             reveal: pages.revealProgress
-            entries: [{key: "back", label: i18n("Back"), icon: "go-previous", enabled: navigation.canGoBack}].concat(
-                root.visibleTabs.includes(2) ? [{key: "time", label: i18n("Time"), icon: "chronometer"}] : [])
+            leadingButton: IslandNavigationButton {
+                objectName: "island-rail-back"
+                width: 33; height: 33; base: "#141416"
+                enabled: navigation.canGoBack; opacity: enabled ? 1 : 0.4
+                showsSections: pages.backShowsSections
+                onClicked: pages.back()
+            }
+            entries: root.visibleTabs.includes(2) ? [{key: "time", label: i18n("Time"), icon: "chronometer"}] : []
             onPreviewRequested: key => root.preparePage(key)
-            onSelected: key => { if (key === "back") pages.back(); else navigation.openTab(key) }
+            onSelected: key => navigation.openTab(key)
         }
         IslandRail {
             id: rightRail
@@ -868,12 +874,12 @@ PlasmoidItem {
                         RowLayout {
                             Layout.fillWidth: true; Layout.preferredHeight: 32; Layout.maximumHeight: 32
                             CompanionSeat { id: headerLeft }
-                            IslandButton { id: sectionsButton; plain: true
-                                icon.name: navigation.canGoBack ? "go-previous" : "window-close"
-                                text: navigation.canGoBack ? i18n("Back") : i18n("Close")
-                                onClicked: { if (navigation.canGoBack) pages.back(); else root.collapse() } }
-                            IslandButton { plain: true; visible: navigation.inDetail
-                                icon.name: "view-grid"; text: i18n("Sections"); onClicked: navigation.showSections() }
+                            IslandNavigationButton { id: sectionsButton; plain: true
+                                closes: !navigation.canGoBack
+                                showsSections: pages.backShowsSections
+                                onClicked: { if (closes) root.collapse(); else pages.back() } }
+                            IslandNavigationButton { plain: true; visible: navigation.inDetail
+                                showsSections: true; onClicked: navigation.showSections() }
                             C.Label {
                                 id: heading
                                 property string presentedTitle: root.pageTitle
@@ -896,12 +902,12 @@ PlasmoidItem {
                             id: body
                             Layout.fillWidth: true; Layout.fillHeight: true
                             presented: root.islandOpen && !root.searching
-                            duration: root.motion && pages.revealProgress === 1 ? Math.min(165, Kirigami.Units.longDuration) : 0
+                            duration: root.motion && pages.revealProgress === 1 ? IslandLayout.slideDuration(Kirigami.Units.longDuration) : 0
                             prewarm: root.prepareSections ? sectionPage : null
                             components: [sectionPage, musicPage, activityPage, timerPage, calendarPage, padPage,
                                 clipboardPage, cameraPage, shelfPage, downloadsPage, watchPage, agendaPage,
                                 awakePage, mixerPage, controlsPage, systemPage, capturesPage, pairedPage, toolPage, agentsPage, notificationsPage, sessionDetails, codexDetails, claudeDetails, toolDetails]
-                            reusable: [musicPage, timerPage, mixerPage, toolPage]
+                            reusable: [musicPage, timerPage, mixerPage, toolPage, controlsPage, systemPage]
                             privatePages: [clipboardPage, cameraPage, activityPage, watchPage, notificationsPage, toolDetails]
                             navigationDirection: root.slideDirection
                             requested: root.overview ? sectionPage : root.utilityPage === "agent-session" ? sessionDetails
@@ -933,11 +939,12 @@ PlasmoidItem {
             navigation.openTab(root.tabNames[root.visibleTabs[next]])
         }
         readonly property bool canNavigate: root.islandOpen && !root.searching && !root.draggingShelf && !body.item?.menuOpen
+        readonly property bool editingEvent: body.current?.modelData === body.requested && !!body.item?.editingEvent
+        readonly property bool notificationOpen: body.current?.modelData === body.requested && !!body.item?.notificationOpen
+        readonly property bool backShowsSections: !root.overview && !navigation.inDetail && !editingEvent && !notificationOpen
         function back(escape = false) {
-            if (body.current?.modelData === body.requested) {
-                if (body.item?.editingEvent) { body.item.closeEditor(); return }
-                if (body.item?.notificationOpen) { body.item.backFromNotification(); return }
-            }
+            if (editingEvent) { body.item.closeEditor(); return }
+            if (notificationOpen) { body.item.backFromNotification(); return }
             if (escape && !navigation.inDetail) root.collapse()
             else navigation.back()
         }

@@ -117,8 +117,11 @@ Monet.IslandSections {
                 QTest.mouseClick(window, Qt.LeftButton, Qt.NoModifier, point)
 
             def on_page(page):
-                QTest.qWait(210)
                 self.assertEqual(grid.property("currentPage"), page)
+                for _ in range(100):
+                    if abs(tiles[page * 12].mapToScene(QPointF()).y()) < 0.1:
+                        break
+                    QTest.qWait(8)
                 self.assertEqual([i for i in sorted(tiles) if in_view(tiles[i])],
                                  list(range(12)) if page == 0 else [12, 13, 14])
                 # The first row of each settled page aligns with the top of the grid.
@@ -126,6 +129,12 @@ Monet.IslandSections {
 
             self.assertEqual(list(sorted(dots)), [0, 1])
             self.assertTrue(all(dot.isVisible() for dot in dots.values()))
+            dot_top = dots[0].mapToScene(QPointF())
+            dot_bottom = dots[1].mapToScene(QPointF())
+            self.assertAlmostEqual(dot_top.x() + dots[0].width(), grid.width())
+            self.assertEqual(dot_top.x(), dot_bottom.x())
+            self.assertLess(dot_top.y(), dot_bottom.y())
+            self.assertLessEqual(tiles[3].mapToScene(QPointF(tiles[3].width(), 0)).x(), dot_top.x())
             wheel(QPoint(-120, 0))
             on_page(0)
             wheel(QPoint(0, -120))
@@ -133,6 +142,15 @@ Monet.IslandSections {
             wheel(QPoint(0, -120))
             on_page(1)
             wheel(QPoint(0, 120))
+            on_page(0)
+            # A short pull follows the fingers and settles back to its page on release.
+            wheel(QPoint(), phase=Qt.ScrollBegin)
+            wheel(QPoint(), QPoint(0, -12), Qt.ScrollUpdate)
+            QTest.qWait(60)
+            offset = tiles[0].mapToScene(QPointF()).y()
+            self.assertLess(offset, -1)
+            self.assertGreaterEqual(offset, -13)
+            wheel(QPoint(), phase=Qt.ScrollEnd)
             on_page(0)
             # Small pixel deltas accumulate, and rebound or momentum from the same swipe cannot undo the turn.
             wheel(QPoint(), phase=Qt.ScrollBegin)
@@ -168,6 +186,14 @@ Monet.IslandSections {
             self.assertEqual(grid.property("lastSection"), "14")
             click(dots[1])
             on_page(1)
+
+            # Reduced motion also completes a slide that has already started.
+            click(dots[0])
+            QTest.qWait(50)
+            grid.setProperty("motion", False)
+            self.assertAlmostEqual(tiles[0].mapToScene(QPointF()).y(), 0, delta=0.1)
+            click(dots[1])
+            self.assertAlmostEqual(tiles[12].mapToScene(QPointF()).y(), 0, delta=0.1)
 
             grid.setWidth(250)
             QTest.qWait(40)
@@ -288,7 +314,10 @@ Item {
             until(root.reverseInPlace)
             root.setProperty("tab", 2)
             until(lambda: root.property("shown") == "mixer" and root.property("settled"))
+            root.setProperty("tab", 0)
+            until(lambda: not root.property("settled"))
             root.setProperty("motion", 0)
+            until(lambda: root.property("settled") and root.property("shown") == "home")
             root.setProperty("tab", 1)
             until(lambda: root.property("shown") == "player")
             self.assertTrue(root.property("settled"))

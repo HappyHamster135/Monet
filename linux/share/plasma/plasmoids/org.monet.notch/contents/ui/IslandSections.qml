@@ -17,11 +17,15 @@ Item {
     readonly property int columns: Math.max(IslandLayout.columns(width), Math.ceil(entries.length / (2 * rows)))
     readonly property int capacity: rows * columns
     readonly property int pageCount: Math.ceil(entries.length / capacity)
+    property real pull: 0
+    onMotionChanged: if (!motion) pull = 0
+    onVisibleChanged: if (!visible) pull = 0
     property int currentPage: 0
     onPageCountChanged: currentPage = Math.min(currentPage, Math.max(0, pageCount - 1))
 
     function focusTile(index, reason) {
         const i = Math.max(0, Math.min(entries.length - 1, index))
+        pull = 0
         currentPage = Math.floor(i / capacity)
         tiles.itemAt(i)?.forceActiveFocus(reason)
     }
@@ -36,18 +40,24 @@ Item {
     Item {
         id: viewport
         anchors.fill: parent
-        anchors.bottomMargin: dots.visible ? dots.height : 0
+        anchors.rightMargin: dots.visible ? dots.width : 0
         clip: true
 
         Grid {
+            id: tilesGrid
             width: parent.width
             columns: gridView.columns
             spacing: IslandLayout.gap
-            property real shownPage: gridView.currentPage
-            y: -shownPage * (viewport.height + spacing)
+            readonly property real destination: Math.max(0, Math.min(gridView.pageCount - 1,
+                gridView.currentPage + gridView.pull / Math.max(1, viewport.height + spacing)))
+            property real shownPage: 0
+            onDestinationChanged: shownPage = destination
+            readonly property real boundedPage: Math.max(0, Math.min(gridView.pageCount - 1, shownPage))
+            y: -boundedPage * (viewport.height + spacing)
             Behavior on shownPage {
                 enabled: gridView.motion && gridView.pageCount > 1
-                NumberAnimation { duration: Math.min(160, K.Units.longDuration); easing.type: Easing.OutCubic }
+                onEnabledChanged: if (!enabled) tilesGrid.shownPage = tilesGrid.destination
+                IslandSlide { id: slide; duration: IslandLayout.slideDuration(K.Units.longDuration) }
             }
             Repeater {
                 id: tiles
@@ -74,7 +84,7 @@ Item {
                         text: "✓"; color: "#c4c5cc"; font.pixelSize: 11
                         Accessible.ignored: true
                     }
-                    onHoveredChanged: if (hovered && onPage) gridView.previewRequested(modelData.key)
+                    onHoveredChanged: if (hovered && onPage && !slide.running) gridView.previewRequested(modelData.key)
                     onVisualFocusChanged: if (visualFocus) gridView.previewRequested(modelData.key)
                     onClicked: if (onPage) gridView.selected(modelData.key)
                     Keys.onPressed: event => {
@@ -95,9 +105,16 @@ Item {
             acceptedDevices: PointerDevice.TouchScreen
             xAxis.enabled: false
             property bool turned: false
-            onActiveChanged: turned = false
+            onActiveChanged: {
+                turned = false
+                if (!active) gridView.pull = 0
+            }
             onActiveTranslationChanged: {
-                if (active && !turned && Math.abs(activeTranslation.y) >= 32) {
+                if (!active || turned) return
+                if (Math.abs(activeTranslation.y) < 32) {
+                    gridView.pull = gridView.motion ? -activeTranslation.y : 0
+                } else {
+                    gridView.pull = 0
                     turned = true
                     gridView.turnTo(activeTranslation.y < 0 ? 1 : 0, Qt.OtherFocusReason)
                 }
@@ -118,10 +135,14 @@ Item {
             // Qt can suppress later pixel-only updates after an accepted event.
             // The chooser has no scrolling ancestor that needs these phases.
             event.accepted = !phased
-            if (event.phase === Qt.ScrollMomentum) return
+            if (event.phase === Qt.ScrollMomentum) {
+                gridView.pull = 0
+                return
+            }
             const now = Date.now()
             if (event.phase === Qt.ScrollBegin || event.phase === Qt.ScrollEnd || (!phased && now - lastWheelTime > 300)) {
                 travel = 0
+                gridView.pull = 0
                 turned = false
             }
             lastWheelTime = now
@@ -132,7 +153,10 @@ Item {
             if (!delta.y || Math.abs(delta.x) >= Math.abs(delta.y)) return
             if (travel * delta.y < 0) travel = 0
             travel += delta.y * (precise ? 1 : 0.25)
-            if (Math.abs(travel) >= 24) {
+            if (Math.abs(travel) < 24) {
+                if (phased && precise && gridView.motion) gridView.pull = -travel
+            } else {
+                gridView.pull = 0
                 gridView.turnTo(travel < 0 ? 1 : 0, Qt.OtherFocusReason)
                 travel = 0
                 turned = phased
@@ -140,11 +164,11 @@ Item {
         }
     }
 
-    Row {
+    Column {
         id: dots
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        height: 24
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.right: parent.right
+        width: 24
         visible: gridView.pageCount > 1
         Repeater {
             model: gridView.pageCount
@@ -152,7 +176,7 @@ Item {
                 id: dot
                 required property int index
                 objectName: "island-dot-" + index
-                width: 26; height: dots.height
+                width: dots.width; height: 26
                 hoverEnabled: true
                 Accessible.name: i18n("Page %1 of %2", index + 1, gridView.pageCount)
                 Accessible.role: Accessible.PageTab
@@ -163,7 +187,11 @@ Item {
                     Rectangle {
                         anchors.centerIn: parent
                         width: 8; height: width; radius: width / 2
-                        color: dot.index === gridView.currentPage ? "#f5f5f7" : dot.hovered ? "#aaaab3" : "#66666d"
+                        color: dot.hovered ? "#aaaab3" : "#66666d"
+                        Rectangle {
+                            anchors.fill: parent; radius: parent.radius; color: "#f5f5f7"
+                            opacity: Math.max(0, 1 - Math.abs(dot.index - tilesGrid.boundedPage))
+                        }
                         border.width: dot.visualFocus ? 1 : 0
                         border.color: "#a3ccff"
                     }

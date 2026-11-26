@@ -10,19 +10,24 @@ PlasmaCore.Dialog {
     required property var entries
     required property real reveal
     required property bool presented
+    property Component leadingButton
     signal selected(string key)
     signal previewRequested(string key)
     type: PlasmaCore.Dialog.Dock
     flags: Qt.FramelessWindowHint | Qt.WindowDoesNotAcceptFocus | Qt.WindowStaysOnTopHint
     location: PlasmaCore.Types.TopEdge
     backgroundHints: PlasmaCore.Dialog.NoBackground
-    visible: presented && entries.length > 0 && !!visualParent
+    visible: presented && (leadingButton || entries.length > 0) && !!visualParent
     mainItem: Column {
         id: column
         width: 33; height: implicitHeight; spacing: 4
         opacity: Math.max(0, (rail.reveal - 0.54) / 0.46)
         enabled: opacity > 0.5
         transform: Translate { y: -5 * (1 - column.opacity) }
+        Loader {
+            sourceComponent: rail.leadingButton
+            visible: !!item
+        }
         Repeater {
             model: rail.entries
             IslandButton {

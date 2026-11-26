@@ -15,12 +15,24 @@ Item {
     property Item current: null
     property Item outgoing: null
     readonly property Item item: current?.item ?? null
-    property real progress: 1
+    property int endpoint: 0
+    property real position: 0
+    readonly property real progress: outgoing ? Math.max(0, Math.min(1, endpoint ? position : 1 - position)) : 1
+    Behavior on position {
+        enabled: !!deck.outgoing && deck.duration > 1
+        IslandSlide { duration: deck.duration }
+    }
+    onPositionChanged: if (outgoing && position === endpoint) Qt.callLater(finishSlide)
+    onDurationChanged: if (outgoing && duration <= 1) {
+        position = endpoint
+        finishSlide()
+    }
     property bool failed: false
     property int direction: 1
     property int navigationDirection: 0
     property real outgoingHeight: 0
-    readonly property real seam: Math.round(width * progress)
+    readonly property real pixelRatio: Screen.devicePixelRatio || 1
+    readonly property real seam: Math.round(width * progress * pixelRatio) / pixelRatio
     signal pageShown()
 
     // A single navigation action can change several bindings. Incubate only its final destination.
@@ -30,10 +42,9 @@ Item {
         // A private page releases its contents as soon as it loses selection.
         // Finish the visible public page underneath it before the next slide.
         if (current && privatePages.includes(current.modelData) && current.modelData !== requested && outgoing?.visible) {
-            entry.stop()
             current = outgoing
             outgoing = null
-            progress = 1
+            position = endpoint
         }
         targetPage = requested
         if (!targetPage) return
@@ -45,8 +56,7 @@ Item {
         }
     }
     function clear() {
-        entry.stop()
-        current = null; outgoing = null; progress = 1
+        current = null; outgoing = null; position = endpoint
     }
     function unavailable() {
         clear()
@@ -57,17 +67,17 @@ Item {
         // Reverse the same moving boundary. A third ready page waits for the boundary
         // to clear, so rapid navigation never drops a half-visible page mid-frame.
         const reversing = outgoing === slot
-        if (entry.running && !reversing && current?.visible && outgoing?.visible) return
-        const start = reversing ? 1 - progress : 0
+        if (!reversing && current?.visible && outgoing?.visible) return
         const previous = current
         const previousHeight = previous?.height ?? 0
-        entry.stop()
         direction = reversing ? -direction : navigationDirection || (previous && slot.index < previous.index ? -1 : 1)
         outgoing = duration > 1 && previous?.visible ? previous : null
         outgoingHeight = previousHeight
-        progress = outgoing ? start : 1
         current = slot
-        if (outgoing) { entry.from = start; entry.start() }
+        // Swapping the two slots flips the target on the same moving coordinate.
+        if (outgoing) endpoint = 1 - endpoint
+        position = endpoint
+        if (outgoing && position === endpoint) Qt.callLater(finishSlide)
         pageShown()
     }
     onRequestedChanged: Qt.callLater(resolve)
@@ -78,13 +88,10 @@ Item {
         }
     }
     Component.onCompleted: Qt.callLater(resolve)
-    NumberAnimation {
-        id: entry
-        target: deck; property: "progress"; from: 0; to: 1
-        duration: Math.max(1, Math.round((1 - from) * deck.duration))
-        easing.type: Easing.BezierSpline
-        easing.bezierCurve: [0.2, 0.75, 0.25, 1, 1, 1]
-        onFinished: { deck.outgoing = null; deck.resolve() }
+    function finishSlide() {
+        if (!outgoing || position !== endpoint) return
+        outgoing = null
+        resolve()
     }
     Text {
         visible: deck.presented && deck.failed
