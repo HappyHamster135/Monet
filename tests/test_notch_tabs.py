@@ -1,6 +1,5 @@
 """Native tab selection stays on the displayed page when its position changes."""
 from pathlib import Path
-import shutil
 import tempfile
 import time
 import unittest
@@ -18,16 +17,6 @@ SHARE = Path(__file__).resolve().parents[1] / "linux/share"
 UI = SHARE / "plasma/plasmoids/org.monet.notch/contents/ui"
 
 
-def section_ui(folder):
-    # install.sh places the shared scroll handler beside the applet QML.
-    applet = Path(folder) / "ui"
-    applet.mkdir()
-    for name in ("IslandSections.qml", "IslandButton.qml", "IslandLayout.js"):
-        shutil.copy(UI / name, applet)
-    shutil.copy(SHARE / "monet/widgets/ScrollInput.qml", applet)
-    return applet.as_uri()
-
-
 @unittest.skipUnless(QQuickView, "requires Qt Quick")
 class NotchTabs(unittest.TestCase):
     def test_section_grid_follows_keyboard_activation_after_reorder(self):
@@ -38,11 +27,12 @@ class NotchTabs(unittest.TestCase):
 import "@MONET_UI@" as Monet
 Monet.IslandSections {
     id: grid; width: 420; height: 130
+    function i18n(text) { return text }
     property string chosen: ""
     function reorder() { entries = entries.slice().reverse() }
     entries: ["music","time","notes","files","activity"].map(k => ({key:k, label:k, icon:"folder", color:"white"}))
     onSelected: key => chosen = key
-}'''.replace("@MONET_UI@", section_ui(folder)))
+}'''.replace("@MONET_UI@", UI.as_uri()))
             window = QQuickView()
             self.addCleanup(window.close)
             window.setSource(QUrl.fromLocalFile(str(scene)))
@@ -71,7 +61,7 @@ Monet.IslandSections {
             QTest.keyClick(window, Qt.Key_Space)
             self.assertEqual(grid.property("chosen"), "activity")
 
-    def test_section_grid_scrolls_past_three_rows_and_returns_to_the_chosen_tile(self):
+    def test_section_grid_snaps_to_pages_by_wheel_gesture_dot_and_keyboard(self):
         app = QGuiApplication.instance() or QGuiApplication([])
         with tempfile.TemporaryDirectory() as folder:
             scene = Path(folder) / "Sections.qml"
@@ -79,10 +69,10 @@ Monet.IslandSections {
 import "@MONET_UI@" as Monet
 Monet.IslandSections {
     width: 432; height: 269
-    function i18n(text) { return text }
+    function i18n(text, a, b) { return text.replace("%1", a).replace("%2", b) }
     entries: Array.from({length: 15}, (_, i) => ({key: String(i), label: String(i), icon: "folder", color: "white"}))
     onSelected: key => lastSection = key
-}'''.replace("@MONET_UI@", section_ui(folder)))
+}'''.replace("@MONET_UI@", UI.as_uri()))
             window = QQuickView()
             self.addCleanup(window.close)
             window.setSource(QUrl.fromLocalFile(str(scene)))
@@ -92,10 +82,13 @@ Monet.IslandSections {
             grid = window.rootObject()
             pending = [grid]
             tiles = {}
+            dots = {}
             while pending:
                 item = pending.pop()
                 if item.objectName().startswith("island-section-"):
                     tiles[int(item.objectName().removeprefix("island-section-"))] = item
+                if item.objectName().startswith("island-dot-"):
+                    dots[int(item.objectName().removeprefix("island-dot-"))] = item
                 pending.extend(item.childItems())
 
             def in_view(item):
@@ -119,35 +112,73 @@ Monet.IslandSections {
                 app.sendEvent(window, event)
                 QTest.qWait(20)
 
-            wheel(QPoint(-120, 0))
-            self.assertEqual((grid.property("contentX"), grid.property("contentY")), (0, 0))
-            wheel(QPoint(0, -120))
-            QTest.qWait(250)
-            self.assertGreater(grid.property("contentY"), 0)
-            grid.focusFirst()
-            self.assertEqual(grid.property("contentY"), 0)
-            for phase, y in ((Qt.ScrollBegin, 0), (Qt.ScrollUpdate, -110), (Qt.ScrollEnd, 0)):
-                wheel(QPoint(), QPoint(0, y), phase)
-            QTest.qWait(250)
-            self.assertTrue(in_view(tiles[14]))
-            self.assertEqual(grid.property("contentX"), 0)
-            target = tiles[14].mapToScene(QPointF(20, 20)).toPoint()
-            QTest.mouseClick(window, Qt.LeftButton, Qt.NoModifier, target)
-            self.assertEqual(grid.property("lastSection"), "14")
+            def click(item):
+                point = item.mapToScene(QPointF(item.width() / 2, item.height() / 2)).toPoint()
+                QTest.mouseClick(window, Qt.LeftButton, Qt.NoModifier, point)
 
-            grid.setProperty("contentY", 0)
+            def on_page(page):
+                QTest.qWait(210)
+                self.assertEqual(grid.property("currentPage"), page)
+                self.assertEqual([i for i in sorted(tiles) if in_view(tiles[i])],
+                                 list(range(12)) if page == 0 else [12, 13, 14])
+                # The first row of each settled page aligns with the top of the grid.
+                self.assertAlmostEqual(tiles[page * 12].mapToScene(QPointF()).y(), 0, delta=1)
+
+            self.assertEqual(list(sorted(dots)), [0, 1])
+            self.assertTrue(all(dot.isVisible() for dot in dots.values()))
+            wheel(QPoint(-120, 0))
+            on_page(0)
+            wheel(QPoint(0, -120))
+            on_page(1)
+            wheel(QPoint(0, -120))
+            on_page(1)
+            wheel(QPoint(0, 120))
+            on_page(0)
+            # Small pixel deltas accumulate, and rebound or momentum from the same swipe cannot undo the turn.
+            wheel(QPoint(), phase=Qt.ScrollBegin)
+            wheel(QPoint(), QPoint(0, -8), Qt.ScrollUpdate)
+            self.assertEqual(grid.property("currentPage"), 0)
+            wheel(QPoint(), QPoint(0, -20), Qt.ScrollUpdate)
+            self.assertEqual(grid.property("currentPage"), 1)
+            wheel(QPoint(), QPoint(0, 42), Qt.ScrollUpdate)
+            wheel(QPoint(), QPoint(0, 80), Qt.ScrollMomentum)
+            wheel(QPoint(), phase=Qt.ScrollEnd)
+            on_page(1)
+
+            click(tiles[14])
+            self.assertEqual(grid.property("lastSection"), "14")
+            click(dots[0])
+            on_page(0)
+            grid.focusFirst()
+            on_page(1)
+            self.assertTrue(tiles[14].hasActiveFocus())
+            QTest.keyClick(window, Qt.Key_Up)
+            on_page(0)
+            self.assertTrue(tiles[10].hasActiveFocus())
+            QTest.keyClick(window, Qt.Key_PageDown)
+            on_page(1)
+            device = QTest.createTouchDevice()
+            gesture = QTest.touchEvent(window, device, False)
+            gesture.press(0, QPoint(70, 35), window).commit()
+            for y in (60, 95, 140):
+                gesture.move(0, QPoint(70, y), window).commit()
+                QTest.qWait(20)
+            gesture.release(0, QPoint(70, 140), window).commit()
+            on_page(0)
+            self.assertEqual(grid.property("lastSection"), "14")
+            click(dots[1])
+            on_page(1)
+
+            grid.setWidth(250)
+            QTest.qWait(40)
+            self.assertEqual(grid.property("pageCount"), 2)
             grid.focusFirst()
             self.assertTrue(tiles[14].hasActiveFocus() and in_view(tiles[14]))
-            for _ in range(3):
-                QTest.keyClick(window, Qt.Key_Up)
-            self.assertTrue(tiles[2].hasActiveFocus() and in_view(tiles[2]))
-            self.assertEqual(grid.property("contentY"), 0)
-
-            grid.focusFirst()
+            dot_row = dots[0].parentItem()
             grid.setProperty("entries", [{"key": "only", "label": "Only", "icon": "folder", "color": "white"}])
             QTest.qWait(40)
-            self.assertFalse(grid.property("interactive"))
-            self.assertEqual(grid.property("contentY"), 0)
+            self.assertEqual((grid.property("pageCount"), grid.property("currentPage")), (1, 0))
+            self.assertFalse(dot_row.isVisible())
 
     def test_navigation_reuses_visited_pages_and_releases_private_content(self):
         app = QGuiApplication.instance() or QGuiApplication([])

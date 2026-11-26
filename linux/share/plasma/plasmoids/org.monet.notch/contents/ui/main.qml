@@ -1009,6 +1009,7 @@ PlasmoidItem {
     Component {
         id: sectionPage
         IslandSections {
+            motion: root.motion && pages.revealProgress === 1 && !body.outgoing
             entries: root.sections
             lastSection: root.lastSection
             detailFor: key => {

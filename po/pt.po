@@ -20104,6 +20104,10 @@ msgstr ""
 msgid "Copy image (%1 × %2)"
 msgstr ""
 
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/IslandSections.qml:157
+msgid "Page %1 of %2"
+msgstr ""
+
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NotchTool.qml:58
 msgid "Could not open tool. Retry"
 msgstr ""
