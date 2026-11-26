@@ -3,13 +3,14 @@ import os
 from pathlib import Path
 import re
 import sys
-from PySide6.QtCore import (QEvent, QObject, QProcess, QSettings, Qt, QTimer, QUrl, Signal, Slot)
+from PySide6.QtCore import (QEvent, QObject, QProcess, QSettings, QSize, Qt, QTimer, QUrl, Signal, Slot)
 from PySide6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage, QDBusServiceWatcher, QDBusVirtualObject
 from PySide6.QtGui import QIcon, QKeySequence, QShortcut
-from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QHBoxLayout, QInputDialog,
+from PySide6.QtWidgets import (QApplication, QButtonGroup, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QHBoxLayout, QInputDialog,
     QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox, QPlainTextEdit,
     QPushButton, QStackedWidget, QToolButton, QVBoxLayout, QWidget)
 from actions import ACTIONS, DIRECT_ACTIONS, SEARCH_HINTS, find_tools, preferences, tr
+from tool_catalog import CATEGORIES, ToolRow, category_for
 from pages import Downloads, Shelf, ShelfList, Snippets, row
 from shelf_content import ShelfEntry
 
@@ -39,10 +40,12 @@ class Window(QMainWindow):
         self.running = set()
         self.clipboard_request = None
         self.setWindowIcon(QIcon.fromTheme("applications-utilities"))
-        self.resize(630, 490)
+        self.resize(650, 525)
         central = QWidget()
         self.setCentralWidget(central)
         layout = QVBoxLayout(central)
+        layout.setContentsMargins(18, 14, 18, 12)
+        layout.setSpacing(10)
         top = QHBoxLayout()
         self.back = QToolButton()
         self.back.setIcon(QIcon.fromTheme("go-previous"))
@@ -52,6 +55,7 @@ class Window(QMainWindow):
         self.title = QLabel()
         font = self.title.font()
         font.setPointSizeF(font.pointSizeF() * 1.4)
+        font.setWeight(font.Weight.DemiBold)
         self.title.setFont(font)
         self.title.setTextFormat(Qt.PlainText)
         top.addWidget(self.title, 1)
@@ -68,13 +72,43 @@ class Window(QMainWindow):
         home_layout = QVBoxLayout(home)
         home_layout.setContentsMargins(0, 0, 0, 0)
         self.search = QLineEdit()
-        self.search.setPlaceholderText("Find a tool…")
+        self.search.setPlaceholderText(tr("Find a tool…"))
+        self.search.addAction(QIcon.fromTheme("system-search"), QLineEdit.LeadingPosition)
+        self.search.setStyleSheet("QLineEdit { border: 1px solid palette(mid); border-radius: 11px; padding: 6px; } QLineEdit:focus { border-color: palette(highlight); }")
         self.search.setClearButtonEnabled(True)
         self.search.textChanged.connect(self.filter)
         self.search.returnPressed.connect(self.open_selected)
         home_layout.addWidget(self.search)
+        self.category = "all"
+        self.category_buttons = QButtonGroup(self)
+        categories = QWidget()
+        categories.setObjectName("toolCategories")
+        categories.setStyleSheet("#toolCategories { background: palette(alternate-base); border-radius: 10px; }"
+                                 "#toolCategories QToolButton { padding: 4px; border: none; border-radius: 7px; }"
+                                 "#toolCategories QToolButton:checked { background: palette(highlight); color: palette(highlighted-text); }"
+                                 "#toolCategories QToolButton:focus { border: 1px solid palette(highlight); }")
+        bar = QHBoxLayout(categories)
+        bar.setContentsMargins(4, 3, 4, 3)
+        bar.setSpacing(1)
+        for key, name, icon in CATEGORIES:
+            button = QToolButton()
+            button.setObjectName("toolCategory-" + key)
+            button.setCheckable(True)
+            button.setChecked(key == self.category)
+            button.setIcon(QIcon.fromTheme(icon))
+            button.setIconSize(QSize(18, 18))
+            button.setAccessibleName(tr(name))
+            button.setToolTip(tr(name))
+            button.clicked.connect(lambda checked, key=key: self.set_category(key))
+            self.category_buttons.addButton(button)
+            bar.addWidget(button, 1)
+        home_layout.addWidget(categories)
         self.catalog = QListWidget()
-        self.catalog.setAlternatingRowColors(True)
+        self.catalog.setFrameShape(QListWidget.NoFrame)
+        self.catalog.setMouseTracking(True)
+        self.catalog.setUniformItemSizes(True)
+        self.catalog.setVerticalScrollMode(QListWidget.ScrollPerPixel)
+        self.catalog.setItemDelegate(ToolRow(self.catalog))
         for key, step in ((Qt.Key_Down, 1), (Qt.Key_Up, -1)):
             shortcut = QShortcut(QKeySequence(key), self.search, activated=lambda step=step: self.step_result(step))
             shortcut.setContext(Qt.WidgetShortcut)
@@ -112,14 +146,26 @@ class Window(QMainWindow):
             self.agent_feed = SessionFeed(self)
         return self.agent_feed
 
+    def set_category(self, key):
+        self.category = key
+        self.filter()
+        self.search.setFocus()
+
     def filter(self):
         self.catalog_pending = False
         self.catalog.clear()
         for key, _ in find_tools(self.search.text(), self.favorites, self.hidden):
             action = ACTIONS[key]
+            if self.category == "favorites":
+                if key not in self.favorites:
+                    continue
+            elif self.category != "all" and category_for(key, action) != self.category:
+                continue
             entry = QListWidgetItem(QIcon.fromTheme(action.icon), action.name)
             entry.setData(Qt.UserRole, key)
-            entry.setToolTip(tr(SEARCH_HINTS[key]) if key in SEARCH_HINTS else action.group)
+            hint = tr(SEARCH_HINTS[key]) if key in SEARCH_HINTS else ""
+            entry.setData(Qt.AccessibleDescriptionRole, hint)
+            entry.setToolTip(hint or action.name)
             self.catalog.addItem(entry)
         self.catalog.setCurrentRow(0)
         if not self.catalog.count():
@@ -140,7 +186,9 @@ class Window(QMainWindow):
     def home(self):
         self.cancel_clipboard_request()
         self.setWindowTitle(tr("Monet Utilities"))
-        self.title.setText("Utilities")
+        self.category = "all"
+        self.category_buttons.buttons()[0].setChecked(True)
+        self.title.setText(tr("Utilities"))
         self.back.hide()
         self.stack.setCurrentIndex(0)
         if self.search.text():
@@ -165,12 +213,24 @@ class Window(QMainWindow):
 
     def customize(self, focus_tool=None):
         dialog = QDialog(self)
-        dialog.setWindowTitle("Customize Utilities")
+        dialog.setWindowTitle(tr("Customize Utilities"))
+        dialog.resize(570, 520)
         layout = QVBoxLayout(dialog)
         hint = QLabel(tr("Choose which tools appear. Quick Panel favorites also appear in the built-in wheel.")
                       + " " + tr("Hiding a tool also removes its controls from the notch."))
         hint.setWordWrap(True)
         layout.addWidget(hint)
+        picker = QComboBox()
+        picker.addItem(tr("Show a group of tools…"), [])
+        picker.addItem(tr("Everyday tools"), ["shelf", "notes", "quick-panel", "clipboard", "screenshot", "appimage"])
+        picker.addItem(tr("Windows and input"), ["window-switcher", "windows", "mouse", "touchpad", "wheel-scrolling", "remap", "quit-protection"])
+        picker.addItem(tr("Power and display"), ["power", "awake", "display", "keyboard-light", "display-off", "wallpaper"])
+        picker.setAccessibleName(tr("Show a group of tools…"))
+        layout.addWidget(picker)
+        match = QLineEdit()
+        match.setPlaceholderText(tr("Find a tool…"))
+        match.setClearButtonEnabled(True)
+        layout.addWidget(match)
         from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem
         tree = QTreeWidget()
         tree.setHeaderLabels(["Tool", "Show", "Favorite"])
@@ -182,6 +242,21 @@ class Window(QMainWindow):
             item.setCheckState(1, Qt.Unchecked if key in self.hidden else Qt.Checked)
             if key != "quick-panel":
                 item.setCheckState(2, Qt.Checked if key in self.favorites else Qt.Unchecked)
+        def show_bundle(index):
+            keys = picker.itemData(index) or []
+            for row in range(tree.topLevelItemCount()):
+                item = tree.topLevelItem(row)
+                if item.data(0, Qt.UserRole) in keys:
+                    item.setCheckState(1, Qt.Checked)
+            picker.setCurrentIndex(0)
+
+        def find_rows(query):
+            for row in range(tree.topLevelItemCount()):
+                item = tree.topLevelItem(row)
+                item.setHidden(query.strip().casefold() not in item.text(0).casefold())
+
+        picker.activated.connect(show_bundle)
+        match.textChanged.connect(find_rows)
         tree.resizeColumnToContents(0)
         layout.addWidget(tree)
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)

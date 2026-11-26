@@ -89,6 +89,10 @@ class PanelLayouts(unittest.TestCase):
         self.assertEqual(self.state('[notchPanel.screen,notchPanel.location,notchPanel.alignment,notchPanel.lengthMode]'),
                          [0, 'top', 'center', 'fit'])
         self.assertFalse(self.choose('notchPanel')['available'])
+        for key in ('hoverControls', 'combined'):
+            self.assertTrue(notch('right')['options'][key])
+            self.assertFalse(notch('left', key + '-off')['options'][key])
+            self.assertFalse(notch('right')['options'][key])
         self.assertTrue(notch('right')['options']['countdown'])
         self.assertFalse(notch('left', 'countdown-off')['options']['countdown'])
         self.assertFalse(notch('right')['options']['countdown'])

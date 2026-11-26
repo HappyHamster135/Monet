@@ -3,6 +3,8 @@
     <kcfgfile name=""/>
     <group name="General">
         <entry name="tabs" type="String"><default>music,activity,time,calendar,notes</default></entry>
+        <entry name="hoverControls" type="Bool"><default>true</default></entry>
+        <entry name="combined" type="Bool"><default>true</default></entry>
         <entry name="wide" type="Bool"><default>false</default></entry>
         <entry name="gestures" type="Bool"><default>true</default></entry>
         <entry name="levels" type="Bool"><default>false</default></entry>

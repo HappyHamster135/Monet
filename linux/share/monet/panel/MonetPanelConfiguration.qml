@@ -393,7 +393,9 @@ Item {
                         }
                     }
                     Repeater {
-                        model: [{key:"gestures", label:i18nd("monet", "Scroll to open the notch or skip tracks")},
+                        model: [{key:"hoverControls", label:i18nd("monet", "Show quick controls when hovering over the notch")},
+                                {key:"combined", label:i18nd("monet", "Show music and a running timer together")},
+                                {key:"gestures", label:i18nd("monet", "Scroll to open the notch or skip tracks")},
                                 {key:"levels", label:i18nd("monet", "Show music level")},
                                 {key:"previews", label:i18nd("monet", "Preview notifications in the notch")},
                                 {key:"countdown", label:i18nd("monet", "Show running timers in the closed notch")},

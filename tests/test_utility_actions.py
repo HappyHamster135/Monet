@@ -105,6 +105,39 @@ class ActionDialogs(unittest.TestCase):
         self.window.worker = self.jobs
         self.addCleanup(self.window.deleteLater)
 
+    def test_category_filters_keep_all_tools_reachable(self):
+        from actions import ACTIONS
+        from tool_catalog import CATEGORIES, category_for
+        from PySide6.QtWidgets import QToolButton
+        expected = set(ACTIONS) - set(self.window.hidden)
+        grouped = set()
+        for category, _, _ in CATEGORIES[2:]:
+            self.window.findChild(QToolButton, "toolCategory-" + category).click()
+            keys = {self.window.catalog.item(i).data(Qt.UserRole) for i in range(self.window.catalog.count())}
+            self.assertTrue(keys)
+            self.assertTrue(all(category_for(key, ACTIONS[key]) == category for key in keys))
+            grouped.update(keys)
+        self.assertEqual(grouped, expected)
+        self.window.findChild(QToolButton, "toolCategory-favorites").click()
+        self.assertEqual({self.window.catalog.item(i).data(Qt.UserRole) for i in range(self.window.catalog.count())},
+                         set(self.window.favorites) & expected)
+
+    def test_recent_captures_show_latest_local_files_once(self):
+        from recent_captures import recent_files
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder)
+            for n in range(16):
+                file = path / f"Shot #{n}.png"
+                file.touch()
+                os.utime(file, (100 + n, 100 + n))
+            (path / "not a capture.txt").touch()
+            (path / "private.png").symlink_to(path / "Shot #3.png")
+            (path / ".draft.png").touch()
+            captures = recent_files({path: {".png"}, path / "missing": {".mp4"}})
+            self.assertEqual([row["name"] for row in captures], [f"Shot #{n}.png" for n in range(15, 3, -1)])
+            self.assertIn("%23", captures[0]["url"])
+            self.assertFalse(captures[0]["video"])
+
     def test_empty_trash_is_singleton_and_cancel_is_safe(self):
         for key in (Qt.Key_Return, Qt.Key_Escape):
             self.window.Open(["empty-trash"])

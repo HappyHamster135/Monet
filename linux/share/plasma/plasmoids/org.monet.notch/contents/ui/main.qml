@@ -12,7 +12,74 @@ import org.kde.plasma.workspace.dbus as DBus
 PlasmoidItem {
     id: root
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
+    // Plasma instantiates the compact item only for applets with both representations.
+    fullRepresentation: Item {}
     preferredRepresentation: compactRepresentation
+    property bool islandOpen: false
+    property bool folding: false
+    property bool pinned: false
+    readonly property bool combined: Plasmoid.configuration.combined && timerStrip && !!media && visibleTabs.includes(0)
+    property bool overview: true
+    property string utilityPage: ""
+    readonly property bool motion: Kirigami.Units.longDuration > 0
+    readonly property bool editing: !!Plasmoid.containment?.corona.editMode
+    readonly property bool ownEdge: Plasmoid.location === PlasmaCore.Types.TopEdge && Plasmoid.containment?.applets.length === 1
+    readonly property int surfaceWidth: Math.min(468, Math.max(240, (root.Screen.width || 500) - 28))
+    readonly property bool railSpace: ownEdge && root.Screen.width >= surfaceWidth + 112
+    readonly property int restWidth: Plasmoid.configuration.wide ? 190 : 128
+    readonly property var panelSurface: pages
+    Binding {
+        target: Plasmoid.containment
+        property: "backgroundHints"
+        when: root.ownEdge && !root.editing
+        value: PlasmaCore.Types.NoBackground
+        restoreMode: Binding.RestoreBindingOrValue
+    }
+    function collapse() {
+        if (folding || !islandOpen) return
+        if (!motion) { islandOpen = false; return }
+        folding = true
+        foldDelay.restart()
+    }
+    Timer { id: foldDelay; interval: Kirigami.Units.shortDuration; onTriggered: root.islandOpen = false }
+    function choose(key) {
+        overview = false
+        utilityPage = ""
+        viewingShelf = false; viewingWatch = false; viewingDownloads = false; viewingAwake = false
+        viewingAgenda = false; requestedNotice = 0; musicView = 0
+        if (["controls","system","together","captures"].includes(key)) utilityPage = key
+        else if (key === "files") viewingShelf = true
+        else if (key === "downloads") { tab = 1; viewingDownloads = true }
+        else if (key === "mixer") { tab = 0; musicView = 3 }
+        else tab = tabNames.indexOf(key)
+        pages.enterPage()
+    }
+    readonly property var sections: {
+        let rows = []
+        function add(key, label, icon, color) { rows.push({key, label, icon, color}) }
+        if (tools.offers("sound") || tools.offers("display")) add("controls", i18n("Controls"), "configure", "#e0e0e5")
+        if (combined) add("together", i18n("Music and timer"), "chronometer", "#ffad54")
+        const icons = ["media-playback-start","notifications","chronometer","view-calendar","document-edit","camera-web","edit-paste"]
+        const colors = ["#ff6485","#a8b7ff","#ff9f38","#ff716b","#ffcf69","#95d5ff","#c29fff"]
+        for (const id of visibleTabs) {
+            add(tabNames[id], tabLabels[id], icons[id], colors[id])
+            if (id === 0 && offerMixer) add("mixer", i18n("Volume mixer"), "audio-volume-high", "#a1d9ff")
+            if (id === 1 && offerDownloads) add("downloads", i18n("Downloads"), "go-down-symbolic", "#79d3aa")
+        }
+        if (tools.offers("screenshot") || tools.offers("recordings")) add("captures", i18n("Recent captures"), "camera-photo", "#bbdeee")
+        if (offerShelf) add("files", i18n("File shelf"), "folder-open", "#75b9ff")
+        if (tools.offers("processes")) add("system", i18n("System"), "view-statistics-symbolic", "#aba6ff")
+        return rows
+    }
+    onSectionsChanged: if (utilityPage && !sections.some(item => item.key === utilityPage)) {
+        utilityPage = ""; overview = true
+    }
+    readonly property string pageTitle: overview ? i18n("Sections") : utilityPage === "controls" ? i18n("Controls")
+        : utilityPage === "captures" ? i18n("Recent captures") : utilityPage === "system" ? i18n("System") : utilityPage === "together" ? i18n("Music and timer") : displayShelf ? i18n("File shelf") : showingWatch ? i18n("Watch")
+        : viewingDownloads ? i18n("Downloads") : tab === 0 && musicView === 3 ? i18n("Volume mixer") : tabLabels[tab] || i18n("Sections")
+    // Keep keyboard activation through Plasma on a custom, edge-attached surface.
+    onExpandedChanged: if (expanded) { expanded = false; openPill() }
+
     readonly property string helper: "@LIBEXECDIR@/monet-quick"
     readonly property var media: players.currentPlayer
     readonly property bool playing: media?.playbackStatus === Mpris.PlaybackStatus.Playing
@@ -32,9 +99,10 @@ PlasmoidItem {
     property bool viewingAwake: false
     readonly property bool timerStrip: visibleTabs.includes(2) && (!!countdown.completion || countdown.waiting
         || (Plasmoid.configuration.countdown && countdown.active))
-    readonly property bool timePageVisible: expanded && !searching && !displayShelf && !showingWatch && !viewingAwake && tab === 2
+    readonly property bool timePageVisible: islandOpen && !overview && !utilityPage && !searching && !displayShelf && !showingWatch && !viewingAwake && tab === 2
     readonly property bool awakeStrip: !!(Plasmoid.configuration.awake && awakeModel.item?.active
         && !timerStrip && !watch.registered && (awakeModel.item.state.duration || !playing))
+    onCombinedChanged: if (!combined && utilityPage === "together") { utilityPage = ""; overview = true }
     onOfferAwakeChanged: if (!offerAwake) viewingAwake = false
     Loader {
         id: awakeModel
@@ -77,12 +145,12 @@ PlasmoidItem {
     readonly property bool hasActivity: visibleTabs.includes(1)
     property int tab: 0
     function selectVisibleTab() {
-        if (!expanded || !visibleTabs.includes(tab)) tab = visibleTabs[0] ?? -1
+        if (!islandOpen || !visibleTabs.includes(tab)) tab = visibleTabs[0] ?? -1
     }
     onVisibleTabsChanged: selectVisibleTab()
     property bool draggingShelf: false
     // Wayland destinations can read the URI list after the pointer leaves the popup.
-    hideOnWindowDeactivate: !draggingShelf
+
     property bool searching: false
     readonly property bool offerSearch: tools.offers("command-bar")
     onOfferSearchChanged: if (!offerSearch) searching = false
@@ -90,37 +158,38 @@ PlasmoidItem {
     readonly property bool displayShelf: offerShelf && (viewingShelf || (!visibleTabs.length && !showingWatch))
     ShelfModel {
         id: fileShelf
-        shown: root.expanded && root.displayShelf
+        shown: root.islandOpen && root.displayShelf
         dragging: root.draggingShelf
         onFilesAdded: root.react("shelf")
     }
     function showShelf() {
         if (!offerShelf) return
-        viewingShelf = true
-        expanded = true
+        islandOpen = true
+        choose("files")
     }
     property int requestedNotice: 0
     Loader {
         id: preview
-        active: (!root.expanded || root.requestedNotice > 0) && root.hasActivity && Plasmoid.configuration.previews && power.active
+        active: (!root.islandOpen || root.requestedNotice > 0) && root.hasActivity && Plasmoid.configuration.previews && power.active
                 && !!power.nativeState?.lockKnown && !power.nativeState.locked && !NM.Server.inhibited
         source: "NoticePreview.qml"
-        onLoaded: item.watching = Qt.binding(() => !root.expanded)
+        onLoaded: item.watching = Qt.binding(() => !root.islandOpen)
     }
     function openPill() {
-        if (!expanded && preview.item?.noticeId) {
-            requestedNotice = preview.item.noticeId
-            viewingWatch = false
-            viewingDownloads = false
-            tab = 1
-        } else if (!expanded && awakeStrip) {
-            viewingAwake = true
-            tab = 2
-        }
-        expanded = !expanded
+        if (folding) { foldDelay.stop(); folding = false; return }
+        if (islandOpen) { collapse(); return }
+        const notice = preview.item?.noticeId || 0
+        const toAwake = awakeStrip
+        islandOpen = true
+        if (notice) { choose("activity"); requestedNotice = notice }
+        else if (combined) choose("together")
+        else if (timerStrip) choose("time")
+        else if (watch.registered) { overview = false; viewingWatch = true; if (hasActivity) tab = 1 }
+        else if (toAwake) { choose("time"); viewingAwake = true }
+        else if (playing && visibleTabs.includes(0)) choose("music")
     }
     property bool padsOpened: false
-    readonly property bool padShown: expanded && !viewingShelf && !showingWatch && tab === 4
+    readonly property bool padShown: islandOpen && !overview && !utilityPage && !viewingShelf && !showingWatch && tab === 4
     onPadShownChanged: if (padShown) padsOpened = true
     onTabChanged: {
         if (tab !== 1) requestedNotice = 0
@@ -131,7 +200,7 @@ PlasmoidItem {
         active: root.padsOpened
         sourceComponent: PadModel {
             shown: root.padShown
-            onDetached: root.expanded = false
+            onDetached: root.islandOpen = false
         }
     }
     property int musicView: 0
@@ -181,7 +250,7 @@ PlasmoidItem {
     property string downloadPath: ""
     property url downloadFolder: ""
     property bool downloadAvailable: false
-    readonly property bool activityOpen: expanded && !viewingShelf && tab === 1 && !(viewingWatch && watch.registered)
+    readonly property bool activityOpen: islandOpen && !overview && !utilityPage && !viewingShelf && tab === 1 && !(viewingWatch && watch.registered)
     function refreshActivity() {
         if (!activityOpen || !(offerDownloads || offerAgents)) return
         if (checkingDownloads) { refreshPending = true; return }
@@ -221,8 +290,8 @@ PlasmoidItem {
         }
         onBatteryStateChanged: trackPlug()
         onCompanionPowerChanged: trackPlug()
-        onActiveChanged: { trackPlug(); if (active && root.endTime) Qt.callLater(root.refreshTime) }
-        observePower: Plasmoid.configuration.alerts || root.expanded || companionPower
+        onActiveChanged: { if (!active && root.islandOpen) root.islandOpen = false; trackPlug(); if (active && root.endTime) Qt.callLater(root.refreshTime) }
+        observePower: Plasmoid.configuration.alerts || root.islandOpen || companionPower
         onBatteriesChanged: if (power.powerReady && Plasmoid.configuration.alerts) root.checkCharge()
         onPowerReadyChanged: {
             trackPlug()
@@ -257,7 +326,7 @@ PlasmoidItem {
     }
     function openTool(page) {
         runner.connectSource(helper + " utilities " + page)
-        expanded = false
+        islandOpen = false
     }
     NotchTimer {
         id: countdown
@@ -300,17 +369,16 @@ PlasmoidItem {
     }
     onShowSecondsChanged: if (showSeconds && (endTime || watchStart)) Qt.callLater(refreshTime)
     Component.onCompleted: { selectVisibleTab(); refreshTime() }
-    onExpandedChanged: {
-        if (!root.expanded) { viewingAwake = false; searching = false; requestedNotice = 0; viewingDownloads = false; viewingShelf = false; return }
+    onIslandOpenChanged: {
+        if (!islandOpen) {
+            foldDelay.stop(); folding = false; pinned = false; pages.revealProgress = 0; overview = true; utilityPage = ""
+            viewingAwake = false; searching = false; requestedNotice = 0; viewingDownloads = false; viewingShelf = false
+            return
+        }
         tools.reload()
         agendaDay = new Date()
         refreshTime()
-        if (requestedNotice || viewingShelf) return
-        if (timerStrip) { viewingWatch = false; tab = 2 }
-        else if (watch.registered) {
-            viewingWatch = true
-            if (hasActivity) tab = 1
-        }
+
     }
     P5.DataSource {
         id: runner
@@ -356,8 +424,8 @@ PlasmoidItem {
     NotchGestures {
         id: notchGestures
         enabled: Plasmoid.configuration.gestures
-        expanded: root.expanded
-        onExpansionRequested: open => { if (open !== root.expanded) root.openPill() }
+        expanded: root.islandOpen
+        onExpansionRequested: open => { if (open !== root.islandOpen) root.openPill() }
         onTrackRequested: next => {
             const player = root.media
             if (next && player?.canGoNext) player.Next()
@@ -366,35 +434,93 @@ PlasmoidItem {
     }
     compactRepresentation: C.AbstractButton {
         id: pill
-        Layout.minimumWidth: Plasmoid.configuration.wide ? 176 : 96
+        Item {
+            id: leftAnchor
+            width: 1; height: parent.height
+            x: (parent.width - root.surfaceWidth) / 2 - 23
+        }
+        Item {
+            id: rightAnchor
+            width: 1; height: parent.height
+            x: (parent.width + root.surfaceWidth) / 2 + 22
+        }
+        IslandRail {
+            id: leftRail
+            visualParent: leftAnchor
+            presented: popup.visible && root.railSpace && !root.folding && !root.editing
+            entries: [{key: "sections", label: i18n("Sections"), icon: "view-grid"}].concat(
+                root.visibleTabs.includes(2) ? [{key: "time", label: i18n("Time"), icon: "chronometer"}] : [])
+            onSelected: key => { if (key === "sections") pages.showSections(); else root.choose(key) }
+        }
+        IslandRail {
+            id: rightRail
+            visualParent: rightAnchor
+            presented: popup.visible && root.railSpace && !root.folding && !root.editing
+            entries: root.sections.filter(item => ["controls", "mixer", "files"].includes(item.key))
+            onSelected: key => root.choose(key)
+        }
+        HoverHandler {
+            id: overPill
+            blocking: false
+            onHoveredChanged: if (!hovered) leavePill.restart()
+        }
+        Timer { id: leavePill; interval: 160 }
+        readonly property bool glance: (overPill.hovered || quickButtons.underPointer || leavePill.running || visualFocus) && !root.editing && !root.islandOpen
+        readonly property bool activeStrip: shelfDrop.containsDrag || preview.item?.noticeId > 0 || root.timerStrip || watch.registered || root.awakeStrip || !!root.media
+        readonly property bool titleVisible: root.islandOpen || glance || !!preview.item?.noticeId || root.timerStrip || watch.registered || root.awakeStrip || shelfDrop.containsDrag || (Plasmoid.configuration.wide && !!root.media)
+        readonly property real expandedWidth: root.islandOpen && !root.folding && root.ownEdge ? root.surfaceWidth
+            : glance || root.islandOpen ? root.restWidth : root.restWidth - 12
+        // Keep the native hit area stationary while the visual strip expands under the pointer.
+        Layout.minimumWidth: root.islandOpen && root.ownEdge ? root.surfaceWidth : root.restWidth
         Layout.maximumWidth: Layout.minimumWidth
         Layout.preferredWidth: Layout.minimumWidth
+        readonly property Item compactHost: {
+            let ancestor = parent
+            while (ancestor && ancestor.objectName !== "org.kde.desktop-CompactApplet") ancestor = ancestor.parent
+            return ancestor
+        }
+        Binding {
+            target: pill.compactHost
+            property: "active"
+            when: !!pill.compactHost
+            value: false
+            restoreMode: Binding.RestoreBindingOrValue
+        }
+        hoverEnabled: true
+        leftPadding: 13; rightPadding: glance && quickButtons.visible ? 5 : 13; topPadding: 0; bottomPadding: 0
         Accessible.name: root.toolTipMainText + ". " + root.toolTipSubText
         Accessible.description: companionLoader.item?.showing ? i18n("Notch companion") : ""
         onClicked: root.openPill()
-        background: Rectangle {
-            radius: height / 2
-            color: shelfDrop.containsDrag || pill.activeFocus ? "#30695e" : "#202323"
-            border.color: shelfDrop.containsDrag || pill.hovered ? "#7ec9b5" : "#494c4a"
+        background: Item {
+            IslandSurface {
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: Math.min(parent.width, animatedWidth)
+                // The panel theme may inset its applets even on a non-floating panel.
+                height: root.ownEdge && pill.Window.window ? pill.Window.window.height : parent.height
+                y: (parent.height - height) / 2
+                property real animatedWidth: pill.expandedWidth
+                Behavior on animatedWidth { NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.OutCubic } }
+                shoulder: root.ownEdge ? 5 : 0
+                chin: root.islandOpen && !root.folding ? 0 : 9
+                topColor: "#050506"
+                bottomColor: shelfDrop.containsDrag ? "#1d4c40" : "#09090b"
+            }
         }
         contentItem: RowLayout {
             spacing: 5
-            Loader {
-                Layout.preferredWidth: active ? 13 : 0; Layout.preferredHeight: 18
-                visible: active; active: Plasmoid.configuration.levels && root.playing && power.active
-                source: "MusicLevel.qml"
-                onLoaded: {
-                    item.sources = players
-                    item.player = Qt.binding(() => root.media)
-                }
+            Image {
+                visible: status === Image.Ready && !root.islandOpen && !!root.media && (!root.timerStrip || root.combined) && !root.awakeStrip && !watch.registered && !preview.item?.noticeId && !shelfDrop.containsDrag
+                Layout.preferredWidth: 20; Layout.preferredHeight: 20
+                source: root.media?.artUrl || ""; sourceSize: Qt.size(40, 40)
+                asynchronous: true; fillMode: Image.PreserveAspectCrop
             }
             Kirigami.Icon {
-                visible: !companionLoader.item?.showing
+                visible: !companionLoader.item?.showing && (pill.titleVisible || pill.activeStrip) && (root.islandOpen || !root.media?.artUrl || !pill.activeStrip || root.timerStrip || root.awakeStrip || watch.registered || !!preview.item?.noticeId || shelfDrop.containsDrag)
                 Layout.preferredHeight: 17; Layout.preferredWidth: 17
-                source: shelfDrop.containsDrag ? "folder-add" : preview.item?.noticeId ? "notifications"
+                source: root.islandOpen ? "view-grid" : shelfDrop.containsDrag ? "folder-add" : preview.item?.noticeId ? "notifications"
                     : root.timerStrip ? (countdown.paused ? "media-playback-pause" : "chronometer") : watch.registered ? "view-visible"
                     : root.awakeStrip ? "system-suspend-inhibited" : root.media ? "audio-x-generic" : "applications-utilities"
-                color: "#9dd9c9"; isMask: true
+                color: root.timerStrip ? "#ffad54" : "#d8d8df"; isMask: true
             }
             Item {
                 id: leftCompanion
@@ -403,8 +529,52 @@ PlasmoidItem {
             }
             C.Label {
                 Layout.fillWidth: true; color: "#f6f3e9"; textFormat: Text.PlainText; elide: Text.ElideRight
-                text: shelfDrop.containsDrag ? i18n("Shelf") : preview.item?.title || (root.timerStrip ? (countdown.completion && !Plasmoid.configuration.wide ? i18n("Done") : root.timerSummary)
-                    : watch.registered ? i18n("Watching") : root.awakeStrip ? awakeModel.item.compactText : root.media?.track || i18n("Tools"))
+                opacity: pill.titleVisible ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: Kirigami.Units.shortDuration } }
+                text: pill.glance && quickButtons.visible && root.media && !Plasmoid.configuration.wide && !root.timerStrip ? "" : root.islandOpen ? root.pageTitle : shelfDrop.containsDrag ? i18n("Shelf") : preview.item?.title || (root.timerStrip ? (countdown.completion && !Plasmoid.configuration.wide ? i18n("Done") : root.timerSummary)
+                    : watch.registered ? i18n("Watching") : root.awakeStrip ? awakeModel.item.compactText : root.media?.track || i18n("Monet Notch"))
+            }
+            Loader {
+                Layout.preferredWidth: active ? 13 : 0; Layout.preferredHeight: 18
+                visible: active; active: Plasmoid.configuration.levels && root.playing && power.active && !root.islandOpen
+                source: "MusicLevel.qml"
+                onLoaded: {
+                    item.sources = players
+                    item.player = Qt.binding(() => root.media)
+                }
+            }
+            RowLayout {
+                id: quickButtons
+                readonly property bool underPointer: playQuick.hovered || nextQuick.hovered || timerQuick.hovered || searchQuick.hovered
+                visible: pill.glance && Plasmoid.configuration.hoverControls
+                spacing: 3
+                IslandButton {
+                    id: playQuick
+                    visible: !!root.media
+                    implicitWidth: 24; implicitHeight: 24
+                    text: root.playing ? i18n("Pause") : i18n("Play"); icon.name: root.playing ? "media-playback-pause" : "media-playback-start"
+                    enabled: root.playing ? !!root.media?.canPause : !!root.media?.canPlay
+                    onClicked: root.playing ? root.media.Pause() : root.media.Play()
+                }
+                IslandButton {
+                    id: nextQuick
+                    visible: !!root.media?.canGoNext && !root.timerStrip
+                    implicitWidth: 24; implicitHeight: 24; text: i18n("Next track"); icon.name: "media-skip-forward"
+                    onClicked: root.media.Next()
+                }
+                IslandButton {
+                    id: timerQuick
+                    visible: root.timerStrip && countdown.active
+                    implicitWidth: 24; implicitHeight: 24; text: countdown.paused ? i18n("Resume timer") : i18n("Pause timer")
+                    icon.name: countdown.paused ? "media-playback-start" : "media-playback-pause"; tint: "#ffb35b"
+                    onClicked: countdown.paused ? countdown.resume(Date.now()) : countdown.pause(Date.now())
+                }
+                IslandButton {
+                    id: searchQuick
+                    visible: !root.media && !root.timerStrip && root.offerSearch
+                    implicitWidth: 24; implicitHeight: 24; text: i18n("Command Bar"); icon.name: "system-search"
+                    onClicked: { root.openPill(); root.searching = true }
+                }
             }
             Item {
                 id: rightCompanion
@@ -445,73 +615,149 @@ PlasmoidItem {
         }
     }
 
-    fullRepresentation: ColumnLayout {
+    PlasmaCore.Dialog {
+        id: popup
+        visualParent: root.compactRepresentationItem
+        location: Plasmoid.location
+        type: PlasmaCore.Dialog.AppletPopup
+        backgroundHints: PlasmaCore.Dialog.NoBackground
+        hideOnWindowDeactivate: !root.draggingShelf && !root.pinned
+        visible: root.islandOpen && !!visualParent
+        onVisibleChanged: {
+            if (visible) { requestActivate(); pages.reveal() }
+            else if (root.islandOpen) root.islandOpen = false
+        }
+        mainItem: FocusScope {
         id: pages
-        readonly property bool canNavigate: root.expanded && !root.searching && !root.draggingShelf
-        readonly property bool canGoBack: root.displayShelf ? root.visibleTabs.length > 0
-            : root.showingWatch ? root.visibleTabs.length > 0 || root.offerShelf
-            : root.viewingAwake || (root.tab === 0 && root.musicView !== 0) || (root.tab === 1 && root.viewingDownloads)
-              || (root.tab === 3 && root.viewingAgenda) || !!body.item?.notificationOpen
-
-        function back() {
-            if (root.displayShelf) {
-                root.viewingShelf = false
-                shelfButton.forceActiveFocus(Qt.BacktabFocusReason)
-            } else if (root.showingWatch) {
-                root.viewingWatch = false
-                strip.currentItem?.forceActiveFocus(Qt.BacktabFocusReason)
-            } else if (root.viewingAwake) {
-                root.viewingAwake = false
-                Qt.callLater(() => body.item?.focusAwake?.())
-            } else if (body.item?.notificationOpen) {
-                body.item.backFromNotification()
-            } else {
-                if (root.tab === 0) root.musicView = 0
-                else if (root.tab === 1) root.viewingDownloads = false
-                else if (root.tab === 3) root.viewingAgenda = false
-                strip.currentItem?.forceActiveFocus(Qt.BacktabFocusReason)
+        width: root.surfaceWidth
+        height: Math.max(150, Math.min(Screen.height - 78, root.searching ? 370 :
+            root.overview ? 58 + Math.ceil(root.sections.length / (width < 374 ? 3 : width < 452 ? 4 : 5)) * 71 :
+            root.utilityPage === "together" ? (width >= 370 ? 194 : 340) : root.utilityPage === "system" ? 260 : root.utilityPage === "controls" ? 250 :
+            root.tab === 0 && root.musicView === 0 && !root.displayShelf ? 260 : 365))
+        focus: true
+        Behavior on height { enabled: root.motion && popup.visible; NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.OutCubic } }
+        property real revealProgress: 0
+        function reveal() {
+            revealProgress = 0
+            revealProgress = 1
+            Qt.callLater(() => { if (root.overview) body.item?.focusFirst?.(); else sectionsButton.forceActiveFocus(Qt.OtherFocusReason) })
+        }
+        function enterPage() { if (root.islandOpen && root.motion) pageEntry.restart() }
+        Connections {
+            target: root
+            function onFoldingChanged() { if (root.islandOpen) pages.revealProgress = root.folding ? 0 : 1 }
+            function onOverviewChanged() { pages.enterPage() }
+        }
+        Behavior on revealProgress {
+            enabled: root.motion && root.islandOpen
+            NumberAnimation { duration: root.folding ? Kirigami.Units.shortDuration : Kirigami.Units.longDuration; easing.type: Easing.OutCubic }
+        }
+        IslandSurface {
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: root.restWidth + (parent.width - (root.ownEdge ? 10 : 0) - root.restWidth) * pages.revealProgress
+            height: Math.max(1, parent.height * pages.revealProgress)
+            chin: 22; topColor: "#09090b"; bottomColor: "#232326"
+        }
+        C.Control {
+            id: skin
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: root.restWidth + (parent.width - (root.ownEdge ? 10 : 0) - root.restWidth) * pages.revealProgress
+            height: parent.height * pages.revealProgress
+            clip: true; padding: 0
+            background: null
+            palette.window: "#151517"; palette.windowText: "#f5f5f7"; palette.text: "#f5f5f7"
+            palette.base: "#232325"; palette.button: "#303034"; palette.buttonText: "#f5f5f7"
+            palette.highlight: "#527ba6"; palette.highlightedText: "white"
+            Kirigami.Theme.inherit: false
+            Kirigami.Theme.backgroundColor: "#19191c"; Kirigami.Theme.textColor: "#f5f5f7"
+            Kirigami.Theme.alternateBackgroundColor: "#262629"; Kirigami.Theme.highlightColor: "#527ba6"
+            contentItem: Item {
+                ColumnLayout {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: 5; width: pages.width - 26; height: pages.height - 17
+                    opacity: Math.max(0, (pages.revealProgress - 0.22) / 0.78)
+                    spacing: 7
+                    RowLayout {
+                        Layout.fillWidth: true
+                        IslandButton { id: sectionsButton; icon.name: root.overview ? "window-close" : "view-grid"
+                            text: root.overview ? i18n("Close") : i18n("Sections")
+                            onClicked: { if (root.overview) root.collapse(); else pages.showSections() } }
+                        IslandButton { visible: !root.overview && pages.canGoBack; icon.name: "go-previous"; text: i18n("Back"); onClicked: pages.back() }
+                        Item { Layout.fillWidth: true }
+                        IslandButton { id: searchButton; visible: root.offerSearch; icon.name: "system-search"; text: i18n("Command Bar"); onClicked: root.searching = true }
+                        IslandButton { icon.name: "pin-symbolic"; text: root.pinned ? i18n("Unpin") : i18n("Keep open"); checked: root.pinned; onClicked: root.pinned = !root.pinned }
+                        IslandButton { icon.name: "application-menu"; text: i18n("Utilities"); onClicked: root.openTool("tools") }
+                    }
+                    Loader {
+                        id: body
+                        Layout.fillWidth: true; Layout.fillHeight: true
+                        visible: !root.searching
+                        active: root.islandOpen && !root.searching
+                        sourceComponent: root.overview ? sectionPage : root.utilityPage === "controls" ? controlsPage
+                            : root.utilityPage === "system" ? systemPage : root.utilityPage === "captures" ? capturesPage : root.utilityPage === "together" ? pairedPage :
+                            root.displayShelf ? shelfPage : root.showingWatch ? watchPage
+                            : root.tab === 2 && root.viewingAwake && awakeModel.item ? awakePage
+                            : root.tab === 1 && root.viewingDownloads ? downloadsPage
+                            : root.tab === 3 && root.viewingAgenda ? agendaPage
+                            : root.tab === 0 && root.musicView === 3 ? mixerPage
+                            : root.tab === 6 ? clipboardPage : root.tab === 5 ? cameraPage
+                            : root.tab === 4 ? (padController.item ? padPage : null)
+                            : [musicPage, activityPage, timerPage, calendarPage][root.tab] ?? null
+                        NumberAnimation on opacity { id: pageEntry; running: false; from: 0.25; to: 1; duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic }
+                    }
+                }
             }
+        }
+        function showSections() {
+            root.overview = true
+            root.searching = false
+            Qt.callLater(() => body.item?.focusFirst?.())
+        }
+        function cycle(direction) {
+            if (!root.visibleTabs.length) return
+            const at = root.visibleTabs.indexOf(root.tab)
+            const next = (at + direction + root.visibleTabs.length) % root.visibleTabs.length
+            root.choose(root.tabNames[root.visibleTabs[next]])
+        }
+        readonly property bool canNavigate: root.islandOpen && !root.searching && !root.draggingShelf
+        readonly property bool canGoBack: !root.overview && (root.displayShelf || root.showingWatch ||
+            root.viewingAwake || (root.tab === 0 && root.musicView !== 0) || (root.tab === 1 && root.viewingDownloads)
+            || (root.tab === 3 && root.viewingAgenda) || !!body.item?.notificationOpen)
+        function back() {
+            if (body.item?.notificationOpen) { body.item.backFromNotification(); return }
+            if (root.viewingAwake) { root.viewingAwake = false; Qt.callLater(() => body.item?.focusAwake?.()); return }
+            if (root.tab === 0 && root.musicView !== 0) { root.musicView = 0; return }
+            if (root.tab === 3 && root.viewingAgenda) { root.viewingAgenda = false; return }
+            showSections()
         }
         Shortcut {
             sequences: ["Escape", "Alt+Left"]
-            enabled: pages.canNavigate && pages.canGoBack
-            onActivated: pages.back()
+            enabled: pages.canNavigate
+            onActivated: { if (pages.canGoBack) pages.back(); else if (!root.overview) pages.showSections(); else root.collapse() }
         }
-        Shortcut {
-            sequence: "Ctrl+Tab"
-            enabled: pages.canNavigate && navigation.visible && strip.count > 1
-            onActivated: strip.step(1)
-        }
-        Shortcut {
-            sequence: "Ctrl+Shift+Tab"
-            enabled: pages.canNavigate && navigation.visible && strip.count > 1
-            onActivated: strip.step(-1)
-        }
-        Shortcut {
-            sequence: "Ctrl+K"
-            enabled: root.expanded && root.offerSearch && !root.searching && !root.draggingShelf
-            onActivated: root.searching = true
-        }
+        Shortcut { sequence: "Ctrl+Tab"; enabled: pages.canNavigate; onActivated: pages.cycle(1) }
+        Shortcut { sequence: "Ctrl+Shift+Tab"; enabled: pages.canNavigate; onActivated: pages.cycle(-1) }
+        Shortcut { sequence: "Ctrl+K"; enabled: pages.canNavigate && root.offerSearch; onActivated: root.searching = true }
         C.Popup {
             id: searchPopup
-            parent: pages
-            width: pages.width; height: pages.height
+            parent: skin
+            x: 8; y: 5; width: pages.width - 16; height: pages.height - 16
             padding: Kirigami.Units.smallSpacing
             background: Rectangle {
                 radius: Kirigami.Units.cornerRadius
-                color: Qt.alpha(Kirigami.Theme.backgroundColor, 0.92)
+                color: "#19191c"
             }
             popupType: C.Popup.Item
             modal: true; dim: false; focus: true
             closePolicy: C.Popup.CloseOnEscape
-            visible: root.expanded && root.searching
+            visible: root.islandOpen && root.searching
             onClosed: {
                 root.searching = false
-                if (root.expanded && searchButton.visible) searchButton.forceActiveFocus(Qt.BacktabFocusReason)
+                if (root.islandOpen && searchButton.visible) searchButton.forceActiveFocus(Qt.BacktabFocusReason)
             }
             readonly property var session: power.nativeState ?? searchLock.item
             readonly property bool unlocked: !!session?.lockKnown && !session.locked
-            onUnlockedChanged: if (visible && session?.lockKnown && session.locked) root.expanded = false
+            onUnlockedChanged: if (visible && session?.lockKnown && session.locked) root.islandOpen = false
             Loader {
                 id: searchLock
                 active: searchPopup.visible && !power.nativeState
@@ -527,7 +773,7 @@ PlasmoidItem {
             Connections {
                 target: commandView.item
                 function onBackRequested() { root.searching = false }
-                function onActivated() { root.expanded = false }
+                function onActivated() { root.islandOpen = false }
             }
             C.Button {
                 anchors.centerIn: parent
@@ -535,97 +781,71 @@ PlasmoidItem {
                 text: searchPopup.unlocked ? i18n("Open Command Bar") : i18n("Back")
                 onClicked: {
                     if (!searchPopup.unlocked) { root.searching = false; return }
-                    root.expanded = false
+                    root.islandOpen = false
                     DBus.SessionBus.asyncCall({service: "org.kde.krunner", path: "/App",
                         iface: "org.kde.krunner.App", member: "display"})
                 }
             }
         }
-        // The popup may still lack its own screen while its first layout runs.
-        // Use the already-mapped panel so the tab row starts at its final width.
-        Layout.preferredWidth: Math.min(422, Math.max(250, (root.Screen.width || 454) - 32))
-        Layout.preferredHeight: root.searching || root.visibleTabs.length || root.displayShelf || root.showingWatch
-            ? Math.min(370, Math.max(200, Screen.height - 80)) : implicitHeight
-        // Plasma can size its transient window before the first page is loaded.
-        // Keep the selected reading height even while switching to or from search.
-        Layout.minimumHeight: Layout.preferredHeight
-        spacing: Kirigami.Units.smallSpacing
-        RowLayout {
-            id: navigation
-            visible: !root.searching && !root.viewingShelf && root.visibleTabs.length > 0
-            Layout.fillWidth: true
-            spacing: Kirigami.Units.smallSpacing
-            NotchTabs {
-                id: strip
-                Layout.fillWidth: true
-                Layout.minimumWidth: 0
-                tabs: root.visibleTabs; labels: root.tabLabels; page: root.tab
-                onChosen: tab => { root.viewingWatch = false; root.tab = tab }
-            }
-            C.ToolButton {
-                id: allTabs
-                visible: strip.naturalWidth > navigation.width
-                text: i18n("All tabs")
-                display: C.AbstractButton.IconOnly
-                icon.name: "arrow-down"
-                onClicked: tabMenu.open()
-                C.ToolTip.visible: hovered
-                C.ToolTip.text: text
-                C.Menu {
-                    id: tabMenu
-                    y: allTabs.height
-                    onOpened: {
-                        currentIndex = root.visibleTabs.indexOf(root.tab)
-                        itemAt(currentIndex)?.forceActiveFocus(Qt.PopupFocusReason)
+        }
+    }
+    Component { id: sectionPage; IslandSections { entries: root.sections; onSelected: key => root.choose(key) } }
+    Component {
+        id: capturesPage
+        IslandCaptures {
+            helper: root.helper
+            images: tools.offers("screenshot"); videos: tools.offers("recordings"); shelf: root.offerShelf
+            onAddFile: url => fileShelf.change({action: "add", urls: [url]})
+        }
+    }
+    Component { id: controlsPage; IslandControls { soundAvailable: tools.offers("sound"); brightnessAvailable: tools.offers("display") } }
+    Component {
+        id: pairedPage
+        GridLayout {
+            columns: width >= 344 ? 2 : 1
+            columnSpacing: 8; rowSpacing: 8
+            Rectangle {
+                Layout.fillWidth: true; Layout.fillHeight: true; Layout.preferredWidth: 1
+                radius: 15; color: "#232225"
+                ColumnLayout {
+                    anchors.fill: parent; anchors.margins: 11; spacing: 4
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Text { text: i18n("Music"); font.weight: Font.Medium; color: "#ff7b97"; Layout.fillWidth: true; elide: Text.ElideRight }
+                        IslandButton { text: i18n("Now playing"); icon.name: "go-next-symbolic"; implicitHeight: 25; implicitWidth: 25; onClicked: root.choose("music") }
                     }
-                    Instantiator {
-                        model: root.visibleTabs
-                        delegate: C.MenuItem {
-                            required property int modelData
-                            text: root.tabLabels[modelData]
-                            checkable: true
-                            checked: root.tab === modelData
-                            onTriggered: strip.chosen(modelData)
-                        }
-                        onObjectAdded: (index, item) => tabMenu.insertItem(index, item)
-                        onObjectRemoved: (index, item) => tabMenu.removeItem(item)
+                    C.Label { Layout.fillWidth: true; elide: Text.ElideRight; font.bold: true; font.pixelSize: 17; color: "white"
+                        textFormat: Text.PlainText; text: root.media?.track || i18n("Now playing") }
+                    C.Label { Layout.fillWidth: true; elide: Text.ElideRight; color: "#c2c0c7"; textFormat: Text.PlainText; text: root.media?.artist || root.media?.identity || "" }
+                    Item { Layout.fillHeight: true }
+                    RowLayout {
+                        IslandButton { text: root.playing ? i18n("Pause") : i18n("Play"); icon.name: root.playing ? "media-playback-pause" : "media-playback-start"; prominent: true
+                            enabled: root.playing ? !!root.media?.canPause : !!root.media?.canPlay
+                            onClicked: root.playing ? root.media.Pause() : root.media.Play() }
+                        IslandButton { text: i18n("Next track"); icon.name: "media-skip-forward"; enabled: !!root.media?.canGoNext; onClicked: root.media.Next() }
                     }
                 }
             }
-        }
-        Loader {
-            id: body
-            Layout.fillWidth: true; Layout.fillHeight: true
-            readonly property bool hasPage: root.visibleTabs.length > 0 || root.displayShelf || root.showingWatch
-            visible: hasPage && !root.searching
-            active: root.expanded && hasPage
-            sourceComponent: root.displayShelf ? shelfPage : root.showingWatch ? watchPage
-                : root.tab === 2 && root.viewingAwake && awakeModel.item ? awakePage
-                : root.tab === 1 && root.viewingDownloads ? downloadsPage
-                : root.tab === 3 && root.viewingAgenda ? agendaPage
-                : root.tab === 0 && root.musicView === 3 ? mixerPage
-                : root.tab === 6 ? clipboardPage
-                : root.tab === 5 ? cameraPage
-                : root.tab === 4 ? (padController.item ? padPage : null) : [musicPage, activityPage, timerPage, calendarPage][root.tab] ?? null
-        }
-        RowLayout {
-            visible: !root.searching && (!root.viewingShelf || !root.visibleTabs.length)
-            Layout.fillWidth: true
-            C.Button { id: shelfButton; visible: root.offerShelf && root.visibleTabs.length > 0; text: i18n("File shelf"); icon.name: "folder-open"; onClicked: root.showShelf() }
-            Item { Layout.fillWidth: true }
-            C.ToolButton {
-                id: searchButton
-                visible: root.offerSearch
-                icon.name: "system-search"
-                text: i18n("Command Bar")
-                display: C.AbstractButton.IconOnly
-                C.ToolTip.visible: hovered
-                C.ToolTip.text: text
-                onClicked: root.searching = true
+            Rectangle {
+                Layout.fillWidth: true; Layout.fillHeight: true; Layout.preferredWidth: 1
+                radius: 15; color: "#29231f"
+                ColumnLayout {
+                    anchors.fill: parent; anchors.margins: 11; spacing: 4
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Text { text: i18n("Timer"); font.weight: Font.Medium; color: "#ffb35b"; Layout.fillWidth: true; elide: Text.ElideRight }
+                        IslandButton { text: i18n("Time"); icon.name: "go-next-symbolic"; implicitHeight: 25; implicitWidth: 25; onClicked: root.choose("time") }
+                    }
+                    Text { text: root.timerSummary; color: "#ffb35b"; font.pixelSize: 30; Layout.fillWidth: true; elide: Text.ElideRight }
+                    Item { Layout.fillHeight: true }
+                    IslandButton { visible: countdown.active; text: countdown.paused ? i18n("Resume timer") : i18n("Pause timer")
+                        icon.name: countdown.paused ? "media-playback-start" : "media-playback-pause"; tint: "#ffb35b"
+                        onClicked: countdown.paused ? countdown.resume(Date.now()) : countdown.pause(Date.now()) }
+                }
             }
-            C.Button { text: i18n("Utilities"); icon.name: "applications-utilities"; onClicked: root.openTool("tools") }
         }
     }
+    Component { id: systemPage; IslandSystem {} }
     Component {
         id: shelfPage
         FileShelf {
@@ -633,7 +853,7 @@ PlasmoidItem {
             canGoBack: root.visibleTabs.length > 0
             onDraggingChanged: root.draggingShelf = dragging
             Component.onDestruction: root.draggingShelf = false
-            onBackRequested: root.viewingShelf = false
+            onBackRequested: pages.showSections()
             onDetachRequested: root.openTool("shelf")
         }
     }
@@ -671,7 +891,7 @@ PlasmoidItem {
             id: clipboardView
             readonly property var session: power.nativeState ?? portableLock.item
             readonly property bool unlocked: !!session?.lockKnown && !session.locked
-            onUnlockedChanged: if (session?.lockKnown && session.locked) root.expanded = false
+            onUnlockedChanged: if (session?.lockKnown && session.locked) root.islandOpen = false
             Loader {
                 id: portableLock
                 active: !power.nativeState
@@ -687,7 +907,7 @@ PlasmoidItem {
             }
             Connections {
                 target: history.item
-                function onRequestHidePopup() { root.expanded = false }
+                function onRequestHidePopup() { root.islandOpen = false }
             }
             C.Label {
                 anchors.centerIn: parent
@@ -702,7 +922,7 @@ PlasmoidItem {
     Component {
         id: cameraPage
         CameraMirror {
-            presented: root.expanded && !root.searching && power.active
+            presented: root.islandOpen && !root.searching && power.active
             session: power.nativeState
         }
     }
@@ -723,7 +943,7 @@ PlasmoidItem {
         Watch {
             service: watch.watchedService; path: root.watchPath
             onBackRequested: root.viewingWatch = false
-            onEditing: root.expanded = false
+            onEditing: root.islandOpen = false
         }
     }
     Component {
@@ -763,7 +983,7 @@ PlasmoidItem {
                 requestedNotice: root.requestedNotice
                 liveSource: root.requestedNotice ? preview.item : null
                 onPreviewFinished: root.requestedNotice = 0
-                onActivated: root.expanded = false
+                onActivated: root.islandOpen = false
             }
             SessionButton {
                 Layout.fillWidth: true
@@ -772,7 +992,7 @@ PlasmoidItem {
                         && !root.viewingDownloads && !notices.inDetail
                 onClicked: {
                     runner.connectSource(root.helper + " utilities agents session")
-                    root.expanded = false
+                    root.islandOpen = false
                 }
             }
             Repeater {
@@ -787,7 +1007,7 @@ PlasmoidItem {
                     onPreferencesChanged: root.refreshActivity()
                     onClicked: {
                         runner.connectSource(root.helper + " utilities agents " + modelData)
-                        root.expanded = false
+                        root.islandOpen = false
                     }
                 }
             }
@@ -808,7 +1028,7 @@ PlasmoidItem {
                         if (watch.registered) root.viewingWatch = true
                         else {
                             runner.connectSource(root.helper + " utilities watch " + Plasmoid.id)
-                            root.expanded = false
+                            root.islandOpen = false
                         }
                     }
                 }
@@ -827,7 +1047,7 @@ PlasmoidItem {
         id: awakePage
         AwakeControls {
             awake: awakeModel.item
-            onBackRequested: root.fullRepresentationItem.back()
+            onBackRequested: pages.back()
             Component.onCompleted: focusBack()
         }
     }

@@ -16,6 +16,36 @@ UI = Path(__file__).resolve().parents[1] / "linux/share/plasma/plasmoids/org.mon
 
 @unittest.skipUnless(QQuickView, "requires Qt Quick")
 class NotchTabs(unittest.TestCase):
+    def test_section_grid_follows_keyboard_activation_after_reorder(self):
+        app = QGuiApplication.instance() or QGuiApplication([])
+        with tempfile.TemporaryDirectory() as folder:
+            scene = Path(folder) / "Sections.qml"
+            scene.write_text('''import QtQuick
+import "@MONET_UI@" as Monet
+Monet.IslandSections {
+    id: grid; width: 420; height: 130
+    property string chosen: ""
+    function reorder() { entries = entries.slice().reverse() }
+    entries: ["music","time","notes","files","activity"].map(k => ({key:k, label:k, icon:"folder", color:"white"}))
+    onSelected: key => chosen = key
+}'''.replace("@MONET_UI@", UI.as_uri()))
+            window = QQuickView()
+            self.addCleanup(window.close)
+            window.setSource(QUrl.fromLocalFile(str(scene)))
+            self.assertEqual(window.status(), QQuickView.Ready, [e.toString() for e in window.errors()])
+            window.show()
+            QTest.qWait(50)
+            grid = window.rootObject()
+            grid.focusFirst()
+            QTest.keyClick(window, Qt.Key_Right)
+            QTest.keyClick(window, Qt.Key_Return)
+            self.assertEqual(grid.property("chosen"), "time")
+            grid.reorder()
+            app.processEvents()
+            grid.focusFirst()
+            QTest.keyClick(window, Qt.Key_Space)
+            self.assertEqual(grid.property("chosen"), "activity")
+
     def test_keys_and_live_reordering_keep_page_and_selection_together(self):
         app = QGuiApplication.instance() or QGuiApplication([])
         was_active = QAccessible.isActive()

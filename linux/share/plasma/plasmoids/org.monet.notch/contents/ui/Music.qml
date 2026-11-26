@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Controls as C
 import org.kde.kirigami as Kirigami
@@ -187,60 +188,54 @@ ColumnLayout {
 
     spacing: Kirigami.Units.smallSpacing
     Item { Layout.fillHeight: true; visible: page.view === 0 }
-    RowLayout {
+    GridLayout {
         Layout.fillWidth: true
-        Layout.leftMargin: Kirigami.Units.smallSpacing
-        Layout.rightMargin: Kirigami.Units.smallSpacing
-        spacing: Kirigami.Units.largeSpacing
-        Item {
-            Layout.fillWidth: true
-            implicitHeight: trackInfo.implicitHeight
-            RowLayout {
-                id: trackInfo
-                anchors.fill: parent
-                spacing: Kirigami.Units.largeSpacing
-                Item {
-                    Layout.preferredWidth: page.view ? 36 : 66
-                    Layout.preferredHeight: Layout.preferredWidth
-                    Kirigami.Icon { anchors.centerIn: parent; width: parent.width * 0.7; height: width; visible: cover.status !== Image.Ready; source: "audio-headphones" }
-                    Image {
-                        id: cover; anchors.fill: parent; asynchronous: true; fillMode: Image.PreserveAspectFit
-                        sourceSize: Qt.size(width * Screen.devicePixelRatio, height * Screen.devicePixelRatio)
-                        source: page.player?.artUrl || ""
-                    }
-                }
-                ColumnLayout {
-                    Layout.fillWidth: true; spacing: 0
-                    C.Label {
-                        Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight; font.bold: true
-                        text: page.player?.track || i18n("Nothing playing")
-                    }
-                    C.Label {
-                        Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight
-                        text: page.player?.artist || page.player?.identity || i18n("Start a song or video in a media player.")
-                    }
-                }
+        columns: 2; rowSpacing: 4; columnSpacing: 14
+        Rectangle {
+            Layout.row: 0; Layout.column: 0; Layout.rowSpan: page.view ? 1 : 3
+            Layout.preferredWidth: page.view ? 42 : Math.min(118, page.width * 0.25)
+            Layout.preferredHeight: Layout.preferredWidth; radius: page.view ? 9 : 16
+            color: "#303037"; clip: true
+            Kirigami.Icon {
+                anchors.centerIn: parent; width: parent.width * 0.39; height: width
+                visible: cover.status !== Image.Ready; source: "media-playback-start"; isMask: true; color: "#c1c0cc"
+            }
+            Rectangle {
+                id: coverMask; anchors.fill: parent; radius: parent.radius
+                visible: false; layer.enabled: cover.status === Image.Ready
+            }
+            Image {
+                layer.enabled: status === Image.Ready
+                layer.effect: MultiEffect { maskEnabled: true; maskSource: coverMask }
+                id: cover; anchors.fill: parent; asynchronous: true; fillMode: Image.PreserveAspectCrop
+                sourceSize: Qt.size(width * Screen.devicePixelRatio, height * Screen.devicePixelRatio)
+                source: page.player?.artUrl || ""
             }
             NotchGestureSurface { gestures: page.gestures }
         }
+        RowLayout {
+            Layout.row: 0; Layout.column: 1; Layout.fillWidth: true
+            ColumnLayout {
+                Layout.fillWidth: true; Layout.minimumWidth: 0; spacing: 2
+                C.Label {
+                    Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight
+                    font.weight: Font.DemiBold; font.pixelSize: page.view ? 15 : 19
+                    color: "#fafafa"; text: page.player?.track || i18n("Nothing playing")
+                }
+                C.Label {
+                    Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight; color: "#b7b7be"
+                    text: page.player?.artist || page.player?.identity || i18n("Start a song or video in a media player.")
+                }
+            }
         C.ToolButton {
             id: sourceButton
             objectName: "notchPlaybackSource"
             visible: sourceRows.count > 2 || page.sources.currentIndex > 0
             Layout.maximumWidth: page.width * 0.36
             text: page.player?.identity || i18n("Playback source")
-            contentItem: RowLayout {
-                spacing: Kirigami.Units.smallSpacing
-                C.Label {
-                    Layout.fillWidth: true; Layout.minimumWidth: 0
-                    text: sourceButton.text; textFormat: Text.PlainText; elide: Text.ElideRight
-                }
-                Kirigami.Icon {
-                    source: "arrow-down"
-                    Layout.preferredWidth: Kirigami.Units.iconSizes.small
-                    Layout.preferredHeight: Layout.preferredWidth
-                }
-            }
+            implicitWidth: 32; implicitHeight: 32; padding: 7
+            background: Rectangle { radius: height / 2; color: sourceButton.hovered ? "#424248" : "#2b2b2e" }
+            contentItem: Kirigami.Icon { source: "arrow-down"; isMask: true; color: "#e3e2e6" }
             Accessible.name: i18n("Playback source")
             Accessible.description: page.player?.identity || ""
             C.ToolTip.text: i18n("Playback source")
@@ -278,9 +273,11 @@ ColumnLayout {
         }
     }
     RowLayout {
+        Layout.row: 1; Layout.column: 1
         visible: page.view === 0 && page.lengthMs > 0
         Layout.fillWidth: true
         C.Label {
+            font.pixelSize: 10; color: "#bebec5"
             text: page.formatDuration((timeline.pressed ? timeline.position * timeline.to : page.elapsed) / 1000)
         }
         C.Slider {
@@ -290,6 +287,17 @@ ColumnLayout {
             from: 0; to: page.lengthMs; value: page.elapsed
             enabled: !!page.player?.canSeek && page.trackId.startsWith("/")
             live: false
+            leftPadding: 5; rightPadding: 5
+            background: Rectangle {
+                x: timeline.leftPadding; y: (timeline.height - height) / 2
+                width: timeline.availableWidth; height: timeline.pressed ? 6 : 4; radius: height / 2; color: "#4b4b50"
+                Rectangle { width: parent.width * timeline.visualPosition; height: parent.height; radius: height / 2; color: "#eeeef2" }
+            }
+            handle: Rectangle {
+                x: timeline.leftPadding + timeline.visualPosition * (timeline.availableWidth - width)
+                y: (timeline.height - height) / 2; width: 10; height: 10; radius: 5; color: "white"
+                visible: timeline.pressed || timeline.hovered || timeline.visualFocus
+            }
             Accessible.name: i18n("Playback position")
             Accessible.description: page.formatDuration(page.elapsed / 1000) + " / " + page.formatDuration(to / 1000)
             Accessible.onIncreaseAction: if (enabled) page.seek(page.elapsed + 5000)
@@ -319,39 +327,38 @@ ColumnLayout {
                 }
             }
         }
-        C.Label { text: page.formatDuration(page.lengthMs / 1000) }
+        C.Label { font.pixelSize: 10; color: "#bebec5"; text: page.formatDuration(page.lengthMs / 1000) }
     }
     RowLayout {
+        Layout.row: 2; Layout.column: 1
         visible: page.view === 0; Layout.alignment: Qt.AlignHCenter
         Item {
             implicitWidth: shuffleButton.implicitWidth
             implicitHeight: shuffleButton.implicitHeight
-            C.ToolButton {
+            IslandButton {
                 id: shuffleButton
                 anchors.centerIn: parent
                 visible: !!page.player && page.player.shuffle !== Mpris.ShuffleStatus.Unknown
                 enabled: !!page.player?.canControl
                 icon.name: "media-playlist-shuffle"
                 checked: page.player?.shuffle === Mpris.ShuffleStatus.On
-                Accessible.name: i18n("Shuffle")
-                C.ToolTip.text: Accessible.name
-                C.ToolTip.delay: Kirigami.Units.toolTipDelay
-                C.ToolTip.visible: hovered
+                text: i18n("Shuffle")
                 onClicked: page.player.shuffle = page.player.shuffle === Mpris.ShuffleStatus.On ? Mpris.ShuffleStatus.Off : Mpris.ShuffleStatus.On
             }
         }
-        C.ToolButton { icon.name: "media-skip-backward"; Accessible.name: i18n("Previous track"); enabled: !!page.player?.canGoPrevious; onClicked: page.player.Previous() }
-        C.ToolButton {
+        IslandButton { icon.name: "media-skip-backward"; text: i18n("Previous track"); enabled: !!page.player?.canGoPrevious; onClicked: page.player.Previous() }
+        IslandButton {
+            prominent: true; implicitWidth: 40; implicitHeight: 40
             icon.name: page.playing ? "media-playback-pause" : "media-playback-start"
-            Accessible.name: page.playing ? i18n("Pause") : i18n("Play")
+            text: page.playing ? i18n("Pause") : i18n("Play")
             enabled: !!(page.playing ? page.player?.canPause : page.player?.canPlay)
             onClicked: page.playing ? page.player.Pause() : page.player.Play()
         }
-        C.ToolButton { icon.name: "media-skip-forward"; Accessible.name: i18n("Next track"); enabled: !!page.player?.canGoNext; onClicked: page.player.Next() }
+        IslandButton { icon.name: "media-skip-forward"; text: i18n("Next track"); enabled: !!page.player?.canGoNext; onClicked: page.player.Next() }
         Item {
             implicitWidth: repeatButton.implicitWidth
             implicitHeight: repeatButton.implicitHeight
-            C.ToolButton {
+            IslandButton {
                 id: repeatButton
                 anchors.centerIn: parent
                 readonly property int status: page.player?.loopStatus ?? Mpris.LoopStatus.Unknown
@@ -359,22 +366,20 @@ ColumnLayout {
                 enabled: !!page.player?.canControl
                 icon.name: status === Mpris.LoopStatus.Track ? "media-playlist-repeat-song" : "media-playlist-repeat"
                 checked: status === Mpris.LoopStatus.Playlist || status === Mpris.LoopStatus.Track
-                Accessible.name: status === Mpris.LoopStatus.Track ? i18n("Repeat track")
+                text: status === Mpris.LoopStatus.Track ? i18n("Repeat track")
                     : status === Mpris.LoopStatus.Playlist ? i18n("Repeat playlist") : i18n("Repeat off")
-                C.ToolTip.text: Accessible.name
-                C.ToolTip.delay: Kirigami.Units.toolTipDelay
-                C.ToolTip.visible: hovered
                 onClicked: page.player.loopStatus = status === Mpris.LoopStatus.None ? Mpris.LoopStatus.Playlist
                     : status === Mpris.LoopStatus.Playlist ? Mpris.LoopStatus.Track : Mpris.LoopStatus.None
             }
         }
     }
+    }
     RowLayout {
         Layout.alignment: Qt.AlignHCenter
         C.ToolButton { visible: page.view !== 0; icon.name: "go-previous"; Accessible.name: i18n("Now playing"); onClicked: page.viewRequested(0) }
-        C.Button { visible: page.offerDetails && (!!page.player || page.view !== 0); text: i18n("Lyrics"); checked: page.view === 1; onClicked: page.viewRequested(1) }
-        C.Button { visible: page.offerDetails && (!!page.player || page.view !== 0); text: i18n("Up next"); checked: page.view === 2; onClicked: page.viewRequested(2) }
-        C.Button { visible: page.offerMixer && page.view === 0; text: i18n("Mixer"); icon.name: "audio-volume-high"; onClicked: page.viewRequested(3) }
+        IslandButton { caption: true; visible: page.offerDetails && (!!page.player || page.view !== 0); text: i18n("Lyrics"); checked: page.view === 1; onClicked: page.viewRequested(1) }
+        IslandButton { caption: true; visible: page.offerDetails && (!!page.player || page.view !== 0); text: i18n("Up next"); checked: page.view === 2; onClicked: page.viewRequested(2) }
+        IslandButton { caption: true; visible: page.offerMixer && page.view === 0; text: i18n("Mixer"); icon.name: "audio-volume-high"; onClicked: page.viewRequested(3) }
         C.ToolButton {
             visible: page.view === 2
             icon.name: "view-refresh"

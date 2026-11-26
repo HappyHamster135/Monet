@@ -19222,10 +19222,6 @@ msgstr "Kopiera konverterad färg"
 msgid "Clipboard"
 msgstr "Urklipp"
 
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:427
-msgid "All tabs"
-msgstr "Alla flikar"
-
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:551
 msgid "Clipboard history is unavailable."
 msgstr "Urklippshistoriken är inte tillgänglig."
@@ -19902,3 +19898,92 @@ msgstr ""
 #: linux/libexec/monet-files-tools:1030
 msgid "AppImage (*.AppImage *.appimage);;All files (*)"
 msgstr "AppImage (*.AppImage *.appimage);;Alla filer (*)"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:396
+msgid "Show quick controls when hovering over the notch"
+msgstr "Visa snabbreglage när pekaren hålls över skärmutskärningen"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:397
+msgid "Show music and a running timer together"
+msgstr "Visa musik och en aktiv timer tillsammans"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/IslandCaptures.qml:41
+msgid "No saved captures yet."
+msgstr "Inga sparade skärmbilder eller inspelningar ännu."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:60 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:77
+msgid "Controls"
+msgstr "Reglage"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:61 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:78
+msgid "Music and timer"
+msgstr "Musik och timer"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:69 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:78
+msgid "Recent captures"
+msgstr "Senaste inspelningar och skärmbilder"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:77 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:79 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:451
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:684
+msgid "Sections"
+msgstr "Avsnitt"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:568 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:819
+msgid "Resume timer"
+msgstr "Återuppta timern"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:568 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:819
+msgid "Pause timer"
+msgstr "Pausa timern"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:689
+msgid "Unpin"
+msgstr "Lossa"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:689
+msgid "Keep open"
+msgstr "Håll öppet"
+
+#: linux/share/monet/utilities/tool_catalog.py:10
+msgid "All tools"
+msgstr "Alla verktyg"
+
+#: linux/share/monet/utilities/tool_catalog.py:13
+msgid "Writing"
+msgstr "Skrivande"
+
+#: linux/share/monet/utilities/tool_catalog.py:14
+msgid "Mouse and keyboard"
+msgstr "Mus och tangentbord"
+
+#: linux/share/monet/utilities/tool_catalog.py:16
+msgid "Capture"
+msgstr "Inspelning"
+
+#: linux/share/monet/utilities/recent_captures.py:14
+msgid "Screenshots"
+msgstr "Skärmbilder"
+
+#: linux/share/monet/utilities/window.py:75 linux/share/monet/utilities/window.py:229
+msgid "Find a tool…"
+msgstr "Hitta ett verktyg…"
+
+#: linux/share/monet/utilities/window.py:214
+msgid "Customize Utilities"
+msgstr "Anpassa verktyg"
+
+#: linux/share/monet/utilities/window.py:222 linux/share/monet/utilities/window.py:226
+msgid "Show a group of tools…"
+msgstr "Visa en grupp verktyg…"
+
+#: linux/share/monet/utilities/window.py:223
+msgid "Everyday tools"
+msgstr "Vardagsverktyg"
+
+#: linux/share/monet/utilities/window.py:224
+msgid "Windows and input"
+msgstr "Fönster och inmatning"
+
+#: linux/share/monet/utilities/window.py:225
+msgid "Power and display"
+msgstr "Ström och bildskärm"

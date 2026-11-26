@@ -19185,10 +19185,6 @@ msgstr ""
 msgid "Clipboard"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:427
-msgid "All tabs"
-msgstr ""
-
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:551
 msgid "Clipboard history is unavailable."
 msgstr ""
@@ -19850,4 +19846,93 @@ msgstr ""
 
 #: linux/libexec/monet-files-tools:1030
 msgid "AppImage (*.AppImage *.appimage);;All files (*)"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:396
+msgid "Show quick controls when hovering over the notch"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:397
+msgid "Show music and a running timer together"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/IslandCaptures.qml:41
+msgid "No saved captures yet."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:60 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:77
+msgid "Controls"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:61 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:78
+msgid "Music and timer"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:69 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:78
+msgid "Recent captures"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:77 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:79 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:451
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:684
+msgid "Sections"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:568 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:819
+msgid "Resume timer"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:568 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:819
+msgid "Pause timer"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:689
+msgid "Unpin"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:689
+msgid "Keep open"
+msgstr ""
+
+#: linux/share/monet/utilities/tool_catalog.py:10
+msgid "All tools"
+msgstr ""
+
+#: linux/share/monet/utilities/tool_catalog.py:13
+msgid "Writing"
+msgstr ""
+
+#: linux/share/monet/utilities/tool_catalog.py:14
+msgid "Mouse and keyboard"
+msgstr ""
+
+#: linux/share/monet/utilities/tool_catalog.py:16
+msgid "Capture"
+msgstr ""
+
+#: linux/share/monet/utilities/recent_captures.py:14
+msgid "Screenshots"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:75 linux/share/monet/utilities/window.py:229
+msgid "Find a tool…"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:214
+msgid "Customize Utilities"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:222 linux/share/monet/utilities/window.py:226
+msgid "Show a group of tools…"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:223
+msgid "Everyday tools"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:224
+msgid "Windows and input"
+msgstr ""
+
+#: linux/share/monet/utilities/window.py:225
+msgid "Power and display"
 msgstr ""

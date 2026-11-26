@@ -8464,7 +8464,7 @@ print(JSON.stringify({ok:true, available:tasks.length > 0,
 def panel_notch(ident, choice=None):
     modes = {None, "compact", "wide", "off"}
     if not re.fullmatch(r"[0-9]{1,10}", str(ident)) or (choice not in modes and
-            not re.fullmatch(r"(levels|companion|alerts|previews|gestures|awake|countdown)-(on|off)|companion-[a-z]{1,10}-[a-z]{1,12}|"
+            not re.fullmatch(r"(levels|companion|alerts|previews|gestures|awake|countdown|hoverControls|combined)-(on|off)|companion-[a-z]{1,10}-[a-z]{1,12}|"
                              r"tab-(music|activity|time|calendar|notes|camera|clipboard)-(show|hide|earlier|later)", choice)):
         return {"ok": False}
     try:
@@ -11276,6 +11276,10 @@ def main(argv):
         result = panel_icons(args[0], args[1] if len(args) == 2 else None)
         emit(result)
         return 0 if result.get("ok") else 1
+    elif cmd == "notch-captures" and len(args) == 1 and args[0] in ("all", "images", "videos"):
+        sys.path.insert(0, str(Path(DATADIR) / "monet/utilities"))
+        from recent_captures import capture_folders, recent_files
+        emit(recent_files(capture_folders(args[0] != "videos", args[0] != "images")))
     elif cmd == "notch-activity" and not args:
         from PySide6.QtCore import QSettings, QStandardPaths, QUrl
         settings = QSettings("Monet", "Utilities")
