@@ -258,6 +258,7 @@ Window {
 
     def test_panel_picker_adds_panels_and_opens_notch_settings(self):
         self.click('panelAddPage')
+        self.wait_for(lambda: self.item('panelAddEmpty').isEnabled(), 'Load panel choices')
         self.click('panelAddEmpty')
         editor = self.item('monetPanelEditor')
         self.wait_for(lambda: 'Panel added' in editor.property('addStatus'), 'Add an empty panel')
