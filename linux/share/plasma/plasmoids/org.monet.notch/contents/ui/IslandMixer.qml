@@ -20,12 +20,17 @@ ColumnLayout {
     readonly property var microphone: Audio.PreferredDevice.source
     spacing: 2
 
-    function deviceLabel(node, fallback) {
-        if (!node) return fallback
-        const bytes = unescape(encodeURIComponent(node))
-        const key = Array.from(bytes,c => c.charCodeAt(0).toString(16).padStart(2,"0")).join("")
-        return outputNames.find(d => d.key === key)?.name || fallback
+    function nodeKey(node) {
+        return Array.from(unescape(encodeURIComponent(node || "")), c => c.charCodeAt(0).toString(16).padStart(2, "0")).join("")
     }
+    function deviceLabel(node, fallback) {
+        return outputNames.find(d => d.key === nodeKey(node))?.name || fallback
+    }
+    // Pulse also enumerates disconnected HDMI endpoints. Map the playable list
+    // back to Pulse by node name, since its indexes differ from WirePlumber IDs.
+    readonly property var routes: outputNames.filter(out => out.key && !out.none).map(out => ({
+        name: out.name, device: sound.devices.find(d => d && d.available && nodeKey(d.node) === out.key)
+    })).filter(out => out.device)
     function selectDevice(command, device) {
         if (!device || switching || !Number.isInteger(device.id) || !/^(?:[0-9a-f]{2})+$/.test(device.key || "")) return
         switching = true; switchError = ""
@@ -102,17 +107,17 @@ ColumnLayout {
             }
             const row = app
             if (!row) return []
-            if (mode === "routes") return sound.devices.filter(d => d && d.available).map(d => ({
-                label: desk.deviceLabel(d.node,d.name),
-                checked: row.online && row.channels.every(s => s.deviceIndex === d.pulseIndex),
-                run: () => sound.route(row.appKey,d)
+            if (mode === "routes") return desk.routes.map(out => ({
+                label: out.name,
+                checked: row.online && row.channels.every(s => s.deviceIndex === out.device.pulseIndex),
+                run: () => sound.route(row.appKey,out.device)
             }))
             return [
                 {label: row.pinned ? i18n("Unpin app") : i18n("Pin app"), icon:"pin", enabled:row.stable && !sound.saving, run: () => sound.pin(row.appKey,row.label,!row.pinned)},
                 {label:i18n("Reset volume to 100%"), icon:"edit-undo", enabled:row.writable && row.percent !== 100, run: () => sound.level(row.appKey,100)},
                 {label:i18n("Move left"), icon:"go-previous", enabled:row.canStep(-1), run: () => sound.step(row.index,-1)},
                 {label:i18n("Move right"), icon:"go-next", enabled:row.canStep(1), run: () => sound.step(row.index,1)},
-                {label:i18n("Play through"), icon:"audio-volume-high", enabled:row.online && sound.devices.some(d => d.available), next:"routes"}
+                {label:i18n("Play through"), icon:"audio-volume-high", enabled:row.online && desk.routes.length > 0, next:"routes"}
             ]
         }
         background: Rectangle { radius: 15; color: "#232327"; border.color: "#4d4d54"; border.width: 1 }

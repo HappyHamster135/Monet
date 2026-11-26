@@ -6,6 +6,7 @@ import org.kde.plasma.workspace.dbus as DBus
 QtObject {
     id: tools
     property var hidden: []
+    property var favorites: []
     property bool ready: false
     function offers(key) { return ready && !hidden.includes(key) }
     readonly property Core.Settings settings: Core.Settings {
@@ -24,6 +25,9 @@ QtObject {
             if (Array.isArray(value)) keys = value.filter(k => typeof k === "string")
         } catch (_) {}
         if (JSON.stringify(keys) !== JSON.stringify(hidden)) hidden = keys
+        let saved = []
+        try { saved = JSON.parse(settings.value("favorites", '["shelf","notes","screenshot","color","awake","sound"]')) } catch (_) {}
+        if (Array.isArray(saved) && JSON.stringify(favorites) !== JSON.stringify(saved)) favorites = saved
         ready = true
     }
     Component.onCompleted: reload()

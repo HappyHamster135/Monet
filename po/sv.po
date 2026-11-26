@@ -20083,18 +20083,6 @@ msgstr "↓ %1"
 msgid "Upload %1"
 msgstr "Uppladdning %1"
 
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:1155
-msgid "Pick a color"
-msgstr "Välj en färg"
-
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:1156
-msgid "Read screen text"
-msgstr "Läs text på skärmen"
-
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:1157
-msgid "Screen recorder"
-msgstr "Skärminspelare"
-
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:1197 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:1208
 msgid "Session activity"
 msgstr "Sessionsaktivitet"
@@ -20126,3 +20114,100 @@ msgstr "Klistra in kalenderlänk…"
 #: linux/share/monet/utilities/calendars.py:48
 msgid "No external calendars linked."
 msgstr "Inga externa kalendrar är länkade."
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:23 linux/share/monet/settings-app/NotchPreferences.qml:30
+msgid "Could not change notch settings."
+msgstr "Kunde inte ändra inställningarna för skärmutskärningen."
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:41
+msgid "No desktop panel is available."
+msgstr "Det finns ingen tillgänglig skrivbordspanel."
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:46
+msgid "Choose its size, pages and controls."
+msgstr "Välj storlek, sidor och kontroller."
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:48
+msgid "Customize"
+msgstr "Anpassa"
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:54
+msgid "Screen %1"
+msgstr "Skärm %1"
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:84
+msgid "Gestures"
+msgstr "Gester"
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:84
+msgid "Hover controls"
+msgstr "Kontroller när pekaren hålls över"
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:84
+msgid "Companion"
+msgstr "Följeslagare"
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:85
+msgid "Audio levels"
+msgstr "Ljudnivåer"
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:85
+msgid "Notification previews"
+msgstr "Förhandsvisning av aviseringar"
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:85
+msgid "Accessory alerts"
+msgstr "Aviseringar om tillbehör"
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:86
+msgid "Countdown"
+msgstr "Nedräkning"
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:95
+msgid "Keep copied images in Recent captures"
+msgstr "Spara kopierade bilder bland de senaste skärmbilderna"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AgentDetail.qml:35
+msgid "Could not read the selected source."
+msgstr "Det gick inte att läsa den valda källan."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AgentDetail.qml:64
+msgid "Choose a local session log to see its activity and token usage."
+msgstr "Välj en lokal sessionslogg för att se aktivitet och tokenanvändning."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AgentDetail.qml:65
+msgid "Connect to read limits from your signed-in CLI on this computer."
+msgstr ""
+"Anslut för att läsa användningsgränser från ditt inloggade kommandoradsverktyg på den här datorn."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AgentDetail.qml:76
+msgid "Forget session"
+msgstr "Glöm session"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CopiedCaptures.qml:12
+msgid "Copied images"
+msgstr "Kopierade bilder"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CopiedCaptures.qml:24
+msgid "Copy image (%1 × %2)"
+msgstr "Kopiera bild (%1 × %2)"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/IslandSections.qml:92
+msgid "Page %1 of %2"
+msgstr "Sida %1 av %2"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NotchTool.qml:58
+msgid "Could not open tool. Retry"
+msgstr "Kunde inte öppna verktyget. Försök igen"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/ToolDirectory.qml:53
+msgid "Category"
+msgstr "Kategori"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/ToolDirectory.qml:73
+msgid "Could not load tools."
+msgstr "Kunde inte läsa in verktygen."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/ToolDirectory.qml:73
+msgid "No matching tools."
+msgstr "Inga matchande verktyg."

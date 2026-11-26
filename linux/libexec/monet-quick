@@ -8461,6 +8461,31 @@ print(JSON.stringify({ok:true, available:tasks.length > 0,
         return {"ok": False}
 
 
+def notch_copied_images(mode=None):
+    if mode:
+        if not kwrite("klipperrc", "General", "SaveImages", "true" if mode == "on" else "false"):
+            return {"ok": False}
+        run("qdbus-qt6", "org.kde.klipper", "/klipper", "org.kde.klipper.klipper.reloadConfig")
+    enabled = kread("klipperrc", "General", "SaveImages", "false").lower() == "true"
+    return {"ok": mode is None or enabled == (mode == "on"), "enabled": enabled}
+
+
+def notch_screens():
+    """One editable Home Bar (or desktop on a screen without a bar) per screen."""
+    script = """var hosts = desktops().reduce((rows, d) => {
+        if (d.screen < 0 || rows.some(r => r.screen === d.screen)) return rows;
+        var bars = panels().filter(p => p.screen === d.screen && !p.widgets("org.monet.notch").length);
+        var host = bars.find(p => p.widgets("org.monet.menu").length) || bars[0] || d;
+        rows.push({screen:d.screen, id:host.id}); return rows;
+    }, []); print(JSON.stringify(hosts.sort((a,b) => a.screen-b.screen)));"""
+    result = busjson("--user", "call", "org.kde.plasmashell", "/PlasmaShell",
+                     "org.kde.PlasmaShell", "evaluateScript", "s", script)
+    try:
+        return json.loads(result[0]) if result else []
+    except (TypeError, ValueError, IndexError):
+        return []
+
+
 def panel_configure(ident):
     if not re.fullmatch(r"[0-9]{1,10}", str(ident)):
         return {"ok": False}
@@ -9403,6 +9428,7 @@ def open_settings(page):
 def search_catalog():
     N_ = lambda text: text  # Extract aliases now, translate them when matching.
     rows = [
+        ("notch", tr("Notch"), tr("Light & Wallpaper"), tr("Customize Home Bar"), "light#notch", "view-grid"),
         ("screen-lock", tr("Screen locking"), tr("Power & Sleep · Automatic screen locking"),
          N_("stop screen locking; screen keeps locking; automatic screen lock; screen lock timer; disable screen lock; lock the screen"), "power#lock", "system-lock-screen"),
         ("download-folder", tr("Download folder"), tr("Storage · Where downloads are saved"),
@@ -11415,6 +11441,10 @@ def main(argv):
         result = panel_add(*args)
         emit(result)
         return 0 if result["ok"] else 1
+    elif cmd == "notch-copied-images" and (not args or args in (["on"], ["off"])):
+        emit(notch_copied_images(args[0] if args else None))
+    elif cmd == "notch-screens" and not args:
+        emit(notch_screens())
     elif cmd == "panel-notch" and len(args) in (1, 2):
         result = panel_notch(*args)
         emit(result)

@@ -114,6 +114,36 @@ SEARCH_HINTS = {
     "emoji": N_("Type emoji: and a name to copy an emoji"),
 }
 
+# Use the same catalog metadata and preference store as search and the Quick Panel.
+CATEGORIES = (
+    ("all", N_("All tools"), "view-grid"),
+    ("favorites", N_("Favorites"), "rating"),
+    ("Files", N_("Files"), "folder"),
+    ("Writing", N_("Writing"), "document-edit"),
+    ("Input", N_("Mouse and keyboard"), "input-keyboard"),
+    ("Sound", N_("Sound"), "audio-volume-high"),
+    ("Capture", N_("Capture"), "camera-photo"),
+    ("Display", N_("Display"), "video-display"),
+    ("System", N_("System"), "utilities-system-monitor"),
+    ("Desktop", N_("Desktop"), "user-desktop"),
+)
+
+
+GROUP_ALIASES = {
+    "Alt": "Desktop", "Calendar": "Desktop", "Close": "Desktop", "Favorite": "Desktop",
+    "Keyboard": "Display", "Mouse": "Input", "Network": "System", "Screen": "Display",
+    "Search": "Desktop",
+    "Session": "System",
+}
+
+
+def category_for(key, action):
+    if key == "emoji":
+        return "Writing"
+    group = action.group.split()[0]
+    return GROUP_ALIASES.get(group, group)
+
+
 DEFAULT_FAVORITES = ["shelf", "notes", "screenshot", "color", "awake", "sound"]
 
 
@@ -167,3 +197,19 @@ def find_tools(query, favorites, hidden):
             score = 0.53
         ranked.append((key, score + favorite_bonus.get(key, 0)))
     return sorted(ranked, key=lambda match: -match[1])
+
+# These tools act immediately or intentionally take input on the desktop.
+# Only explicit clicks may run them. Traversing page history must be passive.
+DESKTOP_TOOLS = {*DIRECT_ACTIONS, "color", "ocr", "record", "watch", "camera", "lock", "clean", "plain", "wheel", "output", "quick-panel",
+                 *(key for key, action in ACTIONS.items() if action.command)}
+
+
+def notch_catalog():
+    return {"groups": [{"key": key, "label": tr(label), "icon": icon} for key, label, icon in CATEGORIES],
+            "rows": [{"key": key, "label": action.name, "icon": action.icon, "group": category_for(key, action),
+                      "terms": search_terms(key)[1], "immediate": key in DESKTOP_TOOLS}
+                     for key, action in ACTIONS.items()]}
+
+
+if __name__ == "__main__":
+    print(json.dumps(notch_catalog()))

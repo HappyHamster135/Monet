@@ -12,6 +12,10 @@ ColumnLayout {
     signal choose(date date)
     signal monthRequested()
     signal calendarsRequested()
+    signal upcomingRequested()
+    readonly property bool editingEvent: edit.visible
+    function closeEditor() { if (!writeRequest) edit.close() }
+    onEnabledChanged: if (!enabled) edit.close()
     readonly property string reader: "/usr/bin/nice -n 10 /usr/bin/python3 '@DATADIR@/monet/utilities/agenda.py' "
     readonly property string dateKey: Qt.formatDate(day, "yyyy-MM-dd")
     readonly property string query: reader + (embedded ? "day " : "list ") + dateKey
@@ -66,18 +70,19 @@ ColumnLayout {
             }
         }
     }
-    C.Dialog {
+    FocusScope {
         id: edit
         objectName: "notchEventEditor"
         parent: page.editorParent
-        anchors.centerIn: parent
-        width: Math.min(380, parent.width - 24)
-        popupType: C.Popup.Item; modal: true; focus: true; dim: false
-        closePolicy: page.writeRequest ? C.Popup.NoAutoClose : C.Popup.CloseOnEscape
+        anchors.fill: parent; anchors.margins: 9
+        visible: false; z: 100; clip: true
+        Keys.onEscapePressed: event => { page.closeEditor(); event.accepted = true }
+        function close() { visible = false; if (page.enabled) newEvent.forceActiveFocus() }
+        Rectangle { anchors.fill: parent; radius: 16; color: "#19191d" }
+        MouseArea { anchors.fill: parent; onWheel: wheel => wheel.accepted = true }
         property string ident: ""
         property string eventDay: ""
         property string problem: ""
-        title: ident ? i18n("Edit event") : i18n("New event")
         function show(event) {
             if (page.writeRequest) return
             ident = event?.localId || ""
@@ -85,7 +90,7 @@ ColumnLayout {
             titleBox.text = event?.title || ""
             clock.text = event && !event.allDay ? event.start.slice(11,16) : ""
             problem = ""
-            open()
+            visible = true
             titleBox.forceActiveFocus()
         }
         function submit(remove) {
@@ -96,26 +101,32 @@ ColumnLayout {
             page.writeRequest = page.reader + (remove ? "remove-event " : "save-event ") + hex
             commands.connectSource(page.writeRequest)
         }
-        contentItem: ColumnLayout {
-            spacing: 6
-            C.Label { text: edit.eventDay ? Qt.formatDate(new Date(edit.eventDay + "T12:00:00"), Qt.locale().dateFormat(Locale.LongFormat)) : ""; visible: !!edit.eventDay }
-            C.TextField { id: titleBox; Layout.fillWidth: true; maximumLength: 256; Accessible.name: i18n("Event title"); placeholderText: Accessible.name }
-            C.TextField {
-                id: clock; Layout.fillWidth: true; maximumLength: 5
-                Accessible.name: i18n("Time"); placeholderText: i18n("HH:MM, or leave blank for all day")
-                validator: RegularExpressionValidator { regularExpression: /(?:[01][0-9]|2[0-3]):[0-5][0-9]/ }
-                onAccepted: if (save.enabled) edit.submit(false)
-            }
-            C.Label { visible: !!edit.problem; text: edit.problem; Layout.fillWidth: true; wrapMode: Text.Wrap }
-            RowLayout {
-                Layout.fillWidth: true; enabled: !page.writeRequest
-                C.Button { visible: !!edit.ident; text: i18n("Delete"); onClicked: edit.submit(true) }
-                Item { Layout.fillWidth: true }
-                C.Button { text: i18n("Cancel"); onClicked: edit.close() }
-                C.Button {
-                    id: save; text: i18n("Save")
-                    enabled: !!titleBox.text.trim() && (!clock.text.trim() || clock.acceptableInput)
-                    onClicked: edit.submit(false)
+        TimeScrollView {
+            id: form
+            anchors.fill: parent; anchors.margins: 12
+            ColumnLayout {
+                width: form.availableWidth
+                C.Label { text: edit.ident ? i18n("Edit event") : i18n("New event"); font.bold: true }
+                spacing: 6
+                C.Label { text: edit.eventDay ? Qt.formatDate(new Date(edit.eventDay + "T12:00:00"), Qt.locale().dateFormat(Locale.LongFormat)) : ""; visible: !!edit.eventDay }
+                C.TextField { id: titleBox; Layout.fillWidth: true; maximumLength: 256; Accessible.name: i18n("Event title"); placeholderText: Accessible.name }
+                C.TextField {
+                    id: clock; Layout.fillWidth: true; maximumLength: 5
+                    Accessible.name: i18n("Time"); placeholderText: i18n("HH:MM, or leave blank for all day")
+                    validator: RegularExpressionValidator { regularExpression: /(?:[01][0-9]|2[0-3]):[0-5][0-9]/ }
+                    onAccepted: if (save.enabled) edit.submit(false)
+                }
+                C.Label { visible: !!edit.problem; text: edit.problem; Layout.fillWidth: true; wrapMode: Text.Wrap }
+                RowLayout {
+                    Layout.fillWidth: true; enabled: !page.writeRequest
+                    C.Button { visible: !!edit.ident; text: i18n("Delete"); onClicked: edit.submit(true) }
+                    Item { Layout.fillWidth: true }
+                    C.Button { text: i18n("Cancel"); onClicked: edit.close() }
+                    C.Button {
+                        id: save; text: i18n("Save")
+                        enabled: !!titleBox.text.trim() && (!clock.text.trim() || clock.acceptableInput)
+                        onClicked: edit.submit(false)
+                    }
                 }
             }
         }
@@ -147,7 +158,7 @@ ColumnLayout {
         C.ToolButton { icon.name: "go-next"; Accessible.name: i18n("Next two weeks"); onClicked: page.choose(page.shifted(14)) }
     }
     IslandButton {
-        caption: true; text: i18n("New event"); Layout.alignment: Qt.AlignLeft
+        id: newEvent; caption: true; text: i18n("New event"); Layout.alignment: Qt.AlignHCenter
         onClicked: edit.show(null)
     }
     C.Label {
@@ -208,6 +219,10 @@ ColumnLayout {
         visible: page.embedded
         Layout.alignment: Qt.AlignHCenter; caption: true
         text: i18n("Link a calendar…"); onClicked: page.calendarsRequested()
+    }
+    IslandButton {
+        visible: page.embedded; caption: true; Layout.alignment: Qt.AlignHCenter
+        text: i18n("Upcoming events"); onClicked: page.upcomingRequested()
     }
     C.Label {
         Layout.fillWidth: true; visible: text.length > 0; wrapMode: Text.Wrap; textFormat: Text.PlainText

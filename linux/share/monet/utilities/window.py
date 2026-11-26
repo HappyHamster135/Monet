@@ -688,9 +688,10 @@ class Window(QMainWindow):
             self.cancel_clipboard_request()
             self.use_clipboard(key)
 
-    def use_clipboard(self, key):
+    def use_clipboard(self, key, value=None):
         from clipboard_text import copy_text
-        value = QApplication.clipboard().text()
+        if value is None:
+            value = QApplication.clipboard().text()
         if not value:
             self.issue(tr("Copy some text first."))
         elif key == "plain":
@@ -976,6 +977,7 @@ class Receiver(QObject):
     def __init__(self, window):
         super().__init__()
         self.window = window
+        self.notch_tools = None
 
         self.idle = QTimer(self)
         self.idle.setSingleShot(True)
@@ -983,7 +985,17 @@ class Receiver(QObject):
         self.idle.timeout.connect(self.release_if_unused)
         window.panelDismissed.connect(self.idle.start)
 
+    def tool_request(self, payload):
+        if self.notch_tools is None:
+            from notch_tools import NotchTools
+            self.notch_tools = NotchTools(self)
+            self.notch_tools.dismissed.connect(self.tool_page.closed)
+        return self.notch_tools.handle(payload)
+
     def release_if_unused(self):
+        if self.notch_tools and self.notch_tools.busy():
+            self.idle.start()
+            return
         if self.window.agent_feed and self.window.agent_feed.views:
             return
         if any(w.isVisible() for w in QApplication.topLevelWidgets()) or self.window.notch_previews:
@@ -1123,6 +1135,19 @@ class NotchPage(QDBusVirtualObject):
         return True
 
 
+class ToolPage(NotchPage):
+    def closed(self, token, go_back):
+        if self.owner:
+            message = QDBusMessage.createTargetedSignal(self.owner, self.path, SERVICE, self.signal_name)
+            message.setArguments([token, go_back])
+            self.bus.send(message)
+
+    def introspect(self, path):
+        return (f'<interface name="{SERVICE}"><method name="Tool"><arg type="s" direction="in"/>'
+                '<arg type="s" direction="out"/></method><signal name="ToolClosed">'
+                '<arg type="s"/><arg type="b"/></signal></interface>')
+
+
 def main(argv, helpers):
     activation_token = os.environ.get("XDG_ACTIVATION_TOKEN", "")
     app = QApplication(argv[:1])
@@ -1151,6 +1176,11 @@ def main(argv, helpers):
             return 1
         pads = NotchPage(bus, receiver, "/Scratchpad", "Pad", receiver.pad_request, "PadsChanged")
         shelf = NotchPage(bus, receiver, "/FileShelf", "Shelf", receiver.shelf_request, "ShelfChanged")
+        receiver.tool_page = ToolPage(bus, receiver, "/NotchTools", "Tool", receiver.tool_request, "ToolClosed")
+        receiver.tool_page.watcher.serviceOwnerChanged.connect(
+            lambda *_: receiver.notch_tools.hide() if receiver.notch_tools else None)
+        if not bus.registerVirtualObject(receiver.tool_page.path, receiver.tool_page):
+            return 1
         window.padsChanged.connect(pads.changed)
         window.shelfChanged.connect(shelf.changed)
         if not bus.registerVirtualObject(pads.path, pads) or not bus.registerVirtualObject(shelf.path, shelf):

@@ -20006,18 +20006,6 @@ msgstr ""
 msgid "Upload %1"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:1155
-msgid "Pick a color"
-msgstr ""
-
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:1156
-msgid "Read screen text"
-msgstr ""
-
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:1157
-msgid "Screen recorder"
-msgstr ""
-
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:1197 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:1208
 msgid "Session activity"
 msgstr ""
@@ -20046,4 +20034,100 @@ msgstr ""
 
 #: linux/share/monet/utilities/calendars.py:48
 msgid "No external calendars linked."
+msgstr ""
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:23 linux/share/monet/settings-app/NotchPreferences.qml:30
+msgid "Could not change notch settings."
+msgstr ""
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:41
+msgid "No desktop panel is available."
+msgstr ""
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:46
+msgid "Choose its size, pages and controls."
+msgstr ""
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:48
+msgid "Customize"
+msgstr ""
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:54
+msgid "Screen %1"
+msgstr ""
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:84
+msgid "Gestures"
+msgstr ""
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:84
+msgid "Hover controls"
+msgstr ""
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:84
+msgid "Companion"
+msgstr ""
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:85
+msgid "Audio levels"
+msgstr ""
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:85
+msgid "Notification previews"
+msgstr ""
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:85
+msgid "Accessory alerts"
+msgstr ""
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:86
+msgid "Countdown"
+msgstr ""
+
+#: linux/share/monet/settings-app/NotchPreferences.qml:95
+msgid "Keep copied images in Recent captures"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AgentDetail.qml:35
+msgid "Could not read the selected source."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AgentDetail.qml:64
+msgid "Choose a local session log to see its activity and token usage."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AgentDetail.qml:65
+msgid "Connect to read limits from your signed-in CLI on this computer."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AgentDetail.qml:76
+msgid "Forget session"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CopiedCaptures.qml:12
+msgid "Copied images"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/CopiedCaptures.qml:24
+msgid "Copy image (%1 × %2)"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/IslandSections.qml:92
+msgid "Page %1 of %2"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NotchTool.qml:58
+msgid "Could not open tool. Retry"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/ToolDirectory.qml:53
+msgid "Category"
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/ToolDirectory.qml:73
+msgid "Could not load tools."
+msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/ToolDirectory.qml:73
+msgid "No matching tools."
 msgstr ""

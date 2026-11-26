@@ -358,6 +358,7 @@ ColumnLayout {
             }
         }
     }
+    NotchPreferences { Layout.fillWidth: true }
     // The way back when More settings changed how Monet looks (KDE's theme buttons once
     // took its app style away): its colors, styles, frames and painting again, for this
     // account, no restart. Files, apps and the bar's islands stay.

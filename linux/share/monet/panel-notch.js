@@ -3,7 +3,7 @@
 (function () {
     var choice = MONET_NOTCH_CHOICE;
     var source = panels().find(p => p.id === MONET_PANEL_ID);
-    if (!source && choice === "add") source = desktops().find(d => d.id === MONET_PANEL_ID);
+    if (!source) source = desktops().find(d => d.id === MONET_PANEL_ID);
     var type = "org.monet.notch";
     if (!source || source.screen < 0) { print(JSON.stringify({ok:false})); return; }
     var existing = panels().filter(function (p) {

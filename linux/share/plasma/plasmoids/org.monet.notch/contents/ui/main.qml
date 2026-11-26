@@ -52,6 +52,11 @@ PlasmoidItem {
         : showingWatch ? "watch" : viewingDownloads ? "downloads" : viewingAgenda ? "agenda"
         : viewingAwake ? "awake" : tab === 0 ? ["music", "lyrics", "queue", "mixer"][musicView] : tabNames[tab]) || "sections"
     function availableRoute(key) {
+        if (key.startsWith("agent-")) return (visibleTabs.includes(8) || visibleTabs.includes(1)) && offerAgents
+        if (key.startsWith("tool-")) {
+            const tool = key.slice(5)
+            return tools.offers(tool) && (visibleTabs.includes(7) || (tool === "calendars" && offerAgenda) || (tool === "downloads" && offerDownloads))
+        }
         if (key === "sections") return true
         if (key === "agenda") return offerAgenda && visibleTabs.includes(3)
         if (key === "awake") return offerAwake
@@ -66,10 +71,12 @@ PlasmoidItem {
     function choose(key, returning = false) {
         if (key === currentRoute) return
         slideDirection = returning ? -1 : 1
-        if (!returning && islandOpen) trail = trail.concat(currentRoute).slice(-40)
+        // Sections is a chooser. After A → Sections → B, Back should return to A.
+        if (!returning && islandOpen && (currentRoute !== "sections" || !trail.length))
+            trail = trail.concat(currentRoute).slice(-40)
         if (overview) lastSection = key
         overview = key === "sections"
-        utilityPage = ["controls","system","together","captures"].includes(key) ? key : ""
+        utilityPage = key.startsWith("agent-") || key.startsWith("tool-") || ["controls","system","together","captures"].includes(key) ? key : ""
         viewingShelf = key === "files"
         viewingWatch = key === "watch"
         viewingDownloads = key === "downloads"
@@ -102,10 +109,12 @@ PlasmoidItem {
         if (tools.offers("processes")) add("system", i18n("System"), "view-statistics-symbolic", "#aba6ff")
         return rows
     }
-    onSectionsChanged: if (utilityPage && !sections.some(item => item.key === utilityPage)) {
+    onSectionsChanged: if (utilityPage && !availableRoute(utilityPage)) {
         utilityPage = ""; overview = true
     }
     readonly property string pageTitle: overview ? i18n("Sections") : utilityPage === "controls" ? i18n("Controls")
+        : utilityPage.startsWith("agent-") ? (utilityPage === "agent-claude" ? "Claude Code" : utilityPage === "agent-codex" ? "Codex" : i18n("Session file"))
+        : utilityPage.startsWith("tool-") ? (toolRows.find(entry => entry.key === utilityPage.slice(5))?.label || (utilityPage === "tool-calendars" ? i18n("Link a calendar…") : utilityPage === "tool-downloads" ? i18n("Watch downloads") : i18n("Tools")))
         : utilityPage === "captures" ? i18n("Recent captures") : utilityPage === "system" ? i18n("System") : utilityPage === "together" ? i18n("Music and timer") : displayShelf ? i18n("File shelf") : showingWatch ? i18n("Watch")
         : viewingDownloads ? i18n("Downloads") : tab === 0 && musicView === 3 ? i18n("Volume mixer") : tabLabels[tab] || i18n("Sections")
     // Keep keyboard activation through Plasma on a custom, edge-attached surface.
@@ -356,6 +365,26 @@ PlasmoidItem {
         : duration(Math.ceil(countdown.remaining(now) / 1000)))
     function hex(text) {
         return Array.from(unescape(encodeURIComponent(text)), c => c.charCodeAt(0).toString(16).padStart(2, "0")).join("")
+    }
+    property var toolRows: []
+    property var toolGroups: []
+    property string toolGroup: "all"
+    property string toolQuery: ""
+    function catalogReady(rows, groups) { toolRows = rows; toolGroups = groups }
+    function selectTool(key) {
+        if (!tools.offers(key)) return
+        const route = ({shelf:"files", notes:"notes", downloads:"downloads", calendars:"agenda", agents:"agents",
+            media:"queue", mixer:"mixer", camera:"camera", clipboard:"clipboard", awake:"awake"})[key]
+        if (route && availableRoute(route)) { choose(route); return }
+        if (key === "command-bar" && offerSearch) { searching = true; return }
+        if (toolRows.find(item => item.key === key)?.immediate) {
+            // The catalogue is already visible. Issue actions once, directly to their owner.
+            DBus.SessionBus.asyncCall({service:"org.monet.Utilities", path:"/NotchTools", iface:"org.monet.Utilities",
+                member:"Tool", signature:"(s)", arguments:[JSON.stringify({action:"run", key:key})]})
+            if (!["mic","output","keyboard-light","automatic-appearance","switch-appearance","clean","plain"].includes(key)) collapse()
+            return
+        }
+        choose("tool-" + key)
     }
     function openTool(page) {
         runner.connectSource(helper + " utilities " + page)
@@ -700,7 +729,7 @@ PlasmoidItem {
         property bool receivedFocus: false
         onActiveChanged: {
             if (active) receivedFocus = true
-            else if (receivedFocus && visible && !root.draggingShelf && !root.pinned) root.collapse()
+            else if (receivedFocus && visible && !root.draggingShelf && !root.pinned && !body.item?.choosingFile && !body.item?.ownsSurface) root.collapse()
         }
         visible: root.islandOpen && !!visualParent
         onVisibleChanged: {
@@ -856,21 +885,23 @@ PlasmoidItem {
                             CompanionSeat { id: headerRight }
                             IslandButton { id: searchButton; plain: true; visible: root.offerSearch; icon.name: "system-search"; text: i18n("Command Bar"); onClicked: root.searching = true }
                             IslandButton { plain: true; icon.name: "pin-symbolic"; text: root.pinned ? i18n("Unpin") : i18n("Keep open"); checked: root.pinned; onClicked: root.pinned = !root.pinned }
-                            IslandButton { plain: true; icon.name: "application-menu"; text: i18n("Utilities"); onClicked: root.openTool("tools") }
+                            IslandButton { plain: true; icon.name: "application-menu"; text: i18n("Tools"); visible: root.visibleTabs.includes(7); onClicked: root.choose("tools") }
                         }
                         IslandPages {
                             id: body
                             Layout.fillWidth: true; Layout.fillHeight: true
                             presented: root.islandOpen && !root.searching
-                            duration: root.motion && pages.revealProgress === 1 ? Kirigami.Units.longDuration : 0
+                            duration: root.motion && pages.revealProgress === 1 ? Math.min(165, Kirigami.Units.longDuration) : 0
                             prewarm: root.prepareSections ? sectionPage : null
                             components: [sectionPage, musicPage, activityPage, timerPage, calendarPage, padPage,
                                 clipboardPage, cameraPage, shelfPage, downloadsPage, watchPage, agendaPage,
-                                awakePage, mixerPage, controlsPage, systemPage, capturesPage, pairedPage, toolPage, agentsPage, notificationsPage]
-                            reusable: [musicPage, timerPage, mixerPage]
-                            privatePages: [clipboardPage, cameraPage, activityPage, watchPage, agentsPage, notificationsPage]
+                                awakePage, mixerPage, controlsPage, systemPage, capturesPage, pairedPage, toolPage, agentsPage, notificationsPage, sessionDetails, codexDetails, claudeDetails, toolDetails]
+                            reusable: [musicPage, timerPage, mixerPage, toolPage]
+                            privatePages: [clipboardPage, cameraPage, activityPage, watchPage, notificationsPage, toolDetails]
                             navigationDirection: root.slideDirection
-                            requested: root.overview ? sectionPage : root.utilityPage === "controls" ? controlsPage
+                            requested: root.overview ? sectionPage : root.utilityPage === "agent-session" ? sessionDetails
+                                : root.utilityPage === "agent-codex" ? codexDetails : root.utilityPage === "agent-claude" ? claudeDetails
+                                : root.utilityPage.startsWith("tool-") ? toolDetails : root.utilityPage === "controls" ? controlsPage
                                 : root.utilityPage === "system" ? systemPage : root.utilityPage === "captures" ? capturesPage : root.utilityPage === "together" ? pairedPage :
                                 root.displayShelf ? shelfPage : root.showingWatch ? watchPage
                                 : root.tab === 2 && root.viewingAwake && awakeModel.item ? awakePage
@@ -903,6 +934,7 @@ PlasmoidItem {
         readonly property bool canNavigate: root.islandOpen && !root.searching && !root.draggingShelf && !body.item?.menuOpen
         readonly property bool canGoBack: !root.overview || root.trail.length > 0
         function back() {
+            if (body.item?.editingEvent) { body.item.closeEditor(); return }
             if (body.item?.notificationOpen) { body.item.backFromNotification(); return }
             const history = root.trail.slice()
             let key
@@ -991,6 +1023,9 @@ PlasmoidItem {
         id: capturesPage
         IslandCaptures {
             helper: root.helper
+            showCopied: root.islandOpen && root.currentRoute === "captures" && !root.searching && power.active
+                        && !!(power.nativeState ?? capturesLock.item)?.lockKnown && !(power.nativeState ?? capturesLock.item)?.locked
+            Loader { id: capturesLock; active: !power.nativeState; sourceComponent: Component { CameraLock {} } }
             images: tools.offers("screenshot"); videos: tools.offers("recordings"); shelf: root.offerShelf
             onAddFile: url => fileShelf.change({action: "add", urls: [url]})
         }
@@ -1069,6 +1104,8 @@ PlasmoidItem {
         id: clipboardPage
         Item {
             id: clipboardView
+            readonly property bool notificationOpen: !!history.item?.inDetail
+            function backFromNotification() { history.item?.back() }
             readonly property var session: power.nativeState ?? portableLock.item
             readonly property bool unlocked: !!session?.lockKnown && !session.locked
             onUnlockedChanged: if (session?.lockKnown && session.locked) root.islandOpen = false
@@ -1144,24 +1181,39 @@ PlasmoidItem {
             opener: FolderOpenController {}
             onBackRequested: pages.back()
             onRefreshRequested: { root.downloadAvailable = false; root.refreshActivity() }
-            onManageRequested: root.openTool("downloads")
+            onManageRequested: root.choose("tool-downloads")
         }
     }
     Component {
         id: toolPage
-        IslandSections {
-            entries: [
-                {key:"screenshot", label:i18n("Screenshot"), icon:"camera-photo", color:"#afcfff"},
-                {key:"color", label:i18n("Pick a color"), icon:"color-picker", color:"#e8b0fa"},
-                {key:"ocr", label:i18n("Read screen text"), icon:"edit-select-text", color:"#8dd5d3"},
-                {key:"recordings", label:i18n("Screen recorder"), icon:"media-record", color:"#ff9393"},
-                {key:"snippets", label:i18n("Text snippets"), icon:"edit-paste", color:"#ffd582"},
-                {key:"compress", label:i18n("Compress media"), icon:"archive-insert", color:"#b5d79c"},
-                {key:"tools", label:i18n("All tools"), icon:"view-grid", color:"#d7d7dd"}
-            ].filter(tool => tool.key === "tools" || tools.offers(tool.key))
-            onSelected: key => root.openTool(key)
+        ToolDirectory {
+            rows: root.toolRows; groups: root.toolGroups; hidden: tools.hidden; favorites: tools.favorites
+            group: root.toolGroup; query: root.toolQuery
+            onFilterChanged: (group, query) => { root.toolGroup = group; root.toolQuery = query }
+            onLoaded: (rows, groups) => root.catalogReady(rows, groups)
+            onSelected: key => root.selectTool(key)
         }
     }
+    Component {
+        id: toolDetails
+        NotchTool {
+            tool: root.utilityPage.startsWith("tool-") ? root.utilityPage.slice(5) : ""
+            ownerId: String(Plasmoid.id)
+            active: root.islandOpen && !root.folding && power.active && !!tool && tools.offers(tool) && body.progress === 1 && body.current?.item === this
+            screenName: Screen.name
+            property point popupPosition: Qt.point(popup.x, popup.y)
+            onPopupPositionChanged: Qt.callLater(reposition)
+            onDismissRequested: root.collapse()
+            onBackRequested: pages.back()
+        }
+    }
+    component ProviderDetail: AgentDetail {
+        presented: power.active && root.islandOpen && root.utilityPage === "agent-" + provider
+        onSettingsChanged: root.refreshActivity()
+    }
+    Component { id: sessionDetails; ProviderDetail { provider: "session" } }
+    Component { id: codexDetails; ProviderDetail { provider: "codex" } }
+    Component { id: claudeDetails; ProviderDetail { provider: "claude" } }
     component AgentReadings: ColumnLayout {
         required property bool showReadings
         SessionButton {
@@ -1169,8 +1221,7 @@ PlasmoidItem {
             widgetId: String(Plasmoid.id)
             active: root.agentsVisible && root.sessionSelected && showReadings && power.active
             onClicked: {
-                runner.connectSource(root.helper + " utilities agents session")
-                root.islandOpen = false
+                root.choose("agent-session")
             }
         }
         Repeater {
@@ -1184,8 +1235,7 @@ PlasmoidItem {
                 pendingLabel: modelData === "claude" ? i18n("Checking Claude Code limits…") : i18n("Checking Codex limits…")
                 onPreferencesChanged: root.refreshActivity()
                 onClicked: {
-                    runner.connectSource(root.helper + " utilities agents " + modelData)
-                    root.islandOpen = false
+                    root.choose("agent-" + modelData)
                 }
             }
         }
@@ -1214,7 +1264,7 @@ PlasmoidItem {
                         tile: true; Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.minimumWidth: 0
                         text: modelData.label; detail: modelData.detail; icon.name: modelData.icon; tint: modelData.color
                         Accessible.description: detail
-                        onClicked: root.openTool("agents " + modelData.key)
+                        onClicked: root.choose("agent-" + modelData.key)
                     }
                 }
             }
@@ -1271,7 +1321,7 @@ PlasmoidItem {
             RowLayout {
                 visible: !notices.inDetail
                 C.Button { visible: root.offerDownloads; text: i18n("Downloads"); onClicked: root.choose("downloads") }
-                C.Button { visible: root.agentsVisible && !root.codexKey && !root.claudeKey; text: i18n("Agent usage"); onClicked: root.openTool("agents") }
+                C.Button { visible: root.agentsVisible && !root.codexKey && !root.claudeKey; text: i18n("Agent usage"); onClicked: root.choose("agents") }
                 C.Button {
                     visible: root.offerWatch
                     text: i18n("Watch")
@@ -1309,13 +1359,15 @@ PlasmoidItem {
             day: root.agendaDay
             onChoose: date => root.agendaDay = date
             onMonthRequested: pages.back()
-            onCalendarsRequested: root.openTool("calendars")
+            onCalendarsRequested: root.choose("tool-calendars")
         }
     }
     Component {
         id: calendarPage
         ColumnLayout {
             id: calendar
+            readonly property bool editingEvent: !!dailyAgenda.item?.editingEvent
+            function closeEditor() { dailyAgenda.item?.closeEditor() }
             readonly property bool split: width >= 410 && height >= 235 && root.offerAgenda
             spacing: 5
             NoteStore { id: notes; helper: root.helper; Component.onCompleted: refresh() }
@@ -1340,19 +1392,21 @@ PlasmoidItem {
                     color: "#24ffffff"
                 }
                 Loader {
+                    id: dailyAgenda
                     visible: active; active: calendar.split
                     Layout.fillWidth: true; Layout.fillHeight: true
                     Layout.preferredWidth: 174; Layout.minimumWidth: 0
                     sourceComponent: Agenda {
                         editorParent: pages
                         embedded: true; day: month.chosen
-                        onCalendarsRequested: root.openTool("calendars")
+                        onUpcomingRequested: root.choose("agenda")
+                        onCalendarsRequested: root.choose("tool-calendars")
                     }
                 }
             }
             IslandButton {
-                Layout.alignment: Qt.AlignRight
-                visible: root.offerAgenda; caption: true
+                Layout.alignment: Qt.AlignHCenter
+                visible: root.offerAgenda && !calendar.split; caption: true
                 text: i18n("Upcoming events")
                 onClicked: { root.agendaDay = month.chosen; root.choose("agenda") }
             }

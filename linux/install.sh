@@ -465,6 +465,7 @@ fi
 put 644 "$SRC/share/ibus/component/monet-snippets.xml" "$DATADIR/ibus/component/monet-snippets.xml"
 install -d "$DATADIR/monet/utilities"
 install -m 644 "$SRC"/share/monet/utilities/*.py "$DATADIR/monet/utilities/"
+install -m 644 "$SRC/share/monet/utilities/NotchPlacement.qml" "$DATADIR/monet/utilities/"
 install -Dm644 "$SRC/clipboard/ext-data-control-v1.xml" "$DATADIR/monet/utilities/ext-data-control-v1.xml"
 if [ -f "$SRC/share/monet/utilities/libmonetclipboard.so" ]; then
     install -m 755 "$SRC/share/monet/utilities/libmonetclipboard.so" "$DATADIR/monet/utilities/"

@@ -238,6 +238,7 @@ Shared.MonetWindow {
         { id: "light", name: i18n("Light & Wallpaper"), glyph: "M5 15a7 7 0 0 1 14 0M3 19h18",
           words: i18nc("Settings search words, space-separated",
                       "light wallpaper painting hours mist smoke dark mode glass placard clock theme appearance colors")
+              + " " + i18n("Notch") + " " + i18n("Home Bar")
               + " " + i18nc("Settings search words, space-separated", "photo picture own painted")
               + " " + i18nc("Settings search words, space-separated", "transparent transparency see-through frosted matte solid blur")
               + " " + i18nc("Settings search words, space-separated", "snap layouts assist windows side by side halves tiling")

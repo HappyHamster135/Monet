@@ -3,36 +3,7 @@ from PySide6.QtCore import QRect, QSize, Qt
 from PySide6.QtGui import QColor, QPalette, QPainter, QPen
 from PySide6.QtWidgets import QStyle, QStyledItemDelegate, QStyleOptionViewItem
 
-from actions import N_
-
-# Use the same catalog metadata and preference store as search and the Quick Panel.
-CATEGORIES = (
-    ("all", N_("All tools"), "view-grid"),
-    ("favorites", N_("Favorites"), "rating"),
-    ("Files", N_("Files"), "folder"),
-    ("Writing", N_("Writing"), "document-edit"),
-    ("Input", N_("Mouse and keyboard"), "input-keyboard"),
-    ("Sound", N_("Sound"), "audio-volume-high"),
-    ("Capture", N_("Capture"), "camera-photo"),
-    ("Display", N_("Display"), "video-display"),
-    ("System", N_("System"), "utilities-system-monitor"),
-    ("Desktop", N_("Desktop"), "user-desktop"),
-)
-
-
-GROUP_ALIASES = {
-    "Alt": "Desktop", "Calendar": "Desktop", "Close": "Desktop", "Favorite": "Desktop",
-    "Keyboard": "Display", "Mouse": "Input", "Network": "System", "Screen": "Display",
-    "Search": "Desktop",
-    "Session": "System",
-}
-
-
-def category_for(key, action):
-    if key == "emoji":
-        return "Writing"
-    group = action.group.split()[0]
-    return GROUP_ALIASES.get(group, group)
+from actions import CATEGORIES, category_for
 
 
 class ToolRow(QStyledItemDelegate):

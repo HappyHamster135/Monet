@@ -10,6 +10,7 @@ ColumnLayout {
     required property bool images
     required property bool videos
     required property bool shelf
+    required property bool showCopied
     signal addFile(string url)
     property var recent: []
     property bool loading: false
@@ -30,13 +31,19 @@ ColumnLayout {
             page.loading = false
         }
     }
+    Loader {
+        id: copies
+        active: page.showCopied; visible: active && !!item?.count
+        Layout.fillWidth: true
+        source: "CopiedCaptures.qml"
+    }
     RowLayout {
         Layout.fillWidth: true
         Item { Layout.fillWidth: true }
         IslandButton { text: i18n("Refresh"); icon.name: "view-refresh"; enabled: !page.loading; onClicked: page.refresh() }
     }
     C.Label {
-        visible: !page.recent.length
+        visible: !page.recent.length && !copies.item?.count
         Layout.fillWidth: true
         text: page.loading ? i18n("Loading…") : i18n("No saved captures yet.")
         horizontalAlignment: Text.AlignHCenter; wrapMode: Text.Wrap
