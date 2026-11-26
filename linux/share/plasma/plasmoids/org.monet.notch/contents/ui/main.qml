@@ -21,7 +21,8 @@ PlasmoidItem {
     readonly property bool combined: Plasmoid.configuration.combined && timerStrip && !!media && visibleTabs.includes(0)
     property bool overview: true
     property string utilityPage: ""
-    readonly property bool motion: Kirigami.Units.longDuration > 0
+    // Kirigami reports one millisecond when desktop animations are disabled.
+    readonly property bool motion: Kirigami.Units.longDuration > 1
     readonly property bool editing: !!Plasmoid.containment?.corona.editMode
     readonly property bool ownEdge: Plasmoid.location === PlasmaCore.Types.TopEdge && Plasmoid.containment?.applets.length === 1
     readonly property int surfaceWidth: Math.min(468, Math.max(240, (root.Screen.width || 500) - 28))
@@ -39,9 +40,8 @@ PlasmoidItem {
         if (folding || !islandOpen) return
         if (!motion) { islandOpen = false; return }
         folding = true
-        foldDelay.restart()
+        pages.animateTo(0)
     }
-    Timer { id: foldDelay; interval: Kirigami.Units.shortDuration; onTriggered: root.islandOpen = false }
     function choose(key) {
         overview = false
         utilityPage = ""
@@ -176,7 +176,7 @@ PlasmoidItem {
         onLoaded: item.watching = Qt.binding(() => !root.islandOpen)
     }
     function openPill() {
-        if (folding) { foldDelay.stop(); folding = false; return }
+        if (folding) { folding = false; pages.animateTo(1); return }
         if (islandOpen) { collapse(); return }
         const notice = preview.item?.noticeId || 0
         const toAwake = awakeStrip
@@ -371,7 +371,7 @@ PlasmoidItem {
     Component.onCompleted: { selectVisibleTab(); refreshTime() }
     onIslandOpenChanged: {
         if (!islandOpen) {
-            foldDelay.stop(); folding = false; pinned = false; pages.revealProgress = 0; overview = true; utilityPage = ""
+            folding = false; pinned = false; pages.resetReveal(); overview = true; utilityPage = ""
             viewingAwake = false; searching = false; requestedNotice = 0; viewingDownloads = false; viewingShelf = false
             return
         }
@@ -637,20 +637,41 @@ PlasmoidItem {
         focus: true
         Behavior on height { enabled: root.motion && popup.visible; NumberAnimation { duration: Kirigami.Units.longDuration; easing.type: Easing.OutCubic } }
         property real revealProgress: 0
-        function reveal() {
+        function resetReveal() {
+            startReveal.stop()
+            morph.stop()
             revealProgress = 0
-            revealProgress = 1
+        }
+        function animateTo(goal) {
+            startReveal.stop()
+            morph.stop()
+            if (!root.motion || revealProgress === goal) {
+                revealProgress = goal
+                if (goal === 0 && root.folding) root.islandOpen = false
+                return
+            }
+            morph.from = revealProgress
+            morph.to = goal
+            morph.duration = goal ? Kirigami.Units.longDuration : Kirigami.Units.shortDuration
+            morph.start()
+        }
+        function reveal() {
+            resetReveal()
+            // Let Plasma map the surface before advancing its first animation frame.
+            if (root.motion) startReveal.restart()
+            else revealProgress = 1
             Qt.callLater(() => { if (root.overview) body.item?.focusFirst?.(); else sectionsButton.forceActiveFocus(Qt.OtherFocusReason) })
+        }
+        Timer { id: startReveal; interval: 16; onTriggered: if (root.islandOpen && !root.folding) pages.animateTo(1) }
+        NumberAnimation {
+            id: morph
+            target: pages; property: "revealProgress"; easing.type: Easing.OutCubic
+            onFinished: if (root.folding && to === 0) root.islandOpen = false
         }
         function enterPage() { if (root.islandOpen && root.motion) pageEntry.restart() }
         Connections {
             target: root
-            function onFoldingChanged() { if (root.islandOpen) pages.revealProgress = root.folding ? 0 : 1 }
             function onOverviewChanged() { pages.enterPage() }
-        }
-        Behavior on revealProgress {
-            enabled: root.motion && root.islandOpen
-            NumberAnimation { duration: root.folding ? Kirigami.Units.shortDuration : Kirigami.Units.longDuration; easing.type: Easing.OutCubic }
         }
         IslandSurface {
             anchors.horizontalCenter: parent.horizontalCenter
