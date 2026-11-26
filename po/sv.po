@@ -20115,55 +20115,55 @@ msgstr "Klistra in kalenderlänk…"
 msgid "No external calendars linked."
 msgstr "Inga externa kalendrar är länkade."
 
-#: linux/share/monet/settings-app/NotchPreferences.qml:23 linux/share/monet/settings-app/NotchPreferences.qml:30
+#: linux/share/monet/settings-app/NotchPreferences.qml:24 linux/share/monet/settings-app/NotchPreferences.qml:38
 msgid "Could not change notch settings."
 msgstr "Kunde inte ändra inställningarna för skärmutskärningen."
 
-#: linux/share/monet/settings-app/NotchPreferences.qml:41
+#: linux/share/monet/settings-app/NotchPreferences.qml:49
 msgid "No desktop panel is available."
 msgstr "Det finns ingen tillgänglig skrivbordspanel."
 
-#: linux/share/monet/settings-app/NotchPreferences.qml:46
+#: linux/share/monet/settings-app/NotchPreferences.qml:54
 msgid "Choose its size, pages and controls."
 msgstr "Välj storlek, sidor och kontroller."
 
-#: linux/share/monet/settings-app/NotchPreferences.qml:48
+#: linux/share/monet/settings-app/NotchPreferences.qml:56
 msgid "Customize"
 msgstr "Anpassa"
 
-#: linux/share/monet/settings-app/NotchPreferences.qml:54
+#: linux/share/monet/settings-app/NotchPreferences.qml:62
 msgid "Screen %1"
 msgstr "Skärm %1"
 
-#: linux/share/monet/settings-app/NotchPreferences.qml:84
+#: linux/share/monet/settings-app/NotchPreferences.qml:92
 msgid "Gestures"
 msgstr "Gester"
 
-#: linux/share/monet/settings-app/NotchPreferences.qml:84
+#: linux/share/monet/settings-app/NotchPreferences.qml:92
 msgid "Hover controls"
 msgstr "Kontroller när pekaren hålls över"
 
-#: linux/share/monet/settings-app/NotchPreferences.qml:84
+#: linux/share/monet/settings-app/NotchPreferences.qml:92
 msgid "Companion"
 msgstr "Följeslagare"
 
-#: linux/share/monet/settings-app/NotchPreferences.qml:85
+#: linux/share/monet/settings-app/NotchPreferences.qml:93
 msgid "Audio levels"
 msgstr "Ljudnivåer"
 
-#: linux/share/monet/settings-app/NotchPreferences.qml:85
+#: linux/share/monet/settings-app/NotchPreferences.qml:93
 msgid "Notification previews"
 msgstr "Förhandsvisning av aviseringar"
 
-#: linux/share/monet/settings-app/NotchPreferences.qml:85
+#: linux/share/monet/settings-app/NotchPreferences.qml:93
 msgid "Accessory alerts"
 msgstr "Aviseringar om tillbehör"
 
-#: linux/share/monet/settings-app/NotchPreferences.qml:86
+#: linux/share/monet/settings-app/NotchPreferences.qml:94
 msgid "Countdown"
 msgstr "Nedräkning"
 
-#: linux/share/monet/settings-app/NotchPreferences.qml:95
+#: linux/share/monet/settings-app/NotchPreferences.qml:103
 msgid "Keep copied images in Recent captures"
 msgstr "Spara kopierade bilder bland de senaste skärmbilderna"
 
@@ -20171,16 +20171,16 @@ msgstr "Spara kopierade bilder bland de senaste skärmbilderna"
 msgid "Could not read the selected source."
 msgstr "Det gick inte att läsa den valda källan."
 
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AgentDetail.qml:64
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AgentDetail.qml:65
 msgid "Choose a local session log to see its activity and token usage."
 msgstr "Välj en lokal sessionslogg för att se aktivitet och tokenanvändning."
 
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AgentDetail.qml:65
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AgentDetail.qml:66
 msgid "Connect to read limits from your signed-in CLI on this computer."
 msgstr ""
 "Anslut för att läsa användningsgränser från ditt inloggade kommandoradsverktyg på den här datorn."
 
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AgentDetail.qml:76
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/AgentDetail.qml:83
 msgid "Forget session"
 msgstr "Glöm session"
 
@@ -20211,3 +20211,7 @@ msgstr "Kunde inte läsa in verktygen."
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/ToolDirectory.qml:73
 msgid "No matching tools."
 msgstr "Inga matchande verktyg."
+
+#: linux/libexec/monet-quick:9431
+msgid "Customize Home Bar"
+msgstr "Anpassa hemfältet"
