@@ -16,7 +16,7 @@ class Calendars(QWidget):
     def __init__(self):
         super().__init__()
         layout = QVBoxLayout(self)
-        hint = QLabel(tr("Choose the appointments shown in the notch. Linked files follow changes on disk. Subscriptions refresh when you open the agenda."))
+        hint = QLabel(tr("Show events from another calendar in the notch. Choose an .ics file or paste a calendar subscription link. Use New event in the notch to save an event on this PC."))
         hint.setWordWrap(True)
         layout.addWidget(hint)
         self.list = QListWidget()
@@ -27,8 +27,8 @@ class Calendars(QWidget):
         self.status.setWordWrap(True)
         layout.addWidget(self.status)
         buttons = QHBoxLayout()
-        self.files = QPushButton(tr("Link file…"), clicked=self.link_file)
-        self.subscribe = QPushButton(tr("Subscribe…"), clicked=self.subscription)
+        self.files = QPushButton(tr("Choose .ics file…"), clicked=self.link_file)
+        self.subscribe = QPushButton(tr("Paste calendar link…"), clicked=self.subscription)
         self.forget = QPushButton(tr("Remove"), clicked=self.remove)
         self.forget.setToolTip(tr("Remove this source and its saved copy from the agenda. Your original calendar is kept."))
         for button in (self.files, self.subscribe, self.forget):
@@ -45,7 +45,7 @@ class Calendars(QWidget):
             self.status.setText(tr("Could not read your calendar list."))
             self.forget.setEnabled(False)
             return
-        self.status.setText("" if rows else tr("No calendars added yet."))
+        self.status.setText("" if rows else tr("No external calendars linked."))
         for row in rows:
             origin = Path(row["location"]).name if row["kind"] == "file" else urlsplit(row["location"]).hostname
             item = QListWidgetItem(row["name"] + " · " + origin)

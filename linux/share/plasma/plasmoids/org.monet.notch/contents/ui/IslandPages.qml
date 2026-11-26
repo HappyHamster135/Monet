@@ -18,6 +18,7 @@ Item {
     property real progress: 1
     property bool failed: false
     property int direction: 1
+    property int navigationDirection: 0
     property real outgoingHeight: 0
     readonly property real seam: Math.round(width * progress)
     signal pageShown()
@@ -35,7 +36,7 @@ Item {
             progress = 1
         }
         targetPage = requested
-        if (!targetPage) { clear(); return }
+        if (!targetPage) return
         for (let i = 0; i < slots.count; ++i) {
             const slot = slots.itemAt(i)
             if (slot?.modelData !== targetPage) continue
@@ -61,7 +62,7 @@ Item {
         const previous = current
         const previousHeight = previous?.height ?? 0
         entry.stop()
-        direction = reversing ? -direction : previous && slot.index < previous.index ? -1 : 1
+        direction = reversing ? -direction : navigationDirection || (previous && slot.index < previous.index ? -1 : 1)
         outgoing = duration > 1 && previous?.visible ? previous : null
         outgoingHeight = previousHeight
         progress = outgoing ? start : 1

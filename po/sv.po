@@ -14449,14 +14449,6 @@ msgstr "Bevakar"
 msgid "Month"
 msgstr "Månad"
 
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:57
-msgid "Calendars…"
-msgstr "Kalendrar…"
-
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:60
-msgid "Refresh appointments"
-msgstr "Uppdatera händelser"
-
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:68
 msgid "Previous two weeks"
 msgstr "Föregående två veckor"
@@ -14469,33 +14461,13 @@ msgstr "Tillbaka till idag"
 msgid "Next two weeks"
 msgstr "Nästa två veckor"
 
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:91
-msgid "Untitled appointment"
-msgstr "Namnlös händelse"
-
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:99
 msgid "All day"
 msgstr "Hela dagen"
 
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:116
-msgid "Loading appointments…"
-msgstr "Läser in händelser…"
-
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:117
 msgid "Could not read your calendars."
 msgstr "Det gick inte att läsa dina kalendrar."
-
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:118
-msgid "Add a calendar to see your appointments here."
-msgstr "Lägg till en kalender för att se dina händelser här."
-
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:119
-msgid "No appointments available."
-msgstr "Inga händelser tillgängliga."
-
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:120
-msgid "No appointments in these two weeks."
-msgstr "Inga händelser under de här två veckorna."
 
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:125
 msgid "Unavailable · %1"
@@ -14509,26 +14481,9 @@ msgstr "Visar sparad kopia · %1"
 msgid "Showing the first 200 appointments."
 msgstr "Visar de första 200 händelserna."
 
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:359
-msgid "Upcoming appointments"
-msgstr "Kommande händelser"
-
-#: linux/share/monet/utilities/calendars.py:19
-msgid ""
-"Choose the appointments shown in the notch. Linked files follow changes on disk. Subscriptions refresh when you open the agenda."
-msgstr ""
-
 #: linux/share/monet/utilities/calendars.py:23
 msgid "Calendars in the notch"
 msgstr "Kalendrar i skärmens överkant"
-
-#: linux/share/monet/utilities/calendars.py:30
-msgid "Link file…"
-msgstr "Länka fil…"
-
-#: linux/share/monet/utilities/calendars.py:31
-msgid "Subscribe…"
-msgstr "Prenumerera…"
 
 #: linux/share/monet/utilities/calendars.py:33
 msgid ""
@@ -14538,10 +14493,6 @@ msgstr ""
 #: linux/share/monet/utilities/calendars.py:45
 msgid "Could not read your calendar list."
 msgstr "Det gick inte att läsa din kalenderlista."
-
-#: linux/share/monet/utilities/calendars.py:48
-msgid "No calendars added yet."
-msgstr "Inga kalendrar har lagts till än."
 
 #: linux/share/monet/utilities/calendars.py:59
 msgid "Link calendar file"
@@ -16972,10 +16923,6 @@ msgstr "Ljusstyrka på %1"
 msgid "Scroll to open the notch or skip tracks"
 msgstr "Rulla för att öppna skärmens urtag eller byta spår"
 
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:30
-msgid "Open shelf in Utilities"
-msgstr "Öppna filhyllan i Verktyg"
-
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:121
 msgid "Remove from shelf"
 msgstr "Ta bort från filhyllan"
@@ -19155,10 +19102,6 @@ msgstr "Flytta fönster till det här skrivbordet"
 msgid "Choose an action"
 msgstr "Välj en åtgärd"
 
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:105
-msgid "Drop files, folders, links or selected text here."
-msgstr "Släpp filer, mappar, länkar eller markerad text här."
-
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:122
 msgid "Drag an item out, or select several to drag together."
 msgstr "Dra ut ett objekt eller markera flera och dra dem tillsammans."
@@ -20035,3 +19978,151 @@ msgstr "Lägger till panel…"
 #: linux/share/monet/panel/MonetPanelConfiguration.qml:947
 msgid "Customize new panel"
 msgstr "Anpassa den nya panelen"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:56 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:124
+msgid "AI agents"
+msgstr "AI-agenter"
+
+#: linux/share/monet/widgets/Month.qml:399
+msgid "Add a day note"
+msgstr "Lägg till en dagsanteckning"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:55
+msgid "Could not save this change. Try again."
+msgstr "Ändringen kunde inte sparas. Försök igen."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:80 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:175
+msgid "Edit event"
+msgstr "Redigera händelse"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:80 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:150
+msgid "New event"
+msgstr "Ny händelse"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:102
+msgid "Event title"
+msgstr "Händelsens namn"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:105
+msgid "HH:MM, or leave blank for all day"
+msgstr "TT:MM, eller lämna tomt för heldag"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:129 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:210
+msgid "Link a calendar…"
+msgstr "Länka en kalender…"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:132
+msgid "Refresh events"
+msgstr "Uppdatera händelser"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:172
+msgid "Untitled event"
+msgstr "Namnlös händelse"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:201
+msgid "Loading events…"
+msgstr "Läser in händelser…"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:203
+msgid "Some calendars could not be read."
+msgstr "Vissa kalendrar kunde inte läsas."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:204
+msgid "No events on this day."
+msgstr "Inga händelser den här dagen."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/Agenda.qml:204
+msgid "No events in these two weeks."
+msgstr "Inga händelser under de här två veckorna."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:32
+msgid "%1 selected"
+msgid_plural "%1 selected"
+msgstr[0] "%1 markerat"
+msgstr[1] "%1 markerade"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:33
+msgid "%1 item"
+msgid_plural "%1 items"
+msgstr[0] "%1 objekt"
+msgstr[1] "%1 objekt"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:36
+msgid "Open in Utilities"
+msgstr "Öppna i Verktyg"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:114
+msgid "Release to add to shelf"
+msgstr "Släpp för att lägga på hyllan"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:114
+msgid "Drop items here"
+msgstr "Släpp objekt här"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/FileShelf.qml:119
+msgid "Keep files, folders, links and text here until you need them."
+msgstr "Samla filer, mappar, länkar och text här tills du behöver dem."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/IslandMixer.qml:63
+msgid "No output connected"
+msgstr "Ingen ljudutgång ansluten"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/IslandSystem.qml:60
+msgid "Average %1"
+msgstr "Genomsnitt %1"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/IslandSystem.qml:62
+msgid "%1 of %2"
+msgstr "%1 av %2"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/IslandSystem.qml:65
+msgid "↓ %1"
+msgstr "↓ %1"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/IslandSystem.qml:66
+msgid "Upload %1"
+msgstr "Uppladdning %1"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:1155
+msgid "Pick a color"
+msgstr "Välj en färg"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:1156
+msgid "Read screen text"
+msgstr "Läs text på skärmen"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:1157
+msgid "Screen recorder"
+msgstr "Skärminspelare"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:1197 linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:1208
+msgid "Session activity"
+msgstr "Sessionsaktivitet"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:1202
+msgid ""
+"Choose a session file to follow its latest activity, or connect Codex or Claude Code usage readings."
+msgstr ""
+"Välj en sessionsfil för att följa aktiviteten, eller anslut användningsstatistik för Codex eller Claude Code."
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:1356
+msgid "Upcoming events"
+msgstr "Kommande händelser"
+
+#: linux/share/monet/utilities/calendars.py:19
+msgid ""
+"Show events from another calendar in the notch. Choose an .ics file or paste a calendar subscription link. Use New event in the notch to save an event on this PC."
+msgstr ""
+"Visa händelser från en annan kalender i skärmutskärningen. Välj en .ics-fil eller klistra in en prenumerationslänk. Välj Ny händelse i skärmutskärningen för att spara en händelse på datorn."
+
+#: linux/share/monet/utilities/calendars.py:30
+msgid "Choose .ics file…"
+msgstr "Välj en .ics-fil…"
+
+#: linux/share/monet/utilities/calendars.py:31
+msgid "Paste calendar link…"
+msgstr "Klistra in kalenderlänk…"
+
+#: linux/share/monet/utilities/calendars.py:48
+msgid "No external calendars linked."
+msgstr "Inga externa kalendrar är länkade."

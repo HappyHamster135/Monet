@@ -150,7 +150,11 @@ class PanelLayouts(unittest.TestCase):
         self.assertEqual(notch('right')['mode'], 'wide')
         self.assertTrue(self.choose('right','three')['ok'])
         standard = ['music', 'activity', 'time', 'calendar', 'notes']
-        self.assertEqual(notch('right')['tabs'], standard)
+        extras = ['tools', 'agents', 'notifications']
+        self.assertEqual(notch('right')['tabs'], standard + ['clipboard'] + extras)
+        for key in extras:
+            self.assertNotIn(key, notch('right', 'tab-' + key + '-hide')['tabs'])
+        self.assertEqual(notch('right', 'tab-clipboard-hide')['tabs'], standard)
         self.assertEqual(notch('right', 'tab-camera-show')['tabs'], standard + ['camera'])
         self.assertEqual(notch('right', 'tab-camera-earlier')['tabs'][-2:], ['camera', 'notes'])
         self.assertEqual(notch('right', 'tab-camera-hide')['tabs'], standard)
@@ -165,7 +169,7 @@ class PanelLayouts(unittest.TestCase):
         self.assertTrue(notch('right', 'off')['ok'])
         self.assertEqual(notch('other')['mode'], 'compact')
         self.assertTrue(self.js('!panelById(notchPanel.id)').toBool())
-        self.assertEqual(notch('other')['tabs'], standard)
+        self.assertEqual(notch('other')['tabs'], standard + ['clipboard'] + extras)
         self.assertTrue(self.choose('right', 'one')['ok'])
         self.assertEqual(notch('right', 'wide'), saved)
         for key in saved['tabs']:
@@ -174,7 +178,7 @@ class PanelLayouts(unittest.TestCase):
         self.assertEqual(notch('right', 'tab-notes-show')['tabs'], ['notes'])
         self.assertEqual(notch('right', 'tab-notes-show')['tabs'], ['notes'])
         self.js("var n=all.find(p=>p.screen===right.screen&&p.widgets('org.monet.notch').length).widgets()[0]; n.currentConfigGroup=['General']; n.writeConfig('tabs','music,music,bad');")
-        self.assertEqual(notch('right')['tabs'], standard)
+        self.assertEqual(notch('right')['tabs'], standard + ['clipboard'] + extras)
 
     def test_add_panel_uses_the_selected_screen_and_keeps_its_existing_widgets(self):
         def add(ident, kind):

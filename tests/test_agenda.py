@@ -86,6 +86,31 @@ class Appointments(PrivateAgenda):
         super().setUp()
         self.file = self.root / "Meetings.ics"
 
+    def test_edit_local_event_and_show_past_events_on_selected_day(self):
+        day = dt.date(2026, 10, 16)
+        later = dt.datetime(2026, 10, 16, 17, tzinfo=agenda.local_zone())
+        self.file.write_bytes(ics("UID:external\nDTSTART:20261016T110000\nSUMMARY:Imported"))
+        original = self.file.read_bytes()
+        agenda.add("file", self.file)
+        event = {"day": day.isoformat(), "title": "Lunch", "time": "12:30"}
+        agenda.change_event("save-event", event)
+        def entries():
+            return agenda.agenda(day, later, single_day=True)["events"]
+        imported, local = entries()
+        self.assertFalse(imported["localId"])
+        self.assertEqual(local["title"], "Lunch")
+        self.assertFalse(agenda.agenda(day, later)["events"])
+        ident = local["localId"]
+        agenda.change_event("save-event", dict(event, id=ident, title="Birthday", time=""))
+        edited = next(item for item in entries() if item["localId"])
+        self.assertEqual((edited["title"], edited["localId"], edited["allDay"]), ("Birthday", ident, True))
+        with self.assertRaises(ValueError):
+            agenda.change_event("save-event", dict(event, id=ident, time="25:12"))
+        agenda.change_event("remove-event", {"id": ident})
+        self.assertEqual([item["title"] for item in entries()], ["Imported"])
+        self.assertEqual(self.file.read_bytes(), original)
+        self.assertEqual((agenda.directory() / "personal.ics").stat().st_mode & 0o777, 0o600)
+
     def test_repeating_series_moved_cancelled_excluded_and_dst(self):
         self.file.write_bytes(ics(
             "UID:weekly\nDTSTART;TZID=Europe/Stockholm:20261016T100000\nDURATION:PT1H\n"

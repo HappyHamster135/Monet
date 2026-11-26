@@ -8,9 +8,11 @@ C.AbstractButton {
     property bool tile: false
     property bool plain: false
     property bool caption: false
+    property string detail: ""
     property color tint: "#f5f5f7"
     property color base: plain ? "transparent" : tile ? "#10ffffff" : "#29292c"
     property bool prominent: false
+    property real glyphSize: tile ? 21 : 15
     implicitWidth: tile ? 95 : caption ? tag.implicitWidth + 25 : 32
     implicitHeight: tile ? IslandLayout.tileHeight : plain ? 29 : 32
     padding: 0
@@ -19,9 +21,6 @@ C.AbstractButton {
     Accessible.onPressAction: click()
     Keys.onReturnPressed: click()
     Keys.onEnterPressed: click()
-    C.ToolTip.text: text
-    C.ToolTip.visible: hovered && !tile && !caption
-    C.ToolTip.delay: K.Units.toolTipDelay
     scale: down ? 0.95 : 1
     Behavior on scale { NumberAnimation { duration: K.Units.shortDuration; easing.type: Easing.OutCubic } }
     background: Rectangle {
@@ -34,10 +33,10 @@ C.AbstractButton {
         Column {
             width: parent.width - 6
             anchors.centerIn: parent
-            spacing: button.tile ? 4 : 2
+            spacing: button.tile && !button.detail ? 4 : 2
             K.Icon {
                 anchors.horizontalCenter: parent.horizontalCenter
-                width: button.tile ? 21 : 15; height: width
+                width: button.glyphSize; height: width
                 visible: !button.caption
                 source: button.icon.name; isMask: true
                 color: !button.enabled ? "#77777e" : button.checked || button.prominent ? "#161618" : button.tint
@@ -49,6 +48,11 @@ C.AbstractButton {
                 textFormat: Text.PlainText; font.pixelSize: 12; font.weight: Font.Medium
                 horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight
                 wrapMode: button.tile ? Text.Wrap : Text.NoWrap; maximumLineCount: button.tile ? 2 : 1
+            }
+            Text {
+                visible: !!button.detail; width: parent.width; text: button.detail; textFormat: Text.PlainText
+                horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; color: "#b8b8c1"; font.pixelSize: 10
+                Accessible.ignored: true
             }
         }
     }

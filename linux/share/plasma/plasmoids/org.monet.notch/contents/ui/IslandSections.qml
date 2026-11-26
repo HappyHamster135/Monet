@@ -7,6 +7,7 @@ C.ScrollView {
     id: gridView
     required property var entries
     property string lastSection: ""
+    property var detailFor: null
     signal selected(string key)
     signal previewRequested(string key)
     contentWidth: availableWidth
@@ -28,9 +29,10 @@ C.ScrollView {
                 required property var modelData
                 required property int index
                 tile: true; Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.minimumWidth: 0
+                detail: gridView.detailFor ? gridView.detailFor(modelData.key) : ""
                 text: modelData.label; icon.name: modelData.icon; tint: modelData.color
                 objectName: "island-section-" + modelData.key
-                Accessible.description: modelData.key === gridView.lastSection ? i18n("Selected") : ""
+                Accessible.description: [detail, modelData.key === gridView.lastSection ? i18n("Selected") : ""].filter(Boolean).join(" · ")
                 Text {
                     visible: modelData.key === gridView.lastSection
                     anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 7

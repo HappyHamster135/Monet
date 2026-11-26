@@ -31,7 +31,6 @@ ColumnLayout {
             width: 35; height: parent.height
             enabled: strip.online
             Accessible.name: strip.muteLabel
-            C.ToolTip.visible: hovered; C.ToolTip.text: Accessible.name
             onClicked: strip.muteRequested()
             background: Rectangle {
                 radius: 9; color: mute.hovered || mute.visualFocus ? "#303034" : "transparent"
@@ -78,7 +77,7 @@ ColumnLayout {
     }
     C.Slider {
         id: level
-        Layout.fillHeight: true; Layout.preferredWidth: 43; Layout.alignment: Qt.AlignHCenter
+        Layout.fillHeight: true; Layout.preferredWidth: 45; Layout.alignment: Qt.AlignHCenter
         leftPadding: 5; rightPadding: 5; topPadding: 3; bottomPadding: 3
         from: 0; to: strip.maximum; stepSize: 1
         value: strip.percent; orientation: Qt.Vertical; enabled: strip.writable
@@ -89,14 +88,17 @@ ColumnLayout {
         background: Rectangle {
             x: level.leftPadding; y: level.topPadding
             width: level.availableWidth; height: level.availableHeight
-            radius: width / 2
+            radius: 11
             color: level.hovered ? "#3a3a40" : "#2d2d32"
             border.width: level.visualFocus ? 2 : 1
             border.color: level.visualFocus ? "#adcfff" : "#18ffffff"
             Rectangle {
                 anchors.bottom: parent.bottom; width: parent.width
                 height: Math.round(parent.height * level.position)
-                radius: Math.min(width / 2,height / 2)
+                Behavior on height { enabled: !level.pressed && strip.visible && K.Units.longDuration > 1; NumberAnimation { duration: K.Units.shortDuration; easing.type: Easing.OutCubic } }
+                radius: Math.min(11, height / 2)
+                topLeftRadius: Math.min(radius, level.value >= strip.maximum ? 11 : 3)
+                topRightRadius: topLeftRadius
                 color: !strip.online || strip.muted ? "#696970" : level.value > 100 ? "#ffae55" : "#f2f2f4"
             }
             Rectangle {

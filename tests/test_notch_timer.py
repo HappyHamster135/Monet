@@ -156,7 +156,7 @@ Item {
     QtObject { id: config; @SETTINGS@ }
     Monet.NotchTimer { id: model; settings: config }
     Monet.TimePage {
-        id: clock; anchors.fill: parent; timer: model; now: 0; message: ""; offerAwake: true
+        id: clock; objectName: "clock"; anchors.fill: parent; timer: model; now: 0; message: ""; offerAwake: true
         formatDuration: seconds => "25:00"
     }
     function fits(label) {
@@ -172,7 +172,6 @@ Item {
         }
         return false
     }
-    function showFocus() { clock.mode = 1 }
 }
 '''.replace("@SETTINGS@", settings_properties()))
             window = QQuickView()
@@ -180,7 +179,16 @@ Item {
             window.setSource(QUrl.fromLocalFile(str(scene)))
             self.assertEqual(window.status(), QQuickView.Ready, [e.toString() for e in window.errors()])
             window.show()
-            window.rootObject().showFocus()
+            clock = window.rootObject().findChild(QObject, "clock")
+            bar = clock.findChild(QObject, "notchTimeModes")
+            QTest.qWait(60)
+            initial = (bar.x(), bar.y(), bar.width(), bar.height())
+            self.assertGreater(bar.width(), 200)
+            for mode in (2, 0, 2, 1):
+                clock.setProperty("mode", mode)
+                QTest.qWait(60)
+                self.assertEqual((bar.x(), bar.y(), bar.width(), bar.height()), initial)
+
             QTest.qWait(60)
             for label in ("Start", "Keep awake", "Focus options"):
                 self.assertTrue(window.rootObject().fits(label), label)

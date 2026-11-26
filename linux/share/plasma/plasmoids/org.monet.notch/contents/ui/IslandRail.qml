@@ -27,6 +27,8 @@ PlasmaCore.Dialog {
             model: rail.entries
             IslandButton {
                 required property var modelData
+                enabled: modelData.enabled !== false
+                opacity: enabled ? 1 : 0.4
                 width: 33; height: 33
                 base: "#141416"; icon.name: modelData.icon; text: modelData.label
                 objectName: "island-rail-" + modelData.key

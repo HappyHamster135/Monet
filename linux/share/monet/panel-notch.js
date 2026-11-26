@@ -12,8 +12,8 @@
     if (existing.length > 1) { print(JSON.stringify({ok:false})); return; }
     var panel = existing[0], widget = panel && panel.widgets(type)[0];
     var removedWidget = 0;
-    var defaultTabs = ["music", "activity", "time", "calendar", "notes"];
-    var names = defaultTabs.concat("camera", "clipboard");
+    var defaultTabs = ["music", "activity", "time", "calendar", "notes", "clipboard", "tools", "agents", "notifications"];
+    var names = defaultTabs.concat("camera");
     var defaults = {hoverControls:true, combined:true, levels:false, companion:false, alerts:true, previews:false, gestures:true, awake:true, countdown:true};
     var companionFields = {style:["soft","robot"], shape:["round","egg","square","pill"],
         color:["mint","pearl","lemon","peach","rose","lilac","sky"], side:["left","right"],
@@ -55,7 +55,7 @@
         return host;
     }
     var setting = /^(levels|companion|alerts|previews|gestures|awake|countdown|hoverControls|combined)-(on|off)$/.exec(choice || "");
-    var tab = /^tab-(music|activity|time|calendar|notes|camera|clipboard)-(show|hide|earlier|later)$/.exec(choice || "");
+    var tab = /^tab-(music|activity|time|calendar|notes|camera|clipboard|tools|agents|notifications)-(show|hide|earlier|later)$/.exec(choice || "");
     var companion = /^companion-([a-z]+)-([a-z]+)$/.exec(choice || "");
     if (companion && (!Object.prototype.hasOwnProperty.call(companionFields, companion[1]) ||
             companionFields[companion[1]].indexOf(companion[2]) < 0)) { print(JSON.stringify({ok:false})); return; }

@@ -57,26 +57,24 @@ ColumnLayout {
     Timer { id: namesDelay; interval: 100; onTriggered: if (desk.presented) desk.refreshOutputs() }
     onPresentedChanged: { if (!presented) choices.close(); else namesDelay.restart() }
     Component.onCompleted: if (presented) namesDelay.restart()
-    readonly property Component outputChooser: Component {
-        C.AbstractButton {
-            id: chooser
-            readonly property bool hasOutputs: desk.outputNames.some(d => !d.none && d.key)
-            text: desk.deviceLabel(sound.output?.name,sound.output?.description || i18n("Sound output"))
-            Accessible.name: i18n("Sound output")
-            enabled: chooser.hasOutputs && !desk.switching
-            C.ToolTip.visible: hovered; C.ToolTip.text: text
-            onClicked: choices.show("outputs",null)
-            background: Rectangle {
-                radius: height / 2; color: chooser.down || chooser.hovered ? "#343438" : "#242428"
-                border.width: chooser.visualFocus ? 1 : 0; border.color: "#adcfff"
-            }
-            contentItem: RowLayout {
-                spacing: 3
-                K.Icon { Layout.preferredWidth: 13; Layout.preferredHeight: 13; source: "audio-volume-high"; color: "#dddddf" }
-                C.Label { Layout.fillWidth: true; Layout.minimumWidth: 0; text: chooser.text; textFormat: Text.PlainText; elide: Text.ElideRight; font.pixelSize: 11; color: "#dddddf" }
-                K.Icon { Layout.preferredWidth: 11; Layout.preferredHeight: 11; source: "arrow-down"; color: "#bdbdc3" }
-            }
-
+    C.AbstractButton {
+        id: chooser
+        Layout.fillWidth: true; implicitHeight: 37; leftPadding: 12; rightPadding: 12
+        text: desk.deviceLabel(sound.output?.name, sound.output?.description || i18n("No output connected"))
+        Accessible.name: i18n("Sound output"); Accessible.description: text
+        enabled: !desk.switching
+        onClicked: { desk.refreshOutputs(); choices.show("outputs", null) }
+        background: Rectangle {
+            radius: 12; color: chooser.down || chooser.hovered ? "#35353a" : "#242428"
+            border.width: chooser.visualFocus ? 1 : 0; border.color: "#adcfff"
+        }
+        contentItem: RowLayout {
+            spacing: 8
+            K.Icon { Layout.preferredWidth: 17; Layout.preferredHeight: 17; source: "audio-volume-high"; color: "#a1d9ff" }
+            C.Label { text: i18n("Sound output"); color: "#f3f3f6"; font.weight: Font.Medium }
+            C.Label { Layout.fillWidth: true; Layout.minimumWidth: 0; text: chooser.text; horizontalAlignment: Text.AlignRight
+                textFormat: Text.PlainText; elide: Text.ElideRight; font.pixelSize: 12; color: "#c8c8cf" }
+            K.Icon { Layout.preferredWidth: 12; Layout.preferredHeight: 12; source: "arrow-down"; color: "#c8c8cf" }
         }
     }
     C.Popup {
@@ -164,7 +162,7 @@ ColumnLayout {
     }
     RowLayout {
         Layout.fillWidth: true; Layout.fillHeight: true
-        spacing: 4
+        spacing: 7
         IslandFader {
             Layout.preferredWidth: desk.width < 350 ? 54 : 68; Layout.maximumWidth: Layout.preferredWidth; Layout.minimumWidth: Layout.preferredWidth; Layout.fillHeight: true
             title: i18n("Output"); levelLabel: i18n("Output volume")
@@ -215,7 +213,7 @@ ColumnLayout {
                     readonly property var channels: sound.matching(appKey)
                     readonly property var first: channels[0]
                     readonly property bool stable: !appKey.startsWith("stream:")
-                    width: Math.min(92,apps.width); height: apps.height - (apps.interactive ? 9 : 0)
+                    width: Math.min(88,apps.width); height: apps.height - (apps.interactive ? 9 : 0)
                     application: true; marked: pinned; title: label
                     symbol: first?.meta["application.icon_name"] || first?.client["application.icon_name"] || first?.identity || "applications-multimedia"
                     levelLabel: i18n("Volume for %1",label)

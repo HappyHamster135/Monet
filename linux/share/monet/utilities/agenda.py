@@ -1,4 +1,4 @@
-"""Read-only iCalendar agenda. The notch runs the reader only while viewing appointments."""
+"""Personal events and read-only calendar subscriptions for the Monet notch."""
 import contextlib
 import datetime as dt
 import fcntl
@@ -211,12 +211,55 @@ def sync_source(source, force=False):
         write(meta_path, json.dumps(result).encode())
 
 
+def change_event(action, payload):
+    from icalendar import Calendar, Event
+
+    ident = payload.get("id", "")
+    if action not in ("save-event", "remove-event") or (ident and not re.fullmatch(r"[0-9a-f]{32}", ident)):
+        raise ValueError("Invalid event.")
+    if action == "save-event":
+        title = payload["title"].strip()
+        if not title or len(title) > 256 or any(ord(c) < 32 for c in title):
+            raise ValueError("Invalid event title.")
+        day = dt.date.fromisoformat(payload["day"])
+        clock = payload.get("time", "")
+        if clock and not re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", clock):
+            raise ValueError("Invalid time.")
+        start = dt.datetime.combine(day, dt.time.fromisoformat(clock)) if clock else day
+    path = directory() / "personal.ics"
+    with transaction():
+        if path.exists():
+            book = calendar(read_file(path))
+        else:
+            book = Calendar()
+            book.add("version", "2.0")
+            book.add("prodid", "-//Monet//Personal calendar//EN")
+        if ident:
+            old = next((event for event in book.subcomponents if str(event.get("UID")) == ident), None)
+            if old is None:
+                raise ValueError("Event no longer exists.")
+            book.subcomponents.remove(old)
+        elif action == "remove-event":
+            raise ValueError("An event ID is required.")
+        if action == "save-event":
+            event = Event()
+            event.add("uid", ident or uuid.uuid4().hex)
+            event.add("dtstamp", dt.datetime.now(dt.timezone.utc))
+            event.add("dtstart", start)
+            event.add("summary", title)
+            book.add_component(event)
+        encoded = book.to_ical()
+        if len(encoded) > MAX_BYTES:
+            raise ValueError("Personal calendar is full.")
+        write(path, encoded)
+
+
 def local_zone():
     from dateutil.tz import gettz
     return gettz(os.environ.get("TZ") or None)
 
 
-def occurrences(data, first, last, now):
+def occurrences(data, first, last, now, *, personal=False, whole_day=False):
     import recurring_ical_events
     zone = first.tzinfo
     def local(value):
@@ -230,12 +273,13 @@ def occurrences(data, first, last, now):
         end = event.end
         all_day = not isinstance(start, dt.datetime)
         begins, ends = local(start), local(end)
-        floor = first if all_day or first.date() != now.date() else now
+        floor = first if whole_day or all_day or first.date() != now.date() else now
         begin_ts, end_ts = begins.timestamp(), ends.timestamp()
         floor_ts = floor.timestamp()
         if begin_ts >= last.timestamp() or (end_ts <= floor_ts if end_ts > begin_ts else begin_ts < floor_ts):
             continue
         yield dict(start=begins.isoformat(), end=ends.isoformat(), allDay=all_day,
+                   localId=str(event.get("UID", "")) if personal else "",
                    title=str(event.get("SUMMARY", ""))[:512], location=str(event.get("LOCATION", ""))[:512])
 
 
@@ -252,15 +296,18 @@ def time_limit(seconds):
         signal.signal(signal.SIGALRM, old)
 
 
-def agenda(day, now=None):
+def agenda(day, now=None, *, single_day=False):
     rows = sources()
     result = dict(sources=len(rows), events=[], needsSync=False, unavailable=[], saved=[], truncated=False)
+    personal = directory() / "personal.ics"
+    if personal.is_file():
+        rows = rows + [dict(kind="personal", location=personal, name="")]
     if not rows:
         return result
     zone = local_zone()
     now = now.astimezone(zone) if now else dt.datetime.now(zone)
     first = dt.datetime.combine(day, dt.time(), zone)
-    last = first + dt.timedelta(days=WINDOW_DAYS)
+    last = first + dt.timedelta(days=1 if single_day else WINDOW_DAYS)
     events = []
     def order(event):
         return (event["start"][:10], not event["allDay"], dt.datetime.fromisoformat(event["start"]).timestamp(),
@@ -278,7 +325,8 @@ def agenda(day, now=None):
                 result["saved"].append(source["name"])
         try:
             with time_limit(3):
-                entries = (dict(e, source=source["name"]) for e in occurrences(read_file(path), first, last, now))
+                entries = (dict(e, source=source["name"]) for e in occurrences(read_file(path), first, last, now,
+                           personal=source["kind"] == "personal", whole_day=single_day))
                 events = heapq.nsmallest(MAX_EVENTS + 1, itertools.chain(events, entries), key=order)
         except (OSError, ValueError, TypeError, KeyError, OverflowError, MemoryError):
             result["unavailable"].append(source["name"])
@@ -290,10 +338,15 @@ def agenda(day, now=None):
 def main(args):
     wheels = Path(__file__).resolve().parents[1] / "agenda-wheels"
     sys.path[:0] = [str(w) for w in sorted(wheels.glob("*.whl"))]
-    if len(args) == 2 and args[0] == "list":
+    if len(args) == 2 and args[0] in ("list","day"):
         import resource
         resource.setrlimit(resource.RLIMIT_AS, (512 * 1024**2, resource.getrlimit(resource.RLIMIT_AS)[1]))
-        print(json.dumps(agenda(dt.date.fromisoformat(args[1]))))
+        print(json.dumps(agenda(dt.date.fromisoformat(args[1]), single_day=args[0] == "day")))
+    elif len(args) == 2 and args[0] in ("save-event", "remove-event"):
+        if len(args[1]) > 8192:
+            return 2
+        change_event(args[0], json.loads(bytes.fromhex(args[1])))
+        print('{"ok":true}')
     elif args in (["sync"], ["sync", "force"]):
         from concurrent.futures import ThreadPoolExecutor
         with ThreadPoolExecutor(max_workers=2) as pool:

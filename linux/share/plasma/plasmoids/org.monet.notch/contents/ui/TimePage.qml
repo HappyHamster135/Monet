@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as C
+import org.kde.kirigami as K
 
 TimeScrollView {
     id: page
@@ -60,48 +61,47 @@ TimeScrollView {
     ColumnLayout {
         width: page.availableWidth
         spacing: 9
-        RowLayout {
-            visible: !page.inSession
-            Layout.fillWidth: true; spacing: 5
-            Rectangle {
-                Layout.fillWidth: true; Layout.preferredHeight: 32
-                radius: 10; color: "#242427"
-                RowLayout {
-                    anchors.fill: parent; anchors.margins: 3; spacing: 2
-                    Repeater {
-                        model: [i18n("Timer"), i18n("Focus"), i18n("Stopwatch")]
-                        C.AbstractButton {
-                            id: tab
-                            required property int index
-                            required property string modelData
-                            Layout.fillWidth: true; Layout.preferredWidth: implicitContentWidth + 8
-                            Layout.minimumWidth: 0; Layout.fillHeight: true
-                            text: modelData; checked: page.mode === index
-                            enabled: !page.timer.active || index === 2 || index === Number(page.settings.focus || page.timer.onBreak)
-                            Accessible.role: Accessible.PageTab
-                            onClicked: page.mode = index
-                            background: Rectangle {
-                                radius: 7; color: tab.checked ? "#49494d" : tab.hovered ? "#313134" : "transparent"
-                                border.width: tab.visualFocus ? 1 : 0; border.color: "#9ecaff"
-                            }
-                            contentItem: Text {
-                                text: tab.text; elide: Text.ElideRight; horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter; font.pixelSize: 12; font.weight: Font.Medium
-                                color: tab.enabled ? "#f4f4f6" : "#929297"
-                            }
+        Item {
+            id: modes
+            objectName: "notchTimeModes"
+            Layout.fillWidth: true; Layout.preferredHeight: 34
+            Row {
+                id: tabs
+                anchors.fill: parent
+                Repeater {
+                    model: [i18n("Timer"), i18n("Focus"), i18n("Stopwatch")]
+                    C.AbstractButton {
+                        id: tab
+                        required property int index
+                        required property string modelData
+                        width: tabs.width / 3; height: tabs.height
+                        text: modelData; checked: page.mode === index
+                        enabled: !page.timer.active || index === 2 || index === Number(page.settings.focus || page.timer.onBreak)
+                        Accessible.role: Accessible.PageTab
+                        onClicked: page.mode = index
+                        background: Rectangle {
+                            radius: 7; color: tab.hovered ? "#202023" : "transparent"
+                            border.width: tab.visualFocus ? 1 : 0; border.color: "#9ecaff"
+                        }
+                        contentItem: Text {
+                            text: tab.text; elide: Text.ElideRight; horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter; font.pixelSize: 13; font.weight: Font.DemiBold
+                            color: tab.checked ? "#f9f9fa" : tab.enabled ? "#aaaab0" : "#737379"
                         }
                     }
                 }
             }
-            IslandButton {
-                caption: true; tint: page.amber; base: "#442f1e"
-                visible: !page.inSession && !page.stopwatch
-                text: i18n("Start"); onClicked: page.timer.start(page.mode === 1, Date.now())
+            Rectangle {
+                width: Math.min(44, tabs.width / 3 - 4); height: 2; radius: 1
+                y: parent.height - height
+                x: (tabs.width / 3) * (page.mirrored ? 2.5 - page.mode : page.mode + 0.5) - width / 2
+                color: page.amber
+                Behavior on x { enabled: K.Units.longDuration > 1; NumberAnimation { duration: K.Units.longDuration; easing.type: Easing.OutCubic } }
             }
         }
         ColumnLayout {
             Layout.fillWidth: true; spacing: 3
-            Item { Layout.preferredHeight: page.inSession ? 20 : 4 }
+            Item { Layout.preferredHeight: 8 }
             Text {
                 Layout.alignment: Qt.AlignRight; Layout.maximumWidth: page.availableWidth
                 elide: Text.ElideRight
@@ -163,15 +163,17 @@ TimeScrollView {
             RowLayout {
                 visible: !page.stopwatch
                 spacing: 5
+                IslandButton {
+                    caption: true; prominent: true
+                    visible: !page.inSession && !page.stopwatch
+                    text: i18n("Start"); onClicked: page.timer.start(page.mode === 1, Date.now())
+                }
                 C.Label { visible: minutesBox.visible; text: i18n("Minutes"); color: "#bdbdc2" }
                 Stepper {
                     id: minutesBox
                     visible: !page.inSession
                     value: page.settings.timerMinutes; Accessible.name: i18n("Minutes")
                     onValueModified: page.settings.timerMinutes = value
-                }
-                IslandButton {
-                    visible: page.inSession; caption: true; text: i18n("Stopwatch"); onClicked: page.mode = 2
                 }
             }
             RowLayout {

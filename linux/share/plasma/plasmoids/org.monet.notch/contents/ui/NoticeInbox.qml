@@ -6,6 +6,7 @@ import org.kde.notificationmanager as NM
 
 ColumnLayout {
     id: inbox
+    property bool standalone: false
     property int requestedNotice: 0
     property var liveSource: null
     signal previewFinished()
@@ -162,16 +163,16 @@ ColumnLayout {
     }
     RowLayout {
         Layout.fillWidth: true
+        visible: !inbox.standalone || inbox.inDetail || inbox.canClear
         C.ToolButton {
             id: backButton
             visible: inbox.inDetail
             text: i18n("Back to notifications"); display: C.AbstractButton.IconOnly
             icon.name: "go-previous"; onClicked: inbox.back()
-            C.ToolTip.visible: hovered; C.ToolTip.text: text
         }
         C.Label {
             Layout.fillWidth: true; font.bold: true
-            text: inbox.inDetail ? inbox.detail.app || i18n("Notification") : i18n("Notifications")
+            text: inbox.inDetail ? inbox.detail.app || i18n("Notification") : inbox.standalone ? i18n("Recent") : i18n("Notifications")
             textFormat: Text.PlainText; elide: Text.ElideRight
         }
         C.ToolButton {
@@ -180,7 +181,6 @@ ColumnLayout {
             text: inbox.inDetail ? i18n("Dismiss notification") : i18n("Clear notifications…")
             display: C.AbstractButton.IconOnly
             icon.name: inbox.inDetail ? "window-close" : "edit-clear-history"
-            C.ToolTip.visible: hovered; C.ToolTip.text: text
             onClicked: if (inbox.inDetail) inbox.action("dismiss"); else inbox.askClear()
         }
     }
@@ -198,15 +198,20 @@ ColumnLayout {
         id: list
         visible: !inbox.inDetail && !inbox.toRemove.length
         Layout.fillWidth: true; Layout.fillHeight: true
+        spacing: inbox.standalone ? 5 : 0
         model: history; clip: true; boundsBehavior: Flickable.StopAtBounds
         C.ScrollBar.vertical: C.ScrollBar {}
         function selectCurrent() { if (currentItem) currentItem.clicked() }
         Keys.onReturnPressed: selectCurrent()
         Keys.onEnterPressed: selectCurrent()
         delegate: C.ItemDelegate {
+            id: row
             required property int index
             required property var model
-            width: list.width
+            width: list.width; leftPadding: 9; rightPadding: 9
+            background: Rectangle {
+                radius: 10; color: row.highlighted || row.hovered ? "#34343a" : inbox.standalone ? "#222226" : "transparent"
+            }
             highlighted: list.activeFocus && ListView.isCurrentItem
             Accessible.name: [model.applicationName, model.summary].filter(Boolean).join(". ")
             onClicked: { list.currentIndex = index; inbox.show({id: model.notificationId, kind: model.type}) }
@@ -216,6 +221,8 @@ ColumnLayout {
                     Layout.fillWidth: true; spacing: 0
                     C.Label { Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight; text: model.summary || model.applicationName }
                     C.Label { Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight; opacity: 0.72; font: Kirigami.Theme.smallFont; text: model.applicationName || "" }
+                    C.Label { visible: inbox.standalone && !!text; Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight
+                        text: String(model.body || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(); color: "#c2c2ca"; font.pixelSize: 12 }
                 }
                 C.Label {
                     readonly property var timestamp: Number(model.updated) ? model.updated : model.created

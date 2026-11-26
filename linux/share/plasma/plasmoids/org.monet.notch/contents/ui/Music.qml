@@ -190,10 +190,10 @@ ColumnLayout {
     Item { Layout.fillHeight: true; visible: page.view === 0 }
     GridLayout {
         Layout.fillWidth: true
-        columns: 2; rowSpacing: 4; columnSpacing: 14
+        columns: 2; rowSpacing: 4; columnSpacing: 16
         Rectangle {
             Layout.row: 0; Layout.column: 0; Layout.rowSpan: page.view ? 1 : 3
-            Layout.preferredWidth: page.view ? 42 : Math.min(106, page.width * 0.25)
+            Layout.preferredWidth: page.view ? 42 : Math.min(118, page.width * 0.28)
             Layout.preferredHeight: Layout.preferredWidth; radius: page.view ? 9 : 16
             color: "#303037"; clip: true
             Kirigami.Icon {
@@ -220,7 +220,7 @@ ColumnLayout {
                 Layout.fillWidth: true; Layout.minimumWidth: 0; spacing: 2
                 C.Label {
                     Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight
-                    font.weight: Font.DemiBold; font.pixelSize: page.view ? 15 : 19
+                    font.weight: Font.DemiBold; font.pixelSize: page.view ? 15 : 21
                     color: "#fafafa"; text: page.player?.track || i18n("Nothing playing")
                 }
                 C.Label {
@@ -239,9 +239,6 @@ ColumnLayout {
             contentItem: Kirigami.Icon { source: "arrow-down"; isMask: true; color: "#e3e2e6" }
             Accessible.name: i18n("Playback source")
             Accessible.description: page.player?.identity || ""
-            C.ToolTip.text: i18n("Playback source")
-            C.ToolTip.delay: Kirigami.Units.toolTipDelay
-            C.ToolTip.visible: hovered
             onClicked: sourceMenu.open()
             C.Menu {
                 id: sourceMenu
@@ -332,6 +329,7 @@ ColumnLayout {
     }
     RowLayout {
         Layout.row: 2; Layout.column: 1
+        spacing: page.width < 320 ? 0 : 4
         visible: page.view === 0; Layout.alignment: Qt.AlignHCenter
         Item {
             implicitWidth: shuffleButton.implicitWidth
@@ -350,7 +348,7 @@ ColumnLayout {
         }
         IslandButton { plain: true; icon.name: "media-skip-backward"; text: i18n("Previous track"); enabled: !!page.player?.canGoPrevious; onClicked: page.player.Previous() }
         IslandButton {
-            prominent: true; implicitWidth: 40; implicitHeight: 40
+            prominent: true; implicitWidth: 44; implicitHeight: 44; glyphSize: 20
             icon.name: page.playing ? "media-playback-pause" : "media-playback-start"
             text: page.playing ? i18n("Pause") : i18n("Play")
             enabled: !!(page.playing ? page.player?.canPause : page.player?.canPlay)
@@ -380,16 +378,13 @@ ColumnLayout {
     RowLayout {
         Layout.alignment: Qt.AlignHCenter
         C.ToolButton { visible: page.view !== 0; icon.name: "go-previous"; Accessible.name: i18n("Now playing"); onClicked: page.viewRequested(0) }
-        IslandButton { caption: true; visible: page.offerDetails && (!!page.player || page.view !== 0); text: i18n("Lyrics"); checked: page.view === 1; onClicked: page.viewRequested(1) }
-        IslandButton { caption: true; visible: page.offerDetails && (!!page.player || page.view !== 0); text: i18n("Up next"); checked: page.view === 2; onClicked: page.viewRequested(2) }
-        IslandButton { caption: true; visible: page.offerMixer && page.view === 0; text: i18n("Mixer"); icon.name: "audio-volume-high"; onClicked: page.viewRequested(3) }
+        IslandButton { caption: true; base: "#1f1f22"; visible: page.offerDetails && (!!page.player || page.view !== 0); text: i18n("Lyrics"); checked: page.view === 1; onClicked: page.viewRequested(1) }
+        IslandButton { caption: true; base: "#1f1f22"; visible: page.offerDetails && (!!page.player || page.view !== 0); text: i18n("Up next"); checked: page.view === 2; onClicked: page.viewRequested(2) }
+        IslandButton { caption: true; base: "#1f1f22"; visible: page.offerMixer && page.view === 0; text: i18n("Mixer"); icon.name: "audio-volume-high"; onClicked: page.viewRequested(3) }
         C.ToolButton {
             visible: page.view === 2
             icon.name: "view-refresh"
             Accessible.name: i18n("Refresh")
-            C.ToolTip.text: Accessible.name
-            C.ToolTip.visible: hovered
-            C.ToolTip.delay: Kirigami.Units.toolTipDelay
             enabled: !!page.player && !page.playback?.busy
             onClicked: {
                 if (page.playback) page.playback.failedOwner = ""

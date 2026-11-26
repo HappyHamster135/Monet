@@ -396,7 +396,7 @@ FocusScope {
                 Text {
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignLeft
-                    text: peek.note !== "" ? peek.note.split("\n")[0] : i18n("Nothing planned")
+                    text: peek.note !== "" ? peek.note.split("\n")[0] : month.island ? i18n("Add a day note") : i18n("Nothing planned")
                     color: peek.note !== "" ? month.ink : month.dim
                     elide: Text.ElideRight
                     textFormat: Text.PlainText

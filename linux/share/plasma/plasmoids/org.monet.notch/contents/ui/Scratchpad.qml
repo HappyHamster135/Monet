@@ -6,9 +6,11 @@ import org.kde.kirigami as Kirigami
 ColumnLayout {
     id: page
     required property var pads
+    onEnabledChanged: if (!enabled) padPicker.popup.close()
     RowLayout {
         Layout.fillWidth: true
         C.ComboBox {
+            id: padPicker
             objectName: "scratchpadChoice"
             Layout.fillWidth: true
             Layout.minimumWidth: 40
@@ -22,14 +24,14 @@ ColumnLayout {
         C.ToolButton {
             icon.name: "list-add"
             text: i18n("New pad"); display: C.AbstractButton.IconOnly
-            Accessible.name: text; C.ToolTip.text: text; C.ToolTip.visible: hovered
+            Accessible.name: text
             enabled: page.pads.revision > 0 && !page.pads.switching
             onClicked: page.pads.select("new")
         }
         C.ToolButton {
             icon.name: "window-new"
             text: i18n("Open floating pad"); display: C.AbstractButton.IconOnly
-            Accessible.name: text; C.ToolTip.text: text; C.ToolTip.visible: hovered
+            Accessible.name: text
             enabled: page.pads.revision > 0 && !page.pads.switching
             onClicked: page.pads.select("float")
         }
