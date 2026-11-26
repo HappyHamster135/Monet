@@ -45,8 +45,13 @@ PlasmoidItem {
         folding = true
         pages.animateTo(0)
     }
-    property string lastSection: ""
-    property var trail: []
+    NotchNavigation {
+        id: navigation
+        route: root.currentRoute
+        sections: root.sections
+        available: root.availableRoute
+        onRequested: (key, backwards) => root.displayRoute(key, backwards)
+    }
     property int slideDirection: 1
     readonly property string currentRoute: overview ? "sections" : utilityPage || (displayShelf ? "files"
         : showingWatch ? "watch" : viewingDownloads ? "downloads" : viewingAgenda ? "agenda"
@@ -70,13 +75,9 @@ PlasmoidItem {
         else if (["music","time","mixer"].includes(key))
             body.anticipated = key === "music" ? musicPage : key === "time" ? timerPage : mixerPage
     }
-    function choose(key, returning = false) {
+    function displayRoute(key, backwards) {
         if (key === currentRoute) return
-        slideDirection = returning ? -1 : 1
-        // Sections is a chooser. After A → Sections → B, Back should return to A.
-        if (!returning && islandOpen && (currentRoute !== "sections" || !trail.length))
-            trail = trail.concat(currentRoute).slice(-40)
-        if (overview) lastSection = key
+        slideDirection = backwards ? -1 : 1
         overview = key === "sections"
         utilityPage = key.startsWith("agent-") || key.startsWith("tool-") || ["controls","system","together","captures"].includes(key) ? key : ""
         viewingShelf = key === "files"
@@ -207,7 +208,7 @@ PlasmoidItem {
     function showShelf() {
         if (!offerShelf) return
         islandOpen = true
-        choose("files")
+        navigation.openTab("files")
     }
     property int requestedNotice: 0
     Loader {
@@ -222,12 +223,12 @@ PlasmoidItem {
         if (islandOpen) { collapse(); return }
         const notice = preview.item?.noticeId || 0
         const toAwake = awakeStrip
-        if (notice) { choose(visibleTabs.includes(9) ? "notifications" : "activity"); requestedNotice = notice }
-        else if (combined) choose("together")
-        else if (timerStrip) choose("time")
-        else if (watch.registered) { overview = false; viewingWatch = true; if (hasActivity) tab = 1 }
-        else if (toAwake) choose("awake")
-        else if (playing && visibleTabs.includes(0)) choose("music")
+        if (notice) { navigation.openTab(visibleTabs.includes(9) ? "notifications" : "activity"); requestedNotice = notice }
+        else if (combined) navigation.openTab("together")
+        else if (timerStrip) navigation.openTab("time")
+        else if (watch.registered) navigation.openTab("watch")
+        else if (toAwake) navigation.openTab("awake")
+        else if (playing && visibleTabs.includes(0)) navigation.openTab("music")
         islandOpen = true
     }
     property bool padsOpened: false
@@ -377,7 +378,7 @@ PlasmoidItem {
         if (!tools.offers(key)) return
         const route = ({shelf:"files", notes:"notes", downloads:"downloads", calendars:"agenda", agents:"agents",
             media:"queue", mixer:"mixer", camera:"camera", clipboard:"clipboard", awake:"awake"})[key]
-        if (route && availableRoute(route)) { choose(route); return }
+        if (route && availableRoute(route)) { navigation.openDetail(route); return }
         if (key === "command-bar" && offerSearch) { searching = true; return }
         if (toolRows.find(item => item.key === key)?.immediate) {
             // The catalogue is already visible. Issue actions once, directly to their owner.
@@ -386,7 +387,7 @@ PlasmoidItem {
             if (!["mic","output","keyboard-light","automatic-appearance","switch-appearance","clean","plain"].includes(key)) collapse()
             return
         }
-        choose("tool-" + key)
+        navigation.openDetail("tool-" + key)
     }
     function openTool(page) {
         runner.connectSource(helper + " utilities " + page)
@@ -435,7 +436,7 @@ PlasmoidItem {
     Component.onCompleted: { selectVisibleTab(); refreshTime() }
     onIslandOpenChanged: {
         if (!islandOpen) {
-            folding = false; pinned = false; trail = []; pages.resetReveal(); overview = true; utilityPage = ""
+            folding = false; pinned = false; navigation.dismiss(); pages.resetReveal(); overview = true; utilityPage = ""
             viewingAwake = false; searching = false; requestedNotice = 0; viewingDownloads = false; viewingShelf = false
             return
         }
@@ -521,10 +522,10 @@ PlasmoidItem {
             visualParent: leftAnchor
             presented: popup.visible && root.railSpace && !root.editing
             reveal: pages.revealProgress
-            entries: [{key: "back", label: i18n("Back"), icon: "go-previous", enabled: pages.canGoBack}].concat(
+            entries: [{key: "back", label: i18n("Back"), icon: "go-previous", enabled: navigation.canGoBack}].concat(
                 root.visibleTabs.includes(2) ? [{key: "time", label: i18n("Time"), icon: "chronometer"}] : [])
             onPreviewRequested: key => root.preparePage(key)
-            onSelected: key => { if (key === "back") pages.back(); else root.choose(key) }
+            onSelected: key => { if (key === "back") pages.back(); else navigation.openTab(key) }
         }
         IslandRail {
             id: rightRail
@@ -533,7 +534,7 @@ PlasmoidItem {
             reveal: pages.revealProgress
             entries: root.sections.filter(item => ["controls", "mixer", "files"].includes(item.key))
             onPreviewRequested: key => root.preparePage(key)
-            onSelected: key => root.choose(key)
+            onSelected: key => navigation.openTab(key)
         }
         HoverHandler {
             id: overPill
@@ -868,11 +869,11 @@ PlasmoidItem {
                             Layout.fillWidth: true; Layout.preferredHeight: 32; Layout.maximumHeight: 32
                             CompanionSeat { id: headerLeft }
                             IslandButton { id: sectionsButton; plain: true
-                                icon.name: pages.canGoBack ? "go-previous" : "window-close"
-                                text: pages.canGoBack ? i18n("Back") : i18n("Close")
-                                onClicked: { if (pages.canGoBack) pages.back(); else root.collapse() } }
-                            IslandButton { plain: true; visible: !root.overview && root.trail.length > 0 && root.trail[root.trail.length-1] !== "sections"
-                                icon.name: "view-grid"; text: i18n("Sections"); onClicked: pages.showSections() }
+                                icon.name: navigation.canGoBack ? "go-previous" : "window-close"
+                                text: navigation.canGoBack ? i18n("Back") : i18n("Close")
+                                onClicked: { if (navigation.canGoBack) pages.back(); else root.collapse() } }
+                            IslandButton { plain: true; visible: navigation.inDetail
+                                icon.name: "view-grid"; text: i18n("Sections"); onClicked: navigation.showSections() }
                             C.Label {
                                 id: heading
                                 property string presentedTitle: root.pageTitle
@@ -887,7 +888,9 @@ PlasmoidItem {
                             CompanionSeat { id: headerRight }
                             IslandButton { id: searchButton; plain: true; visible: root.offerSearch; icon.name: "system-search"; text: i18n("Command Bar"); onClicked: root.searching = true }
                             IslandButton { plain: true; icon.name: "pin-symbolic"; text: root.pinned ? i18n("Unpin") : i18n("Keep open"); checked: root.pinned; onClicked: root.pinned = !root.pinned }
-                            IslandButton { plain: true; icon.name: "application-menu"; text: i18n("Tools"); visible: root.visibleTabs.includes(7); onClicked: root.choose("tools") }
+                            IslandButton { plain: true; icon.name: "application-menu"; text: i18n("Tools"); visible: root.visibleTabs.includes(7); onClicked: navigation.openTab("tools") }
+                            IslandButton { plain: true; visible: root.overview && navigation.canGoBack
+                                icon.name: "window-close"; text: i18n("Close"); onClicked: root.collapse() }
                         }
                         IslandPages {
                             id: body
@@ -923,35 +926,23 @@ PlasmoidItem {
                 }
             }
         }
-        function showSections() {
-            root.searching = false
-            root.choose("sections")
-        }
         function cycle(direction) {
             if (!root.visibleTabs.length) return
             const at = root.visibleTabs.indexOf(root.tab)
             const next = (at + direction + root.visibleTabs.length) % root.visibleTabs.length
-            root.choose(root.tabNames[root.visibleTabs[next]])
+            navigation.openTab(root.tabNames[root.visibleTabs[next]])
         }
         readonly property bool canNavigate: root.islandOpen && !root.searching && !root.draggingShelf && !body.item?.menuOpen
-        readonly property bool canGoBack: !root.overview || root.trail.length > 0
-        function back() {
-            if (body.item?.editingEvent) { body.item.closeEditor(); return }
-            if (body.item?.notificationOpen) { body.item.backFromNotification(); return }
-            const history = root.trail.slice()
-            let key
-            while (history.length) {
-                const previous = history.pop()
-                if (previous !== root.currentRoute && root.availableRoute(previous)) { key = previous; break }
+        function back(escape = false) {
+            if (body.current?.modelData === body.requested) {
+                if (body.item?.editingEvent) { body.item.closeEditor(); return }
+                if (body.item?.notificationOpen) { body.item.backFromNotification(); return }
             }
-            root.trail = history
-            root.choose(key || "sections", true)
+            if (escape && !navigation.inDetail) root.collapse()
+            else navigation.back()
         }
-        Shortcut {
-            sequences: ["Escape", "Alt+Left"]
-            enabled: pages.canNavigate
-            onActivated: { if (pages.canGoBack) pages.back(); else root.collapse() }
-        }
+        Shortcut { sequence: "Escape"; enabled: pages.canNavigate; onActivated: pages.back(true) }
+        Shortcut { sequence: "Alt+Left"; enabled: pages.canNavigate && navigation.canGoBack; onActivated: pages.back() }
         Shortcut { sequence: "Ctrl+Tab"; enabled: pages.canNavigate; onActivated: pages.cycle(1) }
         Shortcut { sequence: "Ctrl+Shift+Tab"; enabled: pages.canNavigate; onActivated: pages.cycle(-1) }
         Shortcut { sequence: "Ctrl+K"; enabled: pages.canNavigate && root.offerSearch; onActivated: root.searching = true }
@@ -1011,14 +1002,14 @@ PlasmoidItem {
         IslandSections {
             motion: root.motion && pages.revealProgress === 1 && !body.outgoing
             entries: root.sections
-            lastSection: root.lastSection
+            lastSection: navigation.lastSection
             detailFor: key => {
                 if (key === "music") return root.media?.track || ""
                 if (key === "time" && countdown.active) return root.timerSummary
                 if (key === "calendar") return Qt.formatDate(root.agendaDay, "ddd d MMM")
                 return ""
             }
-            onSelected: key => root.choose(key)
+            onSelected: key => navigation.openTab(key)
             onPreviewRequested: key => root.preparePage(key)
         }
     }
@@ -1047,7 +1038,7 @@ PlasmoidItem {
                     RowLayout {
                         Layout.fillWidth: true
                         Text { text: i18n("Music"); font.weight: Font.Medium; color: "#ff7b97"; Layout.fillWidth: true; elide: Text.ElideRight }
-                        IslandButton { text: i18n("Now playing"); icon.name: "go-next-symbolic"; implicitHeight: 25; implicitWidth: 25; onClicked: root.choose("music") }
+                        IslandButton { text: i18n("Now playing"); icon.name: "go-next-symbolic"; implicitHeight: 25; implicitWidth: 25; onClicked: navigation.openDetail("music") }
                     }
                     C.Label { Layout.fillWidth: true; elide: Text.ElideRight; font.bold: true; font.pixelSize: 17; color: "white"
                         textFormat: Text.PlainText; text: root.media?.track || i18n("Now playing") }
@@ -1069,7 +1060,7 @@ PlasmoidItem {
                     RowLayout {
                         Layout.fillWidth: true
                         Text { text: i18n("Timer"); font.weight: Font.Medium; color: "#ffb35b"; Layout.fillWidth: true; elide: Text.ElideRight }
-                        IslandButton { text: i18n("Time"); icon.name: "go-next-symbolic"; implicitHeight: 25; implicitWidth: 25; onClicked: root.choose("time") }
+                        IslandButton { text: i18n("Time"); icon.name: "go-next-symbolic"; implicitHeight: 25; implicitWidth: 25; onClicked: navigation.openDetail("time") }
                     }
                     Text {
                         text: root.timerSummary; color: "#ffad53"; font.pixelSize: 43; font.weight: Font.Light
@@ -1162,7 +1153,7 @@ PlasmoidItem {
             formatDuration: root.duration
             gestures: notchGestures
             offerDetails: root.offerMediaDetails; offerMixer: root.offerMixer
-            onViewRequested: index => root.choose(["music","lyrics","queue","mixer"][index])
+            onViewRequested: index => navigation.openDetail(["music","lyrics","queue","mixer"][index])
         }
     }
     Component {
@@ -1184,7 +1175,7 @@ PlasmoidItem {
             opener: FolderOpenController {}
             onBackRequested: pages.back()
             onRefreshRequested: { root.downloadAvailable = false; root.refreshActivity() }
-            onManageRequested: root.choose("tool-downloads")
+            onManageRequested: navigation.openDetail("tool-downloads")
         }
     }
     Component {
@@ -1224,7 +1215,7 @@ PlasmoidItem {
             widgetId: String(Plasmoid.id)
             active: root.agentsVisible && root.sessionSelected && showReadings && power.active
             onClicked: {
-                root.choose("agent-session")
+                navigation.openDetail("agent-session")
             }
         }
         Repeater {
@@ -1238,7 +1229,7 @@ PlasmoidItem {
                 pendingLabel: modelData === "claude" ? i18n("Checking Claude Code limits…") : i18n("Checking Codex limits…")
                 onPreferencesChanged: root.refreshActivity()
                 onClicked: {
-                    root.choose("agent-" + modelData)
+                    navigation.openDetail("agent-" + modelData)
                 }
             }
         }
@@ -1267,7 +1258,7 @@ PlasmoidItem {
                         tile: true; Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.minimumWidth: 0
                         text: modelData.label; detail: modelData.detail; icon.name: modelData.icon; tint: modelData.color
                         Accessible.description: detail
-                        onClicked: root.choose("agent-" + modelData.key)
+                        onClicked: navigation.openDetail("agent-" + modelData.key)
                     }
                 }
             }
@@ -1323,13 +1314,13 @@ PlasmoidItem {
             }
             RowLayout {
                 visible: !notices.inDetail
-                C.Button { visible: root.offerDownloads; text: i18n("Downloads"); onClicked: root.choose("downloads") }
-                C.Button { visible: root.agentsVisible && !root.codexKey && !root.claudeKey; text: i18n("Agent usage"); onClicked: root.choose("agents") }
+                C.Button { visible: root.offerDownloads; text: i18n("Downloads"); onClicked: navigation.openDetail("downloads") }
+                C.Button { visible: root.agentsVisible && !root.codexKey && !root.claudeKey; text: i18n("Agent usage"); onClicked: navigation.openDetail("agents") }
                 C.Button {
                     visible: root.offerWatch
                     text: i18n("Watch")
                     onClicked: {
-                        if (watch.registered) root.choose("watch")
+                        if (watch.registered) navigation.openDetail("watch")
                         else {
                             runner.connectSource(root.helper + " utilities watch " + Plasmoid.id)
                             root.islandOpen = false
@@ -1344,7 +1335,7 @@ PlasmoidItem {
         TimePage {
             timer: countdown; now: root.now; message: root.message; formatDuration: root.duration
             offerAwake: root.offerAwake
-            onAwakeRequested: root.choose("awake")
+            onAwakeRequested: navigation.openDetail("awake")
         }
     }
     Component {
@@ -1362,7 +1353,7 @@ PlasmoidItem {
             day: root.agendaDay
             onChoose: date => root.agendaDay = date
             onMonthRequested: pages.back()
-            onCalendarsRequested: root.choose("tool-calendars")
+            onCalendarsRequested: navigation.openDetail("tool-calendars")
         }
     }
     Component {
@@ -1402,8 +1393,8 @@ PlasmoidItem {
                     sourceComponent: Agenda {
                         editorParent: pages
                         embedded: true; day: month.chosen
-                        onUpcomingRequested: root.choose("agenda")
-                        onCalendarsRequested: root.choose("tool-calendars")
+                        onUpcomingRequested: navigation.openDetail("agenda")
+                        onCalendarsRequested: navigation.openDetail("tool-calendars")
                     }
                 }
             }
@@ -1411,7 +1402,7 @@ PlasmoidItem {
                 Layout.alignment: Qt.AlignHCenter
                 visible: root.offerAgenda && !calendar.split; caption: true
                 text: i18n("Upcoming events")
-                onClicked: { root.agendaDay = month.chosen; root.choose("agenda") }
+                onClicked: { root.agendaDay = month.chosen; navigation.openDetail("agenda") }
             }
             C.Dialog {
                 id: edit
