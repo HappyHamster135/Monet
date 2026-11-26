@@ -202,10 +202,11 @@ ColumnLayout {
             }
             Rectangle {
                 id: coverMask; anchors.fill: parent; radius: parent.radius
-                visible: false; layer.enabled: cover.status === Image.Ready
+                visible: false; layer.enabled: cover.layer.enabled
             }
             Image {
-                layer.enabled: status === Image.Ready
+                // Qt Quick’s software renderer displays the original image directly.
+                layer.enabled: status === Image.Ready && GraphicsInfo.api !== GraphicsInfo.Software && GraphicsInfo.api !== GraphicsInfo.Unknown
                 layer.effect: MultiEffect { maskEnabled: true; maskSource: coverMask }
                 id: cover; anchors.fill: parent; asynchronous: true; fillMode: Image.PreserveAspectCrop
                 sourceSize: Qt.size(width * Screen.devicePixelRatio, height * Screen.devicePixelRatio)
