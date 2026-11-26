@@ -156,27 +156,36 @@ TimeScrollView {
                 }
             }
         }
-        RowLayout {
-            Layout.fillWidth: true; spacing: 5
-            C.Label { visible: minutesBox.visible; text: i18n("Minutes"); color: "#bdbdc2" }
-            Stepper {
-                id: minutesBox
-                visible: !page.stopwatch && !page.inSession
-                value: page.settings.timerMinutes; Accessible.name: i18n("Minutes")
-                onValueModified: page.settings.timerMinutes = value
+        GridLayout {
+            Layout.fillWidth: true
+            columns: page.availableWidth < 400 ? 1 : 2
+            columnSpacing: 5; rowSpacing: 4
+            RowLayout {
+                visible: !page.stopwatch
+                spacing: 5
+                C.Label { visible: minutesBox.visible; text: i18n("Minutes"); color: "#bdbdc2" }
+                Stepper {
+                    id: minutesBox
+                    visible: !page.inSession
+                    value: page.settings.timerMinutes; Accessible.name: i18n("Minutes")
+                    onValueModified: page.settings.timerMinutes = value
+                }
+                IslandButton {
+                    visible: page.inSession; caption: true; text: i18n("Stopwatch"); onClicked: page.mode = 2
+                }
             }
-            IslandButton {
-                visible: page.inSession; caption: true; text: i18n("Stopwatch"); onClicked: page.mode = 2
-            }
-            Item { Layout.fillWidth: true }
-            IslandButton {
-                id: awakeButton; caption: true
-                visible: page.offerAwake; text: i18n("Keep awake"); onClicked: page.awakeRequested()
-            }
-            IslandButton {
-                id: options; caption: true; checkable: true
-                visible: page.mode === 1 && !page.timer.active
-                text: i18n("Focus options")
+            RowLayout {
+                Layout.fillWidth: true; spacing: 5
+                Item { Layout.fillWidth: true }
+                IslandButton {
+                    id: awakeButton; caption: true
+                    visible: page.offerAwake; text: i18n("Keep awake"); onClicked: page.awakeRequested()
+                }
+                IslandButton {
+                    id: options; caption: true; checkable: true
+                    visible: page.mode === 1 && !page.timer.active
+                    text: i18n("Focus options")
+                }
             }
         }
         C.Label { Layout.fillWidth: true; wrapMode: Text.Wrap; visible: !!text; text: page.message || page.timer.completion }

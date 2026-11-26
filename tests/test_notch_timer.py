@@ -17,6 +17,17 @@ except ImportError:
 CONTENTS = Path(__file__).resolve().parents[1] / "linux/share/plasma/plasmoids/org.monet.notch/contents"
 
 
+def settings_properties():
+    entries = ElementTree.parse(CONTENTS / "config/main.xml").findall(".//{*}entry")
+    types = {"Int": "int", "Double": "double", "Bool": "bool", "String": "string"}
+    fields = []
+    for entry in entries:
+        value = entry.findtext("{*}default") or ""
+        kind = types[entry.get("type")]
+        fields.append(f'property {kind} {entry.get("name")}: {json.dumps(value) if kind == "string" else value}')
+    return "\n".join(fields)
+
+
 @unittest.skipUnless(QQmlEngine, "requires Qt QML")
 class NotchTimer(unittest.TestCase):
     @classmethod
@@ -26,19 +37,12 @@ class NotchTimer(unittest.TestCase):
     def setUp(self):
         self.engine = QQmlEngine()
         self.addCleanup(self.engine.deleteLater)
-        entries = ElementTree.parse(CONTENTS / "config/main.xml").findall(".//{*}entry")
-        types = {"Int": "int", "Double": "double", "Bool": "bool", "String": "string"}
-        fields = []
-        for entry in entries:
-            value = entry.findtext("{*}default") or ""
-            kind = types[entry.get("type")]
-            fields.append(f'property {kind} {entry.get("name")}: {json.dumps(value) if kind == "string" else value}')
         with tempfile.TemporaryDirectory() as folder:
             scene = Path(folder) / "Scene.qml"
             scene.write_text('import QtQml\nimport "' + (CONTENTS / "ui").as_uri() + '''" as Monet
 QtObject {
     function i18n(text) { return text }
-    property QtObject config: QtObject { objectName: "settings"; ''' + "\n".join(fields) + ''' }
+    property QtObject config: QtObject { objectName: "settings"; ''' + settings_properties() + ''' }
     property QtObject model: Monet.NotchTimer { objectName: "timer"; settings: config }
 }''')
             self.component = QQmlComponent(self.engine, QUrl.fromLocalFile(str(scene)))
@@ -141,6 +145,46 @@ QtObject {
 
 @unittest.skipUnless(QQmlEngine, "requires Qt Quick")
 class TimerRuler(unittest.TestCase):
+    def test_focus_controls_fit_the_narrow_popup(self):
+        app = QGuiApplication.instance() or QGuiApplication([])
+        with tempfile.TemporaryDirectory() as folder:
+            scene = Path(folder) / "Clock.qml"
+            scene.write_text('import QtQuick\nimport "' + (CONTENTS / "ui").as_uri() + '''" as Monet
+Item {
+    id: scene; width: 310; height: 300
+    function i18n(text) { return text }
+    QtObject { id: config; @SETTINGS@ }
+    Monet.NotchTimer { id: model; settings: config }
+    Monet.TimePage {
+        id: clock; anchors.fill: parent; timer: model; now: 0; message: ""; offerAwake: true
+        formatDuration: seconds => "25:00"
+    }
+    function fits(label) {
+        const pending = [clock]
+        while (pending.length) {
+            const item = pending.pop()
+            if (!item.visible) continue
+            if (item.clicked && item.text === label) {
+                const left = item.mapToItem(scene, 0, 0).x
+                return left >= 0 && left + item.width <= scene.width + 1
+            }
+            for (const child of item.children) pending.push(child)
+        }
+        return false
+    }
+    function showFocus() { clock.mode = 1 }
+}
+'''.replace("@SETTINGS@", settings_properties()))
+            window = QQuickView()
+            self.addCleanup(window.close)
+            window.setSource(QUrl.fromLocalFile(str(scene)))
+            self.assertEqual(window.status(), QQuickView.Ready, [e.toString() for e in window.errors()])
+            window.show()
+            window.rootObject().showFocus()
+            QTest.qWait(60)
+            for label in ("Start", "Keep awake", "Focus options"):
+                self.assertTrue(window.rootObject().fits(label), label)
+
     def test_taps_and_drags_adjust_minutes_and_respect_the_limit(self):
         app = QGuiApplication.instance() or QGuiApplication([])
         with tempfile.TemporaryDirectory() as folder:
