@@ -114,6 +114,62 @@ Item {
             shown("time")
             self.assertEqual(root.property("clocks"), 2)
 
+    def test_interrupted_slides_share_one_edge_and_finish_on_the_last_request(self):
+        app = QGuiApplication.instance() or QGuiApplication([])
+        with tempfile.TemporaryDirectory() as folder:
+            scene = Path(folder) / "Slide.qml"
+            scene.write_text('''import QtQuick
+import "@MONET_UI@" as Monet
+Item {
+    id: root; width: 301; height: 120
+    property int tab: 0
+    property string shown: deck.item?.objectName ?? ""
+    property bool settled: !deck.outgoing
+    property int motion: 400
+    function i18n(text) { return text }
+    function reverseInPlace() {
+        if (!deck.outgoing || deck.progress < 0.15 || deck.progress > 0.9) return false
+        const old = deck.outgoing, next = deck.current
+        const a = old.x, b = next.x
+        tab = 0
+        deck.resolve()
+        return deck.current === old && deck.outgoing === next &&
+               Math.abs(a - old.x) <= 1 && Math.abs(b - next.x) <= 1 &&
+               Math.abs(old.x - next.x) === deck.width && old.clip && next.clip
+    }
+    Component { id: home; Item { objectName: "home" } }
+    Component { id: player; Item { objectName: "player" } }
+    Component { id: mixer; Item { objectName: "mixer" } }
+    Monet.IslandPages {
+        id: deck; anchors.fill: parent; components: [home, player, mixer]
+        reusable: [player, mixer]; privatePages: []; prewarm: home
+        presented: true; duration: root.motion; requested: components[root.tab]
+    }
+}'''.replace("@MONET_UI@", UI.as_uri()))
+            window = QQuickView()
+            self.addCleanup(window.close)
+            window.setSource(QUrl.fromLocalFile(str(scene)))
+            self.assertEqual(window.status(), QQuickView.Ready, [e.toString() for e in window.errors()])
+            window.show()
+            root = window.rootObject()
+
+            def until(predicate):
+                for _ in range(150):
+                    if predicate():
+                        return
+                    QTest.qWait(8)
+                self.fail(f"Slide stalled at {root.property('shown')!r}")
+
+            until(lambda: root.property("shown") == "home")
+            root.setProperty("tab", 1)
+            until(root.reverseInPlace)
+            root.setProperty("tab", 2)
+            until(lambda: root.property("shown") == "mixer" and root.property("settled"))
+            root.setProperty("motion", 0)
+            root.setProperty("tab", 1)
+            until(lambda: root.property("shown") == "player")
+            self.assertTrue(root.property("settled"))
+
     def test_keys_and_live_reordering_keep_page_and_selection_together(self):
         app = QGuiApplication.instance() or QGuiApplication([])
         was_active = QAccessible.isActive()

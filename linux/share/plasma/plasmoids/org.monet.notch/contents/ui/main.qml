@@ -45,11 +45,15 @@ PlasmoidItem {
         folding = true
         pages.animateTo(0)
     }
+    property string lastSection: ""
+    property bool mixerFromMusic: false
     function preparePage(key) {
-        if (islandOpen && (key === "music" || key === "time"))
-            body.anticipated = key === "music" ? musicPage : timerPage
+        if (islandOpen && ["music","time","mixer"].includes(key))
+            body.anticipated = key === "music" ? musicPage : key === "time" ? timerPage : mixerPage
     }
     function choose(key) {
+        lastSection = key
+        mixerFromMusic = false
         overview = false
         utilityPage = ""
         viewingShelf = false; viewingWatch = false; viewingDownloads = false; viewingAwake = false
@@ -475,6 +479,7 @@ PlasmoidItem {
             presented: popup.visible && root.railSpace && !root.editing
             reveal: pages.revealProgress
             entries: root.sections.filter(item => ["controls", "mixer", "files"].includes(item.key))
+            onPreviewRequested: key => root.preparePage(key)
             onSelected: key => root.choose(key)
         }
         HoverHandler {
@@ -677,11 +682,12 @@ PlasmoidItem {
         width: root.surfaceWidth
         // Common pages share a native surface. Moving between tiles only changes its contents.
         readonly property int homeHeight: Math.max(272, 52 + IslandLayout.gridHeight(root.sections.length, width - 32))
-        readonly property bool detailHeight: root.searching || (!root.overview &&
-            (root.displayShelf || root.showingWatch || root.viewingAwake || root.viewingDownloads ||
-             (!root.utilityPage && (root.tab === 1 || root.tab >= 3 || root.musicView > 0))))
+        readonly property Component shownPage: body.current?.modelData ?? body.requested
+        readonly property bool detailHeight: root.searching || [shelfPage, watchPage, awakePage, downloadsPage,
+            activityPage, agendaPage, calendarPage, padPage, cameraPage, clipboardPage].includes(shownPage)
+            || (shownPage === musicPage && body.item?.view > 0)
         readonly property int wantedHeight: Math.min(Math.max(1, (root.Screen.height || 800) - 48),
-            Math.max(homeHeight, detailHeight || (root.utilityPage === "together" && width < 370) ? 344 : 0))
+            Math.max(homeHeight, detailHeight || (shownPage === pairedPage && width < 370) ? 344 : 0))
         property real visualHeight: 1
         property real reservedHeight: 0
         height: Math.max(wantedHeight, reservedHeight)
@@ -792,11 +798,22 @@ PlasmoidItem {
                                 onClicked: { if (root.overview) root.collapse(); else pages.showSections() } }
                             IslandButton { plain: true; visible: !root.overview && pages.canGoBack; icon.name: "go-previous"; text: i18n("Back"); onClicked: pages.back() }
                             C.Label {
-                                text: root.pageTitle; textFormat: Text.PlainText; elide: Text.ElideRight
+                                id: heading
+                                property string presentedTitle: root.pageTitle
+                                function sync() { if (!body.current || body.current.modelData === body.requested) presentedTitle = root.pageTitle }
+                                Connections { target: root; function onPageTitleChanged() { Qt.callLater(heading.sync) } }
+                                text: presentedTitle; textFormat: Text.PlainText; elide: Text.ElideRight
                                 font.weight: Font.DemiBold; font.pixelSize: 13; color: "#f7f7fa"
                                 Layout.fillWidth: true; Layout.minimumWidth: 0; Layout.fillHeight: true
                                 verticalAlignment: Text.AlignVCenter
                                 TapHandler { onTapped: root.openPill() }
+                            }
+                            Loader {
+                                visible: active
+                                active: body.current?.modelData === mixerPage && !!body.item?.outputChooser && root.islandOpen
+                                Layout.preferredWidth: active ? Math.min(145, pages.width * 0.27) : 0
+                                Layout.preferredHeight: 28
+                                sourceComponent: active ? body.item?.outputChooser ?? null : null
                             }
                             IslandButton { id: searchButton; plain: true; visible: root.offerSearch; icon.name: "system-search"; text: i18n("Command Bar"); onClicked: root.searching = true }
                             IslandButton { plain: true; icon.name: "pin-symbolic"; text: root.pinned ? i18n("Unpin") : i18n("Keep open"); checked: root.pinned; onClicked: root.pinned = !root.pinned }
@@ -806,12 +823,12 @@ PlasmoidItem {
                             id: body
                             Layout.fillWidth: true; Layout.fillHeight: true
                             presented: root.islandOpen && !root.searching
-                            duration: root.motion && pages.revealProgress === 1 ? Kirigami.Units.shortDuration : 0
+                            duration: root.motion && pages.revealProgress === 1 ? Kirigami.Units.longDuration : 0
                             prewarm: root.prepareSections ? sectionPage : null
                             components: [sectionPage, musicPage, activityPage, timerPage, calendarPage, padPage,
                                 clipboardPage, cameraPage, shelfPage, downloadsPage, watchPage, agendaPage,
                                 awakePage, mixerPage, controlsPage, systemPage, capturesPage, pairedPage]
-                            reusable: [musicPage, timerPage]
+                            reusable: [musicPage, timerPage, mixerPage]
                             privatePages: [clipboardPage, cameraPage, padPage, activityPage, watchPage]
                             requested: root.overview ? sectionPage : root.utilityPage === "controls" ? controlsPage
                                 : root.utilityPage === "system" ? systemPage : root.utilityPage === "captures" ? capturesPage : root.utilityPage === "together" ? pairedPage :
@@ -823,7 +840,10 @@ PlasmoidItem {
                                 : root.tab === 6 ? clipboardPage : root.tab === 5 ? cameraPage
                                 : root.tab === 4 ? (padController.item ? padPage : null)
                                 : [musicPage, activityPage, timerPage, calendarPage][root.tab] ?? null
-                            onPageShown: if (root.overview && popup.active) item?.focusFirst?.()
+                            onPageShown: {
+                                heading.sync()
+                                if (root.overview && popup.active) item?.focusFirst?.()
+                            }
                         }
                     }
                 }
@@ -841,14 +861,16 @@ PlasmoidItem {
             const next = (at + direction + root.visibleTabs.length) % root.visibleTabs.length
             root.choose(root.tabNames[root.visibleTabs[next]])
         }
-        readonly property bool canNavigate: root.islandOpen && !root.searching && !root.draggingShelf
+        readonly property bool canNavigate: root.islandOpen && !root.searching && !root.draggingShelf && !body.item?.menuOpen
         readonly property bool canGoBack: !root.overview && (root.displayShelf || root.showingWatch ||
-            root.viewingAwake || (root.tab === 0 && root.musicView !== 0) || (root.tab === 1 && root.viewingDownloads)
+            root.viewingAwake || (root.tab === 0 && root.musicView !== 0 && (root.musicView !== 3 || root.mixerFromMusic)) || (root.tab === 1 && root.viewingDownloads)
             || (root.tab === 3 && root.viewingAgenda) || !!body.item?.notificationOpen)
         function back() {
             if (body.item?.notificationOpen) { body.item.backFromNotification(); return }
             if (root.viewingAwake) { root.viewingAwake = false; Qt.callLater(() => body.item?.focusAwake?.()); return }
-            if (root.tab === 0 && root.musicView !== 0) { root.musicView = 0; return }
+            if (root.tab === 0 && root.musicView !== 0 && (root.musicView !== 3 || root.mixerFromMusic)) {
+                root.musicView = 0; return
+            }
             if (root.tab === 3 && root.viewingAgenda) { root.viewingAgenda = false; return }
             showSections()
         }
@@ -915,6 +937,7 @@ PlasmoidItem {
         id: sectionPage
         IslandSections {
             entries: root.sections
+            lastSection: root.lastSection
             onSelected: key => root.choose(key)
             onPreviewRequested: key => root.preparePage(key)
         }
@@ -992,30 +1015,11 @@ PlasmoidItem {
     }
     Component {
         id: mixerPage
-        ColumnLayout {
-            RowLayout {
-                C.ToolButton { icon.name: "go-previous"; Accessible.name: i18n("Now playing"); onClicked: root.musicView = 0 }
-                C.Label { text: i18n("Volume mixer"); font.bold: true }
-            }
-            Loader {
-                id: mixerLoader
-                Layout.fillWidth: true; Layout.fillHeight: true
-                source: "VolumeMixer.qml"
-                onLoaded: {
-                    item.outputNames = Qt.binding(() => root.outputNames)
-                    namesDelay.restart()
-                }
-                Connections {
-                    target: mixerLoader.item
-                    function onOutputsChangedWhileOpen() { namesDelay.restart() }
-                }
-                Timer {
-                    id: namesDelay
-                    interval: 80
-                    onTriggered: runner.connectSource(root.helper + " outputs")
-                }
-            }
-            C.Label { visible: mixerLoader.status === Loader.Error; Layout.fillWidth: true; wrapMode: Text.Wrap; text: i18n("The volume mixer could not open.") }
+        IslandMixer {
+            presented: body.presented && body.requested === mixerPage
+            outputNames: root.outputNames
+            helper: root.helper
+            onRefreshOutputs: runner.connectSource(root.helper + " outputs")
         }
     }
     Component {
@@ -1063,12 +1067,19 @@ PlasmoidItem {
     Component {
         id: musicPage
         Music {
-            player: visible ? root.media : null; sources: players; playing: visible && root.playing; view: visible ? root.musicView : 0
+            id: playerPage
+            player: visible ? root.media : null; sources: players; playing: visible && root.playing
+            view: 0
+            Binding {
+                target: playerPage; property: "view"; value: root.musicView
+                when: body.requested === musicPage && root.musicView < 3
+                restoreMode: Binding.RestoreNone
+            }
             playback: queuePlayback.item
             formatDuration: root.duration
             gestures: notchGestures
             offerDetails: root.offerMediaDetails; offerMixer: root.offerMixer
-            onViewRequested: index => root.musicView = index
+            onViewRequested: index => { root.mixerFromMusic = index === 3; root.musicView = index }
         }
     }
     Component {

@@ -9,7 +9,7 @@ C.AbstractButton {
     property bool plain: false
     property bool caption: false
     property color tint: "#f5f5f7"
-    property color base: plain ? "transparent" : tile ? "#12ffffff" : "#29292c"
+    property color base: plain ? "transparent" : tile ? "#10ffffff" : "#29292c"
     property bool prominent: false
     implicitWidth: tile ? 95 : caption ? tag.implicitWidth + 25 : 32
     implicitHeight: tile ? IslandLayout.tileHeight : plain ? 29 : 32
@@ -25,7 +25,7 @@ C.AbstractButton {
     scale: down ? 0.95 : 1
     Behavior on scale { NumberAnimation { duration: K.Units.shortDuration; easing.type: Easing.OutCubic } }
     background: Rectangle {
-        radius: button.tile ? 10 : height / 2
+        radius: button.tile ? 15 : height / 2
         color: button.down ? "#525258" : button.checked || button.prominent ? "#f3f3f5" : button.hovered ? "#3c3c41" : button.base
         border.width: button.visualFocus ? 1.5 : button.tile ? 1 : 0
         border.color: button.visualFocus ? "#a3ccff" : "#0cffffff"

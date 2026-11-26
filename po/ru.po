@@ -15312,10 +15312,6 @@ msgstr ""
 msgid "Mixer"
 msgstr ""
 
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/main.qml:268
-msgid "The volume mixer could not open."
-msgstr ""
-
 #: linux/libexec/monet-quick:9013
 msgid "Sound · App volume and output"
 msgstr ""
@@ -19927,3 +19923,11 @@ msgstr ""
 #: linux/share/monet/utilities/window.py:225
 msgid "Power and display"
 msgstr ""
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/IslandMixer.qml:183
+msgid "Move left"
+msgstr "Переместить влево"
+
+#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/IslandMixer.qml:184
+msgid "Move right"
+msgstr "Переместить вправо"

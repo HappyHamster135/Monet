@@ -2,6 +2,7 @@ import QtQuick
 
 Item {
     id: deck
+    clip: true
     required property var components
     required property Component requested
     required property var reusable
@@ -16,12 +17,23 @@ Item {
     readonly property Item item: current?.item ?? null
     property real progress: 1
     property bool failed: false
+    property int direction: 1
+    property real outgoingHeight: 0
+    readonly property real seam: Math.round(width * progress)
     signal pageShown()
 
     // A single navigation action can change several bindings. Incubate only its final destination.
     function resolve() {
         if (!presented) return
         failed = false
+        // A private page releases its contents as soon as it loses selection.
+        // Finish the visible public page underneath it before the next slide.
+        if (current && privatePages.includes(current.modelData) && current.modelData !== requested && outgoing?.visible) {
+            entry.stop()
+            current = outgoing
+            outgoing = null
+            progress = 1
+        }
         targetPage = requested
         if (!targetPage) { clear(); return }
         for (let i = 0; i < slots.count; ++i) {
@@ -41,9 +53,17 @@ Item {
     }
     function display(slot) {
         if (!presented || slot.modelData !== requested || current === slot) return
-        const start = outgoing === slot ? 1 - progress : 0.12
+        // Reverse the same moving boundary. A third ready page waits for the boundary
+        // to clear, so rapid navigation never drops a half-visible page mid-frame.
+        const reversing = outgoing === slot
+        if (entry.running && !reversing && current?.visible && outgoing?.visible) return
+        const start = reversing ? 1 - progress : 0
+        const previous = current
+        const previousHeight = previous?.height ?? 0
         entry.stop()
-        outgoing = duration > 1 && current?.visible ? current : null
+        direction = reversing ? -direction : previous && slot.index < previous.index ? -1 : 1
+        outgoing = duration > 1 && previous?.visible ? previous : null
+        outgoingHeight = previousHeight
         progress = outgoing ? start : 1
         current = slot
         if (outgoing) { entry.from = start; entry.start() }
@@ -60,8 +80,10 @@ Item {
     NumberAnimation {
         id: entry
         target: deck; property: "progress"; from: 0; to: 1
-        duration: Math.round((1 - from) * deck.duration); easing.type: Easing.OutCubic
-        onFinished: deck.outgoing = null
+        duration: Math.max(1, Math.round((1 - from) * deck.duration))
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: [0.2, 0.75, 0.25, 1, 1, 1]
+        onFinished: { deck.outgoing = null; deck.resolve() }
     }
     Text {
         visible: deck.presented && deck.failed
@@ -73,9 +95,13 @@ Item {
         Loader {
             id: slot
             required property var modelData
+            required property int index
             property bool visited: false
             readonly property bool allowed: modelData === deck.requested || !deck.privatePages.includes(modelData)
-            anchors.fill: parent
+            width: deck.width
+            height: deck.outgoing === slot ? deck.outgoingHeight : deck.height
+            // Clip the contents of each moving page, including scroll views and focus rings.
+            clip: visible && deck.outgoing !== null
             sourceComponent: modelData
             active: modelData === deck.prewarm || (deck.presented && allowed &&
                 (modelData === deck.targetPage || modelData === deck.anticipated || deck.current === slot || deck.outgoing === slot || visited))
@@ -83,8 +109,7 @@ Item {
             visible: deck.presented && allowed && status === Loader.Ready && (deck.current === slot || deck.outgoing === slot)
             enabled: deck.current === slot && modelData === deck.requested
             z: deck.current === slot ? 1 : 0
-            opacity: deck.current === slot ? deck.progress : 1 - deck.progress
-            transform: Translate { y: deck.current === slot ? 4 * (1 - deck.progress) : -3 * deck.progress }
+            x: deck.outgoing ? deck.direction * (deck.current === slot ? width - deck.seam : -deck.seam) : 0
             onStatusChanged: if (status === Loader.Error && deck.presented && modelData === deck.requested) deck.unavailable()
             onLoaded: {
                 visited = deck.presented && deck.reusable.includes(modelData)

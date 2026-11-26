@@ -6,13 +6,17 @@ import "IslandLayout.js" as IslandLayout
 C.ScrollView {
     id: gridView
     required property var entries
+    property string lastSection: ""
     signal selected(string key)
     signal previewRequested(string key)
     contentWidth: availableWidth
     clip: true
     readonly property int columns: IslandLayout.columns(width)
     C.ScrollBar.horizontal.policy: C.ScrollBar.AlwaysOff
-    function focusFirst() { tiles.itemAt(0)?.forceActiveFocus(Qt.OtherFocusReason) }
+    function focusFirst() {
+        const index = entries.findIndex(entry => entry.key === lastSection)
+        tiles.itemAt(Math.max(0,index))?.forceActiveFocus(Qt.OtherFocusReason)
+    }
     GridLayout {
         width: gridView.availableWidth
         columns: gridView.columns
@@ -26,6 +30,13 @@ C.ScrollView {
                 tile: true; Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.minimumWidth: 0
                 text: modelData.label; icon.name: modelData.icon; tint: modelData.color
                 objectName: "island-section-" + modelData.key
+                Accessible.description: modelData.key === gridView.lastSection ? i18n("Selected") : ""
+                Text {
+                    visible: modelData.key === gridView.lastSection
+                    anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 7
+                    text: "✓"; color: "#c4c5cc"; font.pixelSize: 11
+                    Accessible.ignored: true
+                }
                 onHoveredChanged: if (hovered) gridView.previewRequested(modelData.key)
                 onVisualFocusChanged: if (visualFocus) gridView.previewRequested(modelData.key)
                 onClicked: gridView.selected(modelData.key)
