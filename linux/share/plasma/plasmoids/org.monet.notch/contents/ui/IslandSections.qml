@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls as C
 import QtQuick.Layouts
+import "IslandLayout.js" as IslandLayout
 
 C.ScrollView {
     id: gridView
@@ -8,13 +9,13 @@ C.ScrollView {
     signal selected(string key)
     contentWidth: availableWidth
     clip: true
-    readonly property int columns: width < 348 ? 3 : width < 426 ? 4 : 5
+    readonly property int columns: IslandLayout.columns(width)
     C.ScrollBar.horizontal.policy: C.ScrollBar.AlwaysOff
     function focusFirst() { tiles.itemAt(0)?.forceActiveFocus(Qt.TabFocusReason) }
     GridLayout {
         width: gridView.availableWidth
         columns: gridView.columns
-        rowSpacing: 6; columnSpacing: 6
+        rowSpacing: IslandLayout.gap; columnSpacing: IslandLayout.gap
         Repeater {
             id: tiles
             model: gridView.entries

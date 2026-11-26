@@ -8,6 +8,7 @@ import org.kde.plasma.core as PlasmaCore
 PlasmaCore.Dialog {
     id: rail
     required property var entries
+    required property real reveal
     required property bool presented
     signal selected(string key)
     type: PlasmaCore.Dialog.Dock
@@ -18,10 +19,9 @@ PlasmaCore.Dialog {
     mainItem: Column {
         id: column
         width: 33; height: implicitHeight; spacing: 4
-        opacity: shown ? 1 : 0
-        property bool shown: false
-        Behavior on opacity { NumberAnimation { duration: K.Units.shortDuration; easing.type: Easing.OutCubic } }
-        Connections { target: rail; function onVisibleChanged() { column.shown = rail.visible } }
+        opacity: Math.max(0, (rail.reveal - 0.54) / 0.46)
+        enabled: opacity > 0.5
+        transform: Translate { y: -5 * (1 - column.opacity) }
         Repeater {
             model: rail.entries
             IslandButton {

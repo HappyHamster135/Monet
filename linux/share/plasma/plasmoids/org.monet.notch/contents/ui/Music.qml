@@ -193,7 +193,7 @@ ColumnLayout {
         columns: 2; rowSpacing: 4; columnSpacing: 14
         Rectangle {
             Layout.row: 0; Layout.column: 0; Layout.rowSpan: page.view ? 1 : 3
-            Layout.preferredWidth: page.view ? 42 : Math.min(118, page.width * 0.25)
+            Layout.preferredWidth: page.view ? 42 : Math.min(106, page.width * 0.25)
             Layout.preferredHeight: Layout.preferredWidth; radius: page.view ? 9 : 16
             color: "#303037"; clip: true
             Kirigami.Icon {
@@ -338,6 +338,7 @@ ColumnLayout {
             implicitHeight: shuffleButton.implicitHeight
             IslandButton {
                 id: shuffleButton
+                plain: true
                 anchors.centerIn: parent
                 visible: !!page.player && page.player.shuffle !== Mpris.ShuffleStatus.Unknown
                 enabled: !!page.player?.canControl
@@ -347,7 +348,7 @@ ColumnLayout {
                 onClicked: page.player.shuffle = page.player.shuffle === Mpris.ShuffleStatus.On ? Mpris.ShuffleStatus.Off : Mpris.ShuffleStatus.On
             }
         }
-        IslandButton { icon.name: "media-skip-backward"; text: i18n("Previous track"); enabled: !!page.player?.canGoPrevious; onClicked: page.player.Previous() }
+        IslandButton { plain: true; icon.name: "media-skip-backward"; text: i18n("Previous track"); enabled: !!page.player?.canGoPrevious; onClicked: page.player.Previous() }
         IslandButton {
             prominent: true; implicitWidth: 40; implicitHeight: 40
             icon.name: page.playing ? "media-playback-pause" : "media-playback-start"
@@ -355,12 +356,13 @@ ColumnLayout {
             enabled: !!(page.playing ? page.player?.canPause : page.player?.canPlay)
             onClicked: page.playing ? page.player.Pause() : page.player.Play()
         }
-        IslandButton { icon.name: "media-skip-forward"; text: i18n("Next track"); enabled: !!page.player?.canGoNext; onClicked: page.player.Next() }
+        IslandButton { plain: true; icon.name: "media-skip-forward"; text: i18n("Next track"); enabled: !!page.player?.canGoNext; onClicked: page.player.Next() }
         Item {
             implicitWidth: repeatButton.implicitWidth
             implicitHeight: repeatButton.implicitHeight
             IslandButton {
                 id: repeatButton
+                plain: true
                 anchors.centerIn: parent
                 readonly property int status: page.player?.loopStatus ?? Mpris.LoopStatus.Unknown
                 visible: status !== Mpris.LoopStatus.Unknown
