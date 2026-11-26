@@ -20192,10 +20192,6 @@ msgstr "Kopierade bilder"
 msgid "Copy image (%1 × %2)"
 msgstr "Kopiera bild (%1 × %2)"
 
-#: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/IslandSections.qml:92
-msgid "Page %1 of %2"
-msgstr "Sida %1 av %2"
-
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/NotchTool.qml:58
 msgid "Could not open tool. Retry"
 msgstr "Kunde inte öppna verktyget. Försök igen"

@@ -1,17 +1,31 @@
 """Native tab selection stays on the displayed page when its position changes."""
 from pathlib import Path
+import shutil
 import tempfile
+import time
 import unittest
 
 try:
-    from PySide6.QtCore import QObject, QPoint, Qt, QUrl
-    from PySide6.QtGui import QAccessible, QAccessibleActionInterface, QGuiApplication
+    from PySide6.QtCore import QObject, QPoint, QPointF, Qt, QUrl
+    from PySide6.QtGui import (QAccessible, QAccessibleActionInterface, QGuiApplication,
+                               QInputDevice, QPointingDevice, QWheelEvent)
     from PySide6.QtQuick import QQuickView
     from PySide6.QtTest import QTest
 except ImportError:
     QQuickView = None
 
-UI = Path(__file__).resolve().parents[1] / "linux/share/plasma/plasmoids/org.monet.notch/contents/ui"
+SHARE = Path(__file__).resolve().parents[1] / "linux/share"
+UI = SHARE / "plasma/plasmoids/org.monet.notch/contents/ui"
+
+
+def section_ui(folder):
+    # install.sh places the shared scroll handler beside the applet QML.
+    applet = Path(folder) / "ui"
+    applet.mkdir()
+    for name in ("IslandSections.qml", "IslandButton.qml", "IslandLayout.js"):
+        shutil.copy(UI / name, applet)
+    shutil.copy(SHARE / "monet/widgets/ScrollInput.qml", applet)
+    return applet.as_uri()
 
 
 @unittest.skipUnless(QQuickView, "requires Qt Quick")
@@ -28,7 +42,7 @@ Monet.IslandSections {
     function reorder() { entries = entries.slice().reverse() }
     entries: ["music","time","notes","files","activity"].map(k => ({key:k, label:k, icon:"folder", color:"white"}))
     onSelected: key => chosen = key
-}'''.replace("@MONET_UI@", UI.as_uri()))
+}'''.replace("@MONET_UI@", section_ui(folder)))
             window = QQuickView()
             self.addCleanup(window.close)
             window.setSource(QUrl.fromLocalFile(str(scene)))
@@ -56,6 +70,84 @@ Monet.IslandSections {
             grid.focusFirst()
             QTest.keyClick(window, Qt.Key_Space)
             self.assertEqual(grid.property("chosen"), "activity")
+
+    def test_section_grid_scrolls_past_three_rows_and_returns_to_the_chosen_tile(self):
+        app = QGuiApplication.instance() or QGuiApplication([])
+        with tempfile.TemporaryDirectory() as folder:
+            scene = Path(folder) / "Sections.qml"
+            scene.write_text('''import QtQuick
+import "@MONET_UI@" as Monet
+Monet.IslandSections {
+    width: 432; height: 269
+    function i18n(text) { return text }
+    entries: Array.from({length: 15}, (_, i) => ({key: String(i), label: String(i), icon: "folder", color: "white"}))
+    onSelected: key => lastSection = key
+}'''.replace("@MONET_UI@", section_ui(folder)))
+            window = QQuickView()
+            self.addCleanup(window.close)
+            window.setSource(QUrl.fromLocalFile(str(scene)))
+            self.assertEqual(window.status(), QQuickView.Ready, [e.toString() for e in window.errors()])
+            window.show()
+            QTest.qWait(50)
+            grid = window.rootObject()
+            pending = [grid]
+            tiles = {}
+            while pending:
+                item = pending.pop()
+                if item.objectName().startswith("island-section-"):
+                    tiles[int(item.objectName().removeprefix("island-section-"))] = item
+                pending.extend(item.childItems())
+
+            def in_view(item):
+                y = item.mapToScene(QPointF()).y()
+                return y >= -0.5 and y + item.height() <= grid.height() + 0.5
+
+            self.assertEqual(len(tiles), 15)
+            self.assertEqual([i for i in sorted(tiles) if in_view(tiles[i])], list(range(12)))
+            point = tiles[5].mapToScene(QPointF(20, 20))
+            screen = QPointF(window.mapToGlobal(point.toPoint()))
+            QTest.mouseMove(window, point.toPoint())
+            touchpad = QPointingDevice("Fixture touchpad", 42, QInputDevice.TouchPad, QPointingDevice.Finger,
+                                       QInputDevice.Position | QInputDevice.PixelScroll | QInputDevice.Scroll, 2, 0)
+
+            def wheel(angle, pixel=QPoint(), phase=Qt.NoScrollPhase):
+                device = QPointingDevice.primaryPointingDevice() if phase == Qt.NoScrollPhase else touchpad
+                event = QWheelEvent(point, screen, pixel, angle, Qt.NoButton, Qt.NoModifier, phase, False,
+                                    Qt.MouseEventNotSynthesized if phase == Qt.NoScrollPhase else Qt.MouseEventSynthesizedBySystem,
+                                    device)
+                event.setTimestamp(int(time.monotonic() * 1000))
+                app.sendEvent(window, event)
+                QTest.qWait(20)
+
+            wheel(QPoint(-120, 0))
+            self.assertEqual((grid.property("contentX"), grid.property("contentY")), (0, 0))
+            wheel(QPoint(0, -120))
+            QTest.qWait(250)
+            self.assertGreater(grid.property("contentY"), 0)
+            grid.focusFirst()
+            self.assertEqual(grid.property("contentY"), 0)
+            for phase, y in ((Qt.ScrollBegin, 0), (Qt.ScrollUpdate, -110), (Qt.ScrollEnd, 0)):
+                wheel(QPoint(), QPoint(0, y), phase)
+            QTest.qWait(250)
+            self.assertTrue(in_view(tiles[14]))
+            self.assertEqual(grid.property("contentX"), 0)
+            target = tiles[14].mapToScene(QPointF(20, 20)).toPoint()
+            QTest.mouseClick(window, Qt.LeftButton, Qt.NoModifier, target)
+            self.assertEqual(grid.property("lastSection"), "14")
+
+            grid.setProperty("contentY", 0)
+            grid.focusFirst()
+            self.assertTrue(tiles[14].hasActiveFocus() and in_view(tiles[14]))
+            for _ in range(3):
+                QTest.keyClick(window, Qt.Key_Up)
+            self.assertTrue(tiles[2].hasActiveFocus() and in_view(tiles[2]))
+            self.assertEqual(grid.property("contentY"), 0)
+
+            grid.focusFirst()
+            grid.setProperty("entries", [{"key": "only", "label": "Only", "icon": "folder", "color": "white"}])
+            QTest.qWait(40)
+            self.assertFalse(grid.property("interactive"))
+            self.assertEqual(grid.property("contentY"), 0)
 
     def test_navigation_reuses_visited_pages_and_releases_private_content(self):
         app = QGuiApplication.instance() or QGuiApplication([])
