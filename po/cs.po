@@ -770,10 +770,6 @@ msgstr "Přidat widgety"
 msgid "Done"
 msgstr "Hotovo"
 
-#: linux/share/monet/editmode/MonetDesktopEditMode.qml:147
-msgid "Add a bar…"
-msgstr "Přidat lištu…"
-
 #: linux/share/monet/editmode/MonetDesktopEditMode.qml:156
 msgid "Manage desktops and bars"
 msgstr "Spravovat plochy a lišty"
@@ -798,10 +794,6 @@ msgstr "Hledat"
 #: linux/share/monet/explorer/MonetWidgetExplorer.qml:238
 msgid "Search widgets"
 msgstr "Hledat widgety"
-
-#: linux/share/monet/explorer/MonetWidgetExplorer.qml:279
-msgid "All widgets"
-msgstr "Všechny widgety"
 
 #: linux/share/monet/explorer/MonetWidgetExplorer.qml:316
 msgid "More widgets"
@@ -19912,3 +19904,55 @@ msgstr "Posunout doleva"
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/IslandMixer.qml:184
 msgid "Move right"
 msgstr "Posunout doprava"
+
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:114 linux/share/monet/panel/MonetPanelConfiguration.qml:410 linux/share/monet/panel/MonetPanelConfiguration.qml:918
+msgid "Add panel"
+msgstr ""
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:221
+msgid "Monet widgets"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:233
+msgid "Panel added (%1)."
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:236
+msgid "Could not open this panel."
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:237
+msgid "Could not add the panel. Try again."
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:424
+msgid "Notch"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:751
+msgid "Add notch"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:752 linux/share/monet/panel/MonetPanelConfiguration.qml:922
+msgid "Open music, timers and quick controls from the top of this screen."
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:929
+msgid "Start with the app menu, taskbar, quick settings and clock."
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:935
+msgid "Empty panel"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:936
+msgid "Start with an empty bar and add your own widgets."
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:941
+msgid "Adding panel…"
+msgstr ""
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:947
+msgid "Customize new panel"
+msgstr ""

@@ -770,10 +770,6 @@ msgstr "Lägg till widgetar"
 msgid "Done"
 msgstr "Klar"
 
-#: linux/share/monet/editmode/MonetDesktopEditMode.qml:147
-msgid "Add a bar…"
-msgstr "Lägg till en panel…"
-
 #: linux/share/monet/editmode/MonetDesktopEditMode.qml:156
 msgid "Manage desktops and bars"
 msgstr "Hantera skrivbord och paneler"
@@ -799,10 +795,6 @@ msgstr "Sök"
 #: linux/share/monet/explorer/MonetWidgetExplorer.qml:238
 msgid "Search widgets"
 msgstr "Sök widgetar"
-
-#: linux/share/monet/explorer/MonetWidgetExplorer.qml:279
-msgid "All widgets"
-msgstr "Alla widgetar"
 
 #: linux/share/monet/explorer/MonetWidgetExplorer.qml:316
 msgid "More widgets"
@@ -19991,3 +19983,55 @@ msgstr "Flytta åt vänster"
 #: linux/share/plasma/plasmoids/org.monet.notch/contents/ui/IslandMixer.qml:184
 msgid "Move right"
 msgstr "Flytta åt höger"
+
+#: linux/share/monet/editmode/MonetDesktopEditMode.qml:114 linux/share/monet/panel/MonetPanelConfiguration.qml:410 linux/share/monet/panel/MonetPanelConfiguration.qml:918
+msgid "Add panel"
+msgstr "Lägg till panel"
+
+#: linux/share/monet/explorer/MonetWidgetExplorer.qml:221
+msgid "Monet widgets"
+msgstr "Monet-widgetar"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:233
+msgid "Panel added (%1)."
+msgstr "Panelen har lagts till (%1)."
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:236
+msgid "Could not open this panel."
+msgstr "Det gick inte att öppna panelen."
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:237
+msgid "Could not add the panel. Try again."
+msgstr "Det gick inte att lägga till panelen. Försök igen."
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:424
+msgid "Notch"
+msgstr "Skärmutskärning"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:751
+msgid "Add notch"
+msgstr "Lägg till skärmutskärning"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:752 linux/share/monet/panel/MonetPanelConfiguration.qml:922
+msgid "Open music, timers and quick controls from the top of this screen."
+msgstr "Öppna musik, timrar och snabbreglage från skärmens överkant."
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:929
+msgid "Start with the app menu, taskbar, quick settings and clock."
+msgstr "Börja med appmenyn, aktivitetsfältet, snabbinställningar och klockan."
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:935
+msgid "Empty panel"
+msgstr "Tom panel"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:936
+msgid "Start with an empty bar and add your own widgets."
+msgstr "Börja med en tom panel och lägg till egna widgetar."
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:941
+msgid "Adding panel…"
+msgstr "Lägger till panel…"
+
+#: linux/share/monet/panel/MonetPanelConfiguration.qml:947
+msgid "Customize new panel"
+msgstr "Anpassa den nya panelen"

@@ -1,22 +1,15 @@
-/*
- * Monet's widget gallery, on the glass down the side of the screen, with the
- * desktop beside it: search and Monet's widgets down the left, each with its
- * icon; big cards with a picture of each widget, Add, and Remove for
- * the ones already out; every other widget under More widgets. Click a card
- * to add it, or drag it where you want it. Done ends the editing, or goes
- * back to the bar's settings when the gallery was opened from a bar.
- *
- * Opened by WidgetExplorer.qml in Plasma's desktop shell; Desktop.qml around
- * it keeps the gallery's model (root.widgetExplorer) and pendingUninstallTimer.
- */
+// Widgets for the selected containment, with preview cards and a searchable catalog.
+// Desktop.qml owns the shared model and keeps it alive while an uninstall is pending.
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Templates as T
+import QtQuick.Controls as C
 import QtQuick.Window
 import org.kde.kirigami as Kirigami
 import org.kde.kitemmodels as KItemModels
 import org.kde.kwindowsystem
 import org.kde.plasma.core as PlasmaCore
+import org.kde.plasma.plasma5support as P5Support
 import org.kde.plasma.private.shell
 
 Item {
@@ -47,10 +40,31 @@ Item {
     readonly property bool forBar: containment !== null && (containment.containmentType === 1 || containment.containmentType === 128)
     readonly property string mineIds: forBar ? "clock|games|menu|quick|sound|system|transfers" : "batteries|calendar|frame|network|notes|nowplaying|placard|played|stacks|storage|system|timer|weather|worldclock"
 
+    readonly property bool notchMatch: !!search.text.trim() && !!containment &&
+        [i18nd("monet","Top-center notch"), "notch"].some(label => label.toLocaleLowerCase().includes(search.text.trim().toLocaleLowerCase()))
+    property bool notchPending: false
+    property string notchResult: ""
+    function addNotch() {
+        if (notchPending || !containment) return
+        notchPending = true
+        notchResult = ""
+        notchRunner.connectSource("@LIBEXECDIR@/monet-quick panel-notch " + containment.id + " add")
+    }
+    P5Support.DataSource {
+        id: notchRunner
+        engine: "executable"
+        onNewData: (source,data) => {
+            disconnectSource(source)
+            gallery.notchPending = false
+            let ok = false
+            try { ok = JSON.parse(data.stdout).ok === true } catch (_) {}
+            gallery.notchResult = ok ? i18nd("monet","Added") : i18nd("monet","Could not read or change the notch on this screen.")
+        }
+    }
     signal closed()
 
     // Wide enough for the list and two big cards; the desktop shrinks beside it.
-    width: Math.round(Math.min(Kirigami.Units.gridUnit * 46, Screen.width * 0.56))
+    width: Math.round(Math.min(Kirigami.Units.gridUnit * 36, Math.max(240, Screen.width * 0.52), Screen.width))
     height: 800
     opacity: draggingWidget ? 0.3 : 1
 
@@ -79,14 +93,10 @@ Item {
 
     // Enter adds the first widget that matches the search.
     function addFirst() {
-        const cards = shown === "more" ? moreRows : mineCards
-        for (let i = 0; i < cards.count; ++i) {
-            const card = cards.itemAt(i)
-            if (card && card.visible) {
-                add(card.pluginName)
-                return
-            }
-        }
+        if (notchMatch) { addNotch(); return }
+        const view = catalog.visible ? catalog : previews
+        const item = view.currentItem
+        if (item?.supported) add(item.pluginName)
     }
 
     // Done: the gallery closes and the desktop comes back to full size.
@@ -122,20 +132,21 @@ Item {
 
     Component.onDestruction: {
         // Widgets marked for removal are taken out a minute later; keep the model till then.
+        if (!root.widgetExplorer) return
         if (pendingUninstallTimer.running) {
             root.widgetExplorer.widgetsModel.searchTerm = ""
         } else {
-            root.widgetExplorer.destroy()
+            root.widgetExplorer?.destroy()
             root.widgetExplorer = null
         }
     }
 
     Component {
         id: explorerComponent
-        WidgetExplorer {
-            onShouldClose: gallery.closed()
-        }
+        WidgetExplorer {}
     }
+
+    Connections { target: gallery.explorer; function onShouldClose() { gallery.closed() } }
 
     KItemModels.KSortFilterProxyModel {
         id: mine
@@ -148,9 +159,15 @@ Item {
         id: others
         sourceModel: gallery.explorer ? gallery.explorer.widgetsModel : null
         filterRoleName: "pluginName"
-        filterRegularExpression: new RegExp("^(?!org\\.monet\\.(" + gallery.mineIds + ")$)")
+        filterRegularExpression: new RegExp("^(?!org\\.monet\\.(" + gallery.mineIds + "|notch)$)")
     }
 
+    KItemModels.KSortFilterProxyModel {
+        id: searchable
+        sourceModel: gallery.explorer ? gallery.explorer.widgetsModel : null
+        filterRoleName: "pluginName"
+        filterRegularExpression: /^(?!org\.monet\.notch$)/
+    }
     Keys.onEscapePressed: {
         if (search.text !== "") {
             search.text = ""
@@ -200,226 +217,96 @@ Item {
             }
         }
 
+        C.TextField {
+            id: search
+            objectName: "widgetSearch"
+            Layout.fillWidth: true
+            placeholderText: i18nd("monet","Search widgets")
+            Accessible.name: placeholderText
+            onTextChanged: if (gallery.explorer) gallery.explorer.widgetsModel.searchTerm = text
+            Keys.onReturnPressed: gallery.addFirst()
+            Keys.onEnterPressed: gallery.addFirst()
+        }
         RowLayout {
             Layout.fillWidth: true
-            Layout.fillHeight: true
-            spacing: Kirigami.Units.gridUnit
-
-            // Search, then the widgets one by one, then everyone else's.
-            Flickable {
-                Layout.preferredWidth: Math.min(Kirigami.Units.gridUnit * 12, gallery.width * 0.36)
-                Layout.maximumWidth: Layout.preferredWidth
-                Layout.fillHeight: true
-                clip: true
-                contentWidth: width
-                contentHeight: categories.implicitHeight
+            visible: !search.text
+            Kind {
+                objectName: "monetWidgetCategory"
+                title: i18nd("monet","Monet widgets"); sign: "monet"
+                chosen: gallery.shown === "all"; ink: gallery.ink; wash: gallery.pebble; ring: gallery.lily; speed: gallery.speed
+                onClicked: gallery.shown = "all"
+            }
+            Kind {
+                objectName: "moreWidgetCategory"
+                title: i18nd("monet","More widgets"); sign: "view-grid"
+                chosen: gallery.shown === "more"; ink: gallery.ink; wash: gallery.pebble; ring: gallery.lily; speed: gallery.speed
+                onClicked: gallery.shown = "more"
+            }
+        }
+        C.Button {
+            objectName: "galleryAddNotch"
+            visible: gallery.notchMatch
+            enabled: !gallery.notchPending
+            Layout.fillWidth: true
+            text: i18nd("monet","Top-center notch"); icon.name: "list-add"
+            Accessible.description: i18nd("monet","Open music, timers and quick controls from the top of this screen.")
+            onClicked: gallery.addNotch()
+        }
+        C.Label { visible: gallery.notchMatch && !!gallery.notchResult; text: gallery.notchResult; Layout.fillWidth: true; wrapMode: Text.Wrap }
+        Item {
+            Layout.fillWidth: true; Layout.fillHeight: true
+            GridView {
+                id: previews
+                anchors.fill: parent; clip: true; visible: !search.text && gallery.shown === "all"
+                model: mine
+                cellWidth: width / (width >= 435 ? 2 : 1)
+                cellHeight: 258
                 boundsBehavior: Flickable.StopAtBounds
-
-                ColumnLayout {
-                    id: categories
-                    width: parent.width
-                    spacing: Kirigami.Units.smallSpacing
-
-                    T.TextField {
-                        id: search
-                        Layout.fillWidth: true
-                        Layout.bottomMargin: Kirigami.Units.largeSpacing
-                        implicitHeight: 38
-                        leftPadding: 38
-                        rightPadding: 12
-                        verticalAlignment: TextInput.AlignVCenter
-                        color: gallery.ink
-                        placeholderText: i18nd("monet", "Search")
-                        placeholderTextColor: Qt.rgba(gallery.ink.r, gallery.ink.g, gallery.ink.b, 0.5)
-                        selectionColor: Kirigami.Theme.highlightColor
-                        selectedTextColor: Kirigami.Theme.highlightedTextColor
-                        font.family: "Inter"
-                        font.pixelSize: 14
-                        Accessible.name: i18nd("monet", "Search widgets")
-                        onTextChanged: {
-                            if (gallery.explorer) {
-                                gallery.explorer.widgetsModel.searchTerm = text
-                            }
-                            if (text !== "" && gallery.shown !== "more") {
-                                gallery.shown = "all"
-                            }
-                        }
-                        Keys.onReturnPressed: gallery.addFirst()
-                        Keys.onEnterPressed: gallery.addFirst()
-                        background: Rectangle {
-                            radius: height / 2
-                            color: gallery.pebble
-                            border.width: search.activeFocus ? 2 : 1
-                            border.color: search.activeFocus ? gallery.lily : gallery.rim
-                            Kirigami.Icon {
-                                anchors.left: parent.left
-                                anchors.leftMargin: 12
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: 17
-                                height: 17
-                                source: "edit-find"
-                                opacity: 0.7
-                            }
-                        }
-                        Text {
-                            horizontalAlignment: Text.AlignLeft
-                            anchors.fill: parent
-                            leftPadding: search.leftPadding
-                            rightPadding: search.rightPadding
-                            verticalAlignment: Text.AlignVCenter
-                            visible: search.length === 0 && search.preeditText === ""
-                            text: search.placeholderText
-                            color: search.placeholderTextColor
-                            elide: Text.ElideRight
-                            font: search.font
-                        }
-                    }
-
-                    Kind {
-                        title: i18nd("monet", "All widgets")
-                        sign: gallery.forBar ? "monet" : "preferences-desktop-wallpaper"
-                        chosen: gallery.shown === "all"
-                        ink: gallery.ink
-                        wash: gallery.pebble
-                        ring: gallery.lily
-                        speed: gallery.speed
-                        onClicked: gallery.shown = "all"
-                    }
-
-                    Repeater {
-                        model: mine
-                        delegate: Kind {
-                            required property var model
-                            Layout.fillWidth: true
-                            title: model.name
-                            sign: model.decoration
-                            chosen: gallery.shown === model.pluginName
-                            ink: gallery.ink
-                            wash: gallery.pebble
-                            ring: gallery.lily
-                            speed: gallery.speed
-                            onClicked: gallery.shown = model.pluginName
-                        }
-                    }
-
-                    Rectangle {
-                        Layout.fillWidth: true
-                        Layout.topMargin: Kirigami.Units.smallSpacing
-                        Layout.bottomMargin: Kirigami.Units.smallSpacing
-                        implicitHeight: 1
-                        color: gallery.hairline
-                        visible: others.count > 0
-                    }
-
-                    Kind {
-                        visible: others.count > 0
-                        title: i18nd("monet", "More widgets")
-                        sign: "list-add"
-                        chosen: gallery.shown === "more"
-                        ink: gallery.ink
-                        wash: gallery.pebble
-                        ring: gallery.lily
-                        speed: gallery.speed
-                        onClicked: gallery.shown = "more"
-                    }
+                C.ScrollBar.vertical: C.ScrollBar {}
+                delegate: Card {
+                    required property var model
+                    width: Math.max(1,previews.cellWidth - 10); height: previews.cellHeight - 10
+                    pluginName: model.pluginName; name: model.name
+                    description: gallery.forBar && model.pluginName === "org.monet.system"
+                        ? i18nd("monet","Show your choice of system readings directly on this bar.") : model.description
+                    sign: model.decoration; screenshot: model.screenshot || ""
+                    running: gallery.containment?.applets?.filter(a => a.pluginName === pluginName).length || 0
+                    supported: model.isSupported !== false
+                    smoke: gallery.smoke; forBar: gallery.forBar; ink: gallery.ink; dim: gallery.dim
+                    wash: gallery.pebble; ring: gallery.lily; speed: gallery.speed
+                    onAdd: gallery.add(pluginName)
+                    onTakeAway: gallery.remove(pluginName)
+                    onDragging: on => gallery.draggingWidget = on
                 }
             }
-
-            Flickable {
-                id: scroller
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                clip: true
-                contentWidth: width
-                contentHeight: shelf.implicitHeight
+            ListView {
+                id: catalog
+                anchors.fill: parent; clip: true
+                visible: !!search.text || gallery.shown === "more"
+                model: search.text ? searchable : others
                 boundsBehavior: Flickable.StopAtBounds
-
-                ColumnLayout {
-                    id: shelf
-                    width: scroller.width
-                    spacing: Kirigami.Units.largeSpacing
-
-                    // Monet's widgets as big cards: two side by side, or the chosen one alone.
-                    GridLayout {
-                        Layout.fillWidth: true
-                        visible: gallery.shown !== "more"
-                        columns: gallery.shown === "all" && scroller.width >= Kirigami.Units.gridUnit * 24 ? 2 : 1
-                        columnSpacing: Kirigami.Units.largeSpacing
-                        rowSpacing: Kirigami.Units.largeSpacing
-
-                        Repeater {
-                            id: mineCards
-                            model: mine
-                            delegate: Card {
-                                required property var model
-                                Layout.fillWidth: true
-                                Layout.preferredWidth: 1
-                                Layout.alignment: Qt.AlignTop
-                                visible: gallery.shown === "all" || gallery.shown === model.pluginName
-                                big: gallery.shown !== "all"
-                                pluginName: model.pluginName
-                                name: model.name
-                                description: gallery.forBar && model.pluginName === "org.monet.system"
-                                    ? i18nd("monet", "Show your choice of system readings directly on this bar.") : model.description
-                                sign: model.decoration
-                                screenshot: model.screenshot || ""
-                                running: gallery.containment?.applets?.filter(a => a.pluginName === pluginName).length || 0
-                                supported: model.isSupported !== false
-                                smoke: gallery.smoke
-                                forBar: gallery.forBar
-                                ink: gallery.ink
-                                dim: gallery.dim
-                                wash: gallery.pebble
-                                ring: gallery.lily
-                                speed: gallery.speed
-                                onAdd: gallery.add(pluginName)
-                                onTakeAway: gallery.remove(pluginName)
-                                onDragging: on => gallery.draggingWidget = on
-                            }
-                        }
-                    }
-
-                    // Everyone else's, as a plain list: no pictures to show for them.
-                    Repeater {
-                        id: moreRows
-                        model: gallery.shown === "more" ? others : null
-                        delegate: Listed {
-                            required property var model
-                            Layout.fillWidth: true
-                            pluginName: model.pluginName
-                            name: model.name
-                            description: model.description
-                            sign: model.decoration
-                            running: gallery.containment?.applets?.filter(a => a.pluginName === pluginName).length || 0
-                            supported: model.isSupported !== false
-                            ink: gallery.ink
-                            dim: gallery.dim
-                            wash: gallery.pebble
-                            ring: gallery.lily
-                            speed: gallery.speed
-                            onAdd: gallery.add(pluginName)
-                            onDragging: on => gallery.draggingWidget = on
-                        }
-                    }
-
-                    Text {
-                        Layout.fillWidth: true
-                        Layout.topMargin: Kirigami.Units.gridUnit * 2
-                        visible: gallery.shown === "more" ? others.count === 0 : mine.count === 0
-                        horizontalAlignment: Text.AlignHCenter
-                        wrapMode: Text.Wrap
-                        text: i18nd("monet", "No widget by that name.")
-                        color: gallery.dim
-                        font.family: "Inter"
-                        font.italic: true
-                        font.pixelSize: 14
-                    }
+                C.ScrollBar.vertical: C.ScrollBar {}
+                delegate: Listed {
+                    required property var model
+                    width: Math.max(1,catalog.width - 10)
+                    pluginName: model.pluginName; name: model.name; description: model.description
+                    sign: model.decoration; supported: model.isSupported !== false
+                    running: gallery.containment?.applets?.filter(a => a.pluginName === pluginName).length || 0
+                    ink: gallery.ink; dim: gallery.dim; wash: gallery.pebble; ring: gallery.lily; speed: gallery.speed
+                    onAdd: gallery.add(pluginName)
+                    onDragging: on => gallery.draggingWidget = on
+                    onTakeAway: gallery.remove(pluginName)
                 }
+            }
+            Text {
+                anchors.centerIn: parent
+                width: parent.width; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.Wrap
+                visible: !gallery.notchMatch && (catalog.visible ? catalog.count : previews.count) === 0
+                text: i18nd("monet","No widget by that name."); color: gallery.dim
             }
         }
     }
 
-    // A pill: Done in ink, or Add on a pebble of glass.
     component Pill: T.AbstractButton {
         id: pill
         property color ink
@@ -510,7 +397,7 @@ Item {
         property string screenshot
         property int running: 0
         property bool supported: true
-        property bool big: false
+
         property bool smoke: false
         property bool forBar: false
         property color ink
@@ -613,7 +500,9 @@ Item {
                 Layout.leftMargin: 12
                 Layout.rightMargin: 12
                 Layout.topMargin: 6
-                implicitHeight: card.big ? 240 : 150
+                Layout.fillHeight: true
+                Layout.minimumHeight: 24
+                implicitHeight: 90
                 scale: card.down ? 0.97 : 1
                 Behavior on scale { NumberAnimation { duration: Math.round(160 * card.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
 
@@ -623,7 +512,7 @@ Item {
                     visible: status === Image.Ready
                     fillMode: Image.PreserveAspectFit
                     asynchronous: true
-                    mipmap: true
+                    sourceSize.width: Math.ceil(Math.max(1,card.width) * Screen.devicePixelRatio)
                     source: card.screenshot === "" ? ""
                         : card.smoke ? card.screenshot.replace(/screenshot\.png$/, "screenshot-smoke.png") : card.screenshot
                     onStatusChanged: {
@@ -732,6 +621,7 @@ Item {
         property real speed: 1
 
         signal add()
+        signal takeAway()
         signal dragging(bool on)
 
         implicitHeight: 56

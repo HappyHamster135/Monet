@@ -9,7 +9,6 @@
  * and reads centerX and centerY to place the desktop it shrinks.
  */
 import QtQuick
-import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Templates as T
 import org.kde.kirigami as Kirigami
@@ -25,6 +24,9 @@ Item {
     property real roundedRootWidth: Math.round(root.width)
     property real roundedRootHeight: Math.round(root.height)
     property bool open: false
+    readonly property bool editingPanel: !!containment?.plasmoid.corona.panelBeingConfigured
+        && containment.plasmoid.corona.panelBeingConfigured.screenToFollow === desktop.screenToFollow
+    readonly property bool showToolbar: !editingPanel && !sidePanel.visible
 
     readonly property real speed: Kirigami.Units.longDuration / 200
     // Mist or smoke, the way monet-light set the colors.
@@ -40,19 +42,22 @@ Item {
         open = Qt.binding(() => containment.plasmoid.corona.editMode)
     }
 
-    // A wash of mist or smoke over everything.
-    Rectangle {
-        anchors.fill: parent
-        color: editModeItem.smoke ? "#14131A" : "#E6E3DC"
-        opacity: editModeItem.open ? 0.86 : 0
-        Behavior on opacity { NumberAnimation { duration: Kirigami.Units.longDuration } }
+    // Desktop.qml already scales the live containment and routes input to it.
+    // Paint just the surround. No second fullscreen texture needs to be updated.
+    readonly property color surround: smoke ? "#242321" : "#e6e3dc"
+    Item {
+        anchors.fill: parent; visible: editModeItem.open
+        Rectangle { width: parent.width; height: Math.max(0,editModeUi.y); color: editModeItem.surround }
+        Rectangle { y: editModeUi.y + editModeUi.height; width: parent.width; height: Math.max(0,parent.height - y); color: editModeItem.surround }
+        Rectangle { y: editModeUi.y; width: Math.max(0,editModeUi.x); height: editModeUi.height; color: editModeItem.surround }
+        Rectangle { x: editModeUi.x + editModeUi.width; y: editModeUi.y; width: Math.max(0,parent.width - x); height: editModeUi.height; color: editModeItem.surround }
     }
 
     Item {
         id: editModeUi
         visible: editModeItem.open
         x: Math.round(editModeItem.open ? editModeRect.x + editModeRect.width / 2 - zoomedWidth / 2 : 0)
-        y: Math.round(editModeItem.open ? editModeRect.y + editModeRect.height / 2 - zoomedHeight / 2 + toolBar.height / 2 : 0)
+        y: Math.round(editModeItem.open ? editModeRect.y + editModeRect.height / 2 - zoomedHeight / 2 + (editModeItem.showToolbar ? toolBar.height / 2 : 0) : 0)
         width: editModeItem.open ? zoomedWidth : editModeItem.roundedRootWidth
         height: editModeItem.open ? zoomedHeight : editModeItem.roundedRootHeight
         property real zoomedWidth: Math.round(root.width * containmentParent.scaleFactor)
@@ -62,11 +67,13 @@ Item {
         Rectangle {
             id: frame
             x: -10
-            y: -toolBar.height - 14
+            readonly property real band: editModeItem.showToolbar ? toolBar.height + 14 : 8
+            y: -band
             width: Math.round(parent.width + 20)
-            height: Math.round(parent.height + toolBar.height + 24)
+            height: Math.round(parent.height + band + 10)
             radius: editModeItem.open ? 18 : 0
-            color: editModeItem.paper
+            color: "transparent"
+            Rectangle { width: parent.width; height: frame.band; radius: 8; visible: editModeItem.showToolbar; color: editModeItem.paper }
             border.width: 1
             border.color: editModeItem.hairline
             Behavior on radius { NumberAnimation { duration: Kirigami.Units.longDuration } }
@@ -76,30 +83,38 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: parent.top
-                height: toolBar.height + 14
+                height: frame.band
             }
 
-            RowLayout {
+            Flow {
                 id: toolBar
+                visible: editModeItem.showToolbar
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: parent.top
                 anchors.leftMargin: 16
                 anchors.rightMargin: 12
                 anchors.topMargin: 8
-                spacing: Kirigami.Units.smallSpacing * 2
+                spacing: Kirigami.Units.smallSpacing
                 opacity: editModeItem.open ? 1 : 0
                 Behavior on opacity { NumberAnimation { duration: Kirigami.Units.longDuration } }
 
                 Text {
-                    visible: toolBar.width >= 440
+                    visible: toolBar.width >= 640
                     horizontalAlignment: Text.AlignLeft
-                    Layout.fillWidth: true
+                    width: Math.max(0,toolBar.width - 455); height: 34; verticalAlignment: Text.AlignVCenter
                     text: i18nd("monet", "Drag a widget to move it. Point at one to resize or remove it.")
                     color: editModeItem.dim
                     elide: Text.ElideRight
                     font.family: "Inter"
                     font.pixelSize: 13
+                }
+                Pill {
+                    id: addPanelButton
+                    visible: !sidePanel.visible
+                    text: i18nd("monet", "Add panel")
+                    ink: editModeItem.ink; tint: editModeItem.pebble; ring: editModeItem.lily
+                    onClicked: containment.plasmoid.corona.showAddPanelContextMenu(mapToGlobal(0,height))
                 }
                 Pill {
                     id: moreButton
@@ -144,14 +159,6 @@ Item {
             placement: PlasmaExtras.Menu.BottomPosedLeftAlignedPopup
 
             PlasmaExtras.MenuItem {
-                text: i18nd("monet", "Add a bar…")
-                icon: "list-add"
-                onClicked: Qt.callLater(() => {
-                    if (editModeItem.open)
-                        containment.plasmoid.corona.showAddPanelContextMenu(moreButton.mapToGlobal(0, moreButton.height))
-                })
-            }
-            PlasmaExtras.MenuItem {
                 readonly property QtObject manage: containment ? containment.plasmoid.corona.action("manage-containments") : null
                 text: i18nd("monet", "Manage desktops and bars")
                 icon: "configure"
@@ -161,26 +168,6 @@ Item {
             }
         }
 
-        // The desktop itself, its corners rounded like the frame's. Clicks go
-        // through to the real one Desktop.qml shrinks underneath.
-        MultiEffect {
-            anchors.fill: parent
-            source: containment
-            layer.enabled: true
-            layer.smooth: true
-            layer.effect: Kirigami.ShadowedTexture {
-                width: editModeItem.roundedRootWidth
-                height: editModeItem.roundedRootHeight
-                color: "transparent"
-                radius: editModeItem.open ? 12 : 0
-                Behavior on radius {
-                    NumberAnimation {
-                        duration: Kirigami.Units.longDuration
-                        easing.type: Easing.InOutQuad
-                    }
-                }
-            }
-        }
     }
 
     // A pill: Monet's buttons, on a pebble of glass, or Done in ink.
@@ -196,7 +183,7 @@ Item {
         Accessible.name: text
         Keys.onEnterPressed: clicked()
         Keys.onReturnPressed: clicked()
-        scale: down ? 0.95 : hovered ? 1.04 : 1
+        scale: down ? 0.98 : 1
         Behavior on scale { NumberAnimation { duration: Math.round(160 * pill.speed); easing.type: Easing.Bezier; easing.bezierCurve: [0.2, 0.9, 0.25, 1.25, 1, 1] } }
         background: Rectangle {
             radius: height / 2

@@ -27,6 +27,10 @@ def sources(share):
     files = {path for root in roots for path in root.rglob('*.qml')
              if path.is_file() and not path.is_symlink()}
     panel = share / PANEL_CONFIG
+    for page in ('explorer/MonetWidgetExplorer.qml', 'views/MonetDesktopEditMode.qml'):
+        path = panel.parent / page
+        if path.is_file():
+            files.add(path)
     if (panel / 'MonetPanelConfiguration.qml').is_file():
         files.update(panel / name for name in ('MonetPanelConfiguration.qml', 'PanelConfiguration.qml',
                                                 'monet-editor-entry/PanelConfiguration.qml') if (panel / name).is_file())

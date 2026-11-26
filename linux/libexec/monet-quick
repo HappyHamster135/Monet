@@ -8461,8 +8461,55 @@ print(JSON.stringify({ok:true, available:tasks.length > 0,
         return {"ok": False}
 
 
+def panel_configure(ident):
+    if not re.fullmatch(r"[0-9]{1,10}", str(ident)):
+        return {"ok": False}
+    script = ("var bar = panelById(%d); if (bar) bar.showConfigurationInterface(); "
+              "print(JSON.stringify(!!bar));") % int(ident)
+    reply = busjson("--user", "call", "org.kde.plasmashell", "/PlasmaShell",
+                    "org.kde.PlasmaShell", "evaluateScript", "s", script)
+    return {"ok": bool(reply and str(reply[0]).strip() == "true")}
+
+
+def panel_add(ident, kind):
+    """Create a panel on the edited bar's display, then report its actual edge."""
+    if not re.fullmatch(r"[0-9]{1,10}", str(ident)) or kind not in ("empty", "home"):
+        return {"ok": False}
+    widgets = ["org.monet.menu", "org.kde.plasma.icontasks", "org.monet.quick", "org.monet.clock"] if kind == "home" else []
+    script = """(function() {
+        const source = panelById(PANEL_ID), widgets = WIDGETS;
+        if (!source || source.screen < 0 || widgets.some(id => !knownWidgetTypes.includes(id))) {
+            print(JSON.stringify({ok:false})); return;
+        }
+        const screen = source.screen;
+        const used = panels().filter(p => p.screen === screen).map(p => p.location);
+        const bar = new Panel;
+        try {
+            bar.screen = screen;
+            bar.location = ["bottom","top","left","right"].find(edge => !used.includes(edge)) || bar.location;
+            bar.height = 48;
+            for (const id of widgets) {
+                const added = bar.addWidget(id);
+                if (!added || added.type !== id) throw new Error("widget");
+            }
+            print(JSON.stringify({ok:true,id:bar.id,edge:bar.location}));
+        } catch (e) {
+            bar.remove(); print(JSON.stringify({ok:false}));
+        }
+    })()""".replace("PANEL_ID", str(int(ident))).replace("WIDGETS", json.dumps(widgets))
+    reply = busjson("--user", "call", "org.kde.plasmashell", "/PlasmaShell",
+                    "org.kde.PlasmaShell", "evaluateScript", "s", script)
+    try:
+        state = json.loads(reply[0])
+        if isinstance(state, dict) and state.get("ok") and state.get("edge") in ("left","right","top","bottom"):
+            return state
+    except (IndexError, TypeError, ValueError):
+        pass
+    return {"ok": False}
+
+
 def panel_notch(ident, choice=None):
-    modes = {None, "compact", "wide", "off"}
+    modes = {None, "compact", "wide", "off", "add"}
     if not re.fullmatch(r"[0-9]{1,10}", str(ident)) or (choice not in modes and
             not re.fullmatch(r"(levels|companion|alerts|previews|gestures|awake|countdown|hoverControls|combined)-(on|off)|companion-[a-z]{1,10}-[a-z]{1,12}|"
                              r"tab-(music|activity|time|calendar|notes|camera|clipboard)-(show|hide|earlier|later)", choice)):
@@ -11329,6 +11376,14 @@ def main(argv):
                 return 1
         subprocess.Popen([f"{LIBEXECDIR}/monet-utilities", args[0], *extra],
                          start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    elif cmd == "panel-configure" and len(args) == 1:
+        result = panel_configure(args[0])
+        emit(result)
+        return 0 if result["ok"] else 1
+    elif cmd == "panel-add" and len(args) == 2:
+        result = panel_add(*args)
+        emit(result)
+        return 0 if result["ok"] else 1
     elif cmd == "panel-notch" and len(args) in (1, 2):
         result = panel_notch(*args)
         emit(result)

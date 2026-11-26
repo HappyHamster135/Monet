@@ -1,7 +1,9 @@
 // The notch is a separate, content-sized top panel on the edited bar's screen.
 // A one/three-bar conversion must never claim this containment or its applets.
 (function () {
-    var source = panelById(MONET_PANEL_ID), choice = MONET_NOTCH_CHOICE;
+    var choice = MONET_NOTCH_CHOICE;
+    var source = panels().find(p => p.id === MONET_PANEL_ID);
+    if (!source && choice === "add") source = desktops().find(d => d.id === MONET_PANEL_ID);
     var type = "org.monet.notch";
     if (!source || source.screen < 0) { print(JSON.stringify({ok:false})); return; }
     var existing = panels().filter(function (p) {
@@ -77,6 +79,7 @@
         widget.currentConfigGroup = ["General"];
         removedWidget = widget.id;
         var preferences = optionsOf(widget);
+        preferences.wide = String(widget.readConfig("wide", false)) === "true";
         preferences.companionSettings = companionOf(widget);
         preferences.tabs = tabsOf(widget.readConfig("tabs", "")).join(",") || "none";
         Object.keys(timeDefaults).forEach(function (key) {
@@ -88,7 +91,7 @@
         if (panel.readConfig("owned", "") === "yes" && panel.widgets().length === 1) { widget.remove(); panel.remove(); }
         else widget.remove();
         widget = null;
-    } else if (choice && choice !== "off") {
+    } else if (choice && choice !== "off" && (choice !== "add" || !widget)) {
         if (!widget) {
             if (knownWidgetTypes.indexOf(type) < 0) { print(JSON.stringify({ok:false})); return; }
             var host = savedOnBar(), previous = {};
@@ -119,7 +122,7 @@
             } catch (error) { panel.remove(); print(JSON.stringify({ok:false})); return; }
         }
         widget.currentConfigGroup = ["General"];
-        widget.writeConfig("wide", choice === "wide"); widget.reloadConfig();
+        widget.writeConfig("wide", choice === "wide" || (choice === "add" && previous.wide === true)); widget.reloadConfig();
     }
     if (widget) widget.currentConfigGroup = ["General"];
     var wide = widget && String(widget.readConfig("wide", false)) === "true";

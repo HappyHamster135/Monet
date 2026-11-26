@@ -62,7 +62,11 @@ class PanelIcons(unittest.TestCase):
 class PanelEditor(unittest.TestCase):
     setUpClass = classmethod(settings.SettingsNavigation.setUpClass.__func__)
     tearDownClass = classmethod(settings.SettingsNavigation.tearDownClass.__func__)
-    item = settings.SettingsNavigation.item
+    def item(self, name):
+        item = self.window.control(name)
+        self.assertIsNotNone(item, name)
+        return item
+
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
@@ -81,7 +85,9 @@ class PanelEditor(unittest.TestCase):
 import json
 import sys
 choice = sys.argv[3] if len(sys.argv) > 3 else ""
-if sys.argv[1] == "panel-notch":
+if sys.argv[1] == "panel-add":
+    print(json.dumps(dict(ok=choice in ("empty","home"), id=19, edge="left")))
+elif sys.argv[1] == "panel-notch":
     tabs = ["music", "activity", "time", "calendar", "notes"]
     if choice == "tab-clipboard-show": tabs.append("clipboard")
     if choice == "tab-music-hide": tabs.remove("music")
@@ -112,6 +118,16 @@ import org.kde.plasma.shell
 import org.kde.kirigami as Kirigami
 Window {
     id: window
+    function control(name) {
+        const pending = [contentItem]
+        while (pending.length) {
+            const item = pending.pop()
+            if (item.objectName === name) return item
+            // Query in QML to avoid wrapping every private KDE control in Python.
+            if (item.visible) for (const child of item.children) pending.push(child)
+        }
+        return null
+    }
     function i18nd(domain, text) { return text }
     function i18ndc(domain, context, text) { return text }
     width: 440; height: 760; visible: true; color: "#f3f1ec"
@@ -189,6 +205,7 @@ Window {
         return item
 
     def test_notification_preview_control_round_trips_in_customize_home_bar(self):
+        self.click('panelNotchPage'); QTest.qWait(160)
         name = 'notchOption-previews'
         option = self.item(name)
         self.assertTrue(option.isVisible())
@@ -200,6 +217,7 @@ Window {
             self.assertEqual(option.property('checked'), enabled)
 
     def test_running_timer_checkbox_defaults_on_and_can_be_switched_off(self):
+        self.click('panelNotchPage'); QTest.qWait(160)
         name = 'notchOption-countdown'
         choice = self.item(name)
         self.assertTrue(choice.isVisible() and choice.property('checked'))
@@ -210,6 +228,7 @@ Window {
             self.assertEqual(choice.property('checked'), enabled)
 
     def test_notch_tab_editor_checks_and_moves_with_the_keyboard(self):
+        self.click('panelNotchPage'); QTest.qWait(160)
         toggle = self.item('editNotchTabs')
         toggle.forceActiveFocus(Qt.TabFocusReason)
         QTest.keyClick(self.window, Qt.Key_Return)
@@ -230,6 +249,15 @@ Window {
         QTest.qWait(200)
         self.assertTrue(clipboard.property('checked'))
         self.assertEqual(editor.property('notchTabs').toVariant()[-1], 'clipboard')
+
+    def test_panel_picker_adds_panels_and_opens_notch_settings(self):
+        self.click('panelAddPage')
+        self.click('panelAddEmpty'); QTest.qWait(200)
+        editor = self.item('monetPanelEditor')
+        self.assertIn('Panel added', editor.property('addStatus'))
+        self.click('panelAddNotch'); QTest.qWait(200)
+        self.assertEqual(editor.property('page'), 3)
+        self.assertTrue(self.item('editNotchTabs').isVisible())
 
     def test_one_and_three_bar_choices_use_layout_helper(self):
         self.assertTrue(self.item('panelThreeBars').property('checked'))

@@ -30,7 +30,10 @@ Monet is a preview; individual laptop hardware still needs testing.
 
 Right-click the Home Bar and choose **Customize Home Bar → Layout** to switch
 between **One bar** and **Three bars**. Monet keeps your pinned apps and widgets
-and supplies any missing everyday controls. In **Transfers**, the **×** beside
+and supplies any missing everyday controls. In the same editor, **Add panel →
+Top-center notch** turns on the notch for that screen. Its controls are under
+**Notch**. Choose **Add widgets** to put individual widgets on the current bar.
+In **Transfers**, the **×** beside
 an entry hides it from the list; the transfer continues and its files stay intact.
 
 ## How it works

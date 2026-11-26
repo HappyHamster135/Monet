@@ -104,6 +104,7 @@ class PanelLayouts(unittest.TestCase):
         self.assertFalse(notch('right', 'previews-off')['options']['previews'])
         self.assertTrue(notch('right', 'levels-on')['options']['levels'])
         self.assertEqual(notch('left', 'wide')['mode'], 'wide')
+        self.assertEqual(notch('left', 'add')['mode'], 'wide')
         self.assertEqual(notch('other')['mode'], 'off')
         self.assertTrue(notch('other', 'compact')['options']['gestures'])
         self.assertFalse(notch('right')['options']['gestures'])
@@ -136,6 +137,27 @@ class PanelLayouts(unittest.TestCase):
         self.assertEqual(notch('right', 'tab-notes-show')['tabs'], ['notes'])
         self.js("var n=all.find(p=>p.screen===right.screen&&p.widgets('org.monet.notch').length).widgets()[0]; n.currentConfigGroup=['General']; n.writeConfig('tabs','music,music,bad');")
         self.assertEqual(notch('right')['tabs'], standard)
+
+    def test_add_panel_uses_the_selected_screen_and_keeps_its_existing_widgets(self):
+        def add(ident, kind):
+            def bus(*args):
+                self.js(args[-1])
+                return [self.js('printed').toString()]
+            with patch.object(self.quick, 'busjson', side_effect=bus):
+                return self.quick.panel_add(ident, kind)
+        self.js('var target = new Panel; target.screen=2; target.location="bottom"; target.addWidget("org.monet.games")')
+        ident = str(self.js('target.id').toInt())
+        start = self.js('panels().length').toInt()
+        empty = add(ident, 'empty')
+        self.assertTrue(empty['ok'])
+        self.assertEqual(empty['edge'], 'top')
+        result = add(ident, 'home')
+        self.assertTrue(result['ok'])
+        self.assertEqual(self.js(f"panelById({result['id']}).screen").toInt(), 2)
+        self.assertEqual(self.js(f"panelById({result['id']}).widgets().length").toInt(), 4)
+        self.assertEqual(self.js('target.widgets()[0].type').toString(), 'org.monet.games')
+        self.assertFalse(add(ident, 'other')['ok'])
+        self.assertEqual(self.js('panels().length').toInt(), start + 2)
 
     def test_switch_from_side_bar_round_trip_keeps_id_pins_widgets_and_other_screens(self):
         self.assertEqual(self.choose('right')['layout'], 'three')
