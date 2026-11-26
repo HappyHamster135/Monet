@@ -68,6 +68,13 @@ class PanelEditor(unittest.TestCase):
         return item
 
 
+    def wait_for(self, condition, description):
+        for _ in range(100):
+            if condition():
+                return
+            QTest.qWait(20)
+        self.fail(description)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
         folder = Path(self.temp.name)
@@ -228,35 +235,34 @@ Window {
             self.assertEqual(choice.property('checked'), enabled)
 
     def test_notch_tab_editor_checks_and_moves_with_the_keyboard(self):
-        self.click('panelNotchPage'); QTest.qWait(160)
+        self.click('panelNotchPage')
+        editor = self.item('monetPanelEditor')
+        self.wait_for(lambda: 'activity' in editor.property('notchTabs').toVariant(), 'Load notch tabs')
         toggle = self.item('editNotchTabs')
         toggle.forceActiveFocus(Qt.TabFocusReason)
         QTest.keyClick(self.window, Qt.Key_Return)
         self.assertTrue(toggle.property('checked'))
         self.click('notchEarlier-activity')
-        editor = self.item('monetPanelEditor')
-        self.assertEqual(editor.property('notchTabs').toVariant()[:2], ['activity', 'music'])
+        self.wait_for(lambda: editor.property('notchTabs').toVariant()[:2] == ['activity', 'music'], 'Move Activity earlier')
         music = self.item('notchTab-music')
         music.forceActiveFocus(Qt.TabFocusReason)
         QTest.keyClick(self.window, Qt.Key_Return)
-        QTest.qWait(200)
-        self.assertFalse(music.property('checked'))
+        self.wait_for(lambda: not music.property('checked') and not editor.property('notchBusy'), 'Hide Music')
         self.assertFalse(self.item('notchEarlier-music').isEnabled())
         clipboard = self.item('notchTab-clipboard')
         self.assertFalse(clipboard.property('checked'))
         clipboard.forceActiveFocus()
         QTest.keyClick(self.window, Qt.Key_Return)
-        QTest.qWait(200)
-        self.assertTrue(clipboard.property('checked'))
+        self.wait_for(lambda: clipboard.property('checked') and not editor.property('notchBusy'), 'Show Clipboard')
         self.assertEqual(editor.property('notchTabs').toVariant()[-1], 'clipboard')
 
     def test_panel_picker_adds_panels_and_opens_notch_settings(self):
         self.click('panelAddPage')
-        self.click('panelAddEmpty'); QTest.qWait(200)
+        self.click('panelAddEmpty')
         editor = self.item('monetPanelEditor')
-        self.assertIn('Panel added', editor.property('addStatus'))
-        self.click('panelAddNotch'); QTest.qWait(200)
-        self.assertEqual(editor.property('page'), 3)
+        self.wait_for(lambda: 'Panel added' in editor.property('addStatus'), 'Add an empty panel')
+        self.click('panelAddNotch')
+        self.wait_for(lambda: editor.property('page') == 3, 'Open notch settings')
         self.assertTrue(self.item('editNotchTabs').isVisible())
 
     def test_one_and_three_bar_choices_use_layout_helper(self):
