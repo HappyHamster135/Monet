@@ -14,19 +14,20 @@ ColumnLayout {
     signal addFile(string url)
     property var recent: []
     property bool loading: false
-    readonly property string command: helper + " notch-captures " + (images && videos ? "all" : images ? "images" : "videos")
+    readonly property string command: !images && !videos ? "" : helper + " notch-captures " + (images && videos ? "all" : images ? "images" : "videos")
     function refresh() {
+        if (!images && !videos) { recent = []; loading = false; return }
         loading = true
         fetch.connectSource(command)
     }
     Component.onCompleted: refresh()
-    onCommandChanged: if (fetch && (images || videos)) refresh()
+    onCommandChanged: if (fetch) refresh()
     P5.DataSource {
         id: fetch
         engine: "executable"
         onNewData: (name, data) => {
             disconnectSource(name)
-            if (name !== page.command) return
+            if (name !== page.command || (!page.images && !page.videos)) return
             try { page.recent = JSON.parse(data.stdout) } catch (_) { page.recent = [] }
             page.loading = false
         }

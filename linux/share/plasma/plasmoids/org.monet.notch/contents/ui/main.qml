@@ -65,7 +65,9 @@ PlasmoidItem {
         return sections.some(section => section.key === key)
     }
     function preparePage(key) {
-        if (islandOpen && ["music","time","mixer"].includes(key))
+        if (!islandOpen) return
+        if (key === "tools" && !toolRows.length) body.anticipated = toolPage
+        else if (["music","time","mixer"].includes(key))
             body.anticipated = key === "music" ? musicPage : key === "time" ? timerPage : mixerPage
     }
     function choose(key, returning = false) {
@@ -104,7 +106,7 @@ PlasmoidItem {
             if (id === 0 && offerMixer) add("mixer", i18n("Volume mixer"), "audio-volume-high", "#a1d9ff")
             if (id === 1 && offerDownloads) add("downloads", i18n("Downloads"), "go-down-symbolic", "#79d3aa")
         }
-        if (tools.offers("screenshot") || tools.offers("recordings")) add("captures", i18n("Recent captures"), "camera-photo", "#bbdeee")
+        if (tools.offers("screenshot") || tools.offers("recordings") || tools.offers("clipboard")) add("captures", i18n("Recent captures"), "camera-photo", "#bbdeee")
         if (offerShelf) add("files", i18n("File shelf"), "folder-open", "#75b9ff")
         if (tools.offers("processes")) add("system", i18n("System"), "view-statistics-symbolic", "#aba6ff")
         return rows
@@ -1023,7 +1025,7 @@ PlasmoidItem {
         id: capturesPage
         IslandCaptures {
             helper: root.helper
-            showCopied: root.islandOpen && root.currentRoute === "captures" && !root.searching && power.active
+            showCopied: tools.offers("clipboard") && root.islandOpen && root.currentRoute === "captures" && !root.searching && power.active
                         && !!(power.nativeState ?? capturesLock.item)?.lockKnown && !(power.nativeState ?? capturesLock.item)?.locked
             Loader { id: capturesLock; active: !power.nativeState; sourceComponent: Component { CameraLock {} } }
             images: tools.offers("screenshot"); videos: tools.offers("recordings"); shelf: root.offerShelf
