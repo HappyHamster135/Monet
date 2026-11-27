@@ -9,6 +9,11 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "linux/share/monet/utilities"))
 
+# These scenes are required in the desktop job; the CLI job has no Qt runtime.
+import importlib.util
+if importlib.util.find_spec("PySide6") is None:
+    raise unittest.SkipTest("requires the native Qt desktop runtime")
+
 from PySide6.QtCore import QPoint, QProcess, QSettings, Qt
 from PySide6.QtGui import QColor, QImage, QRegion
 from PySide6.QtTest import QTest

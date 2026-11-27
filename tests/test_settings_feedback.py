@@ -6,7 +6,7 @@ import json
 import os
 from pathlib import Path
 import time
-from tests.settings_support import select_settings_page
+from tests.settings_support import select_settings_page, visual_item
 import unittest
 from unittest.mock import patch
 
@@ -1077,11 +1077,14 @@ class LookFeedback(unittest.TestCase):
 
     def item(self, name):
         select_settings_page(self.window, self.window.property("page"))
-        pending = [self.window.contentItem()]
-        while pending:
-            item = pending.pop()
-            if item.objectName() == name: return item
-            pending.extend(item.childItems())
+        # Do not wrap every private Kirigami child just to locate a named control.
+        from PySide6.QtQuick import QQuickItem
+        named = self.window.findChild(QQuickItem, name)
+        if named is not None:
+            return named
+        named = visual_item(self.window, name)
+        if named is not None:
+            return named
         self.fail("Missing visible control: " + name)
 
     def button(self):

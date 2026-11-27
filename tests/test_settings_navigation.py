@@ -6,7 +6,7 @@ import json
 import os
 from pathlib import Path
 import time
-from tests.settings_support import select_settings_page
+from tests.settings_support import select_settings_page, visual_item
 import unittest
 from unittest.mock import patch
 
@@ -107,11 +107,9 @@ class SettingsNavigation(unittest.TestCase):
         named = self.window.findChild(QQuickItem, name)
         if named is not None:
             return named
-        pending = [self.window.contentItem()]
-        while pending:
-            item = pending.pop()
-            if item.objectName() == name: return item
-            pending.extend(item.childItems())
+        named = visual_item(self.window, name)
+        if named is not None:
+            return named
         self.fail("Missing " + name)
 
     def wait_for(self, condition):

@@ -393,8 +393,7 @@ class SleepWatcher:
         subscribe("org.freedesktop.DBus", "org.freedesktop.DBus", "NameOwnerChanged", "/org/freedesktop/DBus",
                   LOGIN, flags, self.new_login_owner)
         subscribe(BLUEZ, OBJECTS, "InterfacesAdded", "/", None, flags, self.radio_added)
-        from gi.repository import GLibUnix
-        GLibUnix.signal_add(G.PRIORITY_DEFAULT, signal.SIGTERM, self.stop)
+        G.unix_signal_add(G.PRIORITY_DEFAULT, signal.SIGTERM, self.stop)
         try:
             self.lock()
             sleeping, = self.desktop.call(LOGIN, LOGIN_PATH, PROPS, "Get", G.Variant("(ss)", (MANAGER, "PreparingForSleep")))

@@ -145,8 +145,8 @@ def can_trash_download(quick, path):
 
 
 def trash_installed_download(quick, path, identity):
-    from PySide6.QtCore import QFile
     if can_trash_download(quick, path) and file_identity(path.stat()) == identity:
+        from PySide6.QtCore import QFile
         return QFile(str(path)).moveToTrash()
     return False
 

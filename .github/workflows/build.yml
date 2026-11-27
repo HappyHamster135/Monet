@@ -44,7 +44,7 @@ jobs:
       - name: Installer tests
         run: |
           # GTK 3, to check the installer's stylesheet the way Anaconda loads it.
-          sudo apt-get install -y -q gir1.2-gtk-3.0 python3-gi python3-nacl dbus-daemon dbus-bin
+          sudo apt-get install -y -q gir1.2-gtk-3.0 python3-gi python3-nacl python3-evdev python3-numpy python3-pil grub-common dbus-daemon dbus-bin
           python3 tools/test.py
 
   desktop:

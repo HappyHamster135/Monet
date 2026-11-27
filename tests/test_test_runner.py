@@ -19,6 +19,19 @@ spec.loader.exec_module(runner)
 
 
 class Coverage(unittest.TestCase):
+    def test_module_skip_is_reported_and_remains_required_on_desktop(self):
+        with tempfile.TemporaryDirectory() as folder:
+            report = Path(folder) / 'result.json'
+            with patch.object(unittest.defaultTestLoader, 'loadTestsFromName',
+                              side_effect=unittest.SkipTest('requires native Qt')), \
+                    redirect_stderr(io.StringIO()):
+                self.assertEqual(runner.worker('tests.qt_fixture', report), 0)
+            result = json.loads(report.read_text())
+            self.assertEqual(result['errors'], 0)
+            self.assertEqual(len(result['skipped']), 1)
+            self.assertEqual(result['skipped'][0]['reason'], 'requires native Qt')
+            self.assertFalse(runner.expected_skip(result['skipped'][0]))
+
     def test_only_documented_skips_are_allowed(self):
         self.assertTrue(runner.expected_skip({"test": "tests.test_notification_policy.NativePolicy.test_one",
                                               "reason": "only run on the isolated test bus"}))

@@ -11,6 +11,7 @@ import threading
 import time
 import unittest
 from unittest.mock import patch
+from tests.settings_support import visual_item
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -460,11 +461,8 @@ class DownloadUI(unittest.TestCase):
             job = dict(APP, state="running", action="install", progress=.4, error="")
             shop.jobsChanged.emit([job]); QTest.qWait(50)
             def find(name):
-                pending = [window.contentItem()]
-                while pending:
-                    item = pending.pop()
-                    if item.objectName() == name: return item
-                    pending.extend(item.childItems())
+                item = visual_item(window, name)
+                if item is not None: return item
                 self.fail(name)
             cancel = find("cancel-" + APP["id"])
             self.assertTrue(cancel.isVisible()); self.assertTrue(cancel.property("activeFocusOnTab"))

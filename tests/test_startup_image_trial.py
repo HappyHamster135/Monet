@@ -2,6 +2,7 @@
 import importlib.util
 from pathlib import Path
 import subprocess
+import shutil
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -31,7 +32,9 @@ class StartupTrial(unittest.TestCase):
         self.assertIn('if save_env monet_initrd_trial; then', out)
         with tempfile.NamedTemporaryFile(mode='w', suffix='.cfg') as f:
             f.write(out); f.flush()
-            subprocess.run(['grub2-script-check', f.name], check=True, capture_output=True)
+            checker = shutil.which('grub2-script-check') or shutil.which('grub-script-check')
+            self.assertIsNotNone(checker, 'GRUB syntax checker is required')
+            subprocess.run([checker, f.name], check=True, capture_output=True)
 
     def test_incomplete_ambiguous_and_executable_boot_options_are_rejected(self):
         for text in (ENTRY.replace('initrd ', '#initrd '), ENTRY + 'initrd /other\n',

@@ -3,6 +3,11 @@ from pathlib import Path
 import tempfile
 import unittest
 
+# These scenes are required in the desktop job; the CLI job has no Qt runtime.
+import importlib.util
+if importlib.util.find_spec("PySide6") is None:
+    raise unittest.SkipTest("requires the native Qt desktop runtime")
+
 from PySide6.QtCore import QObject, QPoint, QPointF, Qt, QUrl
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQuick import QQuickView, QQuickItem

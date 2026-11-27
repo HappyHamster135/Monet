@@ -150,7 +150,7 @@ class KeepAwake(unittest.TestCase):
             write.assert_not_called()
 
 
-@unittest.skipUnless(sys.platform == 'linux' and importlib.util.find_spec('gi'), 'requires Linux GLib D-Bus')
+@unittest.skipUnless(sys.platform == 'linux' and importlib.util.find_spec('gi') and importlib.util.find_spec('PySide6'), 'requires Linux GLib D-Bus and Qt')
 class NativeKeepAwake(unittest.TestCase):
     def test_native_owned_inhibitions_expiry_backend_restart_and_crash(self):
         from tools.test import private_session

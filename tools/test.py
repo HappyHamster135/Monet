@@ -86,7 +86,15 @@ def private_session():
 
 def worker(module, report):
     sys.path.insert(0, str(ROOT))
-    suite = unittest.defaultTestLoader.loadTestsFromName(module)
+    try:
+        suite = unittest.defaultTestLoader.loadTestsFromName(module)
+    except unittest.SkipTest as skipped:
+        # loadTestsFromName, unlike discover, propagates module-level skips.
+        # Record them so --require-desktop still rejects missing native coverage.
+        reason = str(skipped)
+        def unavailable():
+            raise unittest.SkipTest(reason)
+        suite = unittest.FunctionTestCase(unavailable, description=module)
     result = unittest.TextTestRunner(verbosity=2).run(suite)
     Path(report).write_text(json.dumps({"module": module, "tests": result.testsRun,
         "failures": len(result.failures), "errors": len(result.errors),
