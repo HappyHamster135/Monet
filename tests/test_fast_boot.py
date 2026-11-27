@@ -74,9 +74,10 @@ printf 'timeout=%s\\nstyle=%s\\ncounter=%s\\n' "$timeout" "$timeout_style" "$boo
             self.assertEqual(result['style'], 'menu')
 
     def test_grub_parser_accepts_the_real_profile(self):
-        if not shutil.which('grub2-script-check'):
+        checker = shutil.which('grub2-script-check') or shutil.which('grub-script-check')
+        if not checker:
             self.skipTest('GRUB parser unavailable')
-        result = subprocess.run(['grub2-script-check'], input=boot.PROFILE, text=True, capture_output=True)
+        result = subprocess.run([checker], input=boot.PROFILE, text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_existing_authentication_settings_survive_repeat_install(self):
