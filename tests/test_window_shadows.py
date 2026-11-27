@@ -29,7 +29,22 @@ class WindowShadows(unittest.TestCase):
             image.get("{http://www.w3.org/1999/xlink}href").partition(",")[2]))))[:, :, 3].astype(int)
 
     def test_generated_asset_matches_source(self):
-        self.assertEqual(self.source, self.generator.bare_svg())
+        saved = ET.fromstring(self.source)
+        generated = ET.fromstring(self.generator.bare_svg())
+        # PNG compression differs between Pillow/zlib versions. Compare every
+        # decoded pixel and the complete SVG geometry, not the encoded bytes.
+        href = "{http://www.w3.org/1999/xlink}href"
+        saved_images = list(saved.iter(NS + "image"))
+        generated_images = list(generated.iter(NS + "image"))
+        self.assertEqual(len(saved_images), len(generated_images))
+        for actual, expected in zip(saved_images, generated_images):
+            def pixels(node):
+                return np.asarray(Image.open(io.BytesIO(base64.b64decode(
+                    node.get(href).partition(",")[2]))))
+            np.testing.assert_array_equal(pixels(actual), pixels(expected))
+            actual.set(href, "decoded-image")
+            expected.set(href, "decoded-image")
+        self.assertEqual(ET.tostring(saved), ET.tostring(generated))
 
     def test_straight_edges_have_no_repeating_falloff(self):
         for prefix in ("decoration", "decoration-inactive"):
