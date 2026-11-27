@@ -10,7 +10,13 @@ RUN dnf -y install python3 python3-pyside6 python3-gobject python3-dbus python3-
     util-linux procps-ng ntfsprogs dosfstools wimlib-utils cryptsetup openssl \
     diffutils findutils which git dolphin baloo-widgets ark 7zip \
     hunspell-en-US hunspell-en-GB hunspell-en-CA hunspell-en-AU kf6-sonnet-hunspell \
+    gstreamer1-plugins-good gstreamer1-plugins-bad-free \
     xorg-x11-server-Xvfb mesa-dri-drivers libglvnd-glx libXtst fontconfig \
+ && dnf clean all
+# Match the shipped desktop's encoders, including H.264 export. Fedora's
+# codec-limited libraries cannot exercise the actual recording/media tools.
+RUN dnf -y install "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm" \
+ && dnf -y install ffmpeg --allowerasing \
  && dnf clean all
 COPY tests/install-electron-runtime.py /tmp/install-electron-runtime.py
 RUN python3 /tmp/install-electron-runtime.py /opt/monet-test-electron \
@@ -24,6 +30,18 @@ ENV MONET_TEST_ELECTRON_DBUS=/opt/monet-electron-client/node_modules/dbus-next
 # Only the disposable container opts in to deliberately filling its tmpfs.
 ENV MONET_TEST_ARCHIVE_TMPFS=/dev/shm
 WORKDIR /src
+
+FROM docker.io/library/rust:1 AS measurements
+WORKDIR /src
+COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
+COPY crates ./crates
+RUN rustup toolchain install \
+ && cargo build --locked --release -p monet --bin monet-measure
+
+FROM desktop-runtime AS wallet
+COPY image/wallet /src/wallet
+COPY image/download-source-rpm.py /src/wallet/download-source-rpm.py
+RUN sh /src/wallet/build.sh /out
 
 FROM desktop-runtime AS archive-recovery
 COPY image/archive-recovery /src/archive-recovery
@@ -75,6 +93,9 @@ RUN cmake -S /src/quick-options-test -B /tmp/quick-options-test -DCMAKE_BUILD_TY
  && cp /tmp/quick-options-test/quick-options-test /out/quick-options-test
 
 FROM desktop-runtime
+COPY --from=measurements /src/target/release/monet-measure /opt/monet-test-measure/monet-measure
+ENV MONET_TEST_MEASURE=/opt/monet-test-measure/monet-measure
+COPY --from=wallet /out/ /usr/
 COPY tools/agenda-requirements.txt /tmp/agenda-requirements.txt
 RUN dnf -y install python3-pip && dnf clean all \
  && python3 -m pip install --no-deps --require-hashes --only-binary=:all: --prefix=/usr/local -r /tmp/agenda-requirements.txt

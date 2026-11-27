@@ -43,7 +43,8 @@ class Measurements(unittest.TestCase):
             self.assertEqual(file.stat().st_mode & 0o077, 0)
 
     def test_packaged_calculator(self):
-        helper = next((path for path in (ROOT/'target/release/monet-measure',
+        helper = next((path for path in (Path(os.environ.get('MONET_TEST_MEASURE', '/nonexistent')),
+                                         ROOT/'target/release/monet-measure',
                                          ROOT/'target/debug/monet-measure', measure.HELPER)
                        if path.is_file()), None)
         if helper is None:
