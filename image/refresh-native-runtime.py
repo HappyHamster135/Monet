@@ -13,7 +13,10 @@ BUNDLES = ("notifications", "dock", "editor-recovery", "task-manager", "login", 
 def runtime_packages(root):
     # Reuse each bundle's actual ELF dependency closure instead of maintaining
     # an incomplete hand-written list of Qt, KDE and supporting libraries.
-    names = {"polkit-kde", "polkit-qt6-1", "kf6-kwallet", "kf6-kwallet-libs"}
+    # libzstd is in the desktop closure, but its command-line compressor is
+    # not. Keep them together: zstd requires the exact library version when
+    # dracut compresses the final initramfs.
+    names = {"polkit-kde", "polkit-qt6-1", "kf6-kwallet", "kf6-kwallet-libs", "zstd"}
     for name in BUNDLES:
         manifest = runpy.run_path(str(root / name / "bundle.py"))["capture"]()
         packages = manifest["package_names"]
@@ -29,6 +32,9 @@ def runtime_packages(root):
 def refresh(root):
     names = runtime_packages(root)
     subprocess.run(["dnf5", "-y", "upgrade", *names], check=True)
+    # Exercise compression now, before the expensive native build stages.
+    subprocess.run(["zstd", "--quiet", "--stdout"], input=b"Monet initramfs compressor check\n",
+                   stdout=subprocess.DEVNULL, check=True)
     # Native stages capture this updated runtime and still reject any later
     # dependency drift when development headers are installed.
 

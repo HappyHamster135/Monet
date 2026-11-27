@@ -3,7 +3,7 @@ import importlib.util
 from pathlib import Path
 import subprocess
 import unittest
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("native_runtime_refresh", ROOT / "image/refresh-native-runtime.py")
@@ -20,9 +20,13 @@ class NativeRuntimeRefresh(unittest.TestCase):
                 patch.object(runtime.subprocess, "run") as run:
             runtime.refresh(ROOT / "image")
         self.assertEqual(capture.call_count, len(runtime.BUNDLES))
-        expected = sorted({"shared.x86_64", "polkit-kde", "polkit-qt6-1", "kf6-kwallet", "kf6-kwallet-libs",
+        expected = sorted({"shared.x86_64", "polkit-kde", "polkit-qt6-1", "kf6-kwallet", "kf6-kwallet-libs", "zstd",
                            *(name + ".x86_64" for name in runtime.BUNDLES)})
-        run.assert_called_once_with(["dnf5", "-y", "upgrade", *expected], check=True)
+        self.assertEqual(run.call_args_list, [
+            call(["dnf5", "-y", "upgrade", *expected], check=True),
+            call(["zstd", "--quiet", "--stdout"], input=b"Monet initramfs compressor check\n",
+                 stdout=subprocess.DEVNULL, check=True),
+        ])
 
     def test_missing_or_invalid_dependency_capture_never_runs_a_transaction(self):
         for packages in ([], "all", ["--allowerasing"], ["package; command"], [None]):
@@ -36,5 +40,11 @@ class NativeRuntimeRefresh(unittest.TestCase):
     def test_failed_upgrade_stops_the_build(self):
         with patch.object(runtime, "runtime_packages", return_value=["libplasma.x86_64"]), \
                 patch.object(runtime.subprocess, "run", side_effect=subprocess.CalledProcessError(1, "dnf5")):
+            with self.assertRaises(subprocess.CalledProcessError):
+                runtime.refresh(ROOT / "image")
+
+    def test_incompatible_compressor_stops_before_native_builds(self):
+        with patch.object(runtime, "runtime_packages", return_value=["libzstd.x86_64", "zstd"]), \
+                patch.object(runtime.subprocess, "run", side_effect=[None, subprocess.CalledProcessError(1, "zstd")]):
             with self.assertRaises(subprocess.CalledProcessError):
                 runtime.refresh(ROOT / "image")
