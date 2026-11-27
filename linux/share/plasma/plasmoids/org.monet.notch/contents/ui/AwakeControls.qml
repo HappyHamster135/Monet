@@ -23,34 +23,45 @@ TimeScrollView {
     }
     ColumnLayout {
         width: page.availableWidth
-        spacing: Kirigami.Units.smallSpacing
+        spacing: 8
         RowLayout {
-            C.ToolButton {
-                id: back
+            IslandButton {
+                id: back; plain: true
                 icon.name: "go-previous"; Accessible.name: i18n("Back to Time")
                 onClicked: page.backRequested()
             }
-            Kirigami.Heading { level: 3; text: i18n("Keep awake") }
+            Text { text: i18n("Keep awake"); color: "white"; font.pixelSize: 13; font.weight: Font.DemiBold }
         }
-        C.Label {
-            Layout.fillWidth: true; wrapMode: Text.Wrap
-            text: page.awake.statusText
+        Rectangle {
+            Layout.fillWidth: true; implicitHeight: 72; radius: 14; color: "#19191c"
+            RowLayout {
+                anchors.fill: parent; anchors.margins: 14; spacing: 12
+                IslandGlyph { source: "cup"; color: page.awake.active ? "#ffad53" : "#777781"; Layout.preferredWidth: 32; Layout.preferredHeight: 32 }
+                ColumnLayout {
+                    Layout.fillWidth: true; spacing: 4
+                    Text { text: page.awake.active ? i18n("Keeping you awake") : i18n("Ready when you are"); font.pixelSize: 14; color: "#ededf2"; font.weight: Font.Medium }
+                    Text { Layout.fillWidth: true; wrapMode: Text.Wrap; maximumLineCount: 2; elide: Text.ElideRight; text: page.awake.statusText; font.pixelSize: 11; color: "#aaaab2" }
+                }
+            }
         }
+        Text { text: i18n("KEEP AWAKE FOR"); font.pixelSize: 10; font.letterSpacing: 1; color: "#888893" }
         Flow {
             Layout.fillWidth: true
-            spacing: Kirigami.Units.smallSpacing
+            spacing: 8
             Repeater {
                 model: [{seconds: 1800, label: i18n("30 min")}, {seconds: 3600, label: i18n("1 hour")},
-                        {seconds: -1, label: i18n("Until off")}]
-                C.Button {
+                        {seconds: 7200, label: i18n("2 hours")}, {seconds: -1, label: i18n("Until off")}]
+                IslandButton {
+                    caption: true;
                     required property var modelData
                     text: modelData.label
-                    checked: page.awake.active && page.awake.state.duration === modelData.seconds
+                    checked: page.awake.active && page.awake.sessionState.duration === modelData.seconds
                     enabled: !page.awake.busy
                     onClicked: page.awake.setDuration(modelData.seconds)
                 }
             }
-            C.Button {
+            IslandButton {
+                    caption: true;
                 id: chooseTime
                 text: i18n("End at…"); checkable: true
                 onClicked: if (checked) {
@@ -63,20 +74,21 @@ TimeScrollView {
         }
         RowLayout {
             visible: chooseTime.checked
-            C.SpinBox {
+            IslandStepper {
                 id: hours
                 from: 0; to: 23; editable: true; wrap: true
                 Accessible.name: i18n("Hour (24-hour clock)")
             }
-            C.Label { text: ":" }
-            C.SpinBox {
+            Text { text: ":"; color: "#aaaaaf" }
+            IslandStepper {
                 id: minutes
                 from: 0; to: 59; editable: true; wrap: true
                 Accessible.name: i18n("Minutes")
                 textFromValue: (value, locale) => Number(value).toLocaleString(locale, "f", 0).padStart(2, locale.zeroDigit)
             }
         }
-        C.Button {
+        IslandButton {
+                    caption: true;
             visible: chooseTime.checked
             // Re-evaluate while the picker is open, including across midnight.
             property double now: Date.now()
@@ -103,14 +115,15 @@ TimeScrollView {
                 now = current
             }
         }
-        C.Button {
-            visible: !!page.awake.state.duration
+        IslandButton {
+                    caption: true;
+            visible: !!page.awake.sessionState.duration
             text: i18n("Stop manual timer")
             enabled: !page.awake.busy
             onClicked: page.awake.setDuration(0)
         }
         C.Label {
-            Layout.fillWidth: true; wrapMode: Text.Wrap
+            Layout.fillWidth: true; wrapMode: Text.Wrap; font.pixelSize: 11; color: "#888893"
             text: i18n("A manual timer keeps the screen on and delays automatic locking and sleep until it ends.")
         }
     }

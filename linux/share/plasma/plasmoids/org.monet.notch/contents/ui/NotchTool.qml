@@ -12,8 +12,11 @@ Item {
     signal backRequested()
     property string token: ""
     property bool failed: false
-    readonly property bool ownsSurface: active && !!token && !failed
+    readonly property bool ownsSurface: releasing || (active && !!token && !failed)
     property DBus.DBusPendingReply pending
+    property DBus.DBusPendingReply releasePending
+    property bool releasing: false
+    property var afterRelease: null
     function call(data) {
         return DBus.SessionBus.asyncCall({service:"org.monet.Utilities", path:"/NotchTools", iface:"org.monet.Utilities",
             member:"Tool", signature:"(s)", arguments:[JSON.stringify(data)]})
@@ -22,8 +25,28 @@ Item {
         if (token) call({action:"close", id:token})
         token = ""; pending = null
     }
+    function releaseForNavigation(callback) {
+        afterRelease = callback
+        if (releasing) return
+        releasing = true
+        pending = null
+        if (!token) { releaseFinished(); return }
+        const previous = token
+        token = ""
+        releasePending = call({action:"close", id:previous})
+        if (releasePending.isFinished) releaseFinished()
+    }
+    function releaseFinished() {
+        if (releasePending && !releasePending.isFinished) return
+        const callback = afterRelease
+        releasePending = null
+        afterRelease = null
+        releasing = false
+        if (callback) callback()
+    }
+    Connections { target: page.releasePending; function onFinished() { page.releaseFinished() } }
     function reposition() {
-        if (!active || width < 40 || height < 24) return
+        if (!active || releasing || width < 40 || height < 24) return
         const at = mapToGlobal(0, 0)
         if (!token) token = ownerId + "." + Date.now() + "." + Math.floor(Math.random()*100000)
         failed = false
@@ -53,6 +76,7 @@ Item {
     onScreenNameChanged: layout.restart()
     onWidthChanged: layout.restart()
     onHeightChanged: layout.restart()
+    onReleasingChanged: if (!releasing && active) layout.restart()
     onActiveChanged: if (active) layout.restart(); else closeSurface()
     C.Button {
         visible: page.failed; anchors.centerIn: parent; text: i18n("Could not open tool. Retry")

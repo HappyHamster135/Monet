@@ -393,7 +393,7 @@ def load(name):
     return module
 
 
-def serve(shaders, first, bus=None):
+def serve(shaders, first, bus=None, keys=None):
     """Looks after Steam's shaders, and listens for KWin's word on the session bus; None when one
     is listening already. Returns what must stay alive while the event loop runs."""
     from PySide6.QtCore import ClassInfo, QObject, QTimer, Slot
@@ -411,11 +411,29 @@ def serve(shaders, first, bus=None):
     looks.timeout.connect(lambda: looks.start(int(turn(shaders) * 1000)))
     steps.timeout.connect(lambda: schedule(first.step(time.monotonic())))
 
+    # The top row follows only the focused process, not the full-screen games
+    # on other displays considered by resource priority. Renew while a game
+    # has focus; the system helper's lease expires if this process disappears.
+    key_timer = QTimer()
+    key_timer.setInterval(1000)
+    def key_step():
+        if keys is not None:
+            keys.tick()
+            if not keys.active:
+                key_timer.stop()
+    key_timer.timeout.connect(key_step)
+
     @ClassInfo(**{"D-Bus Interface": NAME_ON_BUS})
     class Service(QObject):
         @Slot(str)
         def Front(self, text):
             schedule(first.report(text, time.monotonic()))
+            if keys is not None:
+                keys.report(text)
+                if keys.active:
+                    key_timer.start()
+                else:
+                    key_timer.stop()
 
     service = Service()
     if not bus.registerService(NAME_ON_BUS):
@@ -424,14 +442,16 @@ def serve(shaders, first, bus=None):
         bus.unregisterService(NAME_ON_BUS)
         return None
     looks.start(0)
-    return {"looks": looks, "steps": steps, "service": service}
+    return {"looks": looks, "steps": steps, "keys": key_timer, "service": service}
 
 
 def main():
     from PySide6.QtCore import QCoreApplication, QSocketNotifier
     app = QCoreApplication(sys.argv[:1])
     shaders, first = Shaders(), GamesFirst(load("monet-rest"))
-    alive = serve(shaders, first)
+    game_keys = load("monet-game-keys")
+    keys = game_keys.Focus(first.rest.game, lambda pid: process(pid)) if game_keys.supported() else None
+    alive = serve(shaders, first, keys=keys)
     if alive is None:
         return 0  # Already running in this sign-in.
     first.recover()
@@ -447,6 +467,8 @@ def main():
     try:
         return app.exec()
     finally:
+        if keys is not None:
+            keys.close()
         first.restore()
 
 

@@ -5,6 +5,8 @@ import importlib.util
 import io
 import json
 import os
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import unittest
@@ -20,6 +22,73 @@ def load(name, filename):
 
 
 class NativePreview(unittest.TestCase):
+    def test_window_shadow_preview_does_not_change_window_preferences(self):
+        p = load('native_preview_window_frames', 'install-desktop-preview.py')
+        with tempfile.TemporaryDirectory() as tmp:
+            p.DATA = Path(tmp) / 'data'
+            files = p.window_frames_plan()
+            self.assertEqual({f.name for f in files}, {'decoration.svg', 'MonetBarerc', 'metadata.desktop'})
+            self.assertTrue(all(f.parent == p.DATA / 'aurorae/themes/MonetBare' for f in files))
+            for target, (data, mode) in files.items():
+                self.assertEqual(mode, 0o644)
+                self.assertEqual(data, (ROOT / 'linux/share/aurorae/themes/MonetBare' / target.name).read_bytes())
+
+    def test_editor_preview_delivers_shared_editor_and_preserves_other_shell_files(self):
+        p = load('native_preview_editor', 'install-desktop-preview.py')
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); p.DATA=root/'data'; p.PRIVATE=root/'private'; p.HELPERS=root/'helpers'
+            system=root/'system'
+            shell=system/'plasma/shells/org.kde.plasma.desktop'
+            (shell/'contents/configuration').mkdir(parents=True)
+            (shell/'metadata.json').write_text('{}')
+            (shell/'contents/configuration/PanelConfiguration.qml').write_text('native fallback')
+            (shell/'contents/configuration/Unrelated.qml').write_text('preserved')
+            (system/'monet/settings-app').mkdir(parents=True)
+            (system/'monet/settings-app/MonetSettings.qml').write_text('installed settings')
+            (system/'applications').mkdir()
+            (system/'applications/monet-settings.desktop').write_text('[Desktop Entry]\nExec=/usr/libexec/monet-settings\n')
+            for name in ('monet', 'monet-matte', 'monet-solid'):
+                theme=system/'plasma/desktoptheme'/name
+                (theme/'widgets').mkdir(parents=True)
+                (theme/'metadata.json').write_text('{}')
+                (theme/'widgets/panel-background.svg').write_text('installed panel')
+            # A locally adjusted theme must survive an editor-only update.
+            personal=p.DATA/'plasma/desktoptheme/monet'
+            (personal/'widgets').mkdir(parents=True)
+            (personal/'metadata.json').write_text('{"personal":true}')
+            (personal/'widgets/panel-background.svg').write_text('personal panel')
+            files=p.editor_plan(system)
+            config=p.DATA/'plasma/shells/org.kde.plasma.desktop/contents/configuration'
+            self.assertEqual(files[config/'Unrelated.qml'][0],b'preserved')
+            self.assertEqual(files[config/'KdePanelConfiguration.qml'][0],b'native fallback')
+            self.assertIn(p.PRIVATE/'editor/monet/panel/NotchEditor.qml',files)
+            self.assertIn(p.PRIVATE/'editor/monet/panel/ResizeGrip.qml',files)
+            self.assertIn(p.PRIVATE/'editor/monet/panel/EditorWindowPlacement.qml',files)
+            for name in ('EditorWindows.js','EditorHost.qml','EditorAppWindow.qml','PanelEditorWindow.qml','WidgetEditorWindow.qml','WindowControls.qml'):
+                self.assertIn(p.PRIVATE/'editor/monet/panel'/name,files)
+            self.assertIn(p.HELPERS/'layout-editor/monet-editor-window',files)
+            self.assertEqual(files[p.PRIVATE/'editor/monet/window-buttons'][0], system/'monet/window-buttons')
+            self.assertEqual(files[config.parent/'views/MonetDesktopEditMode.qml'][0],
+                (ROOT/'linux/share/monet/editmode/MonetDesktopEditMode.qml').read_bytes())
+            self.assertEqual(files[config.parent/'explorer/WidgetExplorer.qml'][0],
+                (ROOT/'linux/share/monet/explorer/WidgetExplorer.qml').read_bytes().replace(b'@DATADIR@', str(p.PRIVATE/'editor').encode()))
+            self.assertIn(b'widgetGalleryTitleDrag',files[config.parent/'explorer/MonetWidgetExplorer.qml'][0])
+            self.assertEqual(files[personal/'widgets/panel-background.svg'][0], b'personal panel')
+            for name in ('monet', 'monet-matte', 'monet-solid'):
+                theme=Path('plasma/desktoptheme')/name
+                self.assertEqual(files[p.DATA/theme/'widgets/margins-highlight.svg'][0],
+                    (ROOT/'linux/share'/theme/'widgets/margins-highlight.svg').read_bytes())
+            self.assertIn(p.DATA/'plasma/packages/org.kde.paneltoolbox/contents/ui/main.qml',files)
+            helper=files[p.HELPERS/'layout-editor/monet-quick'][0].decode()
+            self.assertIn(str(p.PRIVATE/'editor/monet/panel-notch.js'),helper)
+            for name in ('MonetSettings.qml', 'SettingsUpdates.qml', 'SettingsAbout.qml',
+                         'SettingsControls.qml', 'SettingsGames.qml', 'SettingsPower.qml'):
+                self.assertEqual(files[p.PRIVATE/'editor/monet/settings-app'/name][0],
+                                 (ROOT/'linux/share/monet/settings-app'/name).read_bytes())
+            self.assertNotIn('package = notch_package()',helper)
+            self.assertFalse(any(f.is_relative_to(system) for f in files))
+            self.assertFalse(any(f.suffix in {'.qmlc','.jsc'} for f in files))
+
     def setUp(self):
         self.runtime = load('native_preview_runtime_test', 'native-preview-runtime.py')
         self.plan = load('native_preview_plan_test', 'desktop-preview-native.py')
@@ -145,6 +214,61 @@ class NativePreview(unittest.TestCase):
             p.restore(receipt)
             self.assertEqual(executable.read_text(), 'old app')
             self.assertEqual(config.read_text(), 'later personal choice')
+
+    def test_source_update_removes_stale_adjacent_bytecode_and_restores_both(self):
+        p = load('native_preview_qml_cache', 'install-desktop-preview.py')
+        with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stdout(io.StringIO()):
+            root = Path(tmp); p.STATE = root / 'state'
+            source, cache = root / 'Scratchpad.qml', root / 'Scratchpad.qmlc'
+            source.write_bytes(b'old editor'); cache.write_bytes(b'compiled old editor')
+            # A copied package can contain stale bytecode even alongside new source.
+            p.apply({source: (b'new editor', 0o644), cache: (b'compiled old editor', 0o644)})
+            self.assertEqual(source.read_bytes(), b'new editor')
+            self.assertFalse(cache.exists())
+            receipt = next((p.STATE / 'monet/desktop-preview').glob('*/receipt.json'))
+            p.restore(receipt)
+            self.assertEqual(source.read_bytes(), b'old editor')
+            self.assertEqual(cache.read_bytes(), b'compiled old editor')
+
+    def test_notch_preview_uses_source_and_preserves_installed_shared_components(self):
+        p = load('native_preview_notch_plan', 'install-desktop-preview.py')
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); p.DATA = root / 'data'; p.PRIVATE = root / 'private'; p.HELPERS = root / 'helpers'
+            package = Path('plasma/plasmoids/org.monet.notch')
+            installed = root / 'system' / package
+            (installed / 'contents/ui').mkdir(parents=True)
+            (installed / 'metadata.json').write_text('{}')
+            (installed / 'contents/ui/Scratchpad.qmlc').write_bytes(b'old bytecode')
+            (installed / 'contents/ui/VolumeMixer.qml').write_text('shared mixer')
+            files = p.notch_plan(root / 'system')
+            self.assertFalse(any(path.suffix in {'.qmlc', '.jsc'} for path in files))
+            self.assertEqual(files[p.DATA / package / 'contents/ui/VolumeMixer.qml'][0], b'shared mixer')
+            self.assertIn(b'scratchpadTabs', files[p.DATA / package / 'contents/ui/Scratchpad.qml'][0])
+            self.assertIn(str(p.PRIVATE / 'notch/utilities/agent_history.py').encode(), files[p.DATA / package / 'contents/ui/AgentHistory.qml'][0])
+            self.assertIn(str(p.PRIVATE / 'notch/utilities/actions.py').encode(), files[p.DATA / package / 'contents/ui/ToolDirectory.qml'][0])
+            for name in ('actions.py', 'links.py'):
+                target = p.PRIVATE / 'notch/utilities' / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(files[target][0])
+            catalog = json.loads(subprocess.check_output([sys.executable, str(p.PRIVATE / 'notch/utilities/actions.py')], text=True))
+            inline = {row['key'] for row in catalog['rows'] if not row['immediate']}
+            self.assertTrue({'emoji', 'record', 'plain', 'clean', 'snippets'} <= inline)
+            self.assertIn(p.PRIVATE / 'notch/utilities/agent_pricing.py', files)
+            self.assertIn(p.DATA / 'applications/monet-notch-settings.desktop', files)
+            self.assertIn(p.PRIVATE / 'notch/utilities/favorites_wheel.py', files)
+            radial = files[p.DATA / 'applications/org.monet.NotchRadial.desktop'][0]
+            self.assertIn((str(p.HELPERS / 'monet-notch-utilities') + ' radial').encode(), radial)
+            self.assertIn(b'X-KDE-Shortcuts=Ctrl+Shift+Space', radial)
+            self.assertIn(str(p.HELPERS / 'monet-notch-utilities').encode(), files[p.DATA / 'applications/monet-notch-settings.desktop'][0])
+            self.assertIn(str(root / 'system/monet/utilities').encode(), files[p.PRIVATE / 'notch/utilities/window.py'][0])
+            self.assertIn(str(p.HELPERS / 'monet-notch-layout').encode(), files[p.PRIVATE / 'notch/utilities/notch_settings.py'][0])
+            self.assertIn(str(p.PRIVATE / 'notch/panel-notch.js').encode(), files[p.HELPERS / 'monet-notch-layout'][0])
+            self.assertIn(p.PRIVATE / 'notch/panel/NotchEditor.qml', files)
+            self.assertTrue({'text-tools', 'color-tools', 'display', 'sound', 'screenshot', 'color', 'ocr', 'watch'} <= inline)
+            self.assertFalse({'files','homebrew','store'} & {row['key'] for row in catalog['rows']})
+            for module in ('tool_pages.py','compact_capture.py','compact_system.py','inline_dialogs.py','notch_settings_style.py'):
+                self.assertIn(p.PRIVATE / 'notch/utilities' / module,files)
+            self.assertFalse(any(path.is_relative_to(root / 'system') for path in files))
 
     def test_service_menu_mode_only_update_is_installed_and_reversible(self):
         p = load('native_preview_mode_test', 'install-desktop-preview.py')

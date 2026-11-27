@@ -1389,18 +1389,43 @@ def desktop_action(key):
     return {"ok": False}
 
 
+def deployment_identity(deployment):
+    """Human-facing identity of one saved system, independent of list position."""
+    if not isinstance(deployment, dict):
+        return {}
+    version = deployment.get("version") or ""
+    reference = deployment.get("container-image-reference") or ""
+    match = re.fullmatch(r"(?:ostree-image-signed:docker://|ostree-unverified-image:docker://|"
+                         r"ostree-unverified-registry:)ghcr\.io/happyhamster135/monet(?:-amd)?:([^:@]+)",
+                         reference) if isinstance(reference, str) else None
+    beta = BETA_TAG.fullmatch(match[1]) if match else None
+    checksum = deployment.get("checksum") or ""
+    return {"version": beta[1] if beta else version, "beta": int(beta[2]) if beta else 0,
+            "build": checksum[:8] if isinstance(checksum, str) and re.fullmatch(r"[0-9a-f]{64}", checksum) else "",
+            "localBuild": isinstance(reference, str) and bool(re.match(r"ostree-(?:unverified-image|image-signed):oci:", reference))}
+
+
 def previous_monet(status):
     """From `rpm-ostree status --json`: the Monet to go back to ({version, date}, or {} if
     there's none), and whether it's already chosen for the next restart ("pending")."""
-    deployments = status.get("deployments", [])
+    deployments = status.get("deployments", []) if isinstance(status, dict) else []
+    if not isinstance(deployments, list):
+        return {}
+    deployments = [d for d in deployments if isinstance(d, dict)]
     earlier = next((d for d in deployments if not d.get("booted") and not d.get("staged")), None)
     if not earlier:
         return {}
     stamp = earlier.get("timestamp")
-    date = time.strftime("%Y-%m-%d", time.localtime(stamp)) if isinstance(stamp, (int, float)) else ""
+    try:
+        date = time.strftime("%Y-%m-%d", time.localtime(stamp)) if isinstance(stamp, (int, float)) else ""
+    except (OverflowError, ValueError, OSError):
+        date = ""
     first = deployments[0] if deployments else {}
-    return {"version": earlier.get("version") or "", "date": date,
-            "pending": first is earlier}
+    identity = deployment_identity(earlier)
+    current = deployment_identity(next((d for d in deployments if d.get("booted")), None))
+    return {**identity, "date": date, "pending": first is earlier,
+            "sameVersion": bool(identity["version"]) and identity["version"] == current.get("version")
+                and identity["beta"] == current.get("beta")}
 
 
 # An update that didn't start on this PC, so Monet went back by itself (monet-boot notes it),
@@ -1532,30 +1557,33 @@ def running_beta(deployments):
     if not isinstance(deployments, list):
         return 0
     booted = [entry for entry in deployments if isinstance(entry, dict) and entry.get("booted") is True]
-    reference = booted[0].get("container-image-reference") if len(booted) == 1 else None
-    if not isinstance(reference, str) or "@" in reference:
-        return 0
-    match = BETA_TAG.fullmatch(reference.rpartition(":")[2])
-    return int(match[2]) if match and "/happyhamster135/monet" in reference else 0
+    return deployment_identity(booted[0]).get("beta", 0) if len(booted) == 1 else 0
 
 
-def installed_beta():
+def installed_build():
     try:
         status = json.loads(run("rpm-ostree", "status", "--json", timeout=15) or "{}")
     except ValueError:
         status = None
     if isinstance(status, dict) and isinstance(status.get("deployments"), list):
-        return running_beta(status["deployments"])
+        booted = [d for d in status["deployments"] if isinstance(d, dict) and d.get("booted") is True]
+        return deployment_identity(booted[0]) if len(booted) == 1 else {}
     # A fresh encrypted install keeps the OSTree repository private (as update_waiting).
     service = "org.projectatomic.rpmostree1"
     deployments = busjson("--system", "--allow-interactive-authorization=no", "get-property",
                           service, "/org/projectatomic/rpmostree1/Sysroot",
                           service + ".Sysroot", "Deployments")
     try:
-        return running_beta([{name: entry[name]["data"] for name in ("booted", "container-image-reference")
-                              if name in entry} for entry in deployments or []])
+        booted = [{name: entry[name]["data"] for name in ("booted", "container-image-reference", "version", "checksum")
+                   if name in entry} for entry in deployments or []]
+        booted = [d for d in booted if d.get("booted") is True]
+        return deployment_identity(booted[0]) if len(booted) == 1 else {}
     except (KeyError, TypeError):
-        return 0
+        return {}
+
+
+def installed_beta():
+    return installed_build().get("beta", 0)
 
 
 def install_updates():
@@ -4899,9 +4927,20 @@ def game_libraries():
     return found
 
 
+def game_function_keys(command="status"):
+    # Beside the helper in both an image and an account-local desktop preview.
+    helper = Path(__file__).with_name("monet-game-keys")
+    try:
+        result = json.loads(run(str(helper), command) or "{}")
+        return result if isinstance(result, dict) else {}
+    except ValueError:
+        return {}
+
+
 def gaming_state():
     libraries = game_libraries()
     return {"controllers": controllers(),
+            "functionKeys": game_function_keys(),
             "overlay": OVERLAY.is_file() if shutil.which("mangohud") else None,
             "replay": replay_on() if shutil.which("flatpak") else None,
             "pair": bool(shutil.which("bluedevil-wizard")),
@@ -8496,6 +8535,43 @@ def panel_configure(ident):
     return {"ok": bool(reply and str(reply[0]).strip() == "true")}
 
 
+def panel_detail(ident, action):
+    """Small native panel operations used by the app-based layout editor."""
+    if not re.fullmatch(r"[0-9]{1,10}", str(ident)) or not (action in ("spacer", "separator") or re.fullmatch(r"screen-[0-9]{1,2}", action)):
+        return {"ok": False}
+    if action.startswith("screen-"):
+        operation = "const screen = %d; if (screen >= screenCount) throw new Error('screen'); bar.screen = screen;" % int(action[7:])
+    else:
+        plugin = "org.kde.plasma.panelspacer" if action == "spacer" else "org.kde.plasma.marginsseparator"
+        operation = "if (!knownWidgetTypes.includes(%s)) throw new Error('widget'); if (!bar.addWidget(%s)) throw new Error('add');" % (json.dumps(plugin), json.dumps(plugin))
+    script = "(function() { try { const bar = panelById(%d); if (!bar) throw new Error('panel'); %s print(JSON.stringify({ok:true})); } catch (_) { print(JSON.stringify({ok:false})); } })();" % (int(ident), operation)
+    result = busjson("--user", "call", "org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell", "evaluateScript", "s", script)
+    try:
+        return {"ok": json.loads(result[0]).get("ok") is True}
+    except (IndexError, TypeError, ValueError):
+        return {"ok": False}
+
+
+def panel_taskbar_configure(ident):
+    """Open the taskbar on the edited notch's screen, without moving either panel."""
+    if not re.fullmatch(r"[0-9]{1,10}", str(ident)):
+        return {"ok": False}
+    script = """(function() {
+        const source = panelById(PANEL_ID);
+        const bar = source && panels().find(p => p.screen === source.screen
+            && !p.widgets("org.monet.notch").length && p.widgets("org.kde.plasma.icontasks").length);
+        if (bar) bar.showConfigurationInterface();
+        print(JSON.stringify({ok:!!bar, id:bar ? bar.id : 0}));
+    })();""".replace("PANEL_ID", str(int(ident)))
+    reply = busjson("--user", "call", "org.kde.plasmashell", "/PlasmaShell",
+                    "org.kde.PlasmaShell", "evaluateScript", "s", script)
+    try:
+        value = json.loads(reply[0])
+        return value if isinstance(value, dict) and type(value.get("ok")) is bool else {"ok": False}
+    except (IndexError, ValueError, TypeError):
+        return {"ok": False}
+
+
 def panel_add(ident, kind):
     """Create a panel on the edited bar's display, then report its actual edge."""
     if not re.fullmatch(r"[0-9]{1,10}", str(ident)) or kind not in ("empty", "home"):
@@ -8562,8 +8638,9 @@ def notch_package():
 def panel_notch(ident, choice=None):
     modes = {None, "compact", "wide", "off", "add", "hello"}
     if not re.fullmatch(r"[0-9]{1,10}", str(ident)) or (choice not in modes and
-            not re.fullmatch(r"(levels|companion|alerts|previews|gestures|awake|countdown|hoverControls|combined)-(on|off)|companion-[a-z]{1,10}-[a-z]{1,12}|"
-                             r"tab-(music|activity|time|calendar|notes|camera|clipboard|tools|agents|notifications)-(show|hide|earlier|later)", choice)):
+            not re.fullmatch(r"(levels|companion|alerts|previews|gestures|awake|countdown|hoverControls|autoHide|combined|openActivity)-(on|off)|companion-[a-z]{1,10}-[a-z]{1,12}|"
+                             r"tab-(music|activity|time|calendar|notes|camera|clipboard|tools|agents|notifications)-(show|hide|earlier|later)|"
+                             r"(expandedWidth|toolHeight)-[0-9]{3}|size-[0-9]{3}-[0-9]{3}|rail-(left|right)-[a-z,]{1,64}|reopen-(sections|last)|tabs-[a-z,]{1,128}", choice)):
         return {"ok": False}
     try:
         script = (Path(DATADIR) / "monet/panel-notch.js").read_text(encoding="utf-8")
@@ -9236,6 +9313,7 @@ def about():
     status = run(f"{BINDIR}/monet") or ""
     windows = re.search(r"Windows\s+(.+)", status)
     version = (run(f"{BINDIR}/monet", "version") or "").split()
+    build = installed_build()
     return {
         "monet": version[-1] if version else "",
         "processor": re.sub(r"\s+", " ", first("/proc/cpuinfo", "model name")),
@@ -9247,7 +9325,9 @@ def about():
         "setup": read_text(WINDOWS_SETUP_STATUS),
         "autoUpdates": not Path("/var/lib/monet/auto-updates-off").exists(),
         # A beta's number (Settings shows "Monet 0.9.8-7 beta 1"); 0 for a release.
-        "beta": installed_beta(),
+        "beta": build.get("beta", 0),
+        "localBuild": build.get("localBuild", False),
+        "build": build.get("build", ""),
     }
 
 
@@ -10866,12 +10946,21 @@ def battery_state(upower, plugged=None):
     {battery: percent, charging, plugged (charging, full or held at a charge limit), minutes
     (left on battery, or until full)}, or the first battery the kernel lists, or no battery."""
     props = {k: v.get("data") for k, v in (upower or {}).items() if isinstance(v, dict)}
-    if props.get("IsPresent") and props.get("Type") == 2 and isinstance(props.get("Percentage"), (int, float)):
+    def number(value, minimum=0):
+        return type(value) in (int, float) and math.isfinite(value) and value >= minimum
+    if (props.get("IsPresent") and props.get("Type") == 2
+            and number(props.get("Percentage")) and props["Percentage"] <= 100):
         state = props.get("State")
         seconds = props.get("TimeToEmpty") if state == UPOWER_DISCHARGING else props.get("TimeToFull") if state == UPOWER_CHARGING else 0
+        connected = plugged if plugged is not None else state != UPOWER_DISCHARGING
+        # During a charger transition UPower may still carry the old estimate.
+        time_valid = number(seconds, 1) and not (connected and state == UPOWER_DISCHARGING)
+        watts = props.get("EnergyRate")
         return {"battery": round(props["Percentage"]), "charging": state == UPOWER_CHARGING,
-                "plugged": plugged if plugged is not None else state != UPOWER_DISCHARGING,
-                "minutes": round(seconds / 60) if seconds else None}
+                "plugged": connected, "minutes": max(1, round(seconds / 60)) if time_valid else None,
+                "watts": round(watts, 1) if number(watts, .01) and not connected and state == UPOWER_DISCHARGING else None,
+                "energyWh": round(props["Energy"], 1) if number(props.get("Energy")) else None,
+                "fullWh": round(props["EnergyFull"], 1) if number(props.get("EnergyFull"), .01) else None}
     for bat in sorted(Path("/sys/class/power_supply").glob("BAT*")):
         try:
             level, text = int((bat / "capacity").read_text()), (bat / "status").read_text().strip()
@@ -10880,6 +10969,36 @@ def battery_state(upower, plugged=None):
         return {"battery": level, "charging": text == "Charging",
                 "plugged": plugged if plugged is not None else text != "Discharging", "minutes": None}
     return {"battery": None, "charging": False, "plugged": True, "minutes": None}
+
+
+def battery_health(supplies=Path("/sys/class/power_supply")):
+    """Current usable capacity against design, across physical system batteries.
+
+    The display device deliberately omits health. Read cached kernel attributes
+    for this detail; do not wake hardware or infer health from today's charge.
+    """
+    full = design = 0.0
+    for bat in supplies.iterdir() if supplies.is_dir() else ():
+        try:
+            if (bat / "type").read_text().strip() != "Battery":
+                continue
+            if (bat / "scope").exists() and (bat / "scope").read_text().strip() == "Device":
+                continue
+            if (bat / "present").exists() and (bat / "present").read_text().strip() == "0":
+                continue
+            if (bat / "energy_full").exists():
+                now = float((bat / "energy_full").read_text()) / 1e6
+                original = float((bat / "energy_full_design").read_text()) / 1e6
+            else:
+                voltage = float((bat / "voltage_min_design").read_text()) / 1e6
+                now = float((bat / "charge_full").read_text()) * voltage / 1e6
+                original = float((bat / "charge_full_design").read_text()) * voltage / 1e6
+            if not all(math.isfinite(n) and n > 0 for n in (now, original)):
+                return None
+            full += now; design += original
+        except (OSError, ValueError):
+            return None  # An incomplete multi-battery sum would misstate health.
+    return round(min(100, full / design * 100), 1) if design else None
 
 
 def status(scope="all"):
@@ -10903,6 +11022,8 @@ def status(scope="all"):
         upower = busjson("--system", "call", "org.freedesktop.UPower", "/org/freedesktop/UPower/devices/DisplayDevice",
                         "org.freedesktop.DBus.Properties", "GetAll", "s", "org.freedesktop.UPower.Device")
         result.update(battery_state(upower[0] if upower else None, plugged=mains_state()))
+        if scope == "power":
+            result["batteryHealth"] = battery_health()
     if scope in ("all", "light"):
         result["light"] = light_state()
     return result
@@ -11437,6 +11558,14 @@ def main(argv):
         result = panel_configure(args[0])
         emit(result)
         return 0 if result["ok"] else 1
+    elif cmd == "panel-detail" and len(args) == 2:
+        result = panel_detail(*args)
+        emit(result)
+        return 0 if result["ok"] else 1
+    elif cmd == "panel-taskbar-configure" and len(args) == 1:
+        result = panel_taskbar_configure(args[0])
+        emit(result)
+        return 0 if result["ok"] else 1
     elif cmd == "panel-add" and len(args) == 2:
         result = panel_add(*args)
         emit(result)
@@ -11551,6 +11680,9 @@ def main(argv):
         else:
             emit(found)
     elif cmd == "gaming":
+        emit(gaming_state())
+    elif cmd == "game-function-keys" and args and args[0] in ("on", "off"):
+        game_function_keys(args[0])
         emit(gaming_state())
     elif cmd == "replay" and args and args[0] in ("on", "off"):
         set_replay(args[0] == "on")

@@ -6,6 +6,13 @@ Item {
     id: meter
     property var player: null
     property var sources: null
+    property bool monitoring: true
+    property alias playing: wave.playing
+    property alias bars: wave.bars
+    property alias tint: wave.tint
+    property alias motion: wave.motion
+    implicitWidth: wave.implicitWidth
+    implicitHeight: wave.implicitHeight
     property var playerRows: []
     property var streams: []
     readonly property int bestMatch: streams.reduce((best, stream) => Math.max(best, stream.rank), 0)
@@ -57,7 +64,7 @@ Item {
                 }
                 return score
             }
-            readonly property bool listen: rank > 0 && rank === meter.bestMatch && !model.Muted && !model.Corked && model.Volume > 0
+            readonly property bool listen: meter.monitoring && meter.playing && rank > 0 && rank === meter.bestMatch && !model.Muted && !model.Corked && model.Volume > 0
             readonly property real peak: listen && taps.object?.available ? Math.max(0, taps.object.volume) : 0
             // Plasma's monitor binds to the owning output when it starts. Moving the
             // playback stream must create a fresh monitor on its new output.
@@ -69,15 +76,10 @@ Item {
         onObjectAdded: (index, stream) => meter.streams = meter.streams.concat([stream])
         onObjectRemoved: (index, stream) => meter.streams = meter.streams.filter(other => other !== stream)
     }
-    Row {
-        anchors.fill: parent; spacing: 1
-        Repeater {
-            model: 3
-            Rectangle {
-                required property int index
-                width: 3; radius: 1; color: "#9dd9c9"; anchors.verticalCenter: parent.verticalCenter
-                height: Math.max(2, (meter.height - 2) * Math.min(1, meter.level * (1.65 - 0.37 * index)))
-            }
-        }
+    IslandAudioBars {
+        id: wave
+        anchors.fill: parent
+        level: meter.level
+        live: meter.monitoring && meter.bestMatch > 0
     }
 }

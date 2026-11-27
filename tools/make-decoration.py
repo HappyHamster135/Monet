@@ -33,6 +33,9 @@ EDGE_TOP, TITLE, EDGE_BOTTOM = 5, 26, 5
 BAR = EDGE_TOP + TITLE + EDGE_BOTTOM
 RADIUS, RADIUS_BOTTOM = 14, 10
 MIDDLE = 24
+# Keep the corner's blur falloff out of repeated straight-edge tiles. A bare
+# frame has no decorative corner radius to provide this inset by itself.
+BARE_SHADOW_INSET = 48
 BUTTON = 26
 K = 3  # pictures are kept at three times the size, sharp on HiDPI screens
 # The bare frame: no title bar and no glass of its own, only the soft ink shadow around the
@@ -150,14 +153,15 @@ def paint(rgba):
     return f'fill="#{rgba[0]:02X}{rgba[1]:02X}{rgba[2]:02X}" fill-opacity="{rgba[3] / 255:.3g}"'
 
 
-def frame_size(bar=BAR, radius=RADIUS, radius_bottom=RADIUS_BOTTOM):
-    margins = (SIDE + radius, TOP + bar, SIDE + radius, radius_bottom + BOTTOM)
+def frame_size(bar=BAR, radius=RADIUS, radius_bottom=RADIUS_BOTTOM, shadow_inset=0):
+    margins = (SIDE + radius + shadow_inset, TOP + bar + shadow_inset,
+               SIDE + radius + shadow_inset, radius_bottom + BOTTOM + shadow_inset)
     return margins, margins[0] + MIDDLE + margins[2], margins[1] + MIDDLE + margins[3]
 
 
-def shadow_image(active, bar=BAR, radius=RADIUS, radius_bottom=RADIUS_BOTTOM):
+def shadow_image(active, bar=BAR, radius=RADIUS, radius_bottom=RADIUS_BOTTOM, shadow_inset=0):
     """The soft ink shadow, a little below the window; none under the glass."""
-    _, w, h = frame_size(bar, radius, radius_bottom)
+    _, w, h = frame_size(bar, radius, radius_bottom, shadow_inset)
     blur, drop, strength = (16, 10, 0.48) if active else (10, 6, 0.26)
     glass, lifted = Image.new("L", (w * K, h * K), 0), Image.new("L", (w * K, h * K), 0)
     for img, dy in ((glass, 0), (lifted, drop)):
@@ -214,10 +218,13 @@ def flat(sheet, prefix, how):
 
 
 def bare_frame(sheet, prefix, active):
-    """The bare frame's nine pieces: each only the part of the shadow inside its box. They end
-    where the window begins, so nothing of the frame lies under the window, even a see-through one."""
-    (left, top, right, bottom), w, h = frame_size(0, 0, 0)
-    shadow = shadow_image(active, 0, 0, 0)
+    """Keep each corner's falloff in its corner tile, with uniform straight edges.
+
+    Corner tiles include transparent space inside the window. Padding still
+    describes only the outside shadow; nothing is painted under the glass.
+    """
+    (left, top, right, bottom), w, h = frame_size(0, 0, 0, BARE_SHADOW_INSET)
+    shadow = shadow_image(active, 0, 0, 0, BARE_SHADOW_INSET)
     xs, ys = (0, left, w - right, w), (0, top, h - bottom, h)
     names = ("topleft", "top", "topright", "left", "center", "right", "bottomleft", "bottom", "bottomright")
     for n, piece in enumerate(names):

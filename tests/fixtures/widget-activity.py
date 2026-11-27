@@ -64,12 +64,13 @@ elif name == 'monet-files': result = dict(groups=[], limited=False, folder=Path.
 elif name == 'monet-file-jobs': result = dict(files=[dict(token='a'*32, name='A native transfer',kind='extract',
     destination=str(Path.home()/'Desktop'), destinationUrl=(Path.home()/'Desktop').as_uri(), state='running',
     progress=.4, updated=1, error='')], store=[])
+elif name == 'monet-graphics-use': result = dict(version=1, sleepingDevices=[])
 elif name == 'monet-weather': result = dict(config=dict(place='Stockholm', latitude=59.3, longitude=18.1,
     places=[],fahrenheit=False), weather=None, updated=0, stale=True, problem='')
 print(json.dumps(result))
 '''.replace('LOG', repr(str(helper_log))))
     helper.chmod(0o700)
-    for command in ('monet-quick', 'monet-files-tools', 'monet-files', 'monet-file-jobs', 'monet-weather'):
+    for command in ('monet-quick', 'monet-files-tools', 'monet-files', 'monet-file-jobs', 'monet-weather', 'monet-graphics-use'):
         (folder / command).symlink_to(helper)
     for part in ui.glob('*.qml'):
         source = part.read_text().replace('@LIBEXECDIR@', str(folder)).replace('@BINDIR@', str(folder)).replace('@DATADIR@', '/usr/share')
@@ -98,7 +99,7 @@ print(json.dumps(result))
                 focused:search.activeFocus, cursor:search.cursorVisible} : null;''',
         'sound': 'state.request = root.soundRequest; state.serial = root.requestSerial;',
     }.get(name, '')
-    if name in sensors: extra += 'state.sensors = ' + sensors[name] + '.map(s => s.enabled);'
+    if name in sensors: extra += 'state.sensors = ' + sensors[name] + '.map(s => s.sampling !== undefined ? s.active : s.enabled);'
     main = ui / 'main.qml'; source = main.read_text()
     if 'import Qt.labs.folderlistmodel' not in source:
         source = 'import Qt.labs.folderlistmodel\n' + source

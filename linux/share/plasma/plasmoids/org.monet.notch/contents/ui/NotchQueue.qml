@@ -38,7 +38,7 @@ ColumnLayout {
         id: list
         objectName: "notchQueue"
         Layout.fillWidth: true; Layout.fillHeight: true
-        visible: count > 0; clip: true
+        visible: count > 0; clip: true; spacing: 4
         activeFocusOnTab: count > 0
         keyNavigationEnabled: true
         Accessible.role: Accessible.List
@@ -57,7 +57,8 @@ ColumnLayout {
             required property int index
             required property var modelData
             readonly property string title: modelData.title || i18n("Untitled")
-            width: ListView.view.width - Kirigami.Units.largeSpacing
+            width: ListView.view.width; height: 52; padding: 8
+            background: Rectangle { radius: 10; color: row.hovered || row.highlighted ? "#27272c" : "#151518" }
             enabled: page.canChoose && !page.pending
             Accessible.name: enabled ? i18n("Play %1", title) : title
             Accessible.description: modelData.artist
@@ -66,7 +67,7 @@ ColumnLayout {
             contentItem: RowLayout {
                 spacing: Kirigami.Units.smallSpacing
                 Item {
-                    Layout.preferredHeight: Kirigami.Units.iconSizes.medium
+                    Layout.preferredHeight: 34
                     Layout.preferredWidth: Layout.preferredHeight
                     Kirigami.Icon { anchors.fill: parent; visible: cover.status !== Image.Ready; source: "audio-x-generic" }
                     Image {
@@ -79,14 +80,14 @@ ColumnLayout {
                 }
                 ColumnLayout {
                     Layout.fillWidth: true; spacing: 0
-                    C.Label { Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText; text: row.title }
-                    C.Label { Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText; visible: !!text; opacity: 0.75; text: row.modelData.artist }
+                    C.Label { Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText; font.pixelSize: 13; font.weight: Font.Medium; color: "#ededf2"; text: row.title }
+                    C.Label { Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText; visible: !!text; font.pixelSize: 11; color: "#9999a3"; text: row.modelData.artist }
                 }
                 Item {
                     visible: !!page.player?.canControl && !!page.player?.canPlay
                     Layout.preferredHeight: Kirigami.Units.iconSizes.small
                     Layout.preferredWidth: Layout.preferredHeight
-                    Kirigami.Icon { anchors.fill: parent; visible: !progress.running; source: "media-playback-start" }
+                    IslandGlyph { anchors.fill: parent; visible: !progress.running; source: "media-playback-start" }
                     C.BusyIndicator {
                         id: progress; anchors.fill: parent; visible: running
                         running: page.pending && page.playback.owner === page.snapshot.owner && page.playback.targetId === row.modelData.id
@@ -100,12 +101,12 @@ ColumnLayout {
         visible: list.count === 0
         Item { Layout.fillHeight: true }
         C.Label {
-            Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.WordWrap
+            font.pixelSize: 12; color: "#aaaab2"; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.WordWrap
             text: !page.player ? i18n("Nothing playing") : !page.fresh ? i18n("Loading…") :
                 page.shared ? i18n("Nothing else is queued.") : i18n("No upcoming tracks shared by this player.")
         }
-        C.Button {
-            Layout.alignment: Qt.AlignHCenter; visible: !!page.player?.canRaise
+        IslandButton {
+            caption: true; Layout.alignment: Qt.AlignHCenter; visible: !!page.player?.canRaise
             text: i18n("Open %1", page.player?.identity || "")
             onClicked: page.player?.Raise()
         }

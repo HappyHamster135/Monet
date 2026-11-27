@@ -10,6 +10,8 @@ Item {
     required property var power
     required property string style
     property bool inlineLabel: false
+    property var graphicsPolicy: null
+    readonly property bool graphicsPaused: reading.startsWith("gpu/") && (!graphicsPolicy || !graphicsPolicy.allows(reading))
 
     readonly property bool battery: reading.startsWith("battery/")
     readonly property bool percent: names.percentage(reading)
@@ -27,6 +29,7 @@ Item {
     }
     readonly property string label: names.name(reading)
     readonly property string display: {
+        if (graphicsPaused) return i18nd("monet", "Paused")
         if (value === null) return "—"
         if (percent) return i18nd("monet", "%1%", Math.round(value))
         if (reading === "battery/time") return Math.floor(value / 60) + ":" + String(value % 60).padStart(2, "0")
@@ -41,6 +44,7 @@ Item {
         return shortLabel
     }
     readonly property string description: (reading === "battery/time" && value !== null ? shortLabel : label) + "  " + display
+        + (graphicsPaused ? " · " + i18nd("monet", "Open Task Manager for live graphics readings") : "")
     readonly property bool showValue: style !== "bars" || !percent || value === null
     readonly property bool showBar: style !== "values" && percent && value !== null
     readonly property real textHeight: Math.ceil(metrics.height)
@@ -50,7 +54,7 @@ Item {
     FontMetrics { id: metrics; font: Kirigami.Theme.smallFont }
     Loader {
         id: source
-        active: cell.sampling && !cell.battery
+        active: cell.sampling && !cell.battery && !cell.graphicsPaused
         sourceComponent: Component { Sensors.Sensor { sensorId: cell.reading; updateRateLimit: 2000 } }
     }
 

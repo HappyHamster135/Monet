@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "hardware": "ThinkPad P16s Gen 2 Intel",
+  "bios": "N3QET52W (1.52)",
+  "boot_id": "4155edfd-096a-4d39-a6e5-de2e09d3ece0",
+  "boot_kind": "Owner-reported cold boot after power-off",
+  "user_reported_power_on_to_ready_s_approx": 30,
+  "user_reported_monet_screen_s_approx": 7,
+  "phases_s": {
+    "firmware": 13.565,
+    "loader": 4.355,
+    "kernel": 1.728,
+    "initrd": 4.829,
+    "userspace": 6.331,
+    "systemd_total": 30.810
+  },
+  "events_kernel_monotonic_s": {
+    "plymouth_started": 2.523518,
+    "disk_unlock_started": 2.489148,
+    "disk_unlock_finished": 5.107708,
+    "plymouth_switch_root_started": 5.310242,
+    "plymouth_switch_root_finished": 6.454850,
+    "plymouth_quit_finished": 10.022307,
+    "login_manager_started": 10.050870,
+    "desktop_splash_starting": 10.915061,
+    "plasmashell_started": 13.195356,
+    "workspace_target_reached": 13.527198,
+    "desktop_splash_finished": 14.909500
+  },
+  "preview": {
+    "status": "installed; verified on subsequent physical boot",
+    "policy_refresh": "ConditionNeedsUpdate=/etc, Before=systemd-update-done.service",
+    "policy_before_and_after": "DEFAULT; --check passed",
+    "policy_service_baseline_s": 0.306232,
+    "policy_receipt": "/var/lib/monet/startup/20261127T125105Z/receipt.json",
+    "desktop_splash": "User KSplash Engine=none",
+    "splash_receipt": "/var/home/jonte/.local/state/monet/startup/20261127T125120Z/receipt.json",
+    "boot_files_and_firmware_changed": false,
+    "physical_result": {
+      "boot_id": "cf313335-43e4-4760-a349-c9f5975f13eb",
+      "policy_service_skipped_by_condition": true,
+      "configured_policy_applied": true,
+      "desktop_splash_did_not_start": true,
+      "concurrent_trial": "Host-only initramfs 20261127T125857Z; see p16s-startup-image-20261127.json",
+      "isolated_speedup_measured": false
+    }
+  },
+  "limitations": "Service durations overlap and are not additive savings. A workspace target is not a first-frame or interactive-desktop measurement. The seven-second Plymouth interval overlaps real startup work; it is not a fixed animation hold. Firmware and loader remain the largest measured stages."
+}

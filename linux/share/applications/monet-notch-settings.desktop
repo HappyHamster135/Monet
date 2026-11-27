@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Notch & Tools
+Comment=Customize the notch, radial menu and everyday Monet tools
+Icon=preferences-desktop
+Exec=@LIBEXECDIR@/monet-utilities notch-settings
+Categories=Settings;DesktopSettings;
+Keywords=notch;island;radial;wheel;favorites;tools;
+StartupNotify=true

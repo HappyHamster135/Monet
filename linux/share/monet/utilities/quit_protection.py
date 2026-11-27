@@ -142,9 +142,11 @@ class ShortcutRule(QWidget):
 
     def choose_apps(self):
         dialog = AppPicker(self.apps, self)
-        if dialog.exec() == QDialog.Accepted:
+        def selected():
             self.apps = dialog.selection()
             self.save()
+        from inline_dialogs import present_dialog
+        present_dialog(dialog,self,selected)
 
     def save(self):
         values = {"enabled": self.enable.isChecked(), "mode": self.mode.currentData(),

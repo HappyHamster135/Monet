@@ -31,6 +31,8 @@ class Entry:
 
     @property
     def icon_name(self):
+        if self.icon:
+            return self.icon
         if self.kind == "tool" and self.value in ACTIONS:
             return ACTIONS[self.value].icon
         return self.icon or ICONS.get(self.kind, "")

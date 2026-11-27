@@ -762,8 +762,8 @@ class Frames(unittest.TestCase):
         ns = "{http://www.w3.org/2000/svg}"
         sizes = {g.get("id"): (float(g.find(ns + "rect").get("width")), float(g.find(ns + "rect").get("height")))
                  for g in root.iter(ns + "g")}
-        self.assertEqual(sizes["decoration-topleft"], (40.0, 30.0))
-        self.assertEqual(sizes["decoration-bottomright"], (40.0, 54.0))
+        self.assertEqual(sizes["decoration-topleft"], (88.0, 78.0))
+        self.assertEqual(sizes["decoration-bottomright"], (88.0, 102.0))
 
     def test_made_by_the_frames_tool(self):
         tool = (ROOT / "tools/make-decoration.py").read_text(encoding="utf-8")

@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "date": "2026-11-27",
+  "hardware": "ThinkPad P16s Gen 2",
+  "bios": "N3QET52W (1.52)",
+  "scope": "Physical restart before/after observations; single pair, not an isolated controlled benchmark",
+  "baseline": {
+    "boot_id": "495e7d9d-594a-48fd-9284-7ec9b7780cd5",
+    "firmware_s": 22.055,
+    "loader_s": 7.763,
+    "kernel_s": 1.755,
+    "initrd_s": 3.814,
+    "userspace_s": 8.086,
+    "systemd_total_s": 43.474,
+    "power_on_to_login_manager_process_s": 40.904,
+    "shutdown_s": 10.518,
+    "shutdown_included_pending_deployment": true,
+    "deployment_finalization_s": 4.733
+  },
+  "changes": {
+    "uefi_ipv4_network_stack": [
+      "Enable",
+      "Disable"
+    ],
+    "uefi_ipv6_network_stack": [
+      "Enable",
+      "Disable"
+    ],
+    "efi_timeout_s": [
+      2,
+      0
+    ],
+    "grub_successful_boot_timeout_s": [
+      1,
+      0
+    ],
+    "grub_failed_or_trial_boot_timeout_s": [
+      1,
+      10
+    ]
+  },
+  "installation": {
+    "status": "installed",
+    "receipt": "/var/lib/monet/fast-boot/20261127T124124860069/receipt.json",
+    "firmware_changes": [
+      "IPv4NetworkStack",
+      "IPv6NetworkStack"
+    ],
+    "firmware_timeout": 0,
+    "grub_healthy_timeout": 0,
+    "grub_recovery_timeout": 10,
+    "reboot_required": true
+  },
+  "validation": {
+    "tests_passed": 21,
+    "grub_parser_passed": true,
+    "boot_entries_and_main_grub_config_unchanged": true,
+    "rollback_counters_unchanged": true,
+    "wifi_enabled": true,
+    "bluetooth_mouse_connected": true
+  },
+  "after_restart": {
+    "boot_id": "b40af4cc-9a08-4a6f-b713-fb54ff5192ef",
+    "user_reported_restart_s": 42,
+    "firmware_s": 14.586,
+    "loader_s": 4.345,
+    "kernel_s": 1.69,
+    "initrd_s": 3.656,
+    "userspace_s": 8.371,
+    "systemd_total_s": 32.647,
+    "power_on_to_login_manager_process_s": 27.868,
+    "shutdown_services_s": 5.793,
+    "pending_deployment": false,
+    "trust_and_linker_cache_rebuilds_skipped": true,
+    "limitations": "Single before/after pair, with update finalization on the baseline only. Firmware previously varied between boots. Service timestamps are not visible-screen timestamps."
+  }
+}

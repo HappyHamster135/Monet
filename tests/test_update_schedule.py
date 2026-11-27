@@ -124,6 +124,56 @@ class Betas(unittest.TestCase):
             self.assertEqual(self.helper.installed_beta(), 3)
 
 
+class SavedBuilds(unittest.TestCase):
+    def setUp(self):
+        self.helper = quick_helper()
+
+    def deployment(self, beta=0, **changes):
+        tag = f"0.9.8-9-beta.{beta}" if beta else "latest"
+        return dict(version="0.9.8-9", timestamp=1795517237,
+                    **{"container-image-reference": "ostree-image-signed:docker://ghcr.io/happyhamster135/monet:" + tag},
+                    **changes)
+
+    def test_rollback_keeps_the_previous_beta_number_and_skips_the_staged_system(self):
+        current = self.deployment(3, booted=True)
+        previous = self.deployment(2)
+        result = self.helper.previous_monet({"deployments": [self.deployment(4, staged=True), current, previous]})
+        self.assertEqual((result["version"], result["beta"], result["sameVersion"], result["pending"]),
+                         ("0.9.8-9", 2, False, False))
+        self.assertTrue(self.helper.previous_monet({"deployments": [previous, current]})["pending"])
+
+    def test_same_version_local_deployments_are_distinct_saved_builds(self):
+        current = self.deployment(booted=True, checksum="a" * 64)
+        previous = self.deployment(checksum="b" * 64)
+        for entry in (current, previous):
+            entry["container-image-reference"] = "ostree-unverified-image:oci:/var/lib/monet-local-boot-test/example"
+        result = self.helper.previous_monet({"deployments": [current, previous]})
+        self.assertTrue(result["sameVersion"])
+        self.assertTrue(result["localBuild"])
+        self.assertEqual(result["build"], "bbbbbbbb")
+        self.assertEqual(result["beta"], 0)
+        with patch.object(self.helper, "run", return_value=json.dumps({"deployments": [current, previous]})):
+            self.assertEqual(self.helper.installed_build()["build"], "aaaaaaaa")
+
+    def test_same_beta_and_release_rebuilds_are_not_presented_as_a_version_change(self):
+        for beta in (0, 2):
+            result = self.helper.previous_monet({"deployments": [self.deployment(beta, booted=True), self.deployment(beta)]})
+            self.assertTrue(result["sameVersion"])
+        result = self.helper.previous_monet({"deployments": [self.deployment(booted=True), self.deployment(2)]})
+        self.assertFalse(result["sameVersion"])
+
+    def test_foreign_images_do_not_inherit_monets_beta_label(self):
+        for reference in ("ostree-image-signed:docker://ghcr.io/happyhamster135/monet-unrelated:0.9.8-9-beta.4",
+                          "ostree-image-signed:docker://example.com/happyhamster135/monet:0.9.8-9-beta.4"):
+            entry = self.deployment(booted=True)
+            entry["container-image-reference"] = reference
+            self.assertEqual(self.helper.running_beta([entry]), 0)
+
+    def test_missing_or_invalid_deployments_have_no_rollback_offer(self):
+        for status in (None, [], {"deployments": None}, {"deployments": [None, self.deployment(booted=True)]}):
+            self.assertEqual(self.helper.previous_monet(status), {})
+
+
 class UpdateHistory(unittest.TestCase):
     def setUp(self):
         self.helper = quick_helper()

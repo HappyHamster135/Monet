@@ -39,7 +39,7 @@ if __name__ == "__main__":
             sys.exit(main(int(sys.argv[2]), sys.argv[3]))
         sys.exit(2)
     args = sys.argv[1:]
-    if args in (["quick-panel"], ["wheel"], ["color"], ["ocr"]) or (len(args) == 2 and args[0] == "wheel"):
+    if args in (["quick-panel"], ["wheel"], ["radial"], ["color"], ["ocr"]) or (len(args) == 2 and args[0] == "wheel"):
         status = activate_tool(*args)
         if status is not None:
             sys.exit(status)

@@ -7,6 +7,8 @@ Item {
     required property Component requested
     required property var reusable
     required property var privatePages
+    // External native surfaces cannot participate in this scene's slide/clip.
+    property var externalPages: []
     property Component prewarm
     required property bool presented
     required property int duration
@@ -71,7 +73,8 @@ Item {
         const previous = current
         const previousHeight = previous?.height ?? 0
         direction = reversing ? -direction : navigationDirection || (previous && slot.index < previous.index ? -1 : 1)
-        outgoing = duration > 1 && previous?.visible ? previous : null
+        const external = externalPages.includes(slot.modelData) || externalPages.includes(previous?.modelData)
+        outgoing = !external && duration > 1 && previous?.visible ? previous : null
         outgoingHeight = previousHeight
         current = slot
         // Swapping the two slots flips the target on the same moving coordinate.

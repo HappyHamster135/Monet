@@ -385,9 +385,26 @@ def devices(pci=PCI, files=PCI_IDS):
     return named
 
 
+def desktop_policy(pci=PCI, supplies=Path("/sys/class/power_supply")):
+    """Avoid NVIDIA's persistent dmon reader on laptops, including on AC.
+
+    NVIDIA's monitor holds the device awake even at 0% load. A desktop widget
+    must not spend battery just to measure it. Detailed monitoring remains an
+    explicit choice in the widget or Task Manager. No driver query is used.
+    """
+    laptop = any(read(p / "type").strip() == "Battery"
+                 and read(p / "scope").strip() != "Device"
+                 for p in supplies.iterdir()) if supplies.is_dir() else False
+    devices_found = devices(pci, files=())
+    return {"version": 1, "sleepingDevices": [d["id"] for d in devices_found
+                                             if laptop and d["maker"] == "NVIDIA"]}
+
+
 if __name__ == "__main__":
     if sys.argv[1:] == ["--devices"]:
         print(json.dumps({"version": 1, "devices": devices()}))
+    elif sys.argv[1:] == ["--policy"]:
+        print(json.dumps(desktop_policy()))
     elif sys.argv[1:] == ["--watch"]:
         watch(lambda line: print(line, flush=True))
     else:

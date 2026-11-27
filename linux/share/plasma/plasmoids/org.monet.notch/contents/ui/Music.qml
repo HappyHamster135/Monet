@@ -9,6 +9,7 @@ import org.kde.plasma.workspace.dbus as DBus
 
 ColumnLayout {
     id: page
+    readonly property bool menuOpen: sourceMenu.visible || nowPlaying.menuOpen
     required property var player
     required property var sources
     required property var formatDuration
@@ -16,6 +17,14 @@ ColumnLayout {
     property var playback: null
     property bool offerDetails: true
     property bool offerMixer: true
+    property bool liveLevels: false
+    function raisePlayer() {
+        if (service) DBus.SessionBus.asyncCall({service: service, path: playerPath,
+            iface: "org.mpris.MediaPlayer2", member: "Raise"})
+    }
+    function knownCredit(value) {
+        return value && value !== i18n("Unknown Player") && value !== i18n("Unknown Artist") ? value : ""
+    }
     required property bool playing
     required property int view // 0: now playing, 1: lyrics, 2: upcoming tracks
     signal viewRequested(int index)
@@ -57,7 +66,7 @@ ColumnLayout {
     property double anchorTime: 0
     property double anchorPosition: 0
     readonly property double rate: page.playing ? Math.max(0, player?.rate ?? 1) : 0
-    readonly property string reader: "/usr/bin/python3 '@DATADIR@/monet/utilities/player.py' "
+    readonly property string readerCommand: "/usr/bin/python3 '@DATADIR@/monet/utilities/player.py' "
 
     function refresh(clear) {
         ++epoch
@@ -87,7 +96,7 @@ ColumnLayout {
             const key = Array.from(bytes, c => c.charCodeAt(0).toString(16).padStart(2, "0")).join("")
             page.requestedEpoch = page.epoch
             page.busy = true
-            reader.connectSource(page.reader + key)
+            reader.connectSource(page.readerCommand + key)
         }
     }
     P5.DataSource {
@@ -187,14 +196,22 @@ ColumnLayout {
     Timer { id: boundary; onTriggered: page.updateLine() }
 
     spacing: Kirigami.Units.smallSpacing
-    Item { Layout.fillHeight: true; visible: page.view === 0 }
+    MusicNowPlaying {
+        id: nowPlaying
+        objectName: "notchNowPlaying"
+        visible: page.view === 0
+        Layout.fillWidth: true; Layout.fillHeight: true
+        page: page
+        onSourceRequested: sourceMenu.open()
+    }
     GridLayout {
+        visible: page.view !== 0
         Layout.fillWidth: true
-        columns: 2; rowSpacing: 4; columnSpacing: 16
+        columns: 2; rowSpacing: 16; columnSpacing: 14
         Rectangle {
-            Layout.row: 0; Layout.column: 0; Layout.rowSpan: page.view ? 1 : 3
-            Layout.preferredWidth: page.view ? 42 : Math.min(118, page.width * 0.28)
-            Layout.preferredHeight: Layout.preferredWidth; radius: page.view ? 9 : 16
+            Layout.row: 0; Layout.column: 0; Layout.rowSpan: 1
+            Layout.preferredWidth: page.view ? 36 : 64
+            Layout.preferredHeight: Layout.preferredWidth; radius: page.view ? 8 : 12
             color: "#303037"; clip: true
             Kirigami.Icon {
                 anchors.centerIn: parent; width: parent.width * 0.39; height: width
@@ -214,38 +231,41 @@ ColumnLayout {
             }
             NotchGestureSurface { gestures: page.gestures }
         }
+        ColumnLayout {
+            Layout.row: 0; Layout.column: 1; Layout.fillWidth: true; Layout.minimumWidth: 0
+            spacing: 3
         RowLayout {
-            Layout.row: 0; Layout.column: 1; Layout.fillWidth: true
+            Layout.fillWidth: true; Layout.minimumWidth: 0; spacing: 8
             ColumnLayout {
                 Layout.fillWidth: true; Layout.minimumWidth: 0; spacing: 2
                 C.Label {
                     Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight
-                    font.weight: Font.DemiBold; font.pixelSize: page.view ? 15 : 21
+                    font.weight: Font.DemiBold; font.pixelSize: page.view ? 13 : 14
                     color: "#fafafa"; text: page.player?.track || i18n("Nothing playing")
                 }
                 C.Label {
-                    Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight; color: "#b7b7be"
-                    text: page.player?.artist || page.player?.identity || i18n("Start a song or video in a media player.")
+                    Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight; color: "#a9a9b2"; font.pixelSize: 12
+                    text: page.knownCredit(page.player?.artist) || page.knownCredit(page.player?.identity)
+                        || (page.player ? i18n("Now playing") : i18n("Start a song or video in a media player."))
                 }
             }
         C.ToolButton {
             id: sourceButton
-            objectName: "notchPlaybackSource"
+            objectName: "notchPlaybackDetailSource"
             visible: sourceRows.count > 2 || page.sources.currentIndex > 0
             Layout.maximumWidth: page.width * 0.36
             text: page.player?.identity || i18n("Playback source")
-            implicitWidth: 32; implicitHeight: 32; padding: 7
-            background: Rectangle { radius: height / 2; color: sourceButton.hovered ? "#424248" : "#2b2b2e" }
-            contentItem: Kirigami.Icon { source: "arrow-down"; isMask: true; color: "#e3e2e6" }
+            implicitWidth: 24; implicitHeight: 24; padding: 5
+            background: Rectangle { radius: height / 2; color: sourceButton.hovered ? "#303035" : "transparent" }
+            contentItem: IslandGlyph { source: "arrow-down"; color: "#a5a5ae" }
             Accessible.name: i18n("Playback source")
             Accessible.description: page.player?.identity || ""
             onClicked: sourceMenu.open()
-            C.Menu {
+            IslandMenu {
                 id: sourceMenu
-                popupType: C.Popup.Item
-                width: Math.min(page.width, Kirigami.Units.gridUnit * 17)
-                x: Math.min(0, page.width - sourceButton.mapToItem(page, 0, 0).x - width)
-                y: sourceButton.height
+                objectName: "notchPlaybackSourceMenu"
+                bounds: page; anchorItem: page.view === 0 ? nowPlaying.sourceAnchor : sourceButton
+                preferredWidth: Kirigami.Units.gridUnit * 17
                 Instantiator {
                     id: sourceRows
                     model: page.sources
@@ -262,127 +282,24 @@ ColumnLayout {
                 }
             }
         }
-        C.ToolButton {
-            visible: page.view !== 0
+        IslandButton {
+            plain: true; visible: page.view !== 0
             icon.name: page.playing ? "media-playback-pause" : "media-playback-start"
             Accessible.name: page.playing ? i18n("Pause") : i18n("Play")
             enabled: !!(page.playing ? page.player?.canPause : page.player?.canPlay)
             onClicked: page.playing ? page.player.Pause() : page.player.Play()
         }
     }
-    RowLayout {
-        Layout.row: 1; Layout.column: 1
-        visible: page.view === 0 && page.lengthMs > 0
-        Layout.fillWidth: true
-        C.Label {
-            font.pixelSize: 10; color: "#bebec5"
-            text: page.formatDuration((timeline.pressed ? timeline.position * timeline.to : page.elapsed) / 1000)
-        }
-        C.Slider {
-            id: timeline
-            objectName: "notchPlaybackPosition"
-            Layout.fillWidth: true; Layout.minimumWidth: 1
-            from: 0; to: page.lengthMs; value: page.elapsed
-            enabled: !!page.player?.canSeek && page.trackId.startsWith("/")
-            live: false
-            leftPadding: 5; rightPadding: 5
-            background: Rectangle {
-                x: timeline.leftPadding; y: (timeline.height - height) / 2
-                width: timeline.availableWidth; height: timeline.pressed ? 6 : 4; radius: height / 2; color: "#4b4b50"
-                Rectangle { width: parent.width * timeline.visualPosition; height: parent.height; radius: height / 2; color: "#eeeef2" }
-            }
-            handle: Rectangle {
-                x: timeline.leftPadding + timeline.visualPosition * (timeline.availableWidth - width)
-                y: (timeline.height - height) / 2; width: 10; height: 10; radius: 5; color: "white"
-                visible: timeline.pressed || timeline.hovered || timeline.visualFocus
-            }
-            Accessible.name: i18n("Playback position")
-            Accessible.description: page.formatDuration(page.elapsed / 1000) + " / " + page.formatDuration(to / 1000)
-            Accessible.onIncreaseAction: if (enabled) page.seek(page.elapsed + 5000)
-            Accessible.onDecreaseAction: if (enabled) page.seek(page.elapsed - 5000)
-            property var pressedPlayer: null
-            property string pressedTrack: ""
-            Keys.onPressed: event => {
-                if (event.key === Qt.Key_Left || event.key === Qt.Key_Right) {
-                    page.seek(page.elapsed + ((event.key === Qt.Key_Right) !== mirrored ? 5000 : -5000))
-                } else if (event.key === Qt.Key_Home || event.key === Qt.Key_End) {
-                    page.seek(event.key === Qt.Key_Home ? 0 : to)
-                } else {
-                    return
-                }
-                event.accepted = true
-            }
-            onPressedChanged: {
-                if (pressed) {
-                    forceActiveFocus(Qt.MouseFocusReason)
-                    pressedPlayer = page.player
-                    pressedTrack = page.trackId
-                } else {
-                    if (visible && enabled && pressedPlayer && pressedPlayer === page.player && pressedTrack === page.trackId) {
-                        page.seek(position * to)
-                    }
-                    pressedPlayer = null
-                }
-            }
-        }
-        C.Label { font.pixelSize: 10; color: "#bebec5"; text: page.formatDuration(page.lengthMs / 1000) }
-    }
-    RowLayout {
-        Layout.row: 2; Layout.column: 1
-        spacing: page.width < 320 ? 0 : 4
-        visible: page.view === 0; Layout.alignment: Qt.AlignHCenter
-        Item {
-            implicitWidth: shuffleButton.implicitWidth
-            implicitHeight: shuffleButton.implicitHeight
-            IslandButton {
-                id: shuffleButton
-                plain: true
-                anchors.centerIn: parent
-                visible: !!page.player && page.player.shuffle !== Mpris.ShuffleStatus.Unknown
-                enabled: !!page.player?.canControl
-                icon.name: "media-playlist-shuffle"
-                checked: page.player?.shuffle === Mpris.ShuffleStatus.On
-                text: i18n("Shuffle")
-                onClicked: page.player.shuffle = page.player.shuffle === Mpris.ShuffleStatus.On ? Mpris.ShuffleStatus.Off : Mpris.ShuffleStatus.On
-            }
-        }
-        IslandButton { plain: true; icon.name: "media-skip-backward"; text: i18n("Previous track"); enabled: !!page.player?.canGoPrevious; onClicked: page.player.Previous() }
-        IslandButton {
-            prominent: true; implicitWidth: 44; implicitHeight: 44; glyphSize: 20
-            icon.name: page.playing ? "media-playback-pause" : "media-playback-start"
-            text: page.playing ? i18n("Pause") : i18n("Play")
-            enabled: !!(page.playing ? page.player?.canPause : page.player?.canPlay)
-            onClicked: page.playing ? page.player.Pause() : page.player.Play()
-        }
-        IslandButton { plain: true; icon.name: "media-skip-forward"; text: i18n("Next track"); enabled: !!page.player?.canGoNext; onClicked: page.player.Next() }
-        Item {
-            implicitWidth: repeatButton.implicitWidth
-            implicitHeight: repeatButton.implicitHeight
-            IslandButton {
-                id: repeatButton
-                plain: true
-                anchors.centerIn: parent
-                readonly property int status: page.player?.loopStatus ?? Mpris.LoopStatus.Unknown
-                visible: status !== Mpris.LoopStatus.Unknown
-                enabled: !!page.player?.canControl
-                icon.name: status === Mpris.LoopStatus.Track ? "media-playlist-repeat-song" : "media-playlist-repeat"
-                checked: status === Mpris.LoopStatus.Playlist || status === Mpris.LoopStatus.Track
-                text: status === Mpris.LoopStatus.Track ? i18n("Repeat track")
-                    : status === Mpris.LoopStatus.Playlist ? i18n("Repeat playlist") : i18n("Repeat off")
-                onClicked: page.player.loopStatus = status === Mpris.LoopStatus.None ? Mpris.LoopStatus.Playlist
-                    : status === Mpris.LoopStatus.Playlist ? Mpris.LoopStatus.Track : Mpris.LoopStatus.None
-            }
-        }
     }
     }
     RowLayout {
+        visible: page.view !== 0
         Layout.alignment: Qt.AlignHCenter
-        C.ToolButton { visible: page.view !== 0; icon.name: "go-previous"; Accessible.name: i18n("Now playing"); onClicked: page.viewRequested(0) }
+        IslandButton { plain: true; visible: page.view !== 0; icon.name: "go-previous"; Accessible.name: i18n("Now playing"); onClicked: page.viewRequested(0) }
         IslandButton { caption: true; base: "#1f1f22"; visible: page.offerDetails && (!!page.player || page.view !== 0); text: i18n("Lyrics"); checked: page.view === 1; onClicked: page.viewRequested(1) }
         IslandButton { caption: true; base: "#1f1f22"; visible: page.offerDetails && (!!page.player || page.view !== 0); text: i18n("Up next"); checked: page.view === 2; onClicked: page.viewRequested(2) }
-        IslandButton { caption: true; base: "#1f1f22"; visible: page.offerMixer && page.view === 0; text: i18n("Mixer"); icon.name: "audio-volume-high"; onClicked: page.viewRequested(3) }
-        C.ToolButton {
-            visible: page.view === 2
+        IslandButton {
+            plain: true; visible: page.view === 2
             icon.name: "view-refresh"
             Accessible.name: i18n("Refresh")
             enabled: !!page.player && !page.playback?.busy
@@ -391,13 +308,12 @@ ColumnLayout {
                 page.refresh(false)
             }
         }
-        C.ToolButton {
-            visible: page.view === 1 && page.lines.length > 0 && !page.follow
+        IslandButton {
+            plain: true; visible: page.view === 1 && page.lines.length > 0 && !page.follow
             icon.name: "view-restore"; Accessible.name: i18n("Follow lyrics")
             onClicked: { page.follow = true; lyricsList.centerLine() }
         }
     }
-    Item { Layout.fillHeight: true; visible: page.view === 0 }
     Item {
         visible: page.view > 0; Layout.fillWidth: true; Layout.fillHeight: true
         ListView {
@@ -413,7 +329,11 @@ ColumnLayout {
                 id: line
                 required property var modelData
                 width: ListView.view.width; highlighted: ListView.isCurrentItem
-                contentItem: C.Label { textFormat: Text.PlainText; wrapMode: Text.WordWrap; text: modelData.text || "♪"; font.bold: line.highlighted }
+                padding: 10
+                background: Rectangle { radius: 9; color: line.hovered ? "#18181b" : "transparent" }
+                contentItem: Text { textFormat: Text.PlainText; wrapMode: Text.Wrap; text: modelData.text || "♪"
+                    font.pixelSize: line.highlighted ? 18 : 15; font.weight: Font.DemiBold
+                    color: line.highlighted ? "#f5f5f7" : "#777781" }
                 Accessible.role: page.player?.canSeek ? Accessible.Button : Accessible.StaticText
                 Accessible.name: modelData.text || i18n("Instrumental")
                 onClicked: if (page.player?.canSeek && page.trackId && page.details.trackId === page.trackId) page.seek(modelData.at)
@@ -421,10 +341,11 @@ ColumnLayout {
         }
         C.ScrollView {
             id: plainLyrics
-            anchors.fill: parent
+            anchors.fill: parent; clip: true; implicitWidth: 240; implicitHeight: 150
+            C.ScrollBar.horizontal.policy: C.ScrollBar.AlwaysOff
             visible: page.view === 1 && !page.lines.length && !!page.details.lyrics?.text
             contentWidth: availableWidth
-            C.Label { width: plainLyrics.availableWidth; textFormat: Text.PlainText; wrapMode: Text.Wrap; text: page.details.lyrics?.text || "" }
+            C.Label { width: plainLyrics.availableWidth; textFormat: Text.PlainText; wrapMode: Text.Wrap; font.pixelSize: 15; color: "#b8b8c2"; padding: 10; text: page.details.lyrics?.text || "" }
         }
         Loader {
             anchors.fill: parent
@@ -439,10 +360,11 @@ ColumnLayout {
                 onRefreshRequested: page.refresh(false)
             }
         }
-        C.Label {
-            anchors.centerIn: parent; width: parent.width; horizontalAlignment: Text.AlignHCenter
+        IslandEmpty {
+            anchors.fill: parent
             visible: page.view === 1 && !page.lines.length && !page.details.lyrics?.text
-            wrapMode: Text.WordWrap; text: page.busy ? i18n("Loading…") : i18n("No lyrics available for this track.")
+            symbol: "music"; title: page.busy ? i18n("Loading lyrics…") : i18n("No lyrics for this track")
+            detail: i18n("Lyrics appear when your player shares them.")
         }
     }
 }

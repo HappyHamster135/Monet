@@ -22,6 +22,8 @@ class Window(QMainWindow):
 
     def __init__(self, helpers, defer_catalog=False):
         super().__init__()
+        from window_interaction import install_interaction
+        install_interaction(self)
         self.helpers = Path(helpers)
         self.settings = QSettings("Monet", "Utilities")
         self.favorites, self.hidden = preferences(self.settings)
@@ -317,6 +319,12 @@ class Window(QMainWindow):
         self.settings.setValue("favorites", json.dumps(self.favorites))
         self.settings.sync()
         self.filter()
+        from notch_preferences import announce
+        announce()
+
+    def show_notch_settings(self, page="overview"):
+        from notch_settings import open_settings
+        open_settings(self, MODULES, page)
 
     def toggle_panel(self):
         if self.quick_panel and self.quick_panel.isVisible():
@@ -341,6 +349,9 @@ class Window(QMainWindow):
         self.quick_panel.present(self.favorites, self.hidden)
 
     def open_favorite(self, key):
+        if key == 'wheel-settings' and self.favorites_wheel and self.favorites_wheel.active_id == 'radial':
+            self.show_notch_settings('radial')
+            return
         if key not in self.hidden and key in ACTIONS:
             if ACTIONS[key].command or key == "output":
                 self.run_tool(key)
@@ -369,9 +380,15 @@ class Window(QMainWindow):
             modal.raise_()
             modal.activateWindow()
             return
-        from wheel_profiles import favorites_profile, profiles, visible
+        from wheel_profiles import Entry, Profile, favorites_profile, profiles, visible
         default = favorites_profile([k for k in self.favorites if k not in self.hidden])
-        wheels = {"": default, **profiles(self.settings)}
+        if profile == 'radial':
+            from notch_preferences import radial_entries
+            items = tuple(Entry('empty',name=tr('Empty slot')) if item.kind == 'tool' and item.value in self.hidden else item
+                          for item in radial_entries(self.settings))
+            wheels = {'radial':Profile(tr('Radial menu'),items)}
+        else:
+            wheels = {"": default, **profiles(self.settings)}
         if profile and profile not in wheels:
             self.panelDismissed.emit()
             return
@@ -392,14 +409,16 @@ class Window(QMainWindow):
             from favorites_wheel import FavoritesWheel
             self.favorites_wheel = FavoritesWheel()
             self.favorites_wheel.chosen.connect(self.open_favorite)
+            self.favorites_wheel.emojiRequested.connect(lambda:self.favorites_wheel.open_emoji(self))
             self.favorites_wheel.dismissed.connect(self.wheel_dismissed)
             self.favorites_wheel.targetChosen.connect(self.open_wheel_target)
             self.favorites_wheel.profileChosen.connect(self.switch_wheel)
         self.wheel_profiles = wheels
         self.favorites_wheel.active_id = active
+        self.favorites_wheel.setWindowTitle(tr('Radial menu') if active == 'radial' else ACTIONS['wheel'].name)
         self.favorites_wheel.profile_names = {key: profile.name for key, profile in wheels.items()}
         self.favorites_wheel.editable = "wheel-settings" not in self.hidden
-        mode = self.settings.value("wheelActivation", "adaptive")
+        mode = 'click' if active == 'radial' else self.settings.value("wheelActivation", "adaptive")
         bindings = []
         if shortcut and mode != "click":
             from wheel_shortcuts import activation_modifiers
@@ -447,6 +466,10 @@ class Window(QMainWindow):
         # Send the unmap to the compositor before invoking a window shortcut.
         QApplication.sync()
         if not open_target(entry):
+            if self.favorites_wheel and self.favorites_wheel.active_id == 'radial':
+                self.show_notch_settings('radial')
+                self.issue(tr('Could not run this action. Check that the media controller is available.'))
+                return
             self.Open(["wheel-settings"] if "wheel-settings" not in self.hidden else ["tools"])
             self.issue(tr("Couldn’t open %1.").replace("%1", entry.title))
 
@@ -717,6 +740,13 @@ class Window(QMainWindow):
         if not action:
             self.home()
             return
+        if key == "notch-settings":
+            self.show_notch_settings()
+            return
+        if key in ("text-tools", "color-tools"):
+            from notch_pages import create_page
+            self.page(key, lambda: create_page(key, self, lambda: None))
+            return
         if key in DIRECT_ACTIONS:
             if self.direct_actions is None:
                 from quick_actions import QuickActions
@@ -853,6 +883,17 @@ class Window(QMainWindow):
     @Slot("QStringList")
     def Open(self, args):
         key = args[0] if args else "tools"
+        if args == ['radial']:
+            self.wheel('radial')
+            return
+        if key == 'notch-shortcut':
+            if len(args) == 2:
+                from notch_shortcuts import trigger
+                trigger(self,args[1])
+            return
+        if key == "notch-settings":
+            self.show_notch_settings(args[1] if len(args) == 2 else "overview")
+            return
         self.settings.sync()
         self.favorites, self.hidden = preferences(self.settings)
         if ("notes" if key == "floating-pad" else key) in self.hidden:
@@ -1031,7 +1072,7 @@ class Receiver(QObject):
             return
         self.window.settings.sync()
         self.window.favorites, self.window.hidden = preferences(self.window.settings)
-        if key != "customize" and (key not in ACTIONS or key in self.window.hidden):
+        if key not in ("customize", "radial") and (key not in ACTIONS or key in self.window.hidden):
             return
         def launch():
             # Qt Wayland consumes this on the next window activation. External
@@ -1042,6 +1083,8 @@ class Receiver(QObject):
                 if key == "customize":
                     self.window.Open(["tools"])
                     QTimer.singleShot(0, self.window.customize)
+                elif key == "radial":
+                    self.window.Open([key])
                 elif ACTIONS[key].command:
                     self.window.run_tool(key)
                     self.idle.start()
@@ -1159,7 +1202,7 @@ def main(argv, helpers):
         if args == ["--pad-service"]:
             return True
         from PySide6.QtDBus import QDBus
-        if activation_token and (args == ["quick-panel"] or args[:1] == ["wheel"] and len(args) <= 2):
+        if activation_token and (args in (["quick-panel"], ["radial"]) or args[:1] == ["wheel"] and len(args) <= 2):
             msg = QDBusMessage.createMethodCall(SERVICE, "/Utilities", SERVICE, "OpenTool")
             msg.setArguments([args[0], activation_token, *args[1:]])
         else:
@@ -1169,7 +1212,7 @@ def main(argv, helpers):
     if bus.isConnected() and bus.interface().isServiceRegistered(SERVICE).value() and forward():
         return 0
     window = Window(helpers if Path(helpers).is_absolute() else "/usr/libexec",
-                    defer_catalog=args[:1] == ["wheel"] or args in (["quick-panel"], ["color"], ["ocr"], ["rename-shortcut"], ["--pad-service"]))
+                    defer_catalog=args[:1] in (["wheel"], ["radial"], ["notch-shortcut"]) or args in (["quick-panel"], ["color"], ["ocr"], ["rename-shortcut"], ["--pad-service"]))
     receiver = Receiver(window)
     if bus.isConnected():
         if not bus.registerObject("/Utilities", SERVICE, receiver, QDBusConnection.ExportAllSlots):

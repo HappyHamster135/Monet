@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls as C
 import org.kde.plasma.workspace.dbus as DBus
 
-C.ToolButton {
+IslandStatusRow {
     id: button
     required property string widgetId
     required property bool active
@@ -13,14 +13,12 @@ C.ToolButton {
     visible: active
     text: reading ? reading.replace(/\n/g, " · ") : i18n("Session file")
     Accessible.name: text
-    C.ToolTip.visible: hovered && !!reading
-    C.ToolTip.text: reading
-    contentItem: C.Label {
-        text: button.text
-        textFormat: Text.PlainText
-        elide: Text.ElideRight
-        verticalAlignment: Text.AlignVCenter
-    }
+
+
+    heading: i18n("Local session")
+    subtitle: text
+    symbol: "code"; accent: "#c5b7e6"
+    connected: !!reading
 
     DBus.SignalWatcher {
         enabled: button.active
@@ -33,15 +31,13 @@ C.ToolButton {
         busType: DBus.BusType.Session
         watchedService: button.active ? "org.monet.Utilities" : ""
         onRegisteredChanged: {
-            if (!registered) button.reading = ""
-            else if (button.subscribed) button.request(true)
+            if (registered && button.subscribed) button.request(true)
         }
     }
 
     function subscribe(on) {
         if (!ready || on === subscribed) return
         subscribed = on
-        reading = ""
         request(on)
     }
     function request(on) {

@@ -48,8 +48,8 @@ class QuitOnClose(QWidget):
 
     def choose(self):
         dialog = AppPicker(applications(self.config), self)
-        if dialog.exec() == QDialog.Accepted:
-            self.set_apps(dialog.selection())
+        from inline_dialogs import present_dialog
+        present_dialog(dialog,self,lambda:self.set_apps(dialog.selection()))
 
     def set_apps(self, selected):
         rules = application_aliases(selected)

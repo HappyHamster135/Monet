@@ -72,8 +72,7 @@ ColumnLayout {
         horizontalAlignment: Text.AlignHCenter
         text: strip.title; textFormat: Text.PlainText; elide: Text.ElideRight
         color: strip.online ? "#eeeeef" : "#99999f"; font.pixelSize: 11; font.weight: Font.DemiBold
-        C.ToolTip.text: text; C.ToolTip.visible: labelHover.hovered && truncated
-        HoverHandler { id: labelHover }
+
     }
     C.Slider {
         id: level

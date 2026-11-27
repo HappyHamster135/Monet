@@ -188,7 +188,7 @@ def clips(items, query):
     return rows
 
 
-def emoji_dictionary(path):
+def emoji_dictionary(path, *, with_categories=False):
     # Plasma's emoji picker uses a fixed Qt 5.15 little-endian stream of UTF-8 strings.
     # Only system-installed dictionaries are opened. Each starts with a qCompress header.
     content = path.read_bytes()
@@ -200,9 +200,9 @@ def emoji_dictionary(path):
         return stream.read(number()).decode("utf-8")
     for _ in range(number()):
         glyph, name = string(), string()
-        number()  # Category
+        category = number()
         terms = " ".join(string() for _ in range(number()))
-        yield glyph, name, terms
+        yield (glyph, name, terms, category) if with_categories else (glyph, name, terms)
 
 
 @lru_cache(maxsize=1)

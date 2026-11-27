@@ -6,5 +6,6 @@
       <default>cpu/all/usage,memory/physical/usedPercent</default>
     </entry>
     <entry name="readingStyle" type="String"><default>both</default></entry>
+    <entry name="monitorDedicatedGraphics" type="Bool"><default>false</default></entry>
   </group>
 </kcfg>

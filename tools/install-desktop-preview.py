@@ -23,7 +23,7 @@ STATE = Path(os.environ.get('XDG_STATE_HOME', Path.home() / '.local/state'))
 HELPERS = Path.home() / '.local/libexec/monet-desktop-preview'
 PRIVATE = DATA / 'monet-desktop-preview'
 BIN = Path.home() / '.local/bin'
-LOCAL = {'monet-quick', 'monet-settings', 'monet-games', 'monet-store', 'monet-store-jobs', 'monet-files-tools', 'monet-system-info', 'monet-graphics-use', 'monet-weather', 'monet-light', 'monet-daylight'}
+LOCAL = {'monet-game-keys', 'monet-quick', 'monet-settings', 'monet-games', 'monet-store', 'monet-store-jobs', 'monet-files-tools', 'monet-system-info', 'monet-graphics-use', 'monet-weather', 'monet-light', 'monet-daylight'}
 LOCAL |= {'monet-resume', 'monet-files-session', 'monet-browser-session', 'monet-editor-session', 'monet-pdf-session'}
 LOCAL |= {'monet-session', 'monet-passwords', 'monet-passwords-browser', 'monet-keep-awake', 'monet-brightness'}
 LOCAL |= {'monet-look', 'monet-fresh', 'monet-region', 'monet-files', 'monet-file-jobs'}
@@ -74,6 +74,167 @@ def cli_prefix(requested=None):
         if not path.is_file() or not os.access(path, os.X_OK):
             raise ValueError(f'CLI preview helper is not executable: {path}')
     return prefix
+
+
+def notch_plan(system_share=Path('/usr/share')):
+    """Update just the island, keeping installed native helpers and preferences."""
+    files = {}
+    package = Path('plasma/plasmoids/org.monet.notch')
+    installed = system_share / package
+    if not (installed / 'metadata.json').is_file():
+        raise ValueError('Install Monet before applying a notch-only preview')
+    destination = DATA / package
+    override = PRIVATE / 'notch/utilities'
+    # A package is resolved as a unit. Preserve its installed shared components,
+    # but never import image-built bytecode: Qt may prefer it to edited source.
+    for folder in (installed, ROOT / 'linux/share' / package):
+        for source in folder.rglob('*'):
+            if not source.is_file() or source.suffix in {'.qmlc', '.jsc'} or '__pycache__' in source.parts:
+                continue
+            data = source.read_bytes()
+            if source.suffix in {'.qml', '.js'}:
+                data = data.replace(b'@DATADIR@/monet/utilities/agent_history.py', str(override / 'agent_history.py').encode())
+                data = data.replace(b'@DATADIR@/monet/utilities/actions.py', str(override / 'actions.py').encode())
+                data = (data.replace(b'@LIBEXECDIR@', b'/usr/libexec')
+                        .replace(b'@DATADIR@', str(system_share).encode()).replace(b'@BINDIR@', b'/usr/bin'))
+            files[destination / source.relative_to(folder)] = (data, 0o644)
+    # This shared calendar suppresses its hover previews only in island mode.
+    files[destination / 'contents/ui/Month.qml'] = (
+        (ROOT / 'linux/share/monet/widgets/Month.qml').read_bytes(), 0o644)
+    for name in ('scratchpads.py', 'notch_tools.py', 'notch_pages.py', 'notch_style.py', 'monitor_page.py', 'command_search.py', 'NotchPlacement.qml', 'actions.py', 'links.py', 'agent_history.py', 'agent_pricing.py', 'notch_preferences.py', 'quick_text_colors.py', 'NotchSettingsLayout.qml', 'tool_pages.py', 'compact_system.py', 'compact_capture.py', 'notch_settings_style.py', 'screen_selection.py', 'inline_dialogs.py', 'script_page.py', 'calendars.py', 'quit_protection.py', 'quit_on_close.py', 'compress_page.py', 'link_settings.py', 'network_page.py', 'mouse_exceptions.py', 'ports.py', 'wallpaper_page.py', 'fan_page.py', 'capture.py', 'window_interaction.py', 'notch_overview.py', 'radial_preview.py', 'radial_art.py', 'wheel_emoji.py', 'settings_sections.py', 'settings_controls.py', 'settings-chevron.svg', 'radial_actions.py', 'radial_editor.py', 'favorites_wheel.py', 'wheel_profiles.py'):
+        files[override / name] = ((ROOT / 'linux/share/monet/utilities' / name).read_bytes(), 0o644)
+    window = (ROOT / 'linux/share/monet/utilities/window.py').read_text().replace('MODULES = Path(__file__).resolve().parent', 'MODULES = Path(' + repr(str(system_share / 'monet/utilities')) + ')')
+    files[override / 'window.py'] = (window.encode(),0o644)
+    settings = (ROOT / 'linux/share/monet/utilities/notch_settings.py').read_text().replace('BACKEND = None', 'BACKEND = ' + repr(str(HELPERS / 'monet-notch-layout')))
+    files[override / 'notch_settings.py'] = (settings.encode(),0o644)
+    for name in ('NotchEditor.qml','ResizeGrip.qml','IslandGlyph.qml','IslandSymbols.js'):
+        files[override.parent / 'panel' / name] = ((ROOT/'linux/share/monet/panel'/name).read_bytes(),0o644)
+    layout_js = override.parent / 'panel-notch.js'
+    files[layout_js] = ((ROOT/'linux/share/monet/panel-notch.js').read_bytes(),0o644)
+    quick = (ROOT/'linux/libexec/monet-quick').read_text().replace('@DATADIR@',str(system_share)).replace('@LIBEXECDIR@','/usr/libexec').replace('@BINDIR@','/usr/bin')
+    quick = quick.replace('(Path(DATADIR) / "monet/panel-notch.js")', 'Path('+repr(str(layout_js))+')')
+    quick = quick.replace('package = notch_package() if choice in ("add", "compact", "wide") else "org.monet.notch"', 'package = '+repr(str(destination)))
+    files[HELPERS / 'monet-notch-layout'] = (quick.encode(),0o755)
+    launcher = HELPERS / 'monet-notch-utilities'
+    shortcuts = (ROOT / 'linux/share/monet/utilities/notch_shortcuts.py').read_text().replace('LAUNCHER = None', 'LAUNCHER = ' + repr(str(launcher)))
+    files[override / 'notch_shortcuts.py'] = (shortcuts.encode(), 0o644)
+    text = (ROOT / 'linux/libexec/monet-utilities').read_text().replace('@DATADIR@', str(system_share)).replace('@LIBEXECDIR@', '/usr/libexec')
+    needle = 'sys.path.insert(0, str(modules))'
+    if text.count(needle) != 1:
+        raise ValueError('Utilities launcher has changed; review the notch override')
+    text = text.replace(needle, needle + '\n# Account-local notch modules; other resources retain their installed paths.\nsys.path.insert(0, ' + repr(str(override)) + ')')
+    files[launcher] = (text.encode(), 0o755)
+    desktop = (ROOT/'linux/share/applications/monet-notch-settings.desktop').read_text().replace('@LIBEXECDIR@/monet-utilities',str(launcher))
+    files[DATA/'applications/monet-notch-settings.desktop'] = (desktop.encode(),0o644)
+    radial = (ROOT/'linux/share/applications/org.monet.NotchRadial.desktop').read_text().replace('@LIBEXECDIR@/monet-utilities',str(launcher))
+    files[DATA/'applications/org.monet.NotchRadial.desktop'] = (radial.encode(),0o644)
+    files[DATA / 'dbus-1/services/org.monet.Utilities.service'] = (
+        ('[D-BUS Service]\nName=org.monet.Utilities\nExec=' + str(launcher) + ' --pad-service\n').encode(), 0o644)
+    return files
+
+
+def editor_plan(system_share=Path('/usr/share')):
+    """Install the visual editor and Settings entry point for this account."""
+    files = {}
+    private = PRIVATE / 'editor'
+    helpers = HELPERS / 'layout-editor'
+    def put(target, data, mode=0o644):
+        files[target] = (data, mode)
+    def qml(source):
+        return (source.read_text().replace('@DATADIR@', str(private))
+                .replace('@LIBEXECDIR@', str(helpers)).replace('@BINDIR@', '/usr/bin')).encode()
+    # Keep native edit-mode guides from surrounding the live bar. Theme lookup
+    # resolves a package at a time, so preserve all other installed theme assets.
+    for name in ('monet', 'monet-matte', 'monet-solid'):
+        package = Path('plasma/desktoptheme') / name
+        existing = DATA / package if (DATA / package / 'metadata.json').is_file() else system_share / package
+        if not (existing / 'metadata.json').is_file():
+            continue
+        for source in existing.rglob('*'):
+            if source.is_file():
+                put(DATA / package / source.relative_to(existing), source.read_bytes())
+        put(DATA / package / 'widgets/margins-highlight.svg',
+            (ROOT / 'linux/share' / package / 'widgets/margins-highlight.svg').read_bytes())
+    toolbox = Path('plasma/packages/org.kde.paneltoolbox')
+    for source in (ROOT / 'linux/share' / toolbox).rglob('*'):
+        if source.is_file():
+            put(DATA / toolbox / source.relative_to(ROOT / 'linux/share' / toolbox), source.read_bytes())
+    # Preserve the complete installed shell: Plasma resolves this as a package.
+    package = Path('plasma/shells/org.kde.plasma.desktop')
+    existing = DATA / package if (DATA / package / 'metadata.json').is_file() else system_share / package
+    for source in existing.rglob('*'):
+        if source.is_file() and source.suffix not in {'.qmlc', '.jsc'}:
+            put(DATA / package / source.relative_to(existing), source.read_bytes())
+    configuration = DATA / package / 'contents/configuration'
+    views = DATA / package / 'contents/views'
+    if not (existing / 'contents/views/KdeDesktopEditMode.qml').is_file():
+        original = existing / 'contents/views/DesktopEditMode.qml'
+        if original.is_file():
+            put(views / 'KdeDesktopEditMode.qml', original.read_bytes())
+    for name in ('DesktopEditMode.qml', 'MonetDesktopEditMode.qml'):
+        put(views / name, qml(ROOT / 'linux/share/monet/editmode' / name))
+    explorer = DATA / package / 'contents/explorer'
+    if not (existing / 'contents/explorer/KdeWidgetExplorer.qml').is_file():
+        original = existing / 'contents/explorer/WidgetExplorer.qml'
+        if original.is_file():
+            put(explorer / 'KdeWidgetExplorer.qml', original.read_bytes())
+    for name in ('WidgetExplorer.qml', 'MonetWidgetExplorer.qml'):
+        put(explorer / name, qml(ROOT / 'linux/share/monet/explorer' / name))
+    if not (existing / 'contents/configuration/KdePanelConfiguration.qml').is_file():
+        put(configuration / 'KdePanelConfiguration.qml', (existing / 'contents/configuration/PanelConfiguration.qml').read_bytes())
+    page = qml(ROOT / 'linux/share/monet/panel/MonetPanelConfiguration.qml')
+    shared = qml(ROOT / 'linux/share/monet/panel/NotchEditor.qml')
+    grip = qml(ROOT / 'linux/share/monet/panel/ResizeGrip.qml')
+    placement = qml(ROOT / 'linux/share/monet/panel/EditorWindowPlacement.qml')
+    glyph = qml(ROOT / 'linux/share/monet/panel/IslandGlyph.qml')
+    symbols = qml(ROOT / 'linux/share/monet/panel/IslandSymbols.js')
+    revision = hashlib.sha256(page + shared + grip + placement + glyph + symbols).hexdigest()
+    entry = 'monet-editor/' + revision + '/MonetPanelConfiguration.qml'
+    put(configuration / entry, page)
+    put(configuration / 'MonetPanelConfiguration.qml', page)
+    wrapper = qml(ROOT / 'linux/share/monet/panel/PanelConfiguration.qml').replace(b'@PANEL_EDITOR@', entry.encode())
+    put(configuration / 'PanelConfiguration.qml', wrapper)
+    put(configuration / 'monet-editor-entry/PanelConfiguration.qml', wrapper)
+    put(configuration / 'MonetPanelEditor.ini', ('[Editor]\nPage=' + entry + '\n').encode())
+    for name in ('EditorWindows.js', 'EditorHost.qml', 'EditorAppWindow.qml', 'PanelEditorWindow.qml', 'WidgetEditorWindow.qml', 'WindowControls.qml'):
+        put(private / 'monet/panel' / name, qml(ROOT / 'linux/share/monet/panel' / name))
+    put(private / 'monet/panel/NotchEditor.qml', shared)
+    put(private / 'monet/panel/ResizeGrip.qml', grip)
+    put(private / 'monet/panel/EditorWindowPlacement.qml', placement)
+    put(private / 'monet/panel/IslandGlyph.qml', glyph)
+    put(private / 'monet/panel/IslandSymbols.js', symbols)
+    put(private / 'monet/panel-notch.js', (ROOT / 'linux/share/monet/panel-notch.js').read_bytes())
+    quick = (ROOT / 'linux/libexec/monet-quick').read_text().replace('@DATADIR@', str(system_share)).replace('@LIBEXECDIR@', '/usr/libexec').replace('@BINDIR@', '/usr/bin')
+    quick = quick.replace('(Path(DATADIR) / "monet/panel-notch.js")', 'Path(' + repr(str(private / 'monet/panel-notch.js')) + ')')
+    quick = quick.replace('package = notch_package() if choice in ("add", "compact", "wide") else "org.monet.notch"',
+                          'package = ' + repr(str(DATA / 'plasma/plasmoids/org.monet.notch')))
+    put(helpers / 'monet-quick', quick.encode(), 0o755)
+    put(helpers / 'monet-game-keys', (ROOT / 'linux/libexec/monet-game-keys').read_bytes(), 0o755)
+    put(helpers / 'monet-editor-window', (ROOT/'linux/libexec/monet-editor-window').read_bytes().replace(b'@LIBEXECDIR@', b'/usr/libexec'), 0o755)
+    # Other settings pages retain their installed code and resources.
+    for source in (system_share / 'monet/settings-app').rglob('*'):
+        if source.is_file() and source.suffix not in {'.qmlc', '.jsc'}:
+            put(private / 'monet/settings-app' / source.relative_to(system_share / 'monet/settings-app'), source.read_bytes())
+    # These pages share newly added controller methods and backend fields. Keep
+    # them from the same source revision when refreshing an existing preview.
+    for name in ('MonetSettings.qml', 'NotchPreferences.qml', 'SettingsControls.qml',
+                 'SettingsGames.qml', 'SettingsPower.qml', 'SettingsUpdates.qml', 'SettingsAbout.qml'):
+        put(private / 'monet/settings-app' / name, (ROOT / 'linux/share/monet/settings-app' / name).read_bytes())
+    for name in ('widgets', 'games', 'window-buttons', 'monet_runtime', 'settings', 'textures'):
+        put(private / 'monet' / name, system_share / 'monet' / name)
+    launcher = (ROOT / 'linux/libexec/monet-settings').read_text().replace('@DATADIR@', str(private)).replace('@LIBEXECDIR@', '/usr/libexec')
+    launcher = launcher.replace('_loader.exec_module(games)', '_loader.exec_module(games)\ngames.PROGRAMS["helper"] = ' + repr(str(helpers / 'monet-quick')))
+    put(helpers / 'monet-settings', launcher.encode(), 0o755)
+    desktop = (system_share / 'applications/monet-settings.desktop').read_text().replace('/usr/libexec/monet-settings', str(helpers / 'monet-settings'))
+    put(DATA / 'applications/monet-settings.desktop', desktop.encode())
+    return files
+
+
+def window_frames_plan():
+    """Override the active Monet shadow theme without changing window preferences."""
+    folder = Path('aurorae/themes/MonetBare')
+    return {DATA / folder / source.name: (source.read_bytes(), 0o644)
+            for source in (ROOT / 'linux/share' / folder).iterdir() if source.is_file()}
 
 
 def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None, native_bundles=None):
@@ -255,8 +416,11 @@ def plan(monitor_bundle=None, monet_prefix=None, dock_bundle=None, native_bundle
         for source, target in (('ShellLogout.qml', 'Logout.qml'), ('Logout.qml', 'MonetLogout.qml'),
                                ('PowerMark.qml', 'PowerMark.qml'), ('timer.js', 'timer.js'), ('monet.svg', 'monet.svg')):
             add(DATA / logout / target, (ROOT / 'linux/share/monet/logout' / source).read_bytes())
-    add(DATA / shell / 'contents/explorer/MonetWidgetExplorer.qml',
-        render(ROOT / 'linux/share/monet/explorer/MonetWidgetExplorer.qml', bindir=BIN))
+    add(DATA / 'monet/panel/WindowControls.qml',
+        (ROOT / 'linux/share/monet/panel/WindowControls.qml').read_bytes())
+    gallery = render(ROOT / 'linux/share/monet/explorer/MonetWidgetExplorer.qml', bindir=BIN)
+    gallery = gallery.replace(b'file:///usr/share/monet/panel', ('file://' + str(DATA / 'monet/panel')).encode())
+    add(DATA / shell / 'contents/explorer/MonetWidgetExplorer.qml', gallery)
     for name in ('MonetLockScreen.qml', 'LockScreen.qml'):
         add(DATA / shell / 'contents/lockscreen' / name,
             (ROOT / 'linux/share/monet/lockscreen' / name).read_bytes())
@@ -455,21 +619,37 @@ def retire(apply_changes=False, launchers_only=False):
     print(json.dumps(result, indent=2))
 
 
+def source_only(files):
+    """Remove adjacent bytecode whenever a source preview owns that URL."""
+    files = dict(files)
+    for target in tuple(files):
+        if target.suffix in {'.qml', '.js', '.mjs'}:
+            cache = Path(str(target) + 'c')
+            files.pop(cache, None)
+            if cache.exists() or cache.is_symlink():
+                files[cache] = (None, None)
+    return files
+
+
 def apply(files):
+    files = source_only(files)
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ')
     backup = STATE / 'monet/desktop-preview' / stamp
     backup.mkdir(parents=True, mode=0o700); receipt = backup / 'receipt.json'
     info = {'source': str(ROOT), 'files': []}
     for target, (data, mode) in files.items():
-        after = 'link:' + str(data) if isinstance(data, Path) else hashlib.sha256(data).hexdigest()
+        after = None if data is None else 'link:' + str(data) if isinstance(data, Path) else hashlib.sha256(data).hexdigest()
         before = digest(target)
         before_mode = stat.S_IMODE(target.stat().st_mode) if target.exists() and not target.is_symlink() else None
-        after_mode = None if isinstance(data, Path) else mode
+        after_mode = None if data is None or isinstance(data, Path) else mode
         if before == after and (isinstance(data, Path) or before_mode == after_mode): continue
         row = {'path': str(target), 'before': before, 'after': after, 'backup': str(len(info['files'])),
                'before_mode': before_mode, 'after_mode': after_mode}
         if before is not None: shutil.copy2(target, backup / row['backup'], follow_symlinks=False)
         info['files'].append(row); receipt.write_text(json.dumps(info, indent=2)); receipt.chmod(0o600)
+        if data is None:
+            target.unlink(missing_ok=True)
+            continue
         target.parent.mkdir(parents=True, exist_ok=True)
         temporary = target.with_name(target.name + '.monet-preview-tmp')
         if temporary.exists() or temporary.is_symlink(): raise FileExistsError(temporary)
@@ -493,14 +673,25 @@ if __name__ == '__main__':
     parser.add_argument('--task-manager-bundle', type=Path)
     parser.add_argument('--dock-bundle', type=Path)
     parser.add_argument('--native-bundles', type=Path, help='Matching activity, launcher, dock, Files and Archives bundles')
+    parser.add_argument('--notch', action='store_true', help='Update only the notch and its pad service, preserving desktop preferences')
+    parser.add_argument('--editor', action='store_true', help='Update the taskbar and notch editor and its Settings entry point')
+    parser.add_argument('--window-frames', action='store_true', help='Update Monet window shadows without changing the selected theme; may be combined with --notch')
     parser.add_argument('--monet-prefix', type=Path, help='Root-owned tested CLI preview; remembered for future previews')
     args = parser.parse_args()
     if args.retire and args.restore: parser.error('--retire cannot be combined with --restore')
     if args.launchers_only and not args.retire: parser.error('--launchers-only requires --retire')
     if args.after_version and not args.retire: parser.error('--after-version requires --retire')
+    if (args.notch or args.window_frames or args.editor) and (args.retire or args.restore or args.task_manager_bundle or args.dock_bundle or args.native_bundles or args.monet_prefix):
+        parser.error('--notch, --editor and --window-frames cannot be combined with other preview targets or restoration')
     if args.after_version and not running_monet_version(args.after_version):
         print(json.dumps({'deferred': True, 'version': args.after_version}))
     elif args.retire: retire(args.apply, args.launchers_only)
     elif args.restore: restore(args.restore)
+    elif args.notch or args.window_frames or args.editor:
+        files = notch_plan() if args.notch else {}
+        if args.window_frames: files.update(window_frames_plan())
+        if args.editor: files.update(editor_plan())
+        if args.apply: apply(files)
+        else: print(json.dumps({'files': len(files), 'data': str(DATA), 'targets': [name for name, active in [('notch', args.notch), ('editor', args.editor), ('window-frames', args.window_frames)] if active]}, indent=2))
     elif args.apply: apply(plan(args.task_manager_bundle, args.monet_prefix, args.dock_bundle, args.native_bundles))
     else: print(json.dumps({'files': len(plan(args.task_manager_bundle, args.monet_prefix, args.dock_bundle, args.native_bundles)), 'data': str(DATA), 'helpers': str(HELPERS)}, indent=2))

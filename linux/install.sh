@@ -116,7 +116,7 @@ put 644 "$SRC/systemd/user/app-org.kde.spectacle.service.d/monet.conf" "$USERUNI
 put 644 "$SRC/libexec/monet-quick" "$LIBEXECDIR/monet_quick.py"
 python3 -I -m compileall -q -f --invalidation-mode checked-hash "$LIBEXECDIR/monet_quick.py"
 put 755 "$SRC/launchers/monet-quick" "$LIBEXECDIR/monet-quick"
-for tool in monet-utilities monet-session monet-look monet-profile monet-light monet-daylight monet-weather monet-resume monet-work monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-priority monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
+for tool in monet-editor-window monet-utilities monet-session monet-look monet-profile monet-light monet-daylight monet-weather monet-resume monet-work monet-leave monet-files-tools monet-system-info monet-graphics-use monet-boot-network monet-rest monet-priority monet-game-keys monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-paint monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
     put 755 "$SRC/libexec/$tool" "$LIBEXECDIR/$tool"
 done
 if [ "$IMAGE" = 0 ] && [ -d "$SRC/libexec/pulsectl" ]; then
@@ -192,8 +192,10 @@ put 644 "$SRC/share/applications/monet-passwords.desktop" "$DATADIR/applications
 put 644 "$SRC/share/applications/monet-games.desktop" "$DATADIR/applications/monet-games.desktop"
 # Apps, Games' sibling: every app in the menu, by where it came from and what it does.
 put 644 "$SRC/share/applications/monet-utilities.desktop" "$DATADIR/applications/monet-utilities.desktop"
+put 644 "$SRC/share/applications/monet-notch-settings.desktop" "$DATADIR/applications/monet-notch-settings.desktop"
 put 644 "$SRC/share/applications/org.monet.QuickPanel.desktop" "$DATADIR/applications/org.monet.QuickPanel.desktop"
 put 644 "$SRC/share/applications/org.monet.FavoritesWheel.desktop" "$DATADIR/applications/org.monet.FavoritesWheel.desktop"
+put 644 "$SRC/share/applications/org.monet.NotchRadial.desktop" "$DATADIR/applications/org.monet.NotchRadial.desktop"
 wheel_defaults=/etc/xdg
 if [ "$IMAGE" = 1 ] && [ -d /usr/share/kde-settings/kde-profile/default/xdg ]; then
     wheel_defaults=/usr/share/kde-settings/kde-profile/default/xdg
@@ -222,6 +224,7 @@ tree "$SRC/share/plasma/wallpapers/org.monet.hours" "$DATADIR/plasma/wallpapers/
 tree "$SRC/share/plasma/desktoptheme/monet" "$DATADIR/plasma/desktoptheme/monet"
 tree "$SRC/share/plasma/desktoptheme/monet-matte" "$DATADIR/plasma/desktoptheme/monet-matte"
 tree "$SRC/share/plasma/desktoptheme/monet-solid" "$DATADIR/plasma/desktoptheme/monet-solid"
+tree "$SRC/share/plasma/packages/org.kde.paneltoolbox" "$DATADIR/plasma/packages/org.kde.paneltoolbox"
 for theme in org.monet.desktop org.monet.smoke.desktop; do
     tree "$SRC/share/plasma/look-and-feel/$theme" "$DATADIR/plasma/look-and-feel/$theme"
     # The restart and shut-down screen, the same in both lights.
@@ -244,6 +247,14 @@ done
 install -m 644 "$SRC/share/monet/settings-app/DisplayBrightness.qml" "$DATADIR/plasma/plasmoids/org.monet.quick/contents/ui/DisplayBrightness.qml"
 # The desktop widgets share one glass.
 put 644 "$SRC/share/monet/bar-defaults.js" "$DATADIR/monet/bar-defaults.js"
+put 644 "$SRC/share/monet/panel/EditorWindows.js" "$DATADIR/monet/panel/EditorWindows.js"
+for component in EditorHost EditorAppWindow PanelEditorWindow WidgetEditorWindow WindowControls; do
+    put 644 "$SRC/share/monet/panel/$component.qml" "$DATADIR/monet/panel/$component.qml"
+done
+put 644 "$SRC/share/monet/panel/NotchEditor.qml" "$DATADIR/monet/panel/NotchEditor.qml"
+put 644 "$SRC/share/monet/panel/ResizeGrip.qml" "$DATADIR/monet/panel/ResizeGrip.qml"
+put 644 "$SRC/share/monet/panel/IslandGlyph.qml" "$DATADIR/monet/panel/IslandGlyph.qml"
+put 644 "$SRC/share/monet/panel/IslandSymbols.js" "$DATADIR/monet/panel/IslandSymbols.js"
 put 644 "$SRC/share/monet/panel-notch.js" "$DATADIR/monet/panel-notch.js"
 put 644 "$SRC/share/monet/panel-layout.js" "$DATADIR/monet/panel-layout.js"
 put 644 "$SRC/share/monet/repair-sound.js" "$DATADIR/monet/repair-sound.js"
@@ -264,7 +275,7 @@ for applet in org.monet.sound org.monet.quick; do
     install -m 644 "$SRC/share/monet/widgets/ActionButton.qml" "$DATADIR/plasma/plasmoids/$applet/contents/ui/ActionButton.qml"
 done
 for applet in "$DATADIR"/plasma/plasmoids/org.monet.*; do
-    for part in LayoutGuard.qml LayoutMath.js NoteLogic.js PanelFit.qml ClockFormat.qml TaskManagerAction.qml GlassSettings.qml SessionActivity.qml LaunchController.qml LaunchFeedback.qml FolderOpenController.qml ScrollInput.qml; do
+    for part in LayoutGuard.qml LayoutMath.js NoteLogic.js PanelFit.qml ClockFormat.qml TaskManagerAction.qml GlassSettings.qml SessionActivity.qml GraphicsPolicy.qml LaunchController.qml LaunchFeedback.qml FolderOpenController.qml ScrollInput.qml; do
         install -m 644 "$SRC/share/monet/widgets/$part" "$applet/contents/ui/$part"
     done
 done
@@ -339,7 +350,7 @@ install -D -m 644 "$SRC/udev/90-monet-system.rules" /etc/udev/rules.d/90-monet-s
 put 644 "$SRC/systemd/monet-sync.service" "$UNITDIR/monet-sync.service"
 put 644 "$SRC/systemd/monet-windows-setup.service" "$UNITDIR/monet-windows-setup.service"
 put 644 "$SRC/systemd/monet-windows-continue.service" "$UNITDIR/monet-windows-continue.service"
-for unit in monet-update.service monet-update.timer monet-apps.service monet-apps.timer monet-crash@.service monet-charge.service; do
+for unit in monet-update.service monet-update.timer monet-apps.service monet-apps.timer monet-crash@.service monet-charge.service monet-game-keys.service; do
     put 644 "$SRC/systemd/$unit" "$UNITDIR/$unit"
 done
 # When an app crashes, Monet's note instead of KDE's crash reporter: beside each
@@ -352,6 +363,7 @@ put 644 "$SRC/systemd/user/monet-light-sync.service" "$USERUNITDIR/monet-light-s
 put 644 "$SRC/systemd/user/monet-light-sync.path" "$USERUNITDIR/monet-light-sync.path"
 put 644 "$SRC/systemd/user/monet-fresh.service" "$USERUNITDIR/monet-fresh.service"
 put 644 "$SRC/systemd/user/monet-bluetooth-sleep.service" "$USERUNITDIR/monet-bluetooth-sleep.service"
+put 644 "$SRC/systemd/user/mpris-proxy.service.d/monet-shutdown.conf" "$USERUNITDIR/mpris-proxy.service.d/monet-shutdown.conf"
 put 644 "$SRC/systemd/user/monet-clean-links.service" "$USERUNITDIR/monet-clean-links.service"
 put 644 "$SRC/systemd/user/monet-clipboard-expiry.service" "$USERUNITDIR/monet-clipboard-expiry.service"
 put 644 "$SRC/systemd/user/monet-monitor-alerts.service" "$USERUNITDIR/monet-monitor-alerts.service"
@@ -466,6 +478,8 @@ put 644 "$SRC/share/ibus/component/monet-snippets.xml" "$DATADIR/ibus/component/
 install -d "$DATADIR/monet/utilities"
 install -m 644 "$SRC"/share/monet/utilities/*.py "$DATADIR/monet/utilities/"
 install -m 644 "$SRC/share/monet/utilities/NotchPlacement.qml" "$DATADIR/monet/utilities/"
+install -m 644 "$SRC/share/monet/utilities/NotchSettingsLayout.qml" "$DATADIR/monet/utilities/"
+install -m 644 "$SRC/share/monet/utilities/settings-chevron.svg" "$DATADIR/monet/utilities/"
 install -Dm644 "$SRC/clipboard/ext-data-control-v1.xml" "$DATADIR/monet/utilities/ext-data-control-v1.xml"
 if [ -f "$SRC/share/monet/utilities/libmonetclipboard.so" ]; then
     install -m 755 "$SRC/share/monet/utilities/libmonetclipboard.so" "$DATADIR/monet/utilities/"
@@ -579,7 +593,7 @@ if [ "$IMAGE" = 1 ]; then
     systemctl enable monet-boot-arm.service monet-boot-check.service monet-reset.service monet-seal.service \
         monet-seal-relearn.service
     systemctl enable monet-pairings.service
-    systemctl enable monet-input-connect.service
+    systemctl enable monet-input-connect.service monet-game-keys.service
     systemctl enable monet-windows-drive.service monet-windows-files.service monet-windows-network.service
     systemctl enable monet-guest-wipe.service
     # Monet's name, version, mark and links where the system describes itself (KDE's
@@ -745,7 +759,7 @@ TMP
     if [ -f "$explorer/WidgetExplorer.qml" ] && [ -f "$explorer/AppletDelegate.qml" ]; then
         [ -f "$explorer/KdeWidgetExplorer.qml" ] || mv "$explorer/WidgetExplorer.qml" "$explorer/KdeWidgetExplorer.qml"
         put 644 "$SRC/share/monet/explorer/MonetWidgetExplorer.qml" "$explorer/MonetWidgetExplorer.qml"
-        install -m 644 "$SRC/share/monet/explorer/WidgetExplorer.qml" "$explorer/WidgetExplorer.qml"
+        put 644 "$SRC/share/monet/explorer/WidgetExplorer.qml" "$explorer/WidgetExplorer.qml"
     fi
     # And edit mode, around the shrunken desktop while widgets are added or
     # moved: KDE's kept as KdeDesktopEditMode.qml, and DesktopEditMode.qml opens
@@ -768,7 +782,7 @@ TMP
         install -d "$configuration/${editor_page%/*}"
         ln -sfn ../../MonetPanelConfiguration.qml "$configuration/$editor_page"
         wrapper="$configuration/PanelConfiguration.qml"
-        sed "s|@PANEL_EDITOR@|$editor_page|g" "$SRC/share/monet/panel/PanelConfiguration.qml" > "$wrapper.tmp"
+        sed -e "s|@DATADIR@|$DATADIR|g" -e "s|@PANEL_EDITOR@|$editor_page|g" "$SRC/share/monet/panel/PanelConfiguration.qml" > "$wrapper.tmp"
         chmod 644 "$wrapper.tmp"
         mv -f "$wrapper.tmp" "$wrapper"
         # A running shell can enter the new loader at its own URL once, even
@@ -805,6 +819,7 @@ else
     systemctl enable --now monet-keep.timer >/dev/null 2>&1 || true
     systemctl --global enable monet-backup.timer monet-rest.timer >/dev/null 2>&1 || true
     systemctl --global enable monet-priority.service >/dev/null 2>&1 || true
+    systemctl enable --now monet-game-keys.service >/dev/null 2>&1 || true
     # Started now, so the next shutdown already puts a staged update on trial.
     systemctl enable --now monet-boot-arm.service >/dev/null 2>&1 || true
     systemctl enable monet-boot-check.service monet-reset.service monet-seal.service monet-seal-relearn.service \

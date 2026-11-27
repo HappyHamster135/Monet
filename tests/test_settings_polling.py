@@ -22,10 +22,11 @@ class SettingsPolling(unittest.TestCase):
         q = quick_helper()
         with patch.object(q, "busjson", return_value=[{"Percentage": 55, "State": 2}]) as bus, \
                 patch.object(q, "battery_state", return_value={"battery": 55, "plugged": False}) as battery, \
-                patch.object(q, "run") as run:
+                patch.object(q, "run") as run, patch.object(q, "battery_health", return_value=92.0) as health:
             for page in ("power", "updates"):
-                self.assertEqual(q.status(page), {"battery": 55, "plugged": False})
+                self.assertEqual(q.status(page), {"battery": 55, "plugged": False, **({"batteryHealth": 92.0} if page == "power" else {})})
             self.assertEqual(bus.call_count, 2); self.assertEqual(battery.call_count, 2)
+            health.assert_called_once_with()
             run.assert_not_called()
 
     def test_default_snapshot_still_has_every_quick_settings_field(self):

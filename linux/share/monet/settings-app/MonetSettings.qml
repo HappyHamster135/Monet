@@ -534,7 +534,7 @@ Shared.MonetWindow {
     property string walletProblem: ""
     property bool walletChanged: false
     property var printerInfo: ({})
-    // The Monet before the last update: { version, date, pending }, or {}.
+    // The saved system: version, beta, build, localBuild, sameVersion, date, pending.
     property var previous: ({})
     property var profileHistory: []
     property var profileReview: null
@@ -1355,7 +1355,22 @@ Shared.MonetWindow {
         ask("rollback", () => ask("previous", out => sheet.previous = sheet.json(out, {})))
     }
     function previousName() {
-        return previous.version ? i18n("Monet %1", previous.version) : i18n("the Monet from before")
+        if (!previous.version) return i18n("the Monet from before")
+        const version = monetVersion(previous.version, previous.beta, previous.localBuild)
+        return previous.sameVersion ? i18n("the previous build of Monet %1", version) : i18n("Monet %1", version)
+    }
+    function monetVersion(version, beta, localBuild) {
+        const name = beta > 0 ? i18n("%1 beta %2", version, beta) : version
+        return localBuild ? i18n("%1 (local build)", name) : name
+    }
+    function previousDetail() {
+        const identity = []
+        if (previous.build) identity.push(i18n("Build %1", previous.build))
+        if (previous.date) identity.push(i18n("Built on %1", previous.date))
+        const explanation = previous.sameVersion
+            ? i18n("This saved system uses the same version number, but has different changes or settings.")
+            : i18n("If something stopped working after an update, the previous system is still here.")
+        return identity.length ? identity.join(" · ") + ". " + explanation : explanation
     }
 
     function flipAutoUpdates() {
@@ -1516,8 +1531,7 @@ Shared.MonetWindow {
         }
         if (updateRestartReady) return i18n("Restart to finish")
         if (updateState === "done") return i18n("Monet and your apps are up to date.")
-        if (pc.monet && pc.beta > 0) return i18n("Monet %1", i18n("%1 beta %2", pc.monet, pc.beta))
-        return pc.monet ? i18n("Monet %1", pc.monet) : i18n("Monet")
+        return pc.monet ? i18n("Monet %1", monetVersion(pc.monet, pc.beta, pc.localBuild)) : i18n("Monet")
     }
 
     function updateDetail() {
@@ -1757,7 +1771,7 @@ Shared.MonetWindow {
         if (info.charging) return info.minutes
             ? i18nc("%1 is a time like 1:20", "Charging, full in %1", hm(info.minutes)) : i18n("Charging")
         if (!info.plugged) return info.minutes
-            ? i18nc("%1 is a time like 2:15", "About %1 left", hm(info.minutes)) : i18n("On battery")
+            ? i18nc("%1 is a time like 2:15", "About %1 left at current usage", hm(info.minutes)) : i18n("On battery · estimating time remaining…")
         if (batteryCare.supported === true && batteryCare.limit < 100 && info.battery >= batteryCare.limit)
             return i18n("Plugged in · charging paused · %1% limit", batteryCare.limit)
         if (info.battery >= 100) return i18n("Plugged in · fully charged")

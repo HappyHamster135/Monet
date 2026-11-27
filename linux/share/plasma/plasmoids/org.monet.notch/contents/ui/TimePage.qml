@@ -35,32 +35,9 @@ TimeScrollView {
             settings.watchStart = ""
         } else settings.watchStart = String(stamp)
     }
-    component StepMark: Text {
-        width: 30; height: parent.height
-        horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
-        color: enabled ? "#eeeeef" : "#727278"; font.pixelSize: 18
-    }
-    component Stepper: C.SpinBox {
-        id: spin
-        from: 1; to: 1440; editable: true
-        implicitWidth: 106; implicitHeight: 30
-        leftPadding: 30; rightPadding: 30; topPadding: 0; bottomPadding: 0
-        background: Rectangle {
-            radius: 9; color: "#252527"
-            border.width: spin.activeFocus ? 1 : 0; border.color: "#ffad53"
-        }
-        contentItem: TextInput {
-            text: spin.displayText; font.pixelSize: 13; color: "#ffb669"; selectByMouse: true
-            horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
-            validator: spin.validator; readOnly: !spin.editable
-            inputMethodHints: Qt.ImhDigitsOnly
-        }
-        up.indicator: StepMark { x: spin.mirrored ? 0 : spin.width - width; text: "+" }
-        down.indicator: StepMark { x: spin.mirrored ? spin.width - width : 0; text: "−" }
-    }
     ColumnLayout {
         width: page.availableWidth
-        spacing: 9
+        spacing: 6
         Item {
             id: modes
             objectName: "notchTimeModes"
@@ -101,7 +78,6 @@ TimeScrollView {
         }
         ColumnLayout {
             Layout.fillWidth: true; spacing: 3
-            Item { Layout.preferredHeight: 8 }
             Text {
                 Layout.alignment: Qt.AlignRight; Layout.maximumWidth: page.availableWidth
                 elide: Text.ElideRight
@@ -143,7 +119,9 @@ TimeScrollView {
                 Text {
                     Layout.maximumWidth: page.availableWidth - (page.inSession || page.stopwatch ? 106 : 40)
                     text: page.formatDuration(page.seconds); color: page.amber
-                    horizontalAlignment: Text.AlignRight; font.pixelSize: page.availableWidth < 300 ? 43 : 58
+                    // Use the viewport width: scrollbar appearance must not
+                    // change the font and feed back into the content height.
+                    horizontalAlignment: Text.AlignRight; font.pixelSize: page.width < 340 ? 43 : 52
                     font.weight: Font.Light; font.features: ({"tnum": 1})
                     minimumPixelSize: 24; fontSizeMode: Text.HorizontalFit
                 }
@@ -156,20 +134,37 @@ TimeScrollView {
                 }
             }
         }
-        GridLayout {
-            Layout.fillWidth: true
-            columns: page.availableWidth < 400 ? 1 : 2
-            columnSpacing: 5; rowSpacing: 4
+        RowLayout {
+            visible: !page.stopwatch && !page.inSession
+            Layout.fillWidth: true; spacing: 6
+            Repeater {
+                model: [5, 15, 25, 45, 60]
+                IslandButton {
+                    required property int modelData
+                    objectName: "notchTimerPreset-" + modelData
+                    Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.minimumWidth: 0
+                    caption: true; implicitHeight: 28; text: i18n("%1 min",modelData)
+                    checked: page.settings.timerMinutes === modelData
+                    onClicked: page.settings.timerMinutes = modelData
+                }
+            }
+        }
+        Flow {
+            // Wrap based on the controls' real widths, including translated
+            // labels and the extra Focus button, rather than a fixed breakpoint.
+            Layout.fillWidth: true; Layout.minimumWidth: 0
+            spacing: 8
             RowLayout {
-                visible: !page.stopwatch
+                visible: !page.stopwatch && !page.inSession
+                width: implicitWidth
                 spacing: 5
                 IslandButton {
-                    caption: true; prominent: true
+                    caption: true; prominent: false; base: "#ffad53"; tint: "#20170f"; implicitWidth: 90
                     visible: !page.inSession && !page.stopwatch
                     text: i18n("Start"); onClicked: page.timer.start(page.mode === 1, Date.now())
                 }
-                C.Label { visible: minutesBox.visible; text: i18n("Minutes"); color: "#bdbdc2" }
-                Stepper {
+                C.Label { font.pixelSize: 11; visible: minutesBox.visible; text: i18n("Minutes"); color: "#bdbdc2" }
+                IslandStepper {
                     id: minutesBox
                     visible: !page.inSession
                     value: page.settings.timerMinutes; Accessible.name: i18n("Minutes")
@@ -177,8 +172,7 @@ TimeScrollView {
                 }
             }
             RowLayout {
-                Layout.fillWidth: true; spacing: 5
-                Item { Layout.fillWidth: true }
+                width: implicitWidth; spacing: 5
                 IslandButton {
                     id: awakeButton; caption: true
                     visible: page.offerAwake; text: i18n("Keep awake"); onClicked: page.awakeRequested()
@@ -190,7 +184,7 @@ TimeScrollView {
                 }
             }
         }
-        C.Label { Layout.fillWidth: true; wrapMode: Text.Wrap; visible: !!text; text: page.message || page.timer.completion }
+        C.Label { font.pixelSize: 12; Layout.fillWidth: true; wrapMode: Text.Wrap; visible: !!text; text: page.message || page.timer.completion }
         IslandButton {
             caption: true; visible: !!page.timer.completion; text: i18n("Dismiss"); onClicked: page.timer.dismiss()
         }
@@ -199,24 +193,24 @@ TimeScrollView {
             Layout.maximumWidth: page.availableWidth
             visible: options.visible && options.checked
             columns: 2
-            C.Label { Layout.fillWidth: true; wrapMode: Text.Wrap; text: i18n("Focus sessions") }
-            Stepper {
+            C.Label { font.pixelSize: 12; Layout.fillWidth: true; wrapMode: Text.Wrap; text: i18n("Focus sessions") }
+            IslandStepper {
                 from: 1; to: 24; editable: true; value: page.settings.focusSessions
                 Accessible.name: i18n("Focus sessions")
                 onValueModified: page.settings.focusSessions = value
             }
-            C.Label { Layout.fillWidth: true; wrapMode: Text.Wrap; text: i18n("Short break (minutes)") }
-            Stepper {
+            C.Label { font.pixelSize: 12; Layout.fillWidth: true; wrapMode: Text.Wrap; text: i18n("Short break (minutes)") }
+            IslandStepper {
                 value: page.settings.shortBreakMinutes; Accessible.name: i18n("Short break (minutes)")
                 onValueModified: page.settings.shortBreakMinutes = value
             }
-            C.Label { Layout.fillWidth: true; wrapMode: Text.Wrap; text: i18n("Long break (minutes)") }
-            Stepper {
+            C.Label { font.pixelSize: 12; Layout.fillWidth: true; wrapMode: Text.Wrap; text: i18n("Long break (minutes)") }
+            IslandStepper {
                 value: page.settings.longBreakMinutes; Accessible.name: i18n("Long break (minutes)")
                 onValueModified: page.settings.longBreakMinutes = value
             }
-            C.Label { Layout.fillWidth: true; wrapMode: Text.Wrap; text: i18n("Sessions per long break") }
-            Stepper {
+            C.Label { font.pixelSize: 12; Layout.fillWidth: true; wrapMode: Text.Wrap; text: i18n("Sessions per long break") }
+            IslandStepper {
                 from: 1; to: 24; editable: true; value: page.settings.longBreakEvery
                 Accessible.name: i18n("Sessions per long break")
                 onValueModified: page.settings.longBreakEvery = value

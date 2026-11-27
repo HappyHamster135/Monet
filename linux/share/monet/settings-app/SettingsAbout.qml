@@ -51,7 +51,7 @@ ColumnLayout {
             }
             Text {
                 horizontalAlignment: Text.AlignLeft
-                text: sheet.pc.monet ? i18n("%1 · Impression", sheet.pc.beta > 0 ? i18n("%1 beta %2", sheet.pc.monet, sheet.pc.beta) : sheet.pc.monet) : i18n("Impression")
+                text: sheet.pc.monet ? i18n("%1 · Impression", sheet.monetVersion(sheet.pc.monet, sheet.pc.beta, sheet.pc.localBuild)) : i18n("Impression")
                 color: "#E6FFFFFF"
                 font.pixelSize: Math.max(16, Math.round(Kirigami.Theme.defaultFont.pointSize * 4 / 3) + 0)
             }

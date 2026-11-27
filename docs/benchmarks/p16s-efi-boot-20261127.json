@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "hardware": "ThinkPad P16s Gen 2 Intel",
+  "baseline_boot_id": "cf313335-43e4-4760-a349-c9f5975f13eb",
+  "baseline_user_reported_elapsed_s_approx": 33,
+  "baseline_phases_s": {
+    "firmware": 13.62,
+    "loader": 3.851,
+    "kernel": 1.738,
+    "initrd": 4.649,
+    "userspace": 6.518,
+    "systemd_total": 30.379
+  },
+  "trial": "20261127T132847Z",
+  "status": "booted successfully; one-time selection consumed",
+  "route": "UEFI -> existing Fedora shim -> Linux EFI stub -> tested host-only initramfs -> same Monet deployment",
+  "grub_bypassed": true,
+  "shim_retained": true,
+  "reason_for_shim": "Current TPM disk-unlock token is bound to SHA256 PCR 7. The measured boot log includes shim's SbatLevel EV_EFI_VARIABLE_AUTHORITY event in PCR 7. Omitting shim would change that measurement. No TPM enrollment or encryption settings were changed.",
+  "kernel": "7.3.4-ogc8.1.fc45.x86_64",
+  "kernel_sha256": "0ac8617f3fb7debc136107609ef796c4c7aec307a86d79c952f2932e9d92516f",
+  "initrd_sha256": "3e86428d6caab76c7d34a4fcdba4f6dadd20c2c8e065cfa464d266cd73878609",
+  "boot_next": "0001",
+  "trial_label": "Monet EFI kernel test",
+  "backup_entry": "0000 Monet",
+  "permanent_boot_order_changed": false,
+  "existing_efi_entries_verified_unchanged": 30,
+  "existing_esp_files_verified_unchanged": 16,
+  "original_boot_files_verified_unchanged": 6,
+  "esp_directory": "EFI/MonetDirect/20261127T132847Z",
+  "esp_partuuid": "bfd99cf8-a424-41d7-923d-3dae7ab638f9",
+  "receipt": "/var/lib/monet/efi-boot-trial/20261127T132847Z/receipt.json",
+  "validation": {
+    "x64_kernel_efi_application": true,
+    "files_verified_after_esp_unmount_and_remount": true,
+    "firmware_entry_partition_path_and_utf16_options_read_back": true,
+    "utf16_options_explicitly_nul_terminated": true,
+    "no_staged_os_deployment": true,
+    "focused_tests_passed": 13,
+    "physical_boot_result": {
+      "boot_id": "9ad57b19-1f92-408d-b6ba-d022333394f7",
+      "trial_marker_present": true,
+      "user_reported_cold_boot": "20-something seconds",
+      "phases_s": {
+        "firmware": 13.875,
+        "loader": 1.896,
+        "kernel": 1.713,
+        "initrd": 4.727,
+        "userspace": 8.31,
+        "systemd_total": 30.523,
+        "graphical_target_in_userspace": 3.943
+      },
+      "loader_reduction_vs_baseline_s": 1.955,
+      "automatic_unlock_independently_observed": false
+    }
+  },
+  "preparation_note": "Initial unarmed attempt caught efibootmgr 18 omitting the UTF-16 terminator with --unicode. That entry and its files were removed with original state verified. The installed attempt supplies an exact terminated binary payload with --append-binary-args.",
+  "limitations": "The trial booted the intended EFI kernel and deployment. User-reported time to the desktop and the systemd total have different endpoints. This bypasses GRUB, not shim or Lenovo firmware. BootNext was one-time; the original boot order remains unchanged. This is not an update-aware permanent boot installation."
+}

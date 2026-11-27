@@ -8,6 +8,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Qt, QThreadPool, Signal, Slot
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QGridLayout, QHBoxLayout, QLabel,
                                QPushButton, QScrollArea, QSpinBox, QVBoxLayout, QWidget)
+from shiboken6 import isValid
 
 from actions import tr
 from monitor_alerts import LIMITS, NAMES, REPEATS, UNIT, preferences
@@ -37,6 +38,9 @@ class MonitorPage(QWidget):
         scroll.setWidgetResizable(True)
         content = QWidget()
         grid = QGridLayout(content)
+        self.grid = grid
+        self.compact = False
+        self.compact_labels = []
         grid.setColumnStretch(0, 1)
         grid.setVerticalSpacing(2)
         grid.addWidget(QLabel(tr("Alert")), 0, 0)
@@ -64,6 +68,7 @@ class MonitorPage(QWidget):
             self.labels[key] = label
             grid.addWidget(label, row, 2)
         grid.setRowStretch(len(NAMES) + 1, 1)
+        self.grid_cells = [(grid.itemAt(i).widget(), *grid.getItemPosition(i)) for i in range(grid.count())]
         scroll.setWidget(content)
         layout.addWidget(scroll, 1)
 
@@ -124,8 +129,40 @@ class MonitorPage(QWidget):
                 active = subprocess.run(["systemctl", "--user", "is-active", "--quiet", UNIT], timeout=3).returncode == 0
             except (OSError, subprocess.TimeoutExpired):
                 active = False
-            updates.loaded.emit(number, readings, active)
+            if isValid(updates):
+                updates.loaded.emit(number, readings, active)
         QThreadPool.globalInstance().start(sample)
+
+    def set_notch_width(self, width):
+        compact = width < 380
+        if compact == self.compact:
+            return
+        self.compact = compact
+        while self.grid.count():
+            self.grid.takeAt(0)
+        for row in range(self.grid.rowCount()):
+            self.grid.setRowStretch(row, 0)
+        for label in self.compact_labels:
+            label.hide()
+            label.deleteLater()
+        self.compact_labels = []
+        for widget, row, column, rows, columns in self.grid_cells:
+            if not compact:
+                widget.show()
+                self.grid.addWidget(widget, row, column, rows, columns)
+            elif row == 0:
+                widget.hide()
+            elif column == 0:
+                self.grid.addWidget(widget, (row-1)*4, 0, 1, 2)
+            else:
+                title = QLabel(tr("Limit") if column == 1 else tr("Current reading"))
+                title.setWordWrap(True)
+                self.compact_labels.append(title)
+                self.grid.addWidget(title, (row-1)*4+column, 0)
+                self.grid.addWidget(widget, (row-1)*4+column, 1)
+        self.grid.setColumnStretch(0, 1)
+        self.grid.setColumnStretch(1, 1 if compact else 0)
+        self.grid.setColumnMinimumWidth(2, 0)
 
     @Slot(int, object, bool)
     def loaded(self, number, readings, active):

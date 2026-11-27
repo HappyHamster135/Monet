@@ -155,6 +155,160 @@ class Wheel(unittest.TestCase):
         self.assertTrue(self.window.quick_panel.isVisible())
         self.assertEqual(self.window.quick_panel.stack.currentIndex(), 1)
 
+    def test_floating_radial_uses_saved_slots_and_preserves_holes(self):
+        self.favorites(['ports'],['snippets'])
+        self.settings.setValue('notchRadial',json.dumps(['emoji','','text-tools','snippets','','','','']))
+        self.window.Open(['radial'])
+        wheel=self.window.favorites_wheel
+        self.assertTrue(wheel.isVisible());self.assertFalse(self.window.isVisible())
+        self.assertEqual(wheel.active_id,'radial');self.assertEqual(wheel.mode,'click')
+        self.assertEqual([b.key for b in wheel.buttons],['emoji','','text-tools','','','','',''])
+        self.assertEqual([b.isEnabled() for b in wheel.buttons],[True,False,True,False,False,False,False,False])
+        chosen=[];wheel.chosen.disconnect(self.window.open_favorite);wheel.chosen.connect(chosen.append)
+        QTest.keyClick(wheel.current,Qt.Key_2)
+        self.assertTrue(wheel.isVisible());self.assertEqual(chosen,[])
+        QTest.keyClick(wheel.current,Qt.Key_Right);self.assertIs(wheel.current,wheel.buttons[2])
+        QTest.keyClick(wheel.current,Qt.Key_3)
+        self.assertEqual(chosen,['text-tools']);self.assertFalse(wheel.isVisible())
+        self.assertEqual(json.loads(self.settings.value('favorites')),['ports'])
+        self.assertFalse(self.settings.contains('activeWheel'))
+
+    def test_radial_can_toggle_escape_and_edit_without_a_notch(self):
+        self.settings.setValue('notchRadial',json.dumps(['']*8))
+        self.window.Open(['radial']);wheel=self.window.favorites_wheel
+        self.assertTrue(wheel.isVisible());self.assertIsNone(wheel.current)
+        with patch.object(self.window,'show_notch_settings') as settings:
+            QTest.mouseClick(wheel.hub,Qt.LeftButton)
+        settings.assert_called_once_with('radial');self.assertFalse(wheel.isVisible())
+        self.window.Open(['radial']);self.assertTrue(wheel.isVisible())
+        self.window.Open(['radial']);self.assertFalse(wheel.isVisible())
+        self.window.Open(['radial']);QTest.keyClick(wheel,Qt.Key_Escape)
+        self.assertFalse(wheel.isVisible());self.assertIsNone(self.window.quick_panel)
+
+    def test_radial_child_buttons_do_not_clip_the_antialiased_rims(self):
+        from PySide6.QtGui import QImage, QPainter
+        from radial_art import RingGeometry, paint_ring
+        self.window.Open(['radial']);wheel=self.window.favorites_wheel
+        self.app.processEvents()
+        wheel.highlight(wheel.buttons[5])
+        actual=wheel.grab().toImage();scale=actual.devicePixelRatio()
+        surface=QImage(actual.size(),QImage.Format_ARGB32_Premultiplied)
+        surface.setDevicePixelRatio(scale);surface.fill(Qt.transparent)
+        geometry=RingGeometry(wheel.rect())
+        painter=QPainter(surface);paint_ring(painter,geometry,5,len(wheel.buttons));painter.end()
+        # Input widgets must not erase or raster-clip the shared artwork. This
+        # includes both sides of the hub and the translucent outer edge.
+        for radius in (geometry.inner,geometry.radius):
+            for degree in range(360):
+                angle=math.radians(degree)
+                for offset in (-1,0,1):
+                    x=round((geometry.center.x()+(radius+offset)*math.cos(angle))*scale)
+                    y=round((geometry.center.y()+(radius+offset)*math.sin(angle))*scale)
+                    self.assertEqual(actual.pixelColor(x,y),surface.pixelColor(x,y),(radius,degree,offset))
+        self.assertEqual(actual.pixelColor(0,0).alpha(),0)
+
+    def test_radial_mouse_targets_follow_the_painted_slots(self):
+        from radial_art import RingGeometry
+        self.window.Open(['radial']);wheel=self.window.favorites_wheel
+        chosen=[];wheel.chosen.disconnect(self.window.open_favorite);wheel.chosen.connect(chosen.append)
+        expected=[button.key for button in wheel.buttons]
+        geometry=RingGeometry(wheel.rect())
+        for index,key in enumerate(expected):
+            if index:self.window.Open(['radial'])
+            point=geometry.point(index,.71).toPoint()
+            button=wheel.childAt(point)
+            self.assertIs(button,wheel.buttons[index])
+            self.assertEqual([b.key for b in wheel.buttons if b.hitButton(point)],[key])
+            self.assertFalse(any(b.hitButton(geometry.center.toPoint()) for b in wheel.buttons))
+            QTest.mouseClick(button,Qt.LeftButton,Qt.NoModifier,point)
+            if key=='emoji':
+                self.assertTrue(wheel.emoji_picker.isVisible());wheel.hide()
+            else:self.assertFalse(wheel.isVisible())
+        self.assertEqual(chosen,[key for key in expected if key!='emoji'])
+
+    def test_radial_emoji_browses_copies_and_returns_without_opening_utilities(self):
+        from actions import stored
+        self.window.Open(['radial']);wheel=self.window.favorites_wheel
+        emoji=next(button for button in wheel.buttons if button.key=='emoji')
+        wheel.highlight(emoji);emoji.setFocus();self.app.processEvents()
+        with patch.object(self.window,'run_tool') as external,patch.object(self.window,'Open') as launch:
+            wheel.choose(emoji.entry);self.app.processEvents()
+            picker=wheel.emoji_picker;page=picker.page
+            self.assertTrue(wheel.isVisible());self.assertFalse(self.window.isVisible())
+            self.assertFalse(picker.isWindow());self.assertTrue(page.search.hasFocus())
+            for index in range(page.category.count()):
+                button=page.category.buttons[index]
+                self.assertTrue(button.isVisibleTo(wheel))
+                QTest.mouseClick(button,Qt.LeftButton);self.app.processEvents()
+                if page.category.tabData(index)!='recent':self.assertGreater(page.grid.count(),0)
+            page.search.setText('rocket')
+            for _ in range(100):
+                QTest.qWait(10)
+                if not page.delay.isActive():break
+            self.assertFalse(page.delay.isActive())
+            self.assertGreater(page.grid.count(),0)
+            copies=[]
+            with patch('notch_pages.copy_text',side_effect=lambda host,text,done:(copies.append(text),done(True))):
+                page.grid.setCurrentRow(0);page.grid.setFocus();QTest.keyClick(page.grid,Qt.Key_Return)
+            self.assertEqual(copies,['🚀']);self.assertIn('copied',page.caption.text())
+            self.assertEqual(stored(self.settings,'notchRecentEmoji',[]),['🚀'])
+            self.assertTrue(picker.isVisible())
+            page.search.clear();page.category.setCurrentIndex(2);self.app.processEvents()
+            self.assertGreater(page.grid.verticalScrollBar().maximum(),0)
+            page.grid.scrollToBottom();self.assertGreater(page.grid.verticalScrollBar().value(),0)
+            QTest.keyClick(page.grid,Qt.Key_Escape)
+            self.assertFalse(picker.isVisible());self.assertTrue(wheel.hub.isVisible())
+            self.assertIs(wheel.current,emoji)
+            wheel.choose(emoji.entry);picker.back.click()
+            self.assertTrue(emoji.isVisible());self.assertFalse(picker.isVisible())
+            QTest.keyClick(wheel,Qt.Key_Escape);self.assertFalse(wheel.isVisible())
+            external.assert_not_called();launch.assert_not_called()
+
+    def test_radial_emoji_fits_the_existing_surface_and_opens_cleanly_again(self):
+        self.window.Open(['radial']);wheel=self.window.favorites_wheel
+        items=tuple(button.entry for button in wheel.buttons)
+        for size in (320,440):
+            wheel.present(items,size);wheel.open_emoji(self.window);self.app.processEvents()
+            picker=wheel.emoji_picker
+            for widget in [picker.page.search,picker.page.grid,picker.back,picker.close,*picker.page.category.buttons]:
+                top=widget.mapTo(wheel,widget.rect().topLeft())
+                bottom=widget.mapTo(wheel,widget.rect().bottomRight())
+                self.assertGreaterEqual(top.x(),0);self.assertGreaterEqual(top.y(),0)
+                self.assertLess(bottom.x(),wheel.width());self.assertLess(bottom.y(),wheel.height())
+            wheel.hide();self.window.Open(['radial'])
+            self.assertFalse(picker.isVisible());self.assertTrue(wheel.hub.isVisible())
+
+    def test_radial_long_names_stay_within_two_center_lines(self):
+        names=['A very long custom name for my favorite screenshot action','UnbrokenName'*5]
+        self.settings.setValue('notchRadial',json.dumps([{'action':'screenshot','name':name} for name in names]))
+        self.window.Open(['radial']);wheel=self.window.favorites_wheel
+        self.app.processEvents()
+        for index,name in enumerate(names):
+            wheel.highlight(wheel.buttons[index]);self.app.processEvents()
+            lines=wheel.label.text().splitlines()
+            self.assertLessEqual(len(lines),2)
+            for line in lines:
+                self.assertLessEqual(wheel.label.fontMetrics().horizontalAdvance(line),wheel.label.width())
+            self.assertLessEqual(wheel.label.sizeHint().height(),wheel.label.height())
+            self.assertEqual(wheel.hub.accessibleDescription(),name)
+
+    def test_radial_shortcut_fast_dispatch_carries_activation_and_respects_hidden_tool(self):
+        with patch.object(self.window,'wheel') as opened:
+            self.receiver.OpenTool('radial','activation-token')
+            self.app.processEvents()
+        opened.assert_called_once_with('radial')
+        self.assertNotIn('XDG_ACTIVATION_TOKEN',os.environ)
+        self.receiver.OpenTool('radial','')
+        self.app.processEvents()
+        self.assertTrue(self.window.favorites_wheel.isVisible())
+        self.receiver.OpenTool('radial','')
+        self.app.processEvents()
+        self.assertFalse(self.window.favorites_wheel.isVisible())
+        self.favorites(['ports'],['wheel'])
+        self.receiver.OpenTool('radial','')
+        self.app.processEvents()
+        self.assertFalse(self.window.favorites_wheel.isVisible())
+
     def test_submenus_restore_focus_and_hidden_tools_disappear_at_every_level(self):
         from wheel_profiles import Entry, Profile, save_profile
         self.favorites(["notes"], ["shelf"])

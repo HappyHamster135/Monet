@@ -119,7 +119,7 @@ class Pads(QObject):
     def for_notch(self, payload):
         try:
             data = json.loads(payload)
-            if not isinstance(data, dict) or data.get("action") not in ("view", "select", "new", "save"):
+            if not isinstance(data, dict) or data.get("action") not in ("view", "select", "new", "save", "rename", "delete"):
                 return '{"ok":false}'
             result = self.request(data["action"], data.get("id", ""), data.get("revision", 0), data.get("value", ""))
         except (ValueError, TypeError):

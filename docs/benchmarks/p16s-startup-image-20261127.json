@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "hardware": "ThinkPad P16s Gen 2 Intel",
+  "baseline_boot_id": "4155edfd-096a-4d39-a6e5-de2e09d3ece0",
+  "baseline_firmware_s": 13.565,
+  "baseline_loader_s": 4.355,
+  "baseline_systemd_total_s": 30.810,
+  "firmware_performance_table_ns": {
+    "firmware_start": 779439971,
+    "bootloader_load": 13539691931,
+    "bootloader_launch": 13565274518,
+    "exitbootservice_start": 17916674393,
+    "exitbootservice_end": 17921096579
+  },
+  "image": {
+    "mode": "dracut hostonly sloppy, local P16s trial only",
+    "original_bytes": 187861580,
+    "candidate_bytes": 154053111,
+    "candidate_sha256": "3e86428d6caab76c7d34a4fcdba4f6dadd20c2c8e065cfa464d266cd73878609",
+    "kernel": "7.3.4-ogc8.1.fc45.x86_64",
+    "required_driver_checks_passed": true,
+    "critical_elf_dependencies_resolved_inside_image": true,
+    "cryptsetup_help_ran_inside_image": true,
+    "cpu_microcode_verified_against_original": true,
+    "account_password_hashes_present": false
+  },
+  "install": {
+    "status": "tested-once; selector consumed; normal image remains the default",
+    "receipt": "/var/lib/monet/startup-image/20261127T125857Z/receipt.json",
+    "selector": "monet_initrd_trial=20261127T125857Z",
+    "selector_cleared_before_trial_boot": true,
+    "existing_boot_entries_and_images_preserved": true,
+    "firmware_changed": false,
+    "encryption_or_tpm_enrollment_changed": false,
+    "physical_boot_result": {
+      "boot_id": "cf313335-43e4-4760-a349-c9f5975f13eb",
+      "user_reported_elapsed_s_approx": 33,
+      "boot_kind": "Not specified for this measurement",
+      "trial_cmdline_marker_present": true,
+      "trial_selector_absent_after_boot": true,
+      "boot_success": true,
+      "phases_s": {
+        "firmware": 13.620,
+        "loader": 3.851,
+        "kernel": 1.738,
+        "initrd": 4.649,
+        "userspace": 6.518,
+        "systemd_total": 30.379
+      },
+      "firmware_performance_table_ns": {
+        "firmware_start": 769485549,
+        "bootloader_load": 13595118189,
+        "bootloader_launch": 13620977094,
+        "exitbootservice_start": 17467890616,
+        "exitbootservice_end": 17472390634
+      },
+      "events_kernel_monotonic_s": {
+        "plymouth_started": 2.376290,
+        "plymouth_switch_root_started": 5.113923,
+        "plymouth_switch_root_finished": 6.295750,
+        "plymouth_quit_finished": 9.853839,
+        "login_manager_started": 9.876978,
+        "plasmashell_started": 13.028825,
+        "workspace_target_reached": 13.344683
+      },
+      "crypto_policy_regeneration_skipped": true,
+      "configured_crypto_policy_applied": true,
+      "desktop_splash_did_not_start": true,
+      "failed_system_or_user_units": 0,
+      "monet_ready_boot_service_s": 0.063857,
+      "monet_login_brightness_service_s": 0.118282,
+      "monet_deployment_boot_check_skipped": true
+    }
+  },
+  "limitations": "The trial booted successfully. Against one earlier cold boot, the loader counter is 0.504 seconds lower and systemd total is 0.431 seconds lower. This is not a controlled repeated comparison: the latest boot kind is unspecified, and policy-cache and desktop-splash changes also took effect. The owner's 33-second report does not establish a user-visible improvement. systemd total and workspace activation do not measure an interactive desktop. The normal image remains the default; no Rust boot replacement or firmware change was installed."
+}

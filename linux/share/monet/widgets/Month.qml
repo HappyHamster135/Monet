@@ -128,6 +128,7 @@ FocusScope {
             // Notes: the day's note beside the month, out or away.
             PlasmaCore.ToolTipArea {
                 id: notesTab
+                active: !month.island
                 activeFocusOnTab: true
                 Keys.onReturnPressed: month.notesToggled()
                 Keys.onSpacePressed: month.notesToggled()
@@ -274,7 +275,7 @@ FocusScope {
                     Layout.fillHeight: true
                     implicitHeight: 20
                     // A day's note, under the pointer.
-                    active: note !== ""
+                    active: !month.island && note !== ""
                     mainText: Qt.locale().toString(modelData, Qt.locale().dateFormat(Locale.LongFormat))
                     subText: note.split("\n").slice(0, 4).join("\n")
                     Accessible.onPressAction: { month.choose(cell.modelData); month.opened(cell.modelData); }

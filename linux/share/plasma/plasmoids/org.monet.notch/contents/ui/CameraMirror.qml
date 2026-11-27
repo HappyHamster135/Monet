@@ -5,6 +5,7 @@ import org.kde.ki18n as I18n
 
 ColumnLayout {
     id: mirror
+    readonly property bool menuOpen: !!feed.item?.menuOpen
     objectName: "cameraMirror"
     property bool presented: true
     property bool startOnOpen: false
@@ -49,17 +50,17 @@ ColumnLayout {
             function onStopRequested() { mirror.requested = false }
         }
     }
-    Item { Layout.fillHeight: true; visible: !feed.visible }
-    C.Label {
-        Layout.fillWidth: true
+    IslandEmpty {
+        Layout.fillWidth: true; Layout.fillHeight: true; Layout.minimumHeight: 0
         visible: !feed.visible
-        text: feed.status === Loader.Error ? i18n("The camera preview could not open.")
+        symbol: "camera-web"; tint: "#9fc9ed"
+        detail: i18n("A quick mirror, right in your notch.")
+        title: feed.status === Loader.Error ? i18n("The camera preview could not open.")
                                            : i18n("The camera is off.")
-        horizontalAlignment: Text.AlignHCenter
-        wrapMode: Text.Wrap
     }
-    C.Button {
+    IslandButton {
         objectName: "startCamera"
+        caption: true; prominent: true
         Layout.alignment: Qt.AlignHCenter
         visible: !feed.visible
         enabled: mirror.available && feed.status !== Loader.Loading
@@ -73,5 +74,4 @@ ColumnLayout {
             mirror.requested = true
         }
     }
-    Item { Layout.fillHeight: true; visible: !feed.visible }
 }

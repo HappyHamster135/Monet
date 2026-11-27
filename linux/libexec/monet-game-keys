@@ -1,0 +1,361 @@
+#!/usr/bin/python3
+"""Game-only function keys for supported laptop keyboards.
+
+The session supplies a short lease while the *focused process* is a game. The
+system helper checks logind and translates the built-in keyboard's top row;
+Fn+Fx takes the reverse path. Firmware settings, other keyboards and ordinary
+keys are left alone. No input is stored or logged. Losing the session/service
+or its lease restores normal input; no persistent kernel keymap is changed.
+"""
+import argparse
+import json
+import os
+from pathlib import Path
+import selectors
+import signal
+import socket
+import struct
+import time
+
+RUNTIME = Path('/run/monet-game-keys')
+CONTROL = RUNTIME / 'control'
+STATUS = RUNTIME / 'status.json'
+LEASE = 4.0
+PREFERENCE = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config')) / 'monet/game-function-keys'
+# Lenovo's T14/P14s Gen 4 and T16/P16s Gen 2 user guide, "Use the keyboard
+# shortcuts". Do not guess a top-row layout on another model or a USB keyboard.
+MODELS = ('ThinkPad P16s Gen 2', 'ThinkPad T16 Gen 2', 'ThinkPad T14 Gen 4', 'ThinkPad P14s Gen 4')
+FUNCTION = (59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 87, 88)
+SPECIAL = (113, 114, 115, 248, 224, 225, 227, 238, 444, 445, 446, 156)
+SWAP = dict(zip(FUNCTION, SPECIAL)) | dict(zip(SPECIAL, FUNCTION))
+
+
+def supported(dmi=Path('/sys/class/dmi/id')):
+    try:
+        return ((dmi / 'sys_vendor').read_text().strip() == 'LENOVO'
+                and (dmi / 'product_version').read_text().strip() in MODELS)
+    except OSError:
+        return False
+
+
+def enabled():
+    try:
+        return PREFERENCE.read_text().strip() != 'off'
+    except OSError:
+        return True
+
+
+def status():
+    try:
+        state = json.loads(STATUS.read_text())
+    except (OSError, ValueError):
+        state = {}
+    return dict(supported=supported(), enabled=enabled(),
+                ready=CONTROL.exists() and state.get('ready') is True,
+                active=CONTROL.exists() and state.get('active') is True)
+
+
+def send(on):
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM) as channel:
+            channel.settimeout(.1)
+            channel.sendto(b'game' if on else b'normal', str(CONTROL))
+    except OSError:
+        pass  # An image without the helper, or an unsupported keyboard.
+
+
+class Focus:
+    """No cgroup-wide detection: Steam's library can share a unit with its game."""
+    def __init__(self, is_game, identity, emit=send, permitted=enabled):
+        self.is_game, self.identity = is_game, identity
+        self.emit, self.permitted = emit, permitted
+        self.pid, self.token, self.active = 0, None, False
+
+    def report(self, text):
+        try:
+            pid = json.loads(text).get('active', 0)
+            self.pid = pid if type(pid) is int and pid > 0 else 0
+        except (ValueError, TypeError, AttributeError):
+            self.pid = 0
+        self.token = self.identity(self.pid) if self.pid else None
+        self.tick()
+
+    def tick(self):
+        on = bool(self.pid and self.token is not None and self.permitted()
+                  and self.identity(self.pid) == self.token and self.is_game(self.pid))
+        if on or self.active:
+            self.emit(on)
+        self.active = on
+
+    def close(self):
+        self.emit(False)
+        self.active = False
+
+
+class Keys:
+    """Choose on key-down, keep that choice until key-up across focus changes."""
+    def __init__(self):
+        self.held, self.count = {}, {}
+
+    def event(self, code, value, game):
+        if value == 1 and code not in self.held:
+            out = SWAP.get(code, code) if game else code
+            self.held[code] = out
+            self.count[out] = self.count.get(out, 0) + 1
+            return [(out, 1)] if self.count[out] == 1 else []
+        if value == 2:
+            return [(self.held[code], 2)] if code in self.held else []
+        if value == 0 and code in self.held:
+            out = self.held.pop(code)
+            self.count[out] -= 1
+            return [(out, 0)] if self.count[out] == 0 else []
+        return []
+
+    def release(self):
+        events = [(code, 0) for code, count in self.count.items() if count]
+        self.held.clear()
+        self.count.clear()
+        return events
+
+
+def built_in(name, phys):
+    return ((name == 'AT Translated Set 2 keyboard' and phys.startswith('isa0060/serio0/'))
+            or (name == 'ThinkPad Extra Buttons' and phys.startswith('thinkpad_acpi/'))
+            or (name == 'Video Bus' and phys.startswith('LNXVIDEO/'))
+            or (name == 'Intel HID events' and not phys))
+
+
+class Lease:
+    def __init__(self):
+        self.uid, self.until = None, 0
+
+    def request(self, message, uid, active_uid, now):
+        if uid != active_uid or message not in (b'game', b'normal'):
+            return
+        self.uid = uid
+        self.until = now + LEASE if message == b'game' else 0
+
+    def active(self, active_uid, now):
+        return self.uid is not None and self.uid == active_uid and now < self.until
+
+
+def active_user(bus):
+    """Only the local, unlocked graphical session on the built-in keyboard's seat."""
+    import dbus
+    try:
+        props = dbus.Interface(bus.get_object('org.freedesktop.login1', '/org/freedesktop/login1/seat/seat0'),
+                               'org.freedesktop.DBus.Properties')
+        session = props.Get('org.freedesktop.login1.Seat', 'ActiveSession')[1]
+        props = dbus.Interface(bus.get_object('org.freedesktop.login1', session), 'org.freedesktop.DBus.Properties')
+        state = props.GetAll('org.freedesktop.login1.Session')
+        if state['Active'] and not state['LockedHint'] and not state['Remote'] and state['Type'] in ('wayland', 'x11'):
+            return int(state['User'][0])
+    except (dbus.DBusException, KeyError):
+        pass
+    return None
+
+
+class Keyboard:
+    def __init__(self, device):
+        from evdev import UInput, ecodes as e
+        self.device, self.keys, self.dropped = device, Keys(), False
+        caps = device.capabilities()
+        # A new uinput device starts every switch at zero. Advertising
+        # SW_RFKILL_ALL therefore tells the kernel to disable *all* radios as
+        # soon as it registers, before we can copy the physical switch state.
+        # This is a keyboard proxy, never a second lid/tablet/radio switch.
+        switches = caps.pop(e.EV_SW, [])
+        if set(switches) - {e.SW_RFKILL_ALL}:
+            raise OSError('Unsupported hardware switches on keyboard')
+        self.has_wireless_switch = bool(switches)
+        for kind in (e.EV_SYN, e.EV_FF, e.EV_REP):
+            caps.pop(kind, None)
+        caps[e.EV_KEY] = sorted(set(caps.get(e.EV_KEY, [])) | set(SWAP))
+        self.output = UInput(caps, name='Monet game keys: ' + device.name, phys='monet/game-keys')
+        try:
+            device.grab()
+            # Never swallow a release belonging to a press delivered by the
+            # original device. Retry later if anything is being held at startup.
+            if device.active_keys():
+                raise OSError('Keyboard is in use')
+        except BaseException:
+            self.output.close()
+            try:
+                device.ungrab()
+            except OSError:
+                pass
+            raise
+
+    def read(self, game):
+        from evdev import ecodes as e
+        for event in self.device.read():
+            if event.type == e.EV_SYN and event.code == e.SYN_DROPPED:
+                self.dropped = True
+                for code, value in self.keys.release():
+                    self.output.write(e.EV_KEY, code, value)
+                self.output.syn()
+            elif self.dropped:
+                if event.type == e.EV_SYN and event.code == e.SYN_REPORT:
+                    if self.has_wireless_switch:
+                        # The lost batch may include a switch change. Release
+                        # the grab so the original kernel handlers resync it.
+                        raise OSError('Physical wireless switch needs resync')
+                    self.dropped = False
+                    for code in self.device.active_keys():
+                        for out, value in self.keys.event(code, 1, game):
+                            self.output.write(e.EV_KEY, out, value)
+                    self.output.syn()
+            elif event.type == e.EV_KEY:
+                for code, value in self.keys.event(event.code, event.value, game):
+                    self.output.write(e.EV_KEY, code, value)
+            elif event.type == e.EV_SW:
+                # Release this device through the normal reconnect path. The
+                # kernel's input_release_device invokes the original handlers'
+                # start callbacks, so rfkill re-reads the real hardware switch.
+                # Do not invent or replay its state through a virtual device.
+                raise OSError('Physical wireless switch changed')
+            elif event.type != e.EV_REP:
+                self.output.write_event(event)
+
+    def feedback(self):
+        from evdev import ecodes as e
+        for event in self.output.read():
+            if event.type == e.EV_LED:
+                self.device.write_event(event)
+                self.device.syn()
+
+    def close(self):
+        try:
+            self.device.ungrab()
+        except OSError:
+            pass
+        self.output.close()
+        self.device.close()
+
+
+def serve():
+    import dbus
+    import pyudev
+    from evdev import InputDevice, list_devices
+    if os.geteuid() != 0:
+        raise SystemExit('The keyboard service needs administrator access.')
+    if not supported():
+        return
+    RUNTIME.mkdir(mode=0o755, exist_ok=True)
+    selector, keyboards, lease = selectors.DefaultSelector(), {}, Lease()
+    bus = dbus.SystemBus()
+    channel = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+    channel.setsockopt(socket.SOL_SOCKET, socket.SO_PASSCRED, 1)
+    channel.setblocking(False)
+    CONTROL.unlink(missing_ok=True)
+    channel.bind(str(CONTROL))
+    CONTROL.chmod(0o666)
+    selector.register(channel, selectors.EVENT_READ, ('control', None))
+    wake, woken = socket.socketpair()
+    wake.setblocking(False)
+    woken.setblocking(False)
+    signal.set_wakeup_fd(wake.fileno())
+    for number in (signal.SIGTERM, signal.SIGINT):
+        signal.signal(number, lambda *_: None)
+    selector.register(woken, selectors.EVENT_READ, ('stop', None))
+    monitor = pyudev.Monitor.from_netlink(pyudev.Context())
+    monitor.filter_by('input')
+    monitor.start()
+    selector.register(monitor, selectors.EVENT_READ, ('devices', None))
+    next_check, next_scan, uid, game, last = 0, 0, None, False, None
+    try:
+        while True:
+            now = time.monotonic()
+            if now >= next_check:
+                uid = active_user(bus)
+                next_check = now + 1 if lease.active(uid, now) else float("inf")
+            if now >= next_scan:
+                next_scan = float("inf")
+                # A device can disappear on suspend; rediscover its new event node.
+                for path in list_devices():
+                    if path in keyboards:
+                        continue
+                    device = None
+                    try:
+                        device = InputDevice(path)
+                        if not built_in(device.name, device.phys):
+                            device.close()
+                            continue
+                        keyboard = Keyboard(device)
+                        keyboards[path] = keyboard
+                        selector.register(device, selectors.EVENT_READ, ('input', path))
+                        selector.register(keyboard.output, selectors.EVENT_READ, ('led', path))
+                    except OSError:
+                        next_scan = now + 3
+                        if device is not None:
+                            device.close()
+                ready = next_scan == float('inf') and any(k.device.name == 'AT Translated Set 2 keyboard' for k in keyboards.values()) and any(
+                    k.device.name == 'ThinkPad Extra Buttons' for k in keyboards.values())
+            game = ready and lease.active(uid, now)
+            state = dict(ready=ready, active=game)
+            if state != last:
+                temporary = STATUS.with_suffix('.tmp')
+                temporary.write_text(json.dumps(state))
+                temporary.replace(STATUS)
+                last = state
+            deadline = min(next_check, next_scan)
+            timeout = None if deadline == float('inf') else max(0, deadline - time.monotonic())
+            for key, _ in selector.select(timeout):
+                kind, path = key.data
+                if kind == 'stop':
+                    return
+                if kind == 'devices':
+                    while monitor.poll(timeout=0) is not None:
+                        pass
+                    next_scan = 0
+                elif kind == 'control':
+                    data, ancillary, flags, _ = channel.recvmsg(16, socket.CMSG_SPACE(12))
+                    if flags & (socket.MSG_TRUNC | socket.MSG_CTRUNC):
+                        continue
+                    uid = active_user(bus)
+                    for level, option, cred in ancillary:
+                        if level == socket.SOL_SOCKET and option == socket.SCM_CREDENTIALS:
+                            _, sender, _ = struct.unpack('3i', cred)
+                            lease.request(data, sender, uid, time.monotonic())
+                    game = ready and lease.active(uid, time.monotonic())
+                    next_check = 0
+                else:
+                    keyboard = keyboards.get(path)
+                    if keyboard is None:
+                        continue
+                    try:
+                        keyboard.read(game) if kind == 'input' else keyboard.feedback()
+                    except BlockingIOError:
+                        pass
+                    except OSError:
+                        selector.unregister(keyboard.device)
+                        selector.unregister(keyboard.output)
+                        keyboard.close()
+                        del keyboards[path]
+                        game = False
+                        next_scan = 0
+    finally:
+        for keyboard in keyboards.values():
+            keyboard.close()
+        selector.close()
+        channel.close()
+        signal.set_wakeup_fd(-1)
+        wake.close()
+        woken.close()
+        CONTROL.unlink(missing_ok=True)
+        STATUS.unlink(missing_ok=True)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('command', choices=('serve', 'status', 'on', 'off'))
+    args = parser.parse_args()
+    if args.command == 'serve':
+        serve()
+    else:
+        if args.command in ('on', 'off'):
+            PREFERENCE.parent.mkdir(parents=True, exist_ok=True)
+            PREFERENCE.write_text(args.command + '\n')
+            if args.command == 'off':
+                send(False)
+        print(json.dumps(status()))

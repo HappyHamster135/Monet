@@ -68,6 +68,22 @@ password controls (5.2%) in the one-CPU VM. The service duration alone is not an
 end-to-end saving, and physical hardware timings remain unmeasured for this
 candidate.
 
+## Cryptographic policy on normal boots
+
+The inherited `bootc-update-crypto-policies.service` also rewrites its backend
+files on every boot. On the measured P16s cold boot this took 306 ms, overlapping
+other startup work. Image preparation adds `ConditionNeedsUpdate=/etc` and orders
+it before `systemd-update-done.service`, using the same OSTree deployment marker
+lifecycle as certificate trust. First boots and new deployments still regenerate
+the currently selected policy with the original command and prerequisites.
+Explicit policy changes still use `update-crypto-policies --set` normally.
+
+Preparation rejects changed service commands, missing prerequisites and custom
+conflicting drop-ins. The local preview first verified the generated backend
+files with `update-crypto-policies --check`, then checked both the skipped normal
+boot condition and the missing-marker update condition. Physical boot savings
+are not yet measured; the 306 ms service duration is not an additive saving.
+
 ## Disk discovery before login
 
 Fedora's read-ahead rule starts `nfsrahead` on each new backing device. The
@@ -77,3 +93,13 @@ matching `0:*`. The NFS client names its backing devices from the anonymous
 device number allocated by the kernel. Eligible mounts still use the vendor's
 helper and its configured read-ahead value. [Linux NFS superblock code](https://github.com/torvalds/linux/blob/master/fs/nfs/super.c)
 and [anonymous device allocation](https://github.com/torvalds/linux/blob/master/fs/super.c).
+
+## Local boot health checks
+
+The inherited health-check unit waits for `network-online.target` even when its
+only enabled checks are local. The recognized network drop-in now invokes
+`monet-boot-network` first. It waits for the same target whenever repository
+configuration, a custom/changed check or unknown configuration might need it.
+Only verified local checks bypass that wait. All checks, boot-complete ordering
+and rollback gates remain. See [laptop verification](../../docs/LAPTOP-POWER.md)
+for the baseline and the remaining physical reboot validation.

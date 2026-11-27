@@ -1,11 +1,12 @@
 // Keep the native editor available if a future Plasma cannot load Monet's editor.
 import QtQuick
+import "file://@DATADIR@/monet/panel/EditorWindows.js" as EditorWindows
 import QtCore as Core
 
 Item {
     id: root
     required property QtObject panelConfiguration
-    property Item panelRuler: view.item ? view.item.panelRuler : null
+    property Item panelRuler: null
     function configUrl(name) {
         const nested = Qt.resolvedUrl(".").toString().endsWith("/monet-editor-entry/")
         return Qt.resolvedUrl((nested ? "../" : "") + name)
@@ -22,6 +23,7 @@ Item {
         location: root.configUrl("MonetPanelEditor.ini")
         category: "Editor"
     }
+    Timer { id: dismissRequest; interval: 120; onTriggered: configDialog.close() }
     Loader {
         id: view
         anchors.fill: parent
@@ -29,7 +31,17 @@ Item {
             installed.sync()
             const page = String(installed.value("Page", ""))
             const path = /^monet-editor\/[0-9a-f]{64}\/MonetPanelConfiguration\.qml$/.test(page) ? page : "@PANEL_EDITOR@"
-            setSource(root.configUrl(path), {panelConfiguration: root.panelConfiguration, advancedPage: root.kdePage})
+            try {
+                const parentItem = panel.contentItem.children.find(child => child.fixedTopFloatingPadding !== undefined)
+                if (!parentItem) throw new Error("panel content unavailable")
+                const host = EditorWindows.forParent(parentItem)
+                if (!host.openPanel(panel, plasmoid, root.configUrl(path))) throw new Error("editor")
+                configDialog.contentItem.opacity = 0
+                dismissRequest.restart()
+            } catch (error) {
+                console.warn("Monet editor:", error)
+                setSource(root.kdePage, {panelConfiguration: root.panelConfiguration})
+            }
         }
         onStatusChanged: {
             if (status === Loader.Error && String(source) !== String(root.kdePage))

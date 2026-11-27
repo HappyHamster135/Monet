@@ -180,6 +180,45 @@ class PanelLayouts(unittest.TestCase):
         self.js("var n=all.find(p=>p.screen===right.screen&&p.widgets('org.monet.notch').length).widgets()[0]; n.currentConfigGroup=['General']; n.writeConfig('tabs','music,music,bad');")
         self.assertEqual(notch('right')['tabs'], standard + ['clipboard'] + extras)
 
+    def test_taskbar_editor_targets_same_screen_without_changing_notch_geometry(self):
+        self.js("var notch=new Panel; notch.location='top'; notch.height=32; notch.addWidget('org.monet.notch'); var shown=0; all.forEach(p=>p.showConfigurationInterface=function(){shown=this.id});")
+        def bus(*args):
+            self.js(args[-1]); return [self.js('printed').toString()]
+        with patch.object(self.quick, 'busjson', side_effect=bus):
+            result=self.quick.panel_taskbar_configure(str(self.js('notch.id').toInt()))
+            self.assertTrue(result['ok'])
+            self.assertEqual(result['id'],self.js('middle.id').toInt())
+            self.assertEqual(self.js('shown').toInt(),result['id'])
+            self.assertFalse(self.quick.panel_taskbar_configure(str(self.js('other.id').toInt()))['ok'])
+        self.assertEqual(self.state('[notch.location,notch.height]'),['top',32])
+        with patch.object(self.quick,'busjson') as call:
+            self.assertFalse(self.quick.panel_taskbar_configure('1; print(9)')['ok'])
+            call.assert_not_called()
+
+    def test_visual_notch_choices_validate_and_survive_disable_enable(self):
+        self.js("knownWidgetTypes.push('org.monet.notch')")
+        def notch(choice=None):
+            def bus(*args):
+                self.js(args[-1]); return [self.js('printed').toString()]
+            with patch.object(self.quick, 'DATADIR', str(ROOT/'linux/share')), patch.object(self.quick, 'busjson', side_effect=bus):
+                return self.quick.panel_notch(str(self.js('right.id').toInt()), choice)
+        self.assertFalse(notch('add')['options']['autoHide'])
+        for command in ('expandedWidth-550', 'toolHeight-500', 'size-560-520', 'rail-left-notes,time', 'rail-right-tools,mixer', 'reopen-last', 'openActivity-off', 'autoHide-on', 'tabs-time,notes,music'):
+            self.assertTrue(notch(command)['ok'], command)
+        saved = notch()
+        self.assertTrue(saved['options']['autoHide'])
+        self.assertEqual(saved['layout']['expandedWidth'], 560)
+        self.assertEqual(saved['layout']['toolHeight'], 520)
+        self.assertEqual(saved['layout']['leftRail'], 'notes,time')
+        self.assertEqual(saved['tabs'], ['time','notes','music'])
+        for command in ('expandedWidth-999', 'toolHeight-100', 'size-339-520', 'size-560-641', 'size-640-315', 'size-640-520;print(1)', 'rail-right-notes,notes', 'rail-left-bogus', 'tabs-music,bogus', 'tabs-music,music', 'reopen-bogus'):
+            self.assertFalse(notch(command)['ok'], command)
+            self.assertEqual(notch(), saved)
+        notch('off')
+        self.assertEqual(notch('add'), saved)
+        self.assertFalse(notch('autoHide-off')['options']['autoHide'])
+        self.assertFalse(notch()['options']['autoHide'])
+
     def test_add_panel_uses_the_selected_screen_and_keeps_its_existing_widgets(self):
         def add(ident, kind):
             def bus(*args):

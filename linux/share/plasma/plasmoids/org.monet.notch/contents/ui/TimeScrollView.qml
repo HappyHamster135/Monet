@@ -3,7 +3,9 @@ import QtQuick.Controls as C
 
 C.ScrollView {
     id: page
+    implicitWidth: 300; implicitHeight: 240
     contentWidth: availableWidth
+    C.ScrollBar.horizontal.policy: C.ScrollBar.AlwaysOff
     clip: true
     function revealFocus() {
         const item = page.Window.window?.activeFocusItem

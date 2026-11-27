@@ -11,6 +11,7 @@ PlasmaCore.Dialog {
     required property real reveal
     required property bool presented
     property Component leadingButton
+    readonly property bool hovered: pointer.hovered
     signal selected(string key)
     signal previewRequested(string key)
     type: PlasmaCore.Dialog.Dock
@@ -23,6 +24,7 @@ PlasmaCore.Dialog {
         width: 33; height: implicitHeight; spacing: 4
         opacity: Math.max(0, (rail.reveal - 0.54) / 0.46)
         enabled: opacity > 0.5
+        HoverHandler { id: pointer; blocking: false }
         transform: Translate { y: -5 * (1 - column.opacity) }
         Loader {
             sourceComponent: rail.leadingButton

@@ -2,7 +2,16 @@ One USB stick installs everything: Monet, and a games-only Windows that sets its
 
 **Start here: [Install Monet](https://github.com/HappyHamster135/Monet/blob/HEAD/docs/INSTALL.md)**
 
-### New in 0.9.8-9: Startup and Settings polish (in development)
+### New in 0.9.8-9: Notch, editors and everyday tools
+
+- **A notch that appears when you need it.** Turn on **Hidden until hover** to hide the closed notch. Moving the pointer into its normal position reveals it immediately. Hover previews, music controls and returning from tools stay stable.
+- **Edit your desktop without shrinking it.** The taskbar, notch and widget editors open over the desktop as movable windows. Edit panel reuses the same window and selects the right tab. Preview size changes, drag corners to resize, enter exact dimensions and center the bar or its app icons. Closing the editor consistently ends editing.
+- **Tools that fit inside the notch.** Compact recording, cleaning, emoji, text snippets and other tool pages keep controls and text inside the available space. Clipboard actions report what they did. Full applications remain in desktop Utilities.
+- **Notch settings and a separate radial menu.** Browse settings by section, configure the wheel's shortcut, then select a slot, category and action. Media actions include play/pause and next track. Emoji opens a searchable picker beside the wheel, with categories and a way back. Scrolling through settings no longer changes values accidentally.
+- **Music and AI activity at a glance.** A redesigned player brings the cover, timeline, volume and playback controls together. AI agents keep a consistent order and show saved usage while refreshing, with available token and estimated spending details.
+- **Laptop keys and power readings.** On supported ThinkPad keyboards, optionally use F1–F12 in a focused game and hold Fn for brightness or sound. The corrected keyboard helper preserves wireless switches. Background graphics readings avoid waking a sleeping dedicated GPU; Power & Sleep adds battery health, capacity and power draw.
+- **Clearer update and recovery labels.** Updates and About distinguish beta numbers and local builds. A saved system with the same version number is identified as a previous build, with its build ID and date, rather than looking like the current version is an upgrade or downgrade.
+- **Portable startup fixes.** Routine boots avoid redundant crypto-policy work and unnecessary network waits for local health checks. Health checks and recovery remain enabled. Firmware changes and experimental direct-UEFI boot remain opt-in diagnostic tools.
 
 - **Customize Home Bar.** Choose **Add panel** to create a top-center notch, a Home Bar with shortcuts, or an empty panel. Open **Notch** to change its size, shortcuts and behavior. The widget gallery shares one search across both catalogs and loads rows as you scroll.
 - **Use the top-center notch.** Hover for playback controls, or click to open its animated section grid. Use the round side buttons to switch sections, open recent screenshots and recordings, adjust sound and brightness, or keep a timer alongside music. Choose hover controls and combined activities in **Customize Home Bar**. In **Utilities**, browse tools by category and customize which groups appear.

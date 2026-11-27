@@ -436,3 +436,16 @@ class DeviceList(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class PassiveDesktop(unittest.TestCase):
+    def test_inventory_never_queries_driver_and_only_gates_laptop_nvidia(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder); supplies = root/'power'; supplies.mkdir()
+            inventory = [dict(id='gpu0', maker='Intel'), dict(id='gpu1', maker='NVIDIA')]
+            with mock.patch.object(use, 'devices', return_value=inventory), mock.patch.object(use.subprocess, 'run', side_effect=AssertionError('GPU query')):
+                self.assertEqual(use.desktop_policy(root/'pci', supplies)['sleepingDevices'], [])
+                bat = supplies/'BAT0'; bat.mkdir(); (bat/'type').write_text('Battery')
+                self.assertEqual(use.desktop_policy(root/'pci', supplies)['sleepingDevices'], ['gpu1'])
+                (bat/'scope').write_text('Device')
+                self.assertEqual(use.desktop_policy(root/'pci', supplies)['sleepingDevices'], [])

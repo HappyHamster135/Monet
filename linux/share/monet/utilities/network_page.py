@@ -117,7 +117,7 @@ class NetworkPage(QWidget):
         addresses.addWidget(self.address, 1)
         addresses.addWidget(self.copy)
         box.addLayout(addresses)
-        manager = QPushButton(tr("Open Task Manager"))
+        manager = self.manager = QPushButton(tr("Open Task Manager"))
         manager.setToolTip(tr("The Applications page shows download and upload speeds for each app."))
         manager.clicked.connect(self.open_manager)
         box.addWidget(manager, 0, Qt.AlignRight)

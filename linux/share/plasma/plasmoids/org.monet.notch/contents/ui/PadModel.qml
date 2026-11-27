@@ -14,7 +14,7 @@ QtObject {
     property bool dirty: false
     property bool refreshNeeded: false
     property string operation: ""
-    readonly property bool switching: operation === "new" || operation === "select" || !!nextAction
+    readonly property bool switching: ["new", "select", "rename", "delete"].includes(operation) || !!nextAction
     property string sent: ""
     property string nextAction: ""
     property string nextId: ""
@@ -38,10 +38,10 @@ QtObject {
         return DBus.SessionBus.asyncCall({service: "org.monet.Utilities", path: member === "Pad" ? "/Scratchpad" : "/Utilities",
             iface: "org.monet.Utilities", member: member, signature: "(s)", arguments: [JSON.stringify(payload)]})
     }
-    function send(action, id) {
+    function send(action, id, value = "") {
         operation = action
         sent = draft
-        pending = call("Pad", {action: action, id: id, revision: revision, value: action === "save" ? sent : ""})
+        pending = call("Pad", {action: action, "id": id, revision: revision, value: action === "save" ? sent : value})
         if (pending.isFinished) finish()
     }
     function finish() {
@@ -106,6 +106,12 @@ QtObject {
         if (pending || dirty) { refreshNeeded = true; flush() }
         else send("view", ident)
     }
+    function manage(action, value) {
+        // Rename/delete use the revision the user has actually read. Do not
+        // queue a destructive action behind a save that could recover a pad.
+        if (pending || dirty || !ident || !["rename", "delete"].includes(action)) return
+        send(action, ident, value || "")
+    }
     signal detached()
     Component.onCompleted: refresh()
     onShownChanged: {
@@ -115,6 +121,6 @@ QtObject {
     Component.onDestruction: {
         // The popup may disappear between the last keystroke and its debounce.
         if (dirty && ident && (operation !== "save" || draft !== sent))
-            call("Pad", {action: "save", id: ident, revision: revision, value: draft})
+            call("Pad", {action: "save", "id": ident, revision: revision, value: draft})
     }
 }

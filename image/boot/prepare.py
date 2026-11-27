@@ -22,6 +22,13 @@ TRUST_DROPIN = """# Match Fedora's atomic trust refresh lifecycle: first boot an
 ConditionNeedsUpdate=/etc
 Before=systemd-update-done.service systemd-resolved.service
 """
+CRYPTO_DROPIN = """# Regenerate merged crypto policy backends on first boot and deployments.
+# OSTree removes /etc/.updated on deployment; update-done writes it after us.
+# Explicit policy changes still run update-crypto-policies normally.
+[Unit]
+ConditionNeedsUpdate=/etc
+Before=systemd-update-done.service
+"""
 WIFI_NEEDED = ('test ! -e /var/lib/bazzite-iwd-migration.done'
     ' || test -e /etc/NetworkManager/conf.d/99-valve-wifi-backend.conf'
     ' || test -e /etc/NetworkManager/conf.d/iwd.conf'
@@ -85,6 +92,33 @@ def prepare_trust(root):
         raise ValueError('Refusing symlinked image certificate-trust drop-in')
     destination.parent.mkdir(exist_ok=True)
     destination.write_text(TRUST_DROPIN)
+
+
+def prepare_crypto_policy(root):
+    """Keep the selected policy; avoid rewriting its unchanged backends at boot."""
+    unit = root / 'usr/lib/systemd/system/bootc-update-crypto-policies.service'
+    if unit.is_symlink():
+        raise ValueError('Refusing symlinked image crypto-policy service')
+    if not unit.exists():
+        return
+    expected = ('DefaultDependencies=no', 'Requires=local-fs.target',
+                'After=local-fs.target', 'Before=sysinit.target',
+                'ConditionPathIsMountPoint=/sysroot',
+                'ConditionPathExists=/usr/bin/update-crypto-policies',
+                'Type=oneshot', 'RemainAfterExit=yes',
+                'ExecStart=/bin/bash -ec \'policy=$(/usr/bin/update-crypto-policies --show); '
+                'exec /usr/bin/update-crypto-policies --set "$$policy"\'')
+    lines = unit.read_text().splitlines()
+    if (any(line not in lines for line in expected)
+            or [line for line in lines if line.startswith('Exec')] != [expected[-1]]):
+        raise ValueError('Unrecognized crypto-policy refresh; review its deployment lifecycle')
+    destination = unit.with_name(unit.name + '.d') / '50-monet-deployment.conf'
+    if destination.is_symlink() or destination.parent.is_symlink():
+        raise ValueError('Refusing symlinked image crypto-policy drop-in')
+    if destination.exists() and destination.read_text() != CRYPTO_DROPIN:
+        raise ValueError('Conflicting crypto-policy lifecycle override')
+    destination.parent.mkdir(exist_ok=True)
+    destination.write_text(CRYPTO_DROPIN)
 
 
 def hardware_config(script, unit):
@@ -217,6 +251,28 @@ def prepare_openrgb(root):
     path.write_text(''.join(lines))
 
 
+def prepare_healthcheck(root, libexec="/usr/libexec", local=False):
+    """Keep the network wait for network-dependent checks, off the local path."""
+    vendor = root / 'usr/lib/systemd/system/greenboot-healthcheck.service.d/10-network-online.conf'
+    if not vendor.exists():
+        return
+    content = ('# Monet: keep local checks independent of network-online.\n'
+               '[Service]\nExecStartPre=' + libexec + '/monet-boot-network\n')
+    if not local and not vendor.is_symlink() and vendor.read_text() == content:
+        return
+    expected = '[Unit]\nAfter=network-online.target\nWants=network-online.target'
+    if vendor.is_symlink() or vendor.read_text().strip() != expected:
+        raise ValueError('Unrecognized health-check network ordering; review before changing')
+    base = 'etc' if local else 'usr/lib'
+    target = root / base / 'systemd/system/greenboot-healthcheck.service.d/10-network-online.conf'
+    if target.is_symlink() or target.parent.is_symlink():
+        raise ValueError('Refusing symlinked health-check drop-in')
+    if local and target.exists() and target.read_text() != content:
+        raise ValueError('An existing local health-check override needs review')
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(content)
+
+
 def prepare(root):
     root = Path(root)
     # The NFS client gives its backing devices anonymous major:minor names.
@@ -229,8 +285,10 @@ def prepare(root):
     prepare_input_remapper(root)
     prepare_openrgb(root)
     prepare_trust(root)
+    prepare_crypto_policy(root)
     prepare_wifi(root)
     prepare_hardware(root)
+    prepare_healthcheck(root)
     config = root / 'usr/lib/dracut/dracut.conf.d/99-nvidia.conf'
     if config.is_symlink():
         raise ValueError('Refusing a symlinked image graphics configuration')

@@ -14,7 +14,7 @@
     var removedWidget = 0;
     var defaultTabs = ["music", "activity", "time", "calendar", "notes", "clipboard", "tools", "agents", "notifications"];
     var names = defaultTabs.concat("camera");
-    var defaults = {hoverControls:true, combined:true, levels:false, companion:false, alerts:true, previews:false, gestures:true, awake:true, countdown:true};
+    var defaults = {hoverControls:true, autoHide:false, combined:true, levels:false, companion:false, alerts:true, previews:false, gestures:true, awake:true, countdown:true, openActivity:true};
     var companionFields = {style:["soft","robot"], shape:["round","egg","square","pill"],
         color:["mint","pearl","lemon","peach","rose","lilac","sky"], side:["left","right"],
         visits:["normal","rare","frequent","off"], reactions:["on","off"], rest:["show","hide"]};
@@ -26,6 +26,20 @@
             values[field] = choices.indexOf(value) >= 0 ? value : choices[0];
         });
         return values;
+    }
+    var layoutDefaults = {expandedWidth:464, toolHeight:420, leftRail:"time", rightRail:"controls,mixer,files", reopen:"sections"};
+    var railNames = ["controls","mixer","files","music","activity","time","calendar","notes","camera","clipboard","tools","agents","notifications"];
+    function validRail(value) {
+        var rows = value === "none" ? [] : String(value).split(",");
+        return rows.length <= 4 && rows.every((key, index) => railNames.indexOf(key) >= 0 && rows.indexOf(key) === index);
+    }
+    function layoutOf(w) {
+        var result = {};
+        Object.keys(layoutDefaults).forEach(function(key) {
+            var value = w ? w.readConfig(key, layoutDefaults[key]) : layoutDefaults[key];
+            result[key] = typeof layoutDefaults[key] === "number" ? Number(value) : String(value);
+        });
+        return result;
     }
     var timeDefaults = {timerMinutes:25, focusSessions:1, shortBreakMinutes:5, longBreakMinutes:15, longBreakEvery:4};
     function tabsOf(value) {
@@ -54,15 +68,32 @@
         if (host) host.currentConfigGroup = ["MonetNotchPreferences"];
         return host;
     }
-    var setting = /^(levels|companion|alerts|previews|gestures|awake|countdown|hoverControls|combined)-(on|off)$/.exec(choice || "");
+    var setting = /^(levels|companion|alerts|previews|gestures|awake|countdown|hoverControls|autoHide|combined|openActivity)-(on|off)$/.exec(choice || "");
     var tab = /^tab-(music|activity|time|calendar|notes|camera|clipboard|tools|agents|notifications)-(show|hide|earlier|later)$/.exec(choice || "");
     var companion = /^companion-([a-z]+)-([a-z]+)$/.exec(choice || "");
     if (companion && (!Object.prototype.hasOwnProperty.call(companionFields, companion[1]) ||
             companionFields[companion[1]].indexOf(companion[2]) < 0)) { print(JSON.stringify({ok:false})); return; }
-    if (tab || setting || companion) {
+    var size = /^(expandedWidth|toolHeight)-([0-9]+)$/.exec(choice || "");
+    var dimensions = /^size-([0-9]+)-([0-9]+)$/.exec(choice || "");
+    var rail = /^rail-(left|right)-([a-z,]+)$/.exec(choice || "");
+    var reopen = /^reopen-(sections|last)$/.exec(choice || "");
+    if (size && (Number(size[2]) < (size[1] === "expandedWidth" ? 340 : 316) || Number(size[2]) > 640)
+            || dimensions && (Number(dimensions[1]) < 340 || Number(dimensions[1]) > 640 || Number(dimensions[2]) < 316 || Number(dimensions[2]) > 640)
+            || rail && !validRail(rail[2])) { print(JSON.stringify({ok:false})); return; }
+    var tabOrder = /^tabs-([a-z,]+)$/.exec(choice || "");
+    if (tabOrder && (tabOrder[1] !== "none" && (tabsOf(tabOrder[1]).join(",") !== tabOrder[1]))) { print(JSON.stringify({ok:false})); return; }
+    if (tab || setting || companion || size || dimensions || rail || reopen || tabOrder) {
         if (!widget) { print(JSON.stringify({ok:false})); return; }
         widget.currentConfigGroup = ["General"];
-        if (tab) {
+        if (dimensions) {
+            widget.writeConfig("expandedWidth", Number(dimensions[1]));
+            widget.writeConfig("toolHeight", Number(dimensions[2]));
+        }
+        else if (tabOrder) widget.writeConfig("tabs", tabOrder[1]);
+        else if (size) widget.writeConfig(size[1], Number(size[2]));
+        else if (rail) widget.writeConfig(rail[1]+"Rail", rail[2]);
+        else if (reopen) widget.writeConfig("reopen", reopen[1]);
+        else if (tab) {
             var tabs = tabsOf(widget.readConfig("tabs", ""));
             var index = tabs.indexOf(tab[1]), action = tab[2];
             if (action === "show" && index < 0) tabs.push(tab[1]);
@@ -87,6 +118,7 @@
         var preferences = optionsOf(widget);
         preferences.wide = String(widget.readConfig("wide", false)) === "true";
         preferences.companionSettings = companionOf(widget);
+        preferences.layout = layoutOf(widget);
         preferences.tabs = tabsOf(widget.readConfig("tabs", "")).join(",") || "none";
         Object.keys(timeDefaults).forEach(function (key) {
             preferences[key] = Number(widget.readConfig(key, timeDefaults[key]));
@@ -115,6 +147,14 @@
                 Object.keys(defaults).forEach(function (key) {
                     if (typeof previous[key] === "boolean") widget.writeConfig(key, previous[key]);
                 });
+                Object.keys(layoutDefaults).forEach(function(key) {
+                    var value = previous.layout && previous.layout[key];
+                    if (key === "expandedWidth" || key === "toolHeight") {
+                        if (Number.isInteger(value) && value >= (key === "expandedWidth" ? 340 : 316) && value <= 640) widget.writeConfig(key,value);
+                    } else if (key === "reopen") {
+                        if (value === "last" || value === "sections") widget.writeConfig(key,value);
+                    } else if (typeof value === "string" && validRail(value)) widget.writeConfig(key,value);
+                });
                 Object.keys(companionFields).forEach(function (field) {
                     var value = previous.companionSettings && previous.companionSettings[field];
                     if (companionFields[field].indexOf(value) >= 0) widget.writeConfig(companionKey(field), value);
@@ -135,6 +175,7 @@
     var visibleTabs = widget ? tabsOf(widget.readConfig("tabs", "")) : [];
     var result = {ok:true, options:optionsOf(widget), tabs:visibleTabs, mode: !widget ? "off" : wide ? "wide" : "compact"};
     result.companionSettings = companionOf(widget);
+    result.layout = layoutOf(widget);
     if (removedWidget) result.removedWidget = removedWidget;
     print(JSON.stringify(result));
 })();

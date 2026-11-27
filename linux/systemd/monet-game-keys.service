@@ -1,0 +1,23 @@
+[Unit]
+Description=Monet laptop function keys while playing a game
+After=systemd-logind.service
+ConditionPathExists=/dev/uinput
+
+[Service]
+ExecStart=@LIBEXECDIR@/monet-game-keys serve
+Restart=on-failure
+RestartSec=3
+RuntimeDirectory=monet-game-keys
+RuntimeDirectoryMode=0755
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+RestrictAddressFamilies=AF_UNIX AF_NETLINK
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+UMask=0022
+
+[Install]
+WantedBy=multi-user.target

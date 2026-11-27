@@ -7,6 +7,7 @@ import org.kde.plasma.workspace.dbus as DBus
 
 ColumnLayout {
     id: page
+    spacing: 8
     required property var feed
     property bool offerShelf: true
     required property bool checking
@@ -35,24 +36,26 @@ ColumnLayout {
     Connections { target: page.shelfReply; function onFinished() { page.finishShelf() } }
 
     RowLayout {
-        Layout.fillWidth: true
-        C.ToolButton { text: i18n("Activity"); icon.name: "go-previous"; onClicked: page.backRequested() }
-        Item { Layout.fillWidth: true }
-        C.ToolButton {
-            icon.name: "view-refresh"; Accessible.name: i18n("Refresh downloads")
-            C.ToolTip.text: Accessible.name; C.ToolTip.visible: hovered
+        Layout.fillWidth: true; spacing: 6
+        IslandGlyph { source: "download"; color: "#8ddbb5"; Layout.preferredWidth: 18; Layout.preferredHeight: 18 }
+        Text {
+            Layout.fillWidth: true; Layout.minimumWidth: 0; textFormat: Text.PlainText; elide: Text.ElideMiddle
+            text: page.localPath || i18n("Choose a downloads folder"); color: "#b9bac4"; font.pixelSize: 12
+
+        }
+        IslandButton {
+            plain: true; icon.name: "view-refresh"; text: i18n("Refresh downloads")
             enabled: !page.checking; onClicked: page.refreshRequested()
         }
-        C.ToolButton {
-            text: i18n("Folder…"); icon.name: "folder-download"
-            Accessible.name: i18n("Manage watched folder"); onClicked: page.manageRequested()
+        IslandButton {
+            plain: true; icon.name: "folder-open"; text: i18n("Open downloads folder")
+            enabled: !!page.directory && !page.opener.busy
+            onClicked: page.opener.open(page.directory, true, this)
         }
-    }
-    C.Label {
-        Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideMiddle
-        text: page.localPath; Accessible.name: text
-        C.ToolTip.text: text; C.ToolTip.visible: truncated && pathHover.hovered
-        HoverHandler { id: pathHover }
+        IslandButton {
+            plain: true; icon.name: "configure"; text: i18n("Manage watched folder")
+            onClicked: page.manageRequested()
+        }
     }
     C.Label {
         Layout.fillWidth: true; wrapMode: Text.Wrap; textFormat: Text.PlainText
@@ -61,10 +64,13 @@ ColumnLayout {
     }
     C.ScrollView {
         id: scroll
+        implicitWidth: 240; implicitHeight: 180
         Layout.fillWidth: true; Layout.fillHeight: true; clip: true
         contentWidth: availableWidth
+        Layout.minimumHeight: 0
         ColumnLayout {
             width: scroll.availableWidth
+            spacing: 6
             Repeater {
                 model: NM.Notifications {
                     groupMode: NM.Notifications.GroupDisabled
@@ -90,45 +96,51 @@ ColumnLayout {
                     }
                 }
             }
-            C.Label {
-                Layout.fillWidth: true; wrapMode: Text.Wrap
+            IslandEmpty {
+                Layout.fillWidth: true; Layout.preferredHeight: Math.max(90, scroll.availableHeight)
                 visible: !(page.feed?.recent.length)
-                text: page.checking || (page.feed && !page.feed.ready && !page.feed.unavailable) ? i18n("Checking downloads…")
-                    : page.feed && !page.feed.unavailable ? i18n("No recent files in this folder.") : i18n("The watched folder is unavailable.")
+                symbol: "folder-download"; tint: "#8ddbb5"
+                title: page.checking || (page.feed && !page.feed.ready && !page.feed.unavailable) ? i18n("Checking downloads…")
+                    : page.feed && !page.feed.unavailable ? i18n("No recent files") : i18n("Folder unavailable")
+                detail: page.feed && !page.feed.unavailable ? i18n("New downloads will appear here.") : i18n("Choose a folder to watch from the folder settings.")
             }
             Repeater {
                 model: page.feed?.recent ?? []
-                delegate: RowLayout {
+                delegate: Rectangle {
+                    id: file
                     required property var modelData
-                    Layout.fillWidth: true
-                    Kirigami.Icon {
-                        Layout.preferredWidth: 20; Layout.preferredHeight: 20
-                        source: modelData.partial ? "folder-download" : "text-x-generic"
-                    }
-                    ColumnLayout {
-                        Layout.fillWidth: true; Layout.minimumWidth: 0; spacing: 0
-                        C.Label {
-                            Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideMiddle
-                            text: modelData.name
-                            C.ToolTip.text: text; C.ToolTip.visible: truncated && fileHover.hovered
-                            HoverHandler { id: fileHover }
+                    Layout.fillWidth: true; implicitHeight: 58
+                    color: "#19191e"; radius: 12
+                    RowLayout {
+                        anchors.fill: parent; anchors.margins: 9; spacing: 10
+                        Rectangle {
+                            Layout.preferredWidth: 34; Layout.preferredHeight: 34; radius: 10; color: "#24332e"
+                            Kirigami.Icon { anchors.centerIn: parent; width: 19; height: width; isMask: true; color: "#8ddbb5"
+                                source: file.modelData.partial ? "go-down-symbolic" : "text-x-generic" }
                         }
-                        C.Label {
-                            Layout.fillWidth: true; color: Kirigami.Theme.disabledTextColor
-                            text: modelData.partial ? i18n("Partial download") : modelData.size
+                        ColumnLayout {
+                            Layout.fillWidth: true; Layout.minimumWidth: 0; spacing: 3
+                            Text {
+                                Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideMiddle
+                                text: file.modelData.name; color: "#ededf2"; font.pixelSize: 12; font.weight: Font.Medium
+
+                            }
+                            Text {
+                                Layout.fillWidth: true; color: file.modelData.partial ? "#8ddbb5" : "#9696a2"
+                                text: file.modelData.partial ? i18n("Downloading · %1", file.modelData.size) : file.modelData.size
+                                textFormat: Text.PlainText; elide: Text.ElideRight; font.pixelSize: 11
+                            }
                         }
-                    }
-                    C.ToolButton {
-                        visible: !modelData.partial; enabled: !page.opener.busy
-                        icon.name: "folder-open"; Accessible.name: i18n("Show %1 in Files", modelData.name)
-                        C.ToolTip.text: i18n("Show in Files"); C.ToolTip.visible: hovered
-                        onClicked: page.opener.open(modelData.url, false, this)
-                    }
-                    C.ToolButton {
-                        visible: page.offerShelf && !modelData.partial; enabled: !page.shelfReply; icon.name: "folder-add"
-                        Accessible.name: i18n("Add %1 to file shelf", modelData.name)
-                        C.ToolTip.text: i18n("Add to file shelf"); C.ToolTip.visible: hovered
-                        onClicked: page.addToShelf(modelData)
+                        IslandButton {
+                            visible: !file.modelData.partial; enabled: !page.opener.busy; plain: true
+                            icon.name: "folder-open"; text: i18n("Show %1 in Files", file.modelData.name)
+                            onClicked: page.opener.open(file.modelData.url, false, this)
+                        }
+                        IslandButton {
+                            visible: page.offerShelf && !file.modelData.partial; enabled: !page.shelfReply; plain: true
+                            icon.name: "folder-add"; text: i18n("Add %1 to file shelf", file.modelData.name)
+                            onClicked: page.addToShelf(file.modelData)
+                        }
                     }
                 }
             }

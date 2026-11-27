@@ -75,8 +75,8 @@ ColumnLayout {
         }
         contentItem: RowLayout {
             spacing: 8
-            K.Icon { Layout.preferredWidth: 17; Layout.preferredHeight: 17; source: "audio-volume-high"; color: "#a1d9ff" }
-            C.Label { text: i18n("Sound output"); color: "#f3f3f6"; font.weight: Font.Medium }
+            IslandGlyph { Layout.preferredWidth: 17; Layout.preferredHeight: 17; source: "audio-volume-high"; color: "#a1d9ff" }
+            C.Label { text: i18n("Output"); font.pixelSize: 11; color: "#f3f3f6"; font.weight: Font.Medium }
             C.Label { Layout.fillWidth: true; Layout.minimumWidth: 0; text: chooser.text; horizontalAlignment: Text.AlignRight
                 textFormat: Text.PlainText; elide: Text.ElideRight; font.pixelSize: 12; color: "#c8c8cf" }
             K.Icon { Layout.preferredWidth: 12; Layout.preferredHeight: 12; source: "arrow-down"; color: "#c8c8cf" }
@@ -89,15 +89,15 @@ ColumnLayout {
         width: Math.min(232,desk.width - 6)
         height: Math.min(desk.height - 6, 42 + Math.max(1,items.length) * 30)
         property string mode: ""
-        property Item app
-        function show(section, row) { app = row; mode = section; open(); optionsList.currentIndex = 0; optionsList.forceActiveFocus() }
+        property Item application
+        function show(section, row) { application = row; mode = section; open(); optionsList.currentIndex = 0; optionsList.forceActiveFocus() }
         function choose(option) {
             if (!option || option.enabled === false) return
             if (option.next) { mode = option.next; optionsList.currentIndex = 0; return }
             option.run(); close()
         }
-        onClosed: { mode = ""; app = null }
-        onAppChanged: if (!app && (mode === "app" || mode === "routes") && opened) close()
+        onClosed: { mode = ""; application = null }
+        onApplicationChanged: if (!application && (mode === "app" || mode === "routes") && opened) close()
         readonly property var items: {
             if (mode === "outputs" || mode === "inputs") {
                 const input = mode === "inputs"
@@ -105,7 +105,7 @@ ColumnLayout {
                     label: d.name, checked: d.default, run: () => desk.selectDevice(input ? "input" : "output",d)
                 }))
             }
-            const row = app
+            const row = application
             if (!row) return []
             if (mode === "routes") return desk.routes.map(out => ({
                 label: out.name,
@@ -113,7 +113,7 @@ ColumnLayout {
                 run: () => sound.route(row.appKey,out.device)
             }))
             return [
-                {label: row.pinned ? i18n("Unpin app") : i18n("Pin app"), icon:"pin", enabled:row.stable && !sound.saving, run: () => sound.pin(row.appKey,row.label,!row.pinned)},
+                {label: row.pinned ? i18n("Unpin application") : i18n("Pin application"), icon:"pin", enabled:row.stable && !sound.saving, run: () => sound.pin(row.appKey,row.label,!row.pinned)},
                 {label:i18n("Reset volume to 100%"), icon:"edit-undo", enabled:row.writable && row.percent !== 100, run: () => sound.level(row.appKey,100)},
                 {label:i18n("Move left"), icon:"go-previous", enabled:row.canStep(-1), run: () => sound.step(row.index,-1)},
                 {label:i18n("Move right"), icon:"go-next", enabled:row.canStep(1), run: () => sound.step(row.index,1)},
@@ -129,7 +129,7 @@ ColumnLayout {
                 C.Label {
                     Layout.fillWidth: true; Layout.minimumWidth: 0; leftPadding: 6; elide: Text.ElideRight
                     text: choices.mode === "inputs" ? i18n("Microphones") : choices.mode === "outputs" ? i18n("Sound output") :
-                        choices.mode === "routes" ? i18n("Play through") : choices.app?.label ?? ""
+                        choices.mode === "routes" ? i18n("Play through") : choices.application?.label ?? ""
                     font.pixelSize: 12; font.weight: Font.DemiBold; color: "#e9e9ed"; textFormat: Text.PlainText
                 }
                 IslandButton { plain: true; icon.name:"window-close"; text:i18n("Close"); onClicked: choices.close() }

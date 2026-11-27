@@ -4,7 +4,7 @@ import math
 from html import escape
 
 from PySide6.QtCore import QEvent, QPointF, QRectF, Qt, QTimer, Signal
-from PySide6.QtGui import QCursor, QIcon, QPainter, QPainterPath, QPalette, QPen, QRegion
+from PySide6.QtGui import QColor, QCursor, QIcon, QPainter, QPainterPath, QPalette, QPen, QRegion
 from PySide6.QtWidgets import QAbstractButton, QApplication, QDialog, QLabel, QMenu, QPushButton, QVBoxLayout
 
 from actions import ACTIONS, tr
@@ -15,11 +15,12 @@ class Sector(QAbstractButton):
         super().__init__(wheel)
         self.wheel = wheel
         self.entry = entry
+        self.setEnabled(entry.kind != 'empty')
         self.key = entry.value
         self.setText(entry.title)
         self.setIcon(QIcon.fromTheme(entry.icon_name))
         self.setAccessibleName(self.text())
-        self.setToolTip("<span>" + escape(self.text()) + "</span>")
+        self.setToolTip("" if wheel.active_id == 'radial' else "<span>" + escape(self.text()) + "</span>")
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.StrongFocus)
         self.setGeometry(wheel.rect())
@@ -36,6 +37,13 @@ class Sector(QAbstractButton):
         self.path.arcTo(bounds, start, -sector)
         self.path.arcTo(hub, start-sector, sector)
         self.path.closeSubpath()
+        if wheel.active_id == 'radial':
+            from radial_art import RingGeometry
+            geometry = RingGeometry(wheel.rect())
+            self.path = geometry.wedge(index, count)
+            self.setAttribute(Qt.WA_NoSystemBackground)
+            self.pressed.connect(wheel.update)
+            self.released.connect(wheel.update)
         self.setMask(QRegion(self.path.toFillPolygon().toPolygon()))
         radians = math.radians(angle)
         self.anchor = center + QPointF(math.cos(radians), -math.sin(radians)) * (radius * .71)
@@ -73,11 +81,16 @@ class Sector(QAbstractButton):
         super().focusInEvent(event)
 
     def paintEvent(self, event):
+        # Native buttons keep accessible focus and exact hit regions, while
+        # the parent paints the whole radial surface without integer clipping.
+        if self.wheel.active_id == 'radial':
+            return
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         palette = self.palette()
         selected = self.wheel.current is self
         fill = palette.color(QPalette.Highlight if selected else QPalette.Button)
+        if not self.isEnabled():fill=palette.color(QPalette.Disabled,QPalette.Button)
         if self.isDown():
             fill = fill.darker(112)
         painter.setBrush(fill)
@@ -90,7 +103,8 @@ class Sector(QAbstractButton):
         self.icon().paint(painter, x-icon_size//2, y, icon_size, icon_size)
         width = int(self.label_width)
         label = self.fontMetrics().elidedText(self.text(), Qt.ElideRight, width)
-        painter.setPen(palette.color(QPalette.HighlightedText if selected else QPalette.ButtonText))
+        painter.setPen(palette.color(QPalette.HighlightedText if selected else QPalette.ButtonText)
+                       if self.isEnabled() else palette.color(QPalette.Disabled,QPalette.ButtonText))
         painter.drawText(x-width//2, y+icon_size+3, width, text_height, Qt.AlignCenter, label)
 
 
@@ -99,6 +113,7 @@ class FavoritesWheel(QDialog):
     dismissed = Signal()
     targetChosen = Signal(object)
     profileChosen = Signal(str)
+    emojiRequested = Signal()
 
     def __init__(self):
         super().__init__(None, Qt.Tool | Qt.FramelessWindowHint)
@@ -135,6 +150,10 @@ class FavoritesWheel(QDialog):
         self.editable = True
         self.buttons = []
         self.current = None
+        self.base_palette = QPalette(self.palette())
+        self.radial_style = False
+        self.emoji_picker = None
+        self.picker_selection = None
 
         self.dismiss_timer = QTimer(self, singleShot=True)
         self.dismiss_timer.timeout.connect(self.dismiss_if_inactive)
@@ -178,6 +197,7 @@ class FavoritesWheel(QDialog):
         self.hint.setText(tr("Release to choose") if button else self.hub_hint())
 
     def hub_hint(self):
+        if self.active_id == 'radial':return tr('Edit menu')
         return "‹ " + tr("Back") if self.history else tr("Wheels") + " ▾"
 
     def enterEvent(self, event):
@@ -208,6 +228,18 @@ class FavoritesWheel(QDialog):
             super().keyReleaseEvent(event)
 
     def contents(self, items, selected=0):
+        radial = self.active_id == 'radial'
+        if radial != self.radial_style:
+            self.radial_style = radial
+            palette = QPalette(self.base_palette)
+            if radial:
+                for role,color in ((QPalette.Window,'#191d21'),(QPalette.WindowText,'#f0f4f2'),
+                                   (QPalette.Button,'#191d21'),(QPalette.ButtonText,'#f0f4f2'),
+                                   (QPalette.PlaceholderText,'#9ba9ad'),(QPalette.Mid,'#394249')):
+                    palette.setColor(role,QColor(color))
+            self.setPalette(palette)
+            self.hub.setStyleSheet('QPushButton {background:transparent;border:0;} QLabel {color:#eef3f0;background:transparent;}' if radial else '')
+            self.drawn = None
         layout = (self.width(), items)
         if layout != self.drawn:
             self.drawn = layout
@@ -218,17 +250,20 @@ class FavoritesWheel(QDialog):
             self.buttons = [Sector(self, entry, i, len(items)) for i, entry in enumerate(items)]
             for button in self.buttons:
                 button.show()
-            span = round(self.width() * .39)
+            span = round((self.width()-16) * .37) if radial else round(self.width() * .39)
             self.hub.setGeometry((self.width()-span)//2, (self.height()-span)//2, span, span)
             self.hub.setMask(QRegion(self.hub.rect(), QRegion.Ellipse))
             inset = max(3, span // 10)
             self.hub_layout.setContentsMargins(inset, 0, inset, 0)
-        hint = tr("Back") if self.history else tr("Wheels")
+        hint = tr('Edit radial menu') if self.active_id == 'radial' else tr("Back") if self.history else tr("Wheels")
         self.hub.setAccessibleName(hint)
         self.hint.setText(self.hub_hint())
+        self.label.setWordWrap(not radial)
         self.hub.raise_()
-        if self.buttons:
+        enabled = [button for button in self.buttons if button.isEnabled()]
+        if enabled:
             button = self.buttons[min(selected, len(self.buttons)-1)]
+            if not button.isEnabled():button=enabled[0]
             button.setFocus(Qt.ShortcutFocusReason)
             self.highlight(button)
         else:
@@ -236,14 +271,19 @@ class FavoritesWheel(QDialog):
             self.hub.setAccessibleDescription("")
             self.label.setText(tr("Empty wheel"))
             self.hub.setFocus(Qt.ShortcutFocusReason)
+        if radial and enabled:
+            self.label.setText(tr('Radial menu'))
+        self.update()
 
     def present(self, items, available):
+        self.close_picker(focus=False)
         if items and isinstance(items[0], str):
             from wheel_profiles import Entry
             items = tuple(Entry("tool", key) for key in items)
         size = min(max(320, self.fontMetrics().height()*22), max(1, available))
         self.setFixedSize(size, size)
-        self.setMask(QRegion(self.rect(), QRegion.Ellipse))
+        if self.active_id == 'radial': self.clearMask()
+        else: self.setMask(QRegion(self.rect(), QRegion.Ellipse))
         self.history.clear()
         self.contents(items)
         # Wayland placement comes from the compositor when this surface is mapped.
@@ -259,22 +299,40 @@ class FavoritesWheel(QDialog):
         QApplication.setDesktopFileName("org.monet.FavoritesWheel")
         try:
             self.show()
+            if self.active_id == 'radial':
+                # QWindow's input hint is separate from QWidget's raster clip.
+                # The painted rim is inset, so even a compositor using this as
+                # a visual shape cannot cut into its antialiased pixels.
+                self.windowHandle().setMask(QRegion(self.rect(), QRegion.Ellipse))
         finally:
             QApplication.setDesktopFileName(desktop_id)
         self.raise_()
         self.activateWindow()
-        if self.buttons:
-            self.buttons[0].setFocus(Qt.ShortcutFocusReason)
-            self.highlight(self.buttons[0])
+        if self.current:
+            self.current.setFocus(Qt.ShortcutFocusReason)
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
+        if self.emoji_picker and self.emoji_picker.isVisible():
+            painter.setPen(QPen(QColor('#414b4b'),1))
+            painter.setBrush(QColor('#1e1f22'))
+            painter.drawRoundedRect(QRectF(self.rect()).adjusted(1,1,-1,-1),22,22)
+            return
+        if self.active_id == 'radial':
+            from radial_art import RingGeometry, paint_ring, paint_slot
+            geometry=RingGeometry(self.rect())
+            selected=self.buttons.index(self.current) if self.current in self.buttons else -1
+            paint_ring(painter,geometry,selected,len(self.buttons))
+            for index,button in enumerate(self.buttons):
+                paint_slot(painter,geometry,button.entry,index,len(self.buttons),button is self.current,button.isDown())
+            return
         painter.setPen(QPen(self.palette().color(QPalette.Mid), 1))
         painter.setBrush(self.palette().window())
         painter.drawEllipse(QRectF(self.rect()).adjusted(1, 1, -1, -1))
 
     def highlight(self, button):
+        if not button.isEnabled():return
         previous = self.current
         self.current = button
         text = button.text()
@@ -283,14 +341,26 @@ class FavoritesWheel(QDialog):
         # A long filename without spaces would otherwise extend beyond the hub.
         width = self.hub.width() - 2 * self.hub_layout.contentsMargins().left()
         metrics = self.fontMetrics()
-        self.label.setText(" ".join(metrics.elidedText(word, Qt.ElideMiddle, width) for word in text.split()))
+        if self.active_id == 'radial':
+            # At most two lines, including a long custom name with no spaces.
+            words=text.split();first=''
+            while words and metrics.horizontalAdvance((first+' '+words[0]).strip()) <= width:
+                first=(first+' '+words.pop(0)).strip()
+            remaining=' '.join(words)
+            self.label.setText((first+'\n' if first and remaining else first)+metrics.elidedText(remaining,Qt.ElideRight,width))
+            self.update()
+        else:
+            self.label.setText(" ".join(metrics.elidedText(word, Qt.ElideMiddle, width) for word in text.split()))
         if previous and previous is not button:
             previous.update()
         button.update()
 
     def choose(self, entry):
         self.cancel_gesture()
-        if not self.isVisible():
+        if not self.isVisible() or entry.kind == 'empty':
+            return
+        if self.active_id == 'radial' and entry.kind == 'tool' and entry.value == 'emoji':
+            self.emojiRequested.emit()
             return
         if entry.kind == "menu":
             self.history.append((tuple(b.entry for b in self.buttons), self.buttons.index(self.current)))
@@ -302,8 +372,34 @@ class FavoritesWheel(QDialog):
         else:
             self.targetChosen.emit(entry)
 
+    def open_emoji(self, host):
+        from wheel_emoji import WheelEmoji
+        self.cancel_gesture()
+        self.picker_selection=self.current
+        if self.emoji_picker is None:self.emoji_picker=WheelEmoji(self,host)
+        for button in self.buttons:button.hide()
+        self.hub.hide()
+        self.windowHandle().setMask(QRegion())
+        self.emoji_picker.setGeometry(self.rect().adjusted(3,3,-3,-3))
+        self.emoji_picker.show();self.emoji_picker.raise_();self.emoji_picker.focus_search()
+        self.update()
+
+    def close_picker(self, focus=True):
+        if not self.emoji_picker or self.emoji_picker.isHidden():return
+        selected=self.picker_selection
+        self.emoji_picker.hide()
+        for button in self.buttons:button.show()
+        self.hub.show();self.hub.raise_()
+        if self.windowHandle():self.windowHandle().setMask(QRegion(self.rect(),QRegion.Ellipse))
+        if selected in self.buttons and selected.isEnabled():
+            self.highlight(selected)
+            if focus:selected.setFocus(Qt.BacktabFocusReason)
+        self.update()
+
     def open_hub(self):
         self.cancel_gesture()
+        if self.active_id == 'radial':
+            self.hide();self.chosen.emit('wheel-settings');return
         if self.history:
             self.contents(*self.history.pop())
             return
@@ -330,6 +426,9 @@ class FavoritesWheel(QDialog):
             self.profileChosen.emit(selected.data())
 
     def keyPressEvent(self, event):
+        if self.emoji_picker and self.emoji_picker.isVisible():
+            super().keyPressEvent(event)
+            return
         key = event.key()
         if not event.isAutoRepeat() and key not in (Qt.Key_Control, Qt.Key_Alt, Qt.Key_Meta, Qt.Key_Shift):
             self.cancel_gesture()
@@ -338,12 +437,16 @@ class FavoritesWheel(QDialog):
         elif key == Qt.Key_Backspace and self.history:
             self.contents(*self.history.pop())
         elif key in (Qt.Key_Left, Qt.Key_Up, Qt.Key_Right, Qt.Key_Down):
-            if not self.buttons:
+            available = [button for button in self.buttons if button.isEnabled()]
+            if not available:
                 return
             step = -1 if key in (Qt.Key_Left, Qt.Key_Up) else 1
-            index = (self.buttons.index(self.current) + step) % len(self.buttons)
-            self.buttons[index].setFocus(Qt.TabFocusReason)
-            self.highlight(self.buttons[index])
+            index = (available.index(self.current) + step) % len(available) if self.current in available else 0
+            available[index].setFocus(Qt.TabFocusReason)
+            self.highlight(available[index])
+        elif self.active_id == 'radial' and Qt.Key_1 <= key <= Qt.Key_8:
+            index=key-Qt.Key_1
+            if index<len(self.buttons) and not event.isAutoRepeat():self.choose(self.buttons[index].entry)
         elif key in (Qt.Key_Enter, Qt.Key_Return, Qt.Key_Space):
             if not event.isAutoRepeat():
                 if self.hub.hasFocus() or not self.current:
@@ -359,7 +462,9 @@ class FavoritesWheel(QDialog):
 
     def reject(self):
         self.cancel_gesture()
-        if self.history:
+        if self.emoji_picker and self.emoji_picker.isVisible():
+            self.close_picker()
+        elif self.history:
             self.contents(*self.history.pop())
         else:
             self.hide()

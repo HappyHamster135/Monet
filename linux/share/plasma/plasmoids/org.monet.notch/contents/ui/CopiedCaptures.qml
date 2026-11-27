@@ -8,10 +8,10 @@ ColumnLayout {
     id: page
     readonly property int count: items.count
     Clipboard.HistoryModel { id: history }
-    C.Label { visible: items.count > 0; text: i18n("Copied images"); font.weight: Font.DemiBold }
+    C.Label { visible: items.count > 0; text: i18n("Copied images"); font.pixelSize: 11; color: "#9999a4"; font.weight: Font.DemiBold }
     ListView {
         id: items
-        Layout.fillWidth: true; Layout.preferredHeight: count ? 68 : 0
+        Layout.fillWidth: true; Layout.preferredHeight: count ? 52 : 0
         orientation: ListView.Horizontal; spacing: 6; clip: true
         model: Models.KSortFilterProxyModel { sourceModel: history; filterRoleName: "type"; filterRegularExpression: /^4$/ }
         delegate: C.AbstractButton {
@@ -19,7 +19,7 @@ ColumnLayout {
             required property var decoration
             required property var uuid
             required property var imageSize
-            width: 84; height: items.height
+            width: 74; height: items.height
             text: i18n("Copy image (%1 × %2)", imageSize.width, imageSize.height)
             Accessible.name: text
             onClicked: history.moveToTop(uuid)

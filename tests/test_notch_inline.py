@@ -7,7 +7,7 @@ import unittest
 
 MODULES = Path(__file__).resolve().parents[1] / "linux/share/monet/utilities"
 sys.path.insert(0, str(MODULES))
-from actions import ACTIONS, DESKTOP_TOOLS, notch_catalog
+from actions import ACTIONS, DESKTOP_TOOLS, FULL_APPLICATIONS, notch_catalog
 try:
     from PySide6.QtCore import QSettings
     from PySide6.QtWidgets import QApplication
@@ -20,7 +20,7 @@ except ImportError:
 class Catalog(unittest.TestCase):
     def test_every_action_has_a_known_group_and_dispatch(self):
         catalog = notch_catalog()
-        self.assertEqual({row["key"] for row in catalog["rows"]}, set(ACTIONS))
+        self.assertEqual({row["key"] for row in catalog["rows"]}, set(ACTIONS) - FULL_APPLICATIONS)
         groups = {group["key"] for group in catalog["groups"]}
         for row in catalog["rows"]:
             self.assertIn(row["group"], groups)

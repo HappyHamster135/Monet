@@ -28,6 +28,31 @@ ColumnLayout {
     }
     SettingsControls.Caption {
         tone: look
+        visible: (sheet.gameInfo.functionKeys || {}).supported === true
+        text: i18n("Keyboard")
+    }
+    SettingsControls.Card {
+        tone: look
+        visible: (sheet.gameInfo.functionKeys || {}).supported === true
+        SettingsControls.SettingRow {
+            objectName: "gameFunctionKeysSetting"
+            tone: look
+            divider: false
+            title: i18n("F1–F12 while playing")
+            detail: (sheet.gameInfo.functionKeys || {}).ready === true
+                ? i18n("Use the function keys in games. Hold Fn for volume, brightness and the other top-row controls. Switching to another app restores your usual keys. Keep Fn Lock off.")
+                : i18n("The laptop keyboard helper needs to be installed before this can be used.")
+            tappable: (sheet.gameInfo.functionKeys || {}).ready === true
+            onTapped: sheet.ask("game-function-keys " + (sheet.gameInfo.functionKeys.enabled ? "off" : "on"),
+                               out => sheet.gameInfo = sheet.json(out, sheet.gameInfo))
+            SettingsControls.Switch {
+                tone: look
+                active: (sheet.gameInfo.functionKeys || {}).ready === true && (sheet.gameInfo.functionKeys || {}).enabled === true
+            }
+        }
+    }
+    SettingsControls.Caption {
+        tone: look
         text: i18n("Controllers")
     }
     SettingsControls.Card {

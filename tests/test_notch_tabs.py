@@ -263,6 +263,42 @@ Item {
             shown("time")
             self.assertEqual(root.property("clocks"), 2)
 
+    def test_external_tools_do_not_slide_an_empty_scene_behind_a_native_surface(self):
+        app = QGuiApplication.instance() or QGuiApplication([])
+        with tempfile.TemporaryDirectory() as folder:
+            scene = Path(folder) / "External.qml"
+            scene.write_text('''import QtQuick
+import "@MONET_UI@" as Monet
+Item {
+    id: root; width: 350; height: 360
+    property int tab: 0
+    property string shown: deck.item?.objectName ?? ""
+    property bool settled: !deck.outgoing && deck.progress === 1 && deck.item?.x === 0
+    function i18n(text) { return text }
+    Component { id: home; Item { objectName: "tools" } }
+    Component { id: tool; Item { objectName: "native" } }
+    Monet.IslandPages {
+        id: deck; anchors.fill: parent; components: [home, tool]
+        reusable: [home]; privatePages: [tool]; externalPages: [tool]
+        presented: true; duration: 400; requested: components[root.tab]
+    }
+}'''.replace("@MONET_UI@", UI.as_uri()))
+            window = QQuickView()
+            self.addCleanup(window.close)
+            window.setSource(QUrl.fromLocalFile(str(scene)))
+            self.assertEqual(window.status(), QQuickView.Ready, [e.toString() for e in window.errors()])
+            window.show()
+            root = window.rootObject()
+            for target in (0, 1, 0, 1, 0):
+                root.setProperty("tab", target)
+                name = "native" if target else "tools"
+                for _ in range(100):
+                    QTest.qWait(5)
+                    if root.property("shown") == name:
+                        break
+                self.assertEqual(root.property("shown"), name)
+                self.assertTrue(root.property("settled"))
+
     def test_interrupted_slides_share_one_edge_and_finish_on_the_last_request(self):
         app = QGuiApplication.instance() or QGuiApplication([])
         with tempfile.TemporaryDirectory() as folder:

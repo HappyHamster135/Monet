@@ -10,6 +10,7 @@ try:
     from PySide6.QtGui import QGuiApplication
     from PySide6.QtQml import QQmlComponent, QQmlEngine
     from PySide6.QtQuick import QQuickView
+    from PySide6.QtQuickControls2 import QQuickStyle
     from PySide6.QtTest import QTest
 except ImportError:
     QQmlEngine = None
@@ -32,6 +33,7 @@ def settings_properties():
 class NotchTimer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        QQuickStyle.setStyle("org.kde.desktop")
         cls.app = QGuiApplication.instance() or QGuiApplication([])
 
     def setUp(self):
@@ -145,13 +147,19 @@ QtObject {
 
 @unittest.skipUnless(QQmlEngine, "requires Qt Quick")
 class TimerRuler(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        QQuickStyle.setStyle("org.kde.desktop")
+        cls.app = QGuiApplication.instance() or QGuiApplication([])
+
     def test_focus_controls_fit_the_narrow_popup(self):
         app = QGuiApplication.instance() or QGuiApplication([])
         with tempfile.TemporaryDirectory() as folder:
             scene = Path(folder) / "Clock.qml"
             scene.write_text('import QtQuick\nimport "' + (CONTENTS / "ui").as_uri() + '''" as Monet
 Item {
-    id: scene; width: 310; height: 300
+    id: scene; width: 310; height: 257
+    property string failedBounds: ""
     function i18n(text) { return text }
     QtObject { id: config; @SETTINGS@ }
     Monet.NotchTimer { id: model; settings: config }
@@ -165,8 +173,11 @@ Item {
             const item = pending.pop()
             if (!item.visible) continue
             if (item.clicked && item.text === label) {
-                const left = item.mapToItem(scene, 0, 0).x
-                return left >= 0 && left + item.width <= scene.width + 1
+                const corner = item.mapToItem(scene, 0, 0)
+                const fits = corner.x >= 0 && corner.x + item.width <= scene.width + 1
+                    && corner.y >= 0 && corner.y + item.height <= scene.height + 1
+                if (!fits) scene.failedBounds = JSON.stringify({label:label, x:corner.x, y:corner.y, width:item.width, height:item.height, viewportWidth:scene.width, viewportHeight:scene.height, available:clock.availableWidth, contentHeight:clock.contentHeight})
+                return fits
             }
             for (const child of item.children) pending.push(child)
         }
@@ -182,16 +193,17 @@ Item {
             clock = window.rootObject().findChild(QObject, "clock")
             bar = clock.findChild(QObject, "notchTimeModes")
             QTest.qWait(60)
-            initial = (bar.x(), bar.y(), bar.width(), bar.height())
-            self.assertGreater(bar.width(), 200)
-            for mode in (2, 0, 2, 1):
-                clock.setProperty("mode", mode)
+            for width in (288, 310, 399, 400, 414, 432, 520):
+                window.rootObject().setWidth(width)
                 QTest.qWait(60)
-                self.assertEqual((bar.x(), bar.y(), bar.width(), bar.height()), initial)
-
-            QTest.qWait(60)
-            for label in ("Start", "Keep awake", "Focus options"):
-                self.assertTrue(window.rootObject().fits(label), label)
+                for mode in (0, 1, 2):
+                    clock.setProperty("mode", mode)
+                    QTest.qWait(60)
+                    self.assertGreater(bar.width(), 200)
+                    self.assertLessEqual(bar.width(), width, (width, mode))
+                    for label in (("Start", "Keep awake", "Focus options") if mode == 1
+                                  else ("Start", "Keep awake") if mode == 0 else ("Keep awake",)):
+                        self.assertTrue(window.rootObject().fits(label), (width, mode, label, window.rootObject().property("failedBounds")))
 
     def test_taps_and_drags_adjust_minutes_and_respect_the_limit(self):
         app = QGuiApplication.instance() or QGuiApplication([])

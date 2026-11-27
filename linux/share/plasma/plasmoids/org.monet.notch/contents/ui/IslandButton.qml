@@ -13,10 +13,15 @@ C.AbstractButton {
     property color base: plain ? "transparent" : tile ? "#10ffffff" : "#29292c"
     property bool prominent: false
     property real glyphSize: tile ? 21 : 15
+    property bool solidGlyph: false
     implicitWidth: tile ? 95 : caption ? tag.implicitWidth + 25 : 32
     implicitHeight: tile ? IslandLayout.tileHeight : plain ? 29 : 32
     padding: 0
     hoverEnabled: true
+    opacity: enabled ? 1 : 0.4
+
+
+
     Accessible.name: text
     Accessible.onPressAction: click()
     Keys.onReturnPressed: click()
@@ -34,11 +39,12 @@ C.AbstractButton {
             width: parent.width - 6
             anchors.centerIn: parent
             spacing: button.tile && !button.detail ? 4 : 2
-            K.Icon {
+            IslandGlyph {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: button.glyphSize; height: width
                 visible: !button.caption
-                source: button.icon.name; isMask: true
+                source: button.icon.name
+                solid: button.solidGlyph
                 color: !button.enabled ? "#77777e" : button.checked || button.prominent ? "#161618" : button.tint
             }
             Text {

@@ -7,8 +7,10 @@ QtObject {
     id: tools
     property var hidden: []
     property var favorites: []
+    property var radial: []
     property bool ready: false
-    function offers(key) { return ready && !hidden.includes(key) }
+    readonly property var desktopApplications: ["files","trash","appimage","apps","homebrew","store","updates","storage","processes","remap","shortcuts","paste-shortcut","rename-shortcut","debounce","quick-panel","empty-trash"]
+    function offers(key) { return ready && !hidden.includes(key) && !desktopApplications.includes(key) }
     readonly property Core.Settings settings: Core.Settings {
         location: Core.StandardPaths.writableLocation(Core.StandardPaths.GenericConfigLocation) + "/Monet/Utilities.conf"
     }
@@ -26,8 +28,13 @@ QtObject {
         } catch (_) {}
         if (JSON.stringify(keys) !== JSON.stringify(hidden)) hidden = keys
         let saved = []
-        try { saved = JSON.parse(settings.value("favorites", '["shelf","notes","screenshot","color","awake","sound"]')) } catch (_) {}
+        try { saved = JSON.parse(settings.value("favorites", '["screenshot","record","ocr","color","plain","clean","emoji","snippets","compress","mic","output","lock"]')) } catch (_) {}
         if (Array.isArray(saved) && JSON.stringify(favorites) !== JSON.stringify(saved)) favorites = saved
+        let ring = ["screenshot","record","color","text-tools","emoji","snippets","mic","awake"]
+        try { const value = JSON.parse(settings.value("notchRadial",JSON.stringify(ring))); if (Array.isArray(value)) ring=value.slice(0,8) } catch (_) {}
+        while (ring.length<8) ring.push("")
+        ring=ring.map(key => typeof key === "string" && !["wheel","wheel-settings","notch-settings","quick-panel"].includes(key) && !hidden.includes(key) && !desktopApplications.includes(key) ? key : "")
+        if (JSON.stringify(radial)!==JSON.stringify(ring)) radial=ring
         ready = true
     }
     Component.onCompleted: reload()

@@ -1,6 +1,7 @@
 // Widgets for the selected containment, with preview cards and a searchable catalog.
 // Desktop.qml owns the shared model and keeps it alive while an uninstall is pending.
 import QtQuick
+import "file://@DATADIR@/monet/panel" as EditorUI
 import QtQuick.Layouts
 import QtQuick.Templates as T
 import QtQuick.Controls as C
@@ -14,19 +15,32 @@ import org.kde.plasma.private.shell
 
 Item {
     id: gallery
+    objectName: "monetWidgetPicker"
     LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
     LayoutMirroring.childrenInherit: true
 
     property QtObject containment
-    property PlasmaCore.Dialog sidePanel
+    property QtObject sidePanel
     property bool draggingWidget: false
+    onDraggingWidgetChanged: {
+        if (!draggingWidget) {
+            // Normal application windows hide during Show Desktop. Bring the
+            // picker back after a completed or cancelled drag, ready for the next.
+            KWindowSystem.showingDesktop = false
+            if (sidePanel?.visible && sidePanel.raise) {
+                sidePanel.raise()
+                sidePanel.requestActivate()
+            }
+        }
+    }
+    onContainmentChanged: if (explorer) explorer.containment = containment
     // "all", a widget's plugin name, or "more" for everyone else's.
     property string shown: "all"
 
     // While a widget is dragged out, the gallery fades and lets the drop through.
     readonly property bool preventWindowHide: draggingWidget
     readonly property bool outputOnly: draggingWidget
-    readonly property QtObject explorer: root.widgetExplorer
+    readonly property QtObject explorer: root?.widgetExplorer ?? null
     readonly property real speed: Kirigami.Units.longDuration / 200
     readonly property bool smoke: Kirigami.Theme.backgroundColor.hslLightness < 0.5
     readonly property color ink: smoke ? "#EFECE6" : "#1C1B19"
@@ -62,9 +76,11 @@ Item {
         }
     }
     signal closed()
+    signal moveRequested(real x, real y)
 
-    // Wide enough for the list and two big cards; the desktop shrinks beside it.
-    width: Math.round(Math.min(Kirigami.Units.gridUnit * 36, Math.max(240, Screen.width * 0.52), Screen.width))
+    // A compact two-column window over the desktop, with a single column on
+    // smaller screens. Its size does not depend on the selected category.
+    width: Math.round(Math.min(640, Math.max(240, Screen.width - 64)))
     height: 800
     opacity: draggingWidget ? 0.3 : 1
 
@@ -99,7 +115,7 @@ Item {
         if (item?.supported) add(item.pluginName)
     }
 
-    // Done: the gallery closes and the desktop comes back to full size.
+    // Done returns to the panel editor or ends desktop editing.
     function done() {
         gallery.closed()
     }
@@ -107,7 +123,7 @@ Item {
     onClosed: {
         // Keep the panel editor open when returning from its widget gallery.
         if (forBar) {
-            if (containment && !containment.userConfiguring)
+            if (containment?.corona.editMode && !containment.userConfiguring)
                 containment.internalAction("configure")?.trigger()
             return
         }
@@ -123,6 +139,7 @@ Item {
     }
 
     Component.onCompleted: {
+        if (!root) return
         if (!root.widgetExplorer) {
             root.widgetExplorer = explorerComponent.createObject(root)
         }
@@ -132,7 +149,7 @@ Item {
 
     Component.onDestruction: {
         // Widgets marked for removal are taken out a minute later; keep the model till then.
-        if (!root.widgetExplorer) return
+        if (!root || !root.widgetExplorer) return
         if (pendingUninstallTimer.running) {
             root.widgetExplorer.widgetsModel.searchTerm = ""
         } else {
@@ -176,6 +193,13 @@ Item {
         }
     }
 
+    Rectangle {
+        anchors.fill: parent
+        radius: 12
+        color: gallery.smoke ? "#242321" : "#F3F1EC"
+        border.width: 1
+        border.color: gallery.hairline
+    }
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: Kirigami.Units.gridUnit
@@ -185,27 +209,53 @@ Item {
             Layout.fillWidth: true
             spacing: Kirigami.Units.largeSpacing
 
-            ColumnLayout {
+            Item {
                 Layout.fillWidth: true
-                spacing: 2
-                Text {
-                    horizontalAlignment: Text.AlignLeft
-                    text: i18nd("monet", "Widgets")
-                    color: gallery.ink
-                    font.family: "Fraunces 72pt SuperSoft"
-                    font.pixelSize: 30
+                Layout.preferredHeight: headerText.implicitHeight
+                // This header is the window's move area; widget cards keep
+                // their existing drag-and-drop behavior.
+                MouseArea {
+                    objectName: "widgetGalleryTitleDrag"
+                    anchors.fill: parent
+                    enabled: !!gallery.sidePanel
+                    cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                    property point origin
+                    property point windowOrigin
+                    onPressed: mouse => {
+                        if (gallery.sidePanel.startSystemMove) gallery.sidePanel.startSystemMove()
+                        origin = mapToGlobal(mouse.x, mouse.y)
+                        windowOrigin = Qt.point(gallery.sidePanel.x, gallery.sidePanel.y)
+                    }
+                    onPositionChanged: mouse => {
+                        if (!pressed) return
+                        const point = mapToGlobal(mouse.x, mouse.y)
+                        gallery.moveRequested(windowOrigin.x + point.x - origin.x, windowOrigin.y + point.y - origin.y)
+                    }
                 }
-                Text {
-                    horizontalAlignment: Text.AlignLeft
-                    Layout.fillWidth: true
-                    text: gallery.forBar ? i18nd("monet", "Click one to add it to the bar, or drag it there.")
-                                         : i18nd("monet", "Click one to add it to your desktop, or drag it where you want it.")
-                    color: gallery.dim
-                    elide: Text.ElideRight
-                    font.family: "Inter"
-                    font.pixelSize: 13
+                ColumnLayout {
+                    id: headerText
+                    anchors.fill: parent
+                    spacing: 2
+                    Text {
+                        horizontalAlignment: Text.AlignLeft
+                        text: i18nd("monet", "Widgets")
+                        color: gallery.ink
+                        font.family: "Fraunces 72pt SuperSoft"
+                        font.pixelSize: 30
+                    }
+                    Text {
+                        horizontalAlignment: Text.AlignLeft
+                        Layout.fillWidth: true
+                        text: gallery.forBar ? i18nd("monet", "Click one to add it to the bar, or drag it there.")
+                                             : i18nd("monet", "Click one to add it to your desktop, or drag it where you want it.")
+                        color: gallery.dim
+                        elide: Text.ElideRight
+                        font.family: "Inter"
+                        font.pixelSize: 13
+                    }
                 }
             }
+            EditorUI.WindowControls { host: gallery.sidePanel; visible: gallery.sidePanel?.titleHeight === undefined }
             Pill {
                 Layout.alignment: Qt.AlignTop
                 text: i18nd("monet", "Done")
@@ -390,6 +440,7 @@ Item {
     // Remove, when it's out already). The whole card adds it, or drags it out.
     component Card: T.AbstractButton {
         id: card
+        objectName: "widgetCard-" + pluginName
         property string pluginName
         property string name
         property string description
@@ -608,6 +659,7 @@ Item {
     // One of everyone else's widgets: its sign, its name and what it does, and Add.
     component Listed: T.AbstractButton {
         id: row
+        objectName: "widgetRow-" + pluginName
         property string pluginName
         property string name
         property string description

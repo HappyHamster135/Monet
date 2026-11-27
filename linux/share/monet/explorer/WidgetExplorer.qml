@@ -1,50 +1,31 @@
-/*
- * The widget gallery Plasma's desktop opens from "Add Widgets…": Monet's
- * (MonetWidgetExplorer.qml), or KDE's own (KdeWidgetExplorer.qml, KDE's file
- * kept beside it) whenever Monet's can't load.
- *
- * Desktop.qml loads this with containment and sidePanel set, keeps it while
- * preventWindowHide is true, lets clicks through while outputOnly is true,
- * follows its opacity, and closes it on closed().
- */
+// Hand the native sidebar request to a regular editor application window.
 import QtQuick
+import "file://@DATADIR@/monet/panel/EditorWindows.js" as EditorWindows
 import org.kde.plasma.core as PlasmaCore
-
 Item {
     id: gallery
-
     property QtObject containment
     property PlasmaCore.Dialog sidePanel
-    readonly property Item page: monet.item || kde.item
-    readonly property bool preventWindowHide: page ? page.preventWindowHide : false
-    readonly property bool outputOnly: page ? page.outputOnly : false
-
+    property bool preventWindowHide: false
+    property bool outputOnly: false
+    property bool floatingEditor: true
     signal closed()
-
-    width: page ? page.width : 0
-    height: 800
-    opacity: page ? page.opacity : 1
-
-    Loader {
-        id: monet
-        height: parent.height
-        focus: true
-        onLoaded: item.closed.connect(gallery.closed)
-    }
-
-    Loader {
-        id: kde
-        height: parent.height
-        focus: true
-        onLoaded: item.closed.connect(gallery.closed)
-    }
-
+    width: fallback.item ? fallback.item.width : 1
+    height: fallback.item ? fallback.item.height : 1
+    property bool handedOff: false
+    Component.onDestruction: if (handedOff && sidePanel?.contentItem) sidePanel.contentItem.opacity = 1
+    Timer { id: dismissRequest; interval: 120; onTriggered: gallery.closed() }
+    Loader { id: fallback; anchors.fill: parent; onLoaded: item.closed.connect(gallery.closed) }
     Component.onCompleted: {
-        // D-Bus (Settings) has no sender; use this screen's desktop in that case.
-        const pieces = { containment: gallery.containment || root.containment.plasmoid, sidePanel: gallery.sidePanel }
-        monet.setSource(Qt.resolvedUrl("MonetWidgetExplorer.qml"), pieces)
-        if (monet.status === Loader.Error) {
-            kde.setSource(Qt.resolvedUrl("KdeWidgetExplorer.qml"), pieces)
+        try {
+            const host = EditorWindows.forParent(root)
+            if (!host.openWidgets(containment || root.containment.plasmoid, root, pendingUninstallTimer, Qt.resolvedUrl("MonetWidgetExplorer.qml"))) throw new Error("widgets")
+            handedOff = true
+            sidePanel.contentItem.opacity = 0
+            dismissRequest.restart()
+        } catch (error) {
+            console.warn("Monet widgets:", error)
+            fallback.setSource(Qt.resolvedUrl("KdeWidgetExplorer.qml"), {containment: containment, sidePanel: sidePanel})
         }
     }
 }

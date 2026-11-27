@@ -36,6 +36,9 @@ DIRECT_ACTIONS = {
 
 ACTIONS = {
     **DIRECT_ACTIONS,
+    "notch-settings": Action(N_("Notch & Tools settings"), "Desktop notch island favorites radial menu preferences", "configure"),
+    "text-tools": Action(N_("Text tools"), "Writing uppercase lowercase trim lines word count", "format-text-uppercase"),
+    "color-tools": Action(N_("Color palette"), "Capture colors HEX RGB HSL CSS palette", "color-picker"),
     "command-bar": Action(N_("Command Bar"), "Search apps windows files calculator units snippets clipboard emoji app menus commands", "system-search", ("krunner",)),
     "emoji": Action(N_("Find an emoji"), "Search emoji smiley symbols copy", "face-smile", ("krunner", "--runner", "monet-utilities", "emoji: ")),
     "calendars": Action(N_("Notch calendars"), "Calendar subscriptions and appointments", "view-calendar"),
@@ -104,7 +107,7 @@ ACTIONS = {
     "bluetooth": Action(N_("Bluetooth accessories"), "System", "preferences-system-bluetooth", ("@monet-settings", "bluetooth")),
     "quick-panel": Action(N_("Quick Panel"), "Favorite tools floating launcher grid", "view-grid"),
     "wheel-settings": Action(N_("Customize wheels"), "Desktop radial menu profile shortcut application file submenu favorites", "preferences-desktop"),
-    "wheel": Action(N_("Favorite actions wheel"), "Desktop", "view-more"),
+    "wheel": Action(N_("Radial menu"), "Desktop favorite actions wheel shortcuts", "view-more"),
 }
 SEARCH_HINTS = {
     "command-bar": N_("Search apps and files, or type menu: for commands in the active app"),
@@ -144,7 +147,10 @@ def category_for(key, action):
     return GROUP_ALIASES.get(group, group)
 
 
-DEFAULT_FAVORITES = ["shelf", "notes", "screenshot", "color", "awake", "sound"]
+# Quick actions complement the notch's existing pages. Explicit saved favorites
+# remain authoritative, including a deliberately empty selection.
+DEFAULT_FAVORITES = ["screenshot", "record", "ocr", "color", "plain", "clean",
+                     "emoji", "snippets", "compress", "mic", "output", "lock"]
 
 
 def stored(settings, key, default):
@@ -198,17 +204,24 @@ def find_tools(query, favorites, hidden):
         ranked.append((key, score + favorite_bonus.get(key, 0)))
     return sorted(ranked, key=lambda match: -match[1])
 
+# Full application launchers remain available in desktop Utilities only.
+FULL_APPLICATIONS = {"files", "trash", "appimage", "apps", "homebrew", "store", "updates", "storage",
+                     "processes", "remap", "shortcuts", "paste-shortcut", "rename-shortcut", "debounce",
+                     "quick-panel", "empty-trash"}
+COMPACT_SETTINGS = {"display", "power", "sound", "output-order", "mouse", "touchpad", "windows",
+                    "notifications", "theme", "bluetooth", "devices", "screenshot", "color", "ocr", "watch"}
 # These tools act immediately or intentionally take input on the desktop.
 # Only explicit clicks may run them. Traversing page history must be passive.
-DESKTOP_TOOLS = {*DIRECT_ACTIONS, "color", "ocr", "record", "watch", "camera", "lock", "clean", "plain", "wheel", "output", "quick-panel",
-                 *(key for key, action in ACTIONS.items() if action.command)}
+NOTCH_PAGES = {"snippets", "emoji", "plain", "clean", "record", "recordings", "lock", "text-tools", "color-tools"}
+DESKTOP_TOOLS = ({*DIRECT_ACTIONS, "color", "ocr", "watch", "camera", "lock", "wheel", "output", "quick-panel", "notch-settings",
+                  *(key for key, action in ACTIONS.items() if action.command)} - NOTCH_PAGES - COMPACT_SETTINGS)
 
 
 def notch_catalog():
     return {"groups": [{"key": key, "label": tr(label), "icon": icon} for key, label, icon in CATEGORIES],
             "rows": [{"key": key, "label": action.name, "icon": action.icon, "group": category_for(key, action),
                       "terms": search_terms(key)[1], "immediate": key in DESKTOP_TOOLS}
-                     for key, action in ACTIONS.items()]}
+                     for key, action in ACTIONS.items() if key not in FULL_APPLICATIONS]}
 
 
 if __name__ == "__main__":

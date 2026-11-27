@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as C
+import QtQuick.Templates as T
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.components as PlasmaComponents
 import org.kde.plasma.extras as PlasmaExtras
@@ -11,6 +12,15 @@ ColumnLayout {
     signal backRequested()
     signal activated()
     function focusSearch() { field.forceActiveFocus(Qt.ShortcutFocusReason) }
+    function suppressHoverHints(item) {
+        if (!item) return
+        // Milou supplies its own label and action tooltips. Keep its native
+        // result actions, applying the notch's presentation to those hints.
+        for (const child of item.data || []) {
+            if (child instanceof T.ToolTip) child.visible = false
+            else if (child instanceof Item) suppressHoverHints(child)
+        }
+    }
 
     RowLayout {
         Layout.fillWidth: true
@@ -18,8 +28,8 @@ ColumnLayout {
             icon.name: "go-previous"
             text: i18n("Back")
             display: C.AbstractButton.IconOnly
-            C.ToolTip.visible: hovered
-            C.ToolTip.text: text
+
+
             onClicked: page.backRequested()
         }
         PlasmaExtras.SearchField {
@@ -69,6 +79,8 @@ ColumnLayout {
                     width: ListView.view.width
                     categoryWidth: Kirigami.Units.largeSpacing
                     typeText: ""
+                    Component.onCompleted: Qt.callLater(page.suppressHoverHints, this)
+                    onIsCurrentChanged: Qt.callLater(page.suppressHoverHints, this)
                 }
                 C.ScrollBar.vertical: C.ScrollBar {}
                 onUpdateQueryString: (text, pos) => {

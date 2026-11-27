@@ -1,13 +1,3 @@
-/*
- * Monet's edit mode: when you add, move or remove widgets, the desktop steps
- * back into a frame of paper (or smoke) on a wash of mist (or smoke), with Add
- * widgets and Done above it. KDE's blurs the whole desktop behind the frame
- * at every change, which is slow wherever the processor draws the screen.
- *
- * Loaded by DesktopEditMode.qml in Plasma's desktop shell. Desktop.qml around
- * it gives root, containment, containmentParent, editModeRect and sidePanel,
- * and reads centerX and centerY to place the desktop it shrinks.
- */
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Templates as T
@@ -19,14 +9,23 @@ Item {
     LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
     LayoutMirroring.childrenInherit: true
 
-    property real centerX: Math.round(editModeUi.x + editModeUi.width / 2)
-    property real centerY: Math.round(editModeUi.y + editModeUi.height / 2)
+    property real centerX: root.width / 2
+    property real centerY: root.height / 2
     property real roundedRootWidth: Math.round(root.width)
     property real roundedRootHeight: Math.round(root.height)
     property bool open: false
     readonly property bool editingPanel: !!containment?.plasmoid.corona.panelBeingConfigured
         && containment.plasmoid.corona.panelBeingConfigured.screenToFollow === desktop.screenToFollow
+    readonly property bool floatingEditorOpen: editingPanel || (sidePanel.visible && !!sidePanel.mainItem?.item?.floatingEditor)
     readonly property bool showToolbar: !editingPanel && !sidePanel.visible
+
+    // Never scale the containment, including between editor windows.
+    Binding {
+        target: containmentParent
+        property: "scaleFactor"
+        value: 1
+        restoreMode: Binding.RestoreBindingOrValue
+    }
 
     readonly property real speed: Kirigami.Units.longDuration / 200
     // Mist or smoke, the way monet-light set the colors.
@@ -42,50 +41,23 @@ Item {
         open = Qt.binding(() => containment.plasmoid.corona.editMode)
     }
 
-    // Desktop.qml already scales the live containment and routes input to it.
-    // Paint just the surround. No second fullscreen texture needs to be updated.
-    readonly property color surround: smoke ? "#242321" : "#e6e3dc"
-    Item {
-        anchors.fill: parent; visible: editModeItem.open
-        Rectangle { width: parent.width; height: Math.max(0,editModeUi.y); color: editModeItem.surround }
-        Rectangle { y: editModeUi.y + editModeUi.height; width: parent.width; height: Math.max(0,parent.height - y); color: editModeItem.surround }
-        Rectangle { y: editModeUi.y; width: Math.max(0,editModeUi.x); height: editModeUi.height; color: editModeItem.surround }
-        Rectangle { x: editModeUi.x + editModeUi.width; y: editModeUi.y; width: Math.max(0,parent.width - x); height: editModeUi.height; color: editModeItem.surround }
-    }
-
+    // Editing happens on the live, full-size desktop. Only this small toolbar
+    // covers it; editor applications never reserve a strip of the screen.
     Item {
         id: editModeUi
-        visible: editModeItem.open
-        x: Math.round(editModeItem.open ? editModeRect.x + editModeRect.width / 2 - zoomedWidth / 2 : 0)
-        y: Math.round(editModeItem.open ? editModeRect.y + editModeRect.height / 2 - zoomedHeight / 2 + (editModeItem.showToolbar ? toolBar.height / 2 : 0) : 0)
-        width: editModeItem.open ? zoomedWidth : editModeItem.roundedRootWidth
-        height: editModeItem.open ? zoomedHeight : editModeItem.roundedRootHeight
-        property real zoomedWidth: Math.round(root.width * containmentParent.scaleFactor)
-        property real zoomedHeight: Math.round(root.height * containmentParent.scaleFactor)
-
-        // The frame: paper or smoke around the desktop, with the bar above it.
+        anchors.fill: parent
         Rectangle {
             id: frame
-            x: -10
-            readonly property real band: editModeItem.showToolbar ? toolBar.height + 14 : 8
-            y: -band
-            width: Math.round(parent.width + 20)
-            height: Math.round(parent.height + band + 10)
-            radius: editModeItem.open ? 18 : 0
-            color: "transparent"
-            Rectangle { width: parent.width; height: frame.band; radius: 8; visible: editModeItem.showToolbar; color: editModeItem.paper }
+            visible: editModeItem.open && editModeItem.showToolbar
+            x: Math.round((parent.width - width) / 2)
+            y: 64
+            width: Math.min(760, parent.width - 32)
+            height: toolBar.implicitHeight + 16
+            radius: 16
+            color: editModeItem.paper
             border.width: 1
             border.color: editModeItem.hairline
-            Behavior on radius { NumberAnimation { duration: Kirigami.Units.longDuration } }
-
-            // The bar's clicks stay on it; the desktop under the frame stays live.
-            MouseArea {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.top: parent.top
-                height: frame.band
-            }
-
+            MouseArea { anchors.fill: parent }
             Flow {
                 id: toolBar
                 visible: editModeItem.showToolbar

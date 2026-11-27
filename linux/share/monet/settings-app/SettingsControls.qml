@@ -632,6 +632,7 @@ QtObject {
     // A slider: a lily track and a white stone.
     component Slide: T.Slider {
         id: slide
+        wheelEnabled: false
         property var tone
         implicitWidth: 200
         implicitHeight: 28

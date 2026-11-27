@@ -63,6 +63,27 @@ ColumnLayout {
             objectName: "batteryStatusRow"
             detail: sheet.batteryDescription()
         }
+        SettingsControls.SettingRow {
+            tone: look
+            objectName: "batteryEnergyRow"
+            visible: typeof sheet.info.energyWh === "number" && typeof sheet.info.fullWh === "number"
+            title: i18n("Energy remaining")
+            detail: i18n("%1 of %2 Wh", Number(sheet.info.energyWh).toLocaleString(Qt.locale(), "f", 1), Number(sheet.info.fullWh).toLocaleString(Qt.locale(), "f", 1))
+        }
+        SettingsControls.SettingRow {
+            tone: look
+            objectName: "batteryDrawRow"
+            visible: typeof sheet.info.watts === "number" && !sheet.info.plugged
+            title: i18n("Power use · %1 W", Number(sheet.info.watts).toLocaleString(Qt.locale(), "f", 1))
+            detail: i18n("Time remaining follows recent power use. Games, calls and brightness can change it; allow a few minutes after unplugging.")
+        }
+        SettingsControls.SettingRow {
+            tone: look
+            objectName: "batteryHealthRow"
+            visible: typeof sheet.info.batteryHealth === "number"
+            title: i18n("Battery health · %1%", Math.round(sheet.info.batteryHealth))
+            detail: i18n("Usable capacity compared with when the battery was new. The time estimate uses its current capacity.")
+        }
         // Battery care, where the battery can do it (ThinkPads and many others): it stops at 80%.
         SettingsControls.SettingRow {
             tone: look

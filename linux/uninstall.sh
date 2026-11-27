@@ -70,6 +70,13 @@ if [ "$(cat /etc/skel/.config/monet/display-defaults-pending 2>/dev/null || true
     rm -f /etc/skel/.config/monet/display-defaults-pending
 fi
 
+systemctl disable --now monet-game-keys.service >/dev/null 2>&1 || true
+rm -f /etc/systemd/system/monet-game-keys.service
+healthcheck_override=/etc/systemd/system/greenboot-healthcheck.service.d/10-network-online.conf
+if [ -f "$healthcheck_override" ] && grep -q '^# Monet: keep local checks independent of network-online\.$' "$healthcheck_override"; then
+    rm -f "$healthcheck_override"
+fi
+
 systemctl disable --now monet-sync.service monet-windows-setup.service monet-update.timer monet-apps.timer monet-charge.service >/dev/null 2>&1 || true
 rm -f /etc/systemd/system/monet-sync.service /etc/systemd/system/monet-windows-setup.service \
     /etc/systemd/system/monet-windows-continue.service \
@@ -123,6 +130,7 @@ rm -f /etc/systemd/system/monet-guest-wipe.service /etc/systemd/logind.conf.d/50
 # Windows' Games folder stays on Windows' drive, with its games; Monet stops sharing it.
 rm -f "/etc/systemd/user/app-steam@autostart.service.d/monet-steam-share.conf"
 rm -f /etc/systemd/user/plasma-foreground-booster.service.d/monet-session.conf
+rm -f /etc/systemd/user/mpris-proxy.service.d/monet-shutdown.conf
 rm -f '/etc/systemd/user/app-nvidia\x2dsettings\x2dload@autostart.service.d/monet-saved-settings.conf'
 systemctl disable monet-windows-drive.service monet-windows-files.service monet-windows-network.service >/dev/null 2>&1 || true
 rm -f /etc/systemd/system/monet-windows-drive.service /etc/systemd/system/monet-windows-files.service \
@@ -175,7 +183,7 @@ rm -f "$PREFIX/libexec/monet-measure"
 rm -f "$PREFIX/bin/monet" "$PREFIX/libexec/monet-switch"
 rm -f "$PREFIX/bin/monet-files" "$PREFIX/libexec/monet-file-jobs"
 rm -f "$PREFIX/libexec/monet_quick.py" "$PREFIX/libexec/__pycache__"/monet_quick.*.pyc
-for tool in monet-region monet_region.py monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-work monet-leave monet-files-tools monet-system-info monet-graphics-use monet-rest monet-priority monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-boot monet-reset monet-seal monet-pairings monet-secure monet-windows-drive monet-paint monet-guest monet-prepare-windows monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
+for tool in monet-region monet_region.py monet-session monet-look monet-profile monet-light monet-daylight monet-quick monet-weather monet-resume monet-work monet-leave monet-files-tools monet-system-info monet-graphics-use monet-boot-network monet-rest monet-priority monet-game-keys monet-on-power monet-files-session monet-browser-session monet-editor-session monet-pdf-session monet-bookmarks monet-fresh monet-widgets monet-apps monet-charge monet-ready monet-keep monet-boot monet-reset monet-seal monet-pairings monet-secure monet-windows-drive monet-paint monet-guest monet-prepare-windows monet-games monet-settings monet-passwords monet-passwords-browser monet-store monet-store-jobs monet-keep-awake monet-brightness monet-login-brightness; do
     rm -f "$PREFIX/libexec/$tool"
 done
 for icon in monet monet-windows monet-quick-symbolic; do

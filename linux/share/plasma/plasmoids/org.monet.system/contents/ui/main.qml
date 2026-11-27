@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 /*
  * System: how hard the PC is working, on Monet's glass. A dial each for the
  * processor, the graphics and the memory, a stroke of paint that warms from
@@ -21,6 +22,10 @@ PlasmoidItem {
     readonly property bool onBar: sideBar || Plasmoid.formFactor === PlasmaCore.Types.Horizontal
     readonly property var readings: Array.from(Plasmoid.configuration.readings || [])
     readonly property bool dashboardSampling: activity.active && (!onBar || expanded)
+    GraphicsPolicy {
+        id: gpuPolicy
+        monitorDedicatedGraphics: Plasmoid.configuration.monitorDedicatedGraphics
+    }
     SessionActivity {
         id: activity
         viewVisible: root.visible
@@ -35,7 +40,7 @@ PlasmoidItem {
     }
 
     function ready(sensor) {
-        return sensor.status === Sensors.Sensor.Ready && typeof sensor.value === "number"
+        return sensor.readingStatus === Sensors.Sensor.Ready && typeof sensor.value === "number"
             && Number.isFinite(sensor.value);
     }
 
@@ -52,6 +57,7 @@ PlasmoidItem {
         style: Plasmoid.configuration.readingStyle
         vertical: root.sideBar
         power: activity.powerReady ? activity.batteryState : ({})
+        graphicsPolicy: gpuPolicy
         sampling: activity.active
         enabled: !Plasmoid.containment?.corona.editMode
         onPressedReading: {
@@ -60,10 +66,17 @@ PlasmoidItem {
         }
     }
 
-    component Reading: Sensors.Sensor {
+    component Reading: Loader {
+        id: reading
         required property bool sampling
-        enabled: sampling
-        updateRateLimit: 1500
+        required property string sensorId
+        readonly property var value: item ? item.value : null
+        readonly property string formattedValue: item ? item.formattedValue : ""
+        readonly property int readingStatus: item ? item.status : -1
+        active: sampling && gpuPolicy.allows(sensorId)
+        sourceComponent: Component {
+            Sensors.Sensor { sensorId: reading.sensorId; updateRateLimit: 1500 }
+        }
     }
 
     Reading { sampling: root.dashboardSampling; id: cpu; sensorId: "cpu/all/usage" }

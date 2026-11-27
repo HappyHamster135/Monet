@@ -6,6 +6,7 @@ import org.kde.plasma.plasma5support as P5
 
 ColumnLayout {
     id: page
+    spacing: 7
     property bool embedded: false
     required property Item editorParent
     required property date day
@@ -24,7 +25,7 @@ ColumnLayout {
     property bool readAgain: false
     property bool syncing: false
     property bool canSync: true
-    property var state: null
+    property var calendarState: null
     function shifted(days) {
         return new Date(day.getFullYear(), day.getMonth(), day.getDate() + days)
     }
@@ -43,7 +44,7 @@ ColumnLayout {
         commands.connectSource(reader + (force ? "sync force" : "sync"))
     }
     Timer { id: dayChange; interval: 100; onTriggered: page.list() }
-    onDateKeyChanged: if (ready) { state = null; dayChange.restart() }
+    onDateKeyChanged: if (ready) { calendarState = null; dayChange.restart() }
     property bool ready: false
     Component.onCompleted: { ready = true; list() }
     P5.DataSource {
@@ -64,9 +65,9 @@ ColumnLayout {
                 page.pending = ""
                 if (source !== page.query) return
                 if (page.readAgain) { Qt.callLater(page.list); return }
-                try { page.state = JSON.parse(data.stdout) }
-                catch (_) { page.state = {error: true} }
-                if (page.state.needsSync && page.canSync) page.sync(false)
+                try { page.calendarState = JSON.parse(data.stdout) }
+                catch (_) { page.calendarState = {error: true} }
+                if (page.calendarState.needsSync && page.canSync) page.sync(false)
             }
         }
     }
@@ -77,7 +78,7 @@ ColumnLayout {
         anchors.fill: parent; anchors.margins: 9
         visible: false; z: 100; clip: true
         Keys.onEscapePressed: event => { page.closeEditor(); event.accepted = true }
-        function close() { visible = false; if (page.enabled) newEvent.forceActiveFocus() }
+        function close() { visible = false; if (page.enabled) (page.embedded ? embeddedAdd : newEvent).forceActiveFocus() }
         Rectangle { anchors.fill: parent; radius: 16; color: "#19191d" }
         MouseArea { anchors.fill: parent; onWheel: wheel => wheel.accepted = true }
         property string ident: ""
@@ -95,7 +96,7 @@ ColumnLayout {
         }
         function submit(remove) {
             if (page.writeRequest) return
-            const value = {id: ident, day: eventDay, title: titleBox.text.trim(), time: clock.text.trim()}
+            const value = {"id": ident, day: eventDay, title: titleBox.text.trim(), time: clock.text.trim()}
             const bytes = unescape(encodeURIComponent(JSON.stringify(value)))
             const hex = Array.from(bytes, c => c.charCodeAt(0).toString(16).padStart(2,"0")).join("")
             page.writeRequest = page.reader + (remove ? "remove-event " : "save-event ") + hex
@@ -106,11 +107,11 @@ ColumnLayout {
             anchors.fill: parent; anchors.margins: 12
             ColumnLayout {
                 width: form.availableWidth
-                C.Label { text: edit.ident ? i18n("Edit event") : i18n("New event"); font.bold: true }
+                C.Label { font.pixelSize: 12; text: edit.ident ? i18n("Edit event") : i18n("New event"); font.bold: true }
                 spacing: 6
-                C.Label { text: edit.eventDay ? Qt.formatDate(new Date(edit.eventDay + "T12:00:00"), Qt.locale().dateFormat(Locale.LongFormat)) : ""; visible: !!edit.eventDay }
-                C.TextField { id: titleBox; Layout.fillWidth: true; maximumLength: 256; Accessible.name: i18n("Event title"); placeholderText: Accessible.name }
-                C.TextField {
+                C.Label { font.pixelSize: 12; text: edit.eventDay ? Qt.formatDate(new Date(edit.eventDay + "T12:00:00"), Qt.locale().dateFormat(Locale.LongFormat)) : ""; visible: !!edit.eventDay }
+                IslandTextField { id: titleBox; Layout.fillWidth: true; maximumLength: 256; Accessible.name: i18n("Event title"); placeholderText: Accessible.name }
+                IslandTextField {
                     id: clock; Layout.fillWidth: true; maximumLength: 5
                     Accessible.name: i18n("Time"); placeholderText: i18n("HH:MM, or leave blank for all day")
                     validator: RegularExpressionValidator { regularExpression: /(?:[01][0-9]|2[0-3]):[0-5][0-9]/ }
@@ -119,11 +120,11 @@ ColumnLayout {
                 C.Label { visible: !!edit.problem; text: edit.problem; Layout.fillWidth: true; wrapMode: Text.Wrap }
                 RowLayout {
                     Layout.fillWidth: true; enabled: !page.writeRequest
-                    C.Button { visible: !!edit.ident; text: i18n("Delete"); onClicked: edit.submit(true) }
+                    IslandButton { caption: true; visible: !!edit.ident; text: i18n("Delete"); onClicked: edit.submit(true) }
                     Item { Layout.fillWidth: true }
-                    C.Button { text: i18n("Cancel"); onClicked: edit.close() }
-                    C.Button {
-                        id: save; text: i18n("Save")
+                    IslandButton { caption: true; text: i18n("Cancel"); onClicked: edit.close() }
+                    IslandButton { caption: true;
+                        id: save; prominent: true; text: i18n("Save")
                         enabled: !!titleBox.text.trim() && (!clock.text.trim() || clock.acceptableInput)
                         onClicked: edit.submit(false)
                     }
@@ -134,13 +135,13 @@ ColumnLayout {
     RowLayout {
         visible: !page.embedded
         Layout.fillWidth: true
-        C.ToolButton { icon.name: "go-previous"; text: i18n("Month"); onClicked: page.monthRequested() }
+        IslandButton { plain: true; icon.name: "go-previous"; text: i18n("Month"); onClicked: page.monthRequested() }
         Item { Layout.fillWidth: true }
-        C.ToolButton {
-            text: i18n("Link a calendar…"); icon.name: "view-calendar"; onClicked: page.calendarsRequested()
+        IslandButton {
+            plain: true; text: i18n("Link a calendar…"); icon.name: "view-calendar"; onClicked: page.calendarsRequested()
         }
-        C.ToolButton {
-            icon.name: "view-refresh"; Accessible.name: i18n("Refresh events")
+        IslandButton {
+            plain: true; icon.name: "view-refresh"; text: i18n("Refresh events")
             enabled: !page.syncing && !page.pending
             onClicked: page.sync(true)
         }
@@ -148,87 +149,92 @@ ColumnLayout {
     RowLayout {
         visible: !page.embedded
         Layout.fillWidth: true
-        C.ToolButton { icon.name: "go-previous"; Accessible.name: i18n("Previous two weeks"); onClicked: page.choose(page.shifted(-14)) }
-        C.Button {
-            Layout.fillWidth: true
+        IslandButton { plain: true; icon.name: "go-previous"; text: i18n("Previous two weeks"); onClicked: page.choose(page.shifted(-14)) }
+        IslandButton {
+            caption: true; Layout.fillWidth: true; Layout.minimumWidth: 0
             text: Qt.locale().toString(page.day, "d MMM") + " – " + Qt.locale().toString(page.shifted(13), "d MMM yyyy")
             Accessible.description: i18n("Return to today")
             onClicked: page.choose(new Date())
         }
-        C.ToolButton { icon.name: "go-next"; Accessible.name: i18n("Next two weeks"); onClicked: page.choose(page.shifted(14)) }
+        IslandButton { plain: true; icon.name: "go-next"; text: i18n("Next two weeks"); onClicked: page.choose(page.shifted(14)) }
     }
     IslandButton {
-        id: newEvent; caption: true; text: i18n("New event"); Layout.alignment: Qt.AlignHCenter
+        id: newEvent; visible: !page.embedded; caption: true; text: i18n("New event"); Layout.alignment: Qt.AlignHCenter
         onClicked: edit.show(null)
     }
-    C.Label {
+    RowLayout {
         visible: page.embedded; Layout.fillWidth: true
-        text: Qt.locale().toString(page.day, "ddd d MMM")
-        font.weight: Font.DemiBold; font.pixelSize: 13; elide: Text.ElideRight
+        Text { Layout.fillWidth: true; text: Qt.locale().toString(page.day,"ddd d MMM")
+            font.weight: Font.DemiBold; font.pixelSize: 12; color: "#ededf2"; elide: Text.ElideRight }
+        IslandButton { id: embeddedAdd; plain: true; icon.name: "plus"; text: i18n("New event"); onClicked: edit.show(null) }
     }
     ListView {
         id: events
         objectName: "notchAppointments"
         Layout.fillWidth: true; Layout.fillHeight: true; clip: true
-        model: page.state?.events || []
+        spacing: 6; boundsBehavior: Flickable.StopAtBounds
+        model: page.calendarState?.events || []
         C.ScrollBar.vertical: C.ScrollBar {}
-        delegate: ColumnLayout {
+        delegate: Rectangle {
+            id: eventRow
             required property var modelData
             readonly property date start: new Date(modelData.start)
             readonly property date end: new Date(modelData.end)
-            width: events.width - Kirigami.Units.smallSpacing * 2
-            spacing: 0
-            RowLayout {
-                Layout.fillWidth: true
-                C.Label { Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText; text: modelData.title || i18n("Untitled event"); font.bold: true }
-                IslandButton {
-                    visible: !!modelData.localId; plain: true; implicitWidth: 24; implicitHeight: 24
-                    icon.name: "document-edit"; text: i18n("Edit event"); onClicked: edit.show(modelData)
-                }
-            }
-            C.Label {
-                Layout.fillWidth: true; elide: Text.ElideRight
-                text: {
-                    const date = Qt.locale().toString(start, "ddd d MMM")
-                    if (modelData.allDay) {
-                        const finalDay = new Date(end.getFullYear(), end.getMonth(), end.getDate() - 1)
-                        return date + (start.toDateString() === finalDay.toDateString() ? "" : " – " + Qt.locale().toString(finalDay, "d MMM")) + " · " + i18n("All day")
+            width: events.width
+            height: eventContent.implicitHeight + 18
+            radius: 11; color: "#19191e"
+            Rectangle { x: 0; y: 10; width: 3; height: parent.height - 20; radius: 1.5; color: "#ff8797" }
+            ColumnLayout {
+                id: eventContent
+                x: 12; y: 9; width: parent.width - 24; spacing: 4
+                RowLayout {
+                    Layout.fillWidth: true
+                    C.Label { Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText; text: modelData.title || i18n("Untitled event"); font.weight: Font.DemiBold; font.pixelSize: 12 }
+                    IslandButton {
+                        visible: !!modelData.localId; plain: true; implicitWidth: 24; implicitHeight: 24
+                        icon.name: "document-edit"; text: i18n("Edit event"); onClicked: edit.show(modelData)
                     }
-                    const from = date + " · " + Qt.formatTime(start, Locale.ShortFormat)
-                    if (start.getTime() === end.getTime()) return from
-                    return from + " – " + (start.toDateString() === end.toDateString() ? "" : Qt.locale().toString(end, "d MMM") + " ") + Qt.formatTime(end, Locale.ShortFormat)
                 }
-            }
-            C.Label {
-                Layout.fillWidth: true; Layout.bottomMargin: Kirigami.Units.smallSpacing
-                textFormat: Text.PlainText; elide: Text.ElideRight; opacity: 0.8
-                text: [modelData.source, modelData.location].filter(Boolean).join(" · ")
+                C.Label {
+                    font.pixelSize: 11; color: "#aaaab2"; Layout.fillWidth: true; elide: Text.ElideRight
+                    text: {
+                        const date = Qt.locale().toString(start, "ddd d MMM")
+                        if (modelData.allDay) {
+                            const finalDay = new Date(end.getFullYear(), end.getMonth(), end.getDate() - 1)
+                            return date + (start.toDateString() === finalDay.toDateString() ? "" : " – " + Qt.locale().toString(finalDay, "d MMM")) + " · " + i18n("All day")
+                        }
+                        const from = date + " · " + Qt.formatTime(start, Locale.ShortFormat)
+                        if (start.getTime() === end.getTime()) return from
+                        return from + " – " + (start.toDateString() === end.toDateString() ? "" : Qt.locale().toString(end, "d MMM") + " ") + Qt.formatTime(end, Locale.ShortFormat)
+                    }
+                }
+                C.Label {
+                    Layout.fillWidth: true; visible: !!text
+                    textFormat: Text.PlainText; elide: Text.ElideRight; color: "#9696a2"; font.pixelSize: 11
+                    text: [modelData.source, modelData.location].filter(Boolean).join(" · ")
+                }
             }
         }
-        C.Label {
-            anchors.centerIn: parent; width: parent.width - 12
+        IslandEmpty {
+            anchors.fill: parent
             visible: events.count === 0
-            horizontalAlignment: Text.AlignHCenter; wrapMode: Text.Wrap
-            text: !page.state || page.syncing ? i18n("Loading events…")
-                : page.state.error ? i18n("Could not read your calendars.")
-                : page.state.unavailable?.length ? i18n("Some calendars could not be read.")
+            symbol: "view-calendar"; tint: "#ff8797"
+            title: !page.calendarState || page.syncing ? i18n("Loading events…")
+                : page.calendarState.error ? i18n("Could not read your calendars.")
+                : page.calendarState.unavailable?.length ? i18n("Some calendars could not be read.")
                 : page.embedded ? i18n("No events on this day.") : i18n("No events in these two weeks.")
         }
     }
-    IslandButton {
-        visible: page.embedded
-        Layout.alignment: Qt.AlignHCenter; caption: true
-        text: i18n("Link a calendar…"); onClicked: page.calendarsRequested()
-    }
-    IslandButton {
-        visible: page.embedded; caption: true; Layout.alignment: Qt.AlignHCenter
-        text: i18n("Upcoming events"); onClicked: page.upcomingRequested()
+    RowLayout {
+        visible: page.embedded; Layout.fillWidth: true
+        IslandButton { plain: true; icon.name: "view-calendar"; text: i18n("Link a calendar…"); onClicked: page.calendarsRequested() }
+        IslandButton { caption: true; Layout.fillWidth: true; Layout.minimumWidth: 0; text: i18n("Upcoming"); onClicked: page.upcomingRequested() }
     }
     C.Label {
         Layout.fillWidth: true; visible: text.length > 0; wrapMode: Text.Wrap; textFormat: Text.PlainText
-        text: [page.state?.unavailable?.length ? i18n("Unavailable · %1", page.state.unavailable.join(", ")) : "",
-            page.state?.saved?.length ? i18n("Showing saved copy · %1", page.state.saved.join(", ")) : "",
-            page.state?.truncated ? i18n("Showing the first 200 appointments.") : ""].filter(Boolean).join("\n")
+        text: [page.calendarState?.unavailable?.length ? i18n("Unavailable · %1", page.calendarState.unavailable.join(", ")) : "",
+            page.calendarState?.saved?.length ? i18n("Showing saved copy · %1", page.calendarState.saved.join(", ")) : "",
+            page.calendarState?.truncated ? i18n("Showing the first 200 appointments.") : ""].filter(Boolean).join("\n")
         maximumLineCount: 2; elide: Text.ElideRight
     }
 }

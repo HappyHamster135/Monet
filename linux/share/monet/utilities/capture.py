@@ -38,10 +38,14 @@ class Selection(QLabel):
         self.origin = None
 
 class Preview(QDialog):
-    def __init__(self, parent, widget_id=None):
+    def __init__(self, parent, widget_id=None, *, autostart=True, inline=False):
         super().__init__(parent)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setWindowFlag(Qt.WindowStaysOnTopHint)
+        self.inline = inline
+        self.capture_active = False
+        if inline:self.setWindowFlags(Qt.Widget)
+        else:
+            self.setAttribute(Qt.WA_DeleteOnClose)
+            self.setWindowFlag(Qt.WindowStaysOnTopHint)
         self.setWindowTitle("Watch a window")
         self.resize(420, 300)
         self.bridge = None
@@ -53,7 +57,7 @@ class Preview(QDialog):
         self.image = Selection("Choose a window in the sharing picker.")
         self.image.setTextFormat(Qt.PlainText)
         self.image.setAlignment(Qt.AlignCenter)
-        self.image.setMinimumSize(80, 60)
+        self.image.setMinimumSize(80, 140)
         self.image.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
         self.image.setWordWrap(True)
         layout = QVBoxLayout(self)
@@ -86,6 +90,10 @@ class Preview(QDialog):
         self.reset.clicked.connect(self.clear_crop)
         self.reset.setEnabled(False)
         actions.addWidget(self.reset)
+        if inline:
+            stop = QPushButton("Stop watching")
+            stop.clicked.connect(self.stop_watching)
+            actions.addWidget(stop)
         actions.addStretch()
         self.image.cropChanged.connect(self.crop_changed)
         if widget_id:
@@ -100,8 +108,10 @@ class Preview(QDialog):
         self.frames = QTimer(self)
         self.frames.setInterval(200)
         self.frames.timeout.connect(self.draw)
-        self.frames.start()
-        self.stream.start()
+        if autostart:
+            self.capture_active = True
+            self.frames.start()
+            self.stream.start()
 
     def choose_window(self):
         from watch import WindowStream
@@ -115,8 +125,17 @@ class Preview(QDialog):
         self.alert.setCurrentIndex(0)
         self.image.setText("Choose a window in the sharing picker.")
         self.stream = WindowStream(self.capture_failed)
+        self.capture_active = True
         self.frames.start()
         self.stream.start()
+
+    def stop_watching(self):
+        self.capture_active = False
+        self.frames.stop()
+        self.stream.close()
+        self.text_alert.stop()
+        self.alert.setCurrentIndex(0)
+        self.image.setText("Watching stopped. Choose a window to start again.")
 
     def clear_crop(self):
         self.image.crop = None
@@ -176,6 +195,7 @@ class Preview(QDialog):
         self.render_watch()
 
     def capture_failed(self, message):
+        self.capture_active = False
         self.frames.stop()
         self.full_picture = self.picture = QImage()
         self.text_alert.stop()

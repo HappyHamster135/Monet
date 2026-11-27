@@ -21,7 +21,8 @@ from media_names import CopyNames, NameDialog, copy_base
 from media_presets import ExportMenu
 from picture_edit import picture_geometry
 
-WORKER = Path(__file__).with_name("media_compress.py")
+import media_compress
+WORKER = Path(media_compress.__file__)
 
 
 @dataclass
@@ -230,9 +231,8 @@ class CompressPage(QWidget):
         ready = (e for e in self.entries.values() if e.info)
         samples = [(e.path, self.planned_size(e), self.suffix(e)) for e in islice(ready, 6)]
         dialog = NameDialog(self, self.name_pattern, samples)
-        if dialog.exec() == NameDialog.Accepted:
-            self.name_pattern = dialog.pattern.text().strip()
-        dialog.deleteLater()
+        from inline_dialogs import present_dialog
+        present_dialog(dialog,self,lambda:setattr(self,'name_pattern',dialog.pattern.text().strip()))
 
     def edit_picture_options(self):
         ready = [e for e in self.entries.values() if e.info and self.suffix(e) not in (".gif", ".mp4")]
@@ -240,10 +240,11 @@ class CompressPage(QWidget):
             return
         entry = next((e for e in ready if e.row.isSelected()), ready[0])
         dialog = PictureOptions(self, entry, self.suffix(entry), self.picture_options, self.edge.value())
-        if dialog.exec() == PictureOptions.Accepted:
+        def accepted():
             self.picture_options = dialog.values()
-        dialog.deleteLater()
-        self.update_controls()
+            self.update_controls()
+        from inline_dialogs import present_dialog
+        present_dialog(dialog,self,accepted)
 
     def selection_changed(self):
         self.update_controls()

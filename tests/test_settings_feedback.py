@@ -381,6 +381,29 @@ class LookFeedback(unittest.TestCase):
         self.assertFalse(self.item("betaInstall").property("visible"))
         self.window.setProperty("showBetas", False)
 
+    def test_rollback_labels_distinguish_betas_rebuilds_and_local_test_systems(self):
+        self.helper.replies["about"] = json.dumps({"monet": "0.9.8-9", "beta": 3})
+        self.helper.replies["previous"] = json.dumps(dict(version="0.9.8-9", beta=2, date="2026-11-24", build="abc12345"))
+        select_settings_page(self.window, "updates")
+        row = self.item("previousBuildRow")
+        self.wait_for(lambda: row.property("title") == "Go back to Monet 0.9.8-9 beta 2")
+        self.assertIn("Build abc12345", row.property("detail"))
+        self.assertIn("Built on 2026-11-24", row.property("detail"))
+        self.window.setProperty("previous", dict(version="0.9.8-9", beta=3, sameVersion=True, date="2026-11-24"))
+        self.assertEqual(row.property("title"), "Go back to the previous build of Monet 0.9.8-9 beta 3")
+        self.assertIn("same version number", row.property("detail"))
+        self.window.setProperty("previous", dict(version="0.9.8-9", beta=0, localBuild=True,
+                                               sameVersion=True, pending=True, date="2026-11-24"))
+        self.assertIn("previous build of Monet 0.9.8-9 (local build)", row.property("title"))
+        self.assertIn("starts at your next restart", row.property("title"))
+        self.assertFalse(self.item("rollbackPc").property("visible"))
+        self.assertFalse(any(c[1] in ("rollback", "restart") for c in self.helper.commands))
+
+    def test_updates_identifies_the_running_local_build(self):
+        self.helper.replies["about"] = json.dumps({"monet": "0.9.8-9", "beta": 0, "localBuild": True})
+        select_settings_page(self.window, "updates")
+        self.wait_for(lambda: self.item("updateTitle").property("text") == "Monet 0.9.8-9 (local build)")
+
     def test_security_shows_unknown_and_pending_checks_in_the_overview(self):
         state = dict(secureBoot="on", encrypted=True, encryptionSetup="complete",
                      firewall="unavailable", selinux="enforcing", autoUpdates="on",

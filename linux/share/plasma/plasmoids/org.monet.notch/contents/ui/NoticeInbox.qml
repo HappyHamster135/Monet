@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls as C
 import QtQuick.Layouts
@@ -16,7 +17,7 @@ ColumnLayout {
     property var detail: ({})
     property var toRemove: []
     property bool canClear: false
-    spacing: Kirigami.Units.smallSpacing
+    spacing: 8
     NM.Settings { id: preferences }
     NM.Notifications {
         id: history
@@ -99,7 +100,7 @@ ColumnLayout {
         }
     }
     function openRequested() {
-        if (requestedNotice) show({id: requestedNotice, kind: NM.Notifications.NotificationType, live: true})
+        if (requestedNotice) show({"id": requestedNotice, kind: NM.Notifications.NotificationType, live: true})
     }
     Timer { id: openRequest; interval: 0; onTriggered: inbox.openRequested() }
     onRequestedNoticeChanged: if (requestedNotice) openRequest.restart()
@@ -149,14 +150,14 @@ ColumnLayout {
         for (let i = 0; i < history.count; ++i) {
             const entry = history.index(i, 0)
             if (removable(entry))
-                pending.push({id: history.data(entry, NM.Notifications.IdRole), stamp: deliveryTime(entry)})
+                pending.push({"id": history.data(entry, NM.Notifications.IdRole), stamp: deliveryTime(entry)})
         }
         toRemove = pending
         if (pending.length) cancelButton.forceActiveFocus(Qt.OtherFocusReason)
     }
     function clearListed() {
         for (const item of toRemove) {
-            const entry = findEntry({id: item.id, kind: NM.Notifications.NotificationType})
+            const entry = findEntry({"id": item.id, kind: NM.Notifications.NotificationType})
             if (entry && removable(entry) && deliveryTime(entry) === item.stamp) history.close(entry)
         }
         toRemove = []
@@ -164,22 +165,22 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         visible: !inbox.standalone || inbox.inDetail || inbox.canClear
-        C.ToolButton {
+        IslandButton {
             id: backButton
             visible: inbox.inDetail
-            text: i18n("Back to notifications"); display: C.AbstractButton.IconOnly
+            text: i18n("Back to notifications"); plain: true
             icon.name: "go-previous"; onClicked: inbox.back()
         }
         C.Label {
-            Layout.fillWidth: true; font.bold: true
+            Layout.fillWidth: true; font.bold: true; font.pixelSize: 12
             text: inbox.inDetail ? inbox.detail.app || i18n("Notification") : inbox.standalone ? i18n("Recent") : i18n("Notifications")
             textFormat: Text.PlainText; elide: Text.ElideRight
         }
-        C.ToolButton {
+        IslandButton {
             id: clearButton
             visible: !inbox.toRemove.length && (inbox.inDetail ? !!inbox.detail.closable : inbox.canClear)
             text: inbox.inDetail ? i18n("Dismiss notification") : i18n("Clear notifications…")
-            display: C.AbstractButton.IconOnly
+            plain: true
             icon.name: inbox.inDetail ? "window-close" : "edit-clear-history"
             onClicked: if (inbox.inDetail) inbox.action("dismiss"); else inbox.askClear()
         }
@@ -190,15 +191,15 @@ ColumnLayout {
         C.Label { Layout.fillWidth: true; text: i18n("Remove these notifications from desktop history?"); wrapMode: Text.Wrap }
         Keys.onEscapePressed: inbox.cancelClear()
         RowLayout {
-            C.Button { id: cancelButton; text: i18n("Cancel"); onClicked: inbox.cancelClear() }
-            C.Button { text: i18n("Clear"); onClicked: inbox.clearListed() }
+            IslandButton { id: cancelButton; caption: true; text: i18n("Cancel"); onClicked: inbox.cancelClear() }
+            IslandButton { caption: true; prominent: true; text: i18n("Clear"); onClicked: inbox.clearListed() }
         }
     }
     ListView {
         id: list
         visible: !inbox.inDetail && !inbox.toRemove.length
         Layout.fillWidth: true; Layout.fillHeight: true
-        spacing: inbox.standalone ? 5 : 0
+        spacing: 6
         model: history; clip: true; boundsBehavior: Flickable.StopAtBounds
         C.ScrollBar.vertical: C.ScrollBar {}
         function selectCurrent() { if (currentItem) currentItem.clicked() }
@@ -208,19 +209,20 @@ ColumnLayout {
             id: row
             required property int index
             required property var model
-            width: list.width; leftPadding: 9; rightPadding: 9
+            width: list.width; leftPadding: 12; rightPadding: 12; topPadding: 10; bottomPadding: 10
             background: Rectangle {
-                radius: 10; color: row.highlighted || row.hovered ? "#34343a" : inbox.standalone ? "#222226" : "transparent"
+                radius: 12; color: row.highlighted || row.hovered ? "#303036" : "#19191e"
             }
             highlighted: list.activeFocus && ListView.isCurrentItem
             Accessible.name: [model.applicationName, model.summary].filter(Boolean).join(". ")
-            onClicked: { list.currentIndex = index; inbox.show({id: model.notificationId, kind: model.type}) }
+            onClicked: { list.currentIndex = index; inbox.show({"id": model.notificationId, kind: model.type}) }
             contentItem: RowLayout {
-                Kirigami.Icon { source: model.applicationIconName || "notifications"; Layout.preferredWidth: 20; Layout.preferredHeight: 20 }
+                spacing: 10
+                Kirigami.Icon { source: model.applicationIconName || "notifications"; Layout.preferredWidth: 26; Layout.preferredHeight: 26 }
                 ColumnLayout {
-                    Layout.fillWidth: true; spacing: 0
-                    C.Label { Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight; text: model.summary || model.applicationName }
-                    C.Label { Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight; opacity: 0.72; font: Kirigami.Theme.smallFont; text: model.applicationName || "" }
+                    Layout.fillWidth: true; Layout.minimumWidth: 0; spacing: 3
+                    C.Label { Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight; text: model.summary || model.applicationName; wrapMode: Text.Wrap; maximumLineCount: 2; font.pixelSize: 13; font.weight: Font.DemiBold }
+                    C.Label { Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight; opacity: 0.72; font.pixelSize: 10; text: model.applicationName || "" }
                     C.Label { visible: inbox.standalone && !!text; Layout.fillWidth: true; textFormat: Text.PlainText; elide: Text.ElideRight
                         text: String(model.body || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(); color: "#c2c2ca"; font.pixelSize: 12 }
                 }
@@ -229,14 +231,18 @@ ColumnLayout {
                     text: !timestamp ? "" : timestamp.toDateString() === new Date().toDateString()
                           ? Qt.formatTime(timestamp, Qt.locale().timeFormat(Locale.ShortFormat))
                           : Qt.formatDate(timestamp, Qt.locale().dateFormat(Locale.ShortFormat))
-                    font: Kirigami.Theme.smallFont
+                    font.pixelSize: 10; color: "#9999a4"
+                    Layout.maximumWidth: list.width * 0.23; elide: Text.ElideRight
                 }
             }
         }
-        C.Label { anchors.centerIn: parent; visible: !list.count; text: i18n("No recent notifications") }
+        IslandEmpty { anchors.fill: parent; visible: !list.count; symbol: "notifications"; tint: "#dfb88d"
+            title: i18n("No recent notifications"); detail: i18n("You’re all caught up.") }
     }
     C.ScrollView {
         id: details
+        implicitWidth: 240; implicitHeight: 180
+        C.ScrollBar.horizontal.policy: C.ScrollBar.AlwaysOff
         visible: inbox.inDetail
         Layout.fillWidth: true; Layout.fillHeight: true; clip: true
         contentWidth: availableWidth
@@ -244,27 +250,28 @@ ColumnLayout {
             width: details.availableWidth
             C.Label {
                 Layout.fillWidth: true; textFormat: Text.PlainText; wrapMode: Text.Wrap
-                text: inbox.detail.summary || ""; font.bold: true
+                text: inbox.detail.summary || ""; font.bold: true; font.pixelSize: 14
             }
             C.Label {
                 Layout.fillWidth: true; visible: !!text
                 // The desktop already sanitizes notification markup. Omit inline images.
                 text: (inbox.detail.body || "").replace(/<img\b[^>]*>/gi, "")
-                textFormat: Text.StyledText; wrapMode: Text.Wrap
+                textFormat: Text.StyledText; wrapMode: Text.Wrap; font.pixelSize: 12; color: "#c3c3ce"
                 onLinkActivated: link => { if (/^https?:\/\//i.test(link)) Qt.openUrlExternally(link) }
             }
             C.ProgressBar {
                 visible: inbox.selection?.kind === NM.Notifications.JobType
                 Layout.fillWidth: true; to: 100; value: inbox.detail.progress || 0
             }
-            component NoticeAction: C.Button {
+            component NoticeAction: IslandButton {
+                caption: true
                 width: Math.min(implicitWidth, details.availableWidth)
                 contentItem: C.Label {
                     text: parent.text; textFormat: Text.PlainText; elide: Text.ElideRight
                     horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
                 }
-                C.ToolTip.visible: hovered && contentItem.truncated
-                C.ToolTip.text: text
+
+
             }
             Flow {
                 Layout.fillWidth: true; spacing: Kirigami.Units.smallSpacing
@@ -284,14 +291,14 @@ ColumnLayout {
             }
             RowLayout {
                 visible: !!inbox.detail.canReply; Layout.fillWidth: true
-                C.TextField {
+                IslandTextField {
                     id: replyField
                     Layout.fillWidth: true; Accessible.name: i18n("Reply")
                     placeholderText: inbox.detail.replyHint || ""
                     onAccepted: inbox.action("reply", text)
                 }
-                C.ToolButton {
-                    text: i18n("Send reply"); icon.name: "mail-send"; display: C.AbstractButton.IconOnly
+                IslandButton {
+                    text: i18n("Send reply"); icon.name: "mail-send"; plain: true
                     enabled: replyField.text.trim().length > 0
                     onClicked: inbox.action("reply", replyField.text)
                 }

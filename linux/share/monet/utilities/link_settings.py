@@ -1,6 +1,7 @@
 """Preview copied-link cleanup and choose the rules used by both clipboard actions."""
 from pathlib import Path
 import sys
+import clipboard_links
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox,
@@ -78,9 +79,10 @@ class LinkRules(QDialog):
         self.reset.setEnabled(selection is not None and selection.text() in group)
 
     def add_site(self):
-        text, ok = QInputDialog.getText(self, tr("Add website…"), tr("Website name"))
-        if not ok:
-            return
+        from inline_dialogs import text_prompt
+        text_prompt(self,tr("Add website…"),tr("Website name"),self.add_site_value)
+
+    def add_site_value(self, text):
         try:
             site = site_name(text)
         except ValueError:
@@ -94,9 +96,10 @@ class LinkRules(QDialog):
         self.message.clear()
 
     def add_parameter(self):
-        text, ok = QInputDialog.getText(self, tr("Add parameter…"), tr("Parameter name"))
-        if not ok:
-            return
+        from inline_dialogs import text_prompt
+        text_prompt(self,tr("Add parameter…"),tr("Parameter name"),self.add_parameter_value)
+
+    def add_parameter_value(self, text):
         try:
             name = rule_name(text)
         except ValueError:
@@ -189,8 +192,8 @@ class LinkSettings(QWidget):
         except ValueError:
             self.owner.issue(tr("Couldn’t read the saved link rules."))
             return
-        LinkRules(edits, self).exec()
-        self.reload_rules()
+        from inline_dialogs import present_dialog
+        present_dialog(LinkRules(edits,self),self,finished=lambda _:self.reload_rules())
 
     def reload_rules(self):
         try:
@@ -204,7 +207,7 @@ class LinkSettings(QWidget):
             self.switch.setChecked(result.strip() == "on")
             self.switch.setEnabled(True)
         self.switch.setEnabled(False)
-        self.owner.worker([sys.executable, Path(__file__).with_name("clipboard_links.py"), "status"], show)
+        self.owner.worker([sys.executable, Path(clipboard_links.__file__), "status"], show)
         self.reload_rules()
 
     def toggle(self, on):
@@ -212,5 +215,5 @@ class LinkSettings(QWidget):
         def failed(message):
             self.owner.issue(message)
             self.refresh()
-        self.owner.worker([sys.executable, Path(__file__).with_name("clipboard_links.py"), "on" if on else "off"],
+        self.owner.worker([sys.executable, Path(clipboard_links.__file__), "on" if on else "off"],
                           lambda _: self.refresh(), failed)

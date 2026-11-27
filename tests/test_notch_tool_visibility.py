@@ -42,6 +42,23 @@ def fixture():
     engine.warnings.connect(lambda errors: warnings.extend(e.toString() for e in errors))
     engine.load(QUrl.fromLocalFile(str(UI / "ToolVisibility.qml")))
     (tools,) = engine.rootObjects()
+    from actions import DEFAULT_FAVORITES
+    assert len(DEFAULT_FAVORITES) == 12
+    assert not set(DEFAULT_FAVORITES) & {"notes", "calendars", "shelf", "clipboard", "downloads", "camera", "mixer", "agents"}
+    assert tools.property("favorites").toVariant() == DEFAULT_FAVORITES
+    assert not settings.contains("favorites")
+    from actions import preferences
+    for chosen in (["camera", "notes"], []):
+        settings.setValue("favorites", json.dumps(chosen)); settings.sync()
+        tools.reload()
+        assert tools.property("favorites").toVariant() == chosen
+        assert preferences(settings)[0] == chosen
+    settings.remove("favorites"); settings.sync(); tools.reload()
+    from notch_preferences import RADIAL_DEFAULT, save_radial
+    assert tools.property("radial").toVariant() == RADIAL_DEFAULT
+    chosen = ["emoji", "", "record", "downloads", "", "", "", ""]
+    save_radial(settings, chosen);tools.reload()
+    assert tools.property("radial").toVariant() == ["emoji", "", "record", "", "", "", "", ""]
     assert tools.property("hidden").toVariant() == ["downloads"], warnings
     bus = QDBusConnection.sessionBus()
     assert not bus.interface().isServiceRegistered(SERVICE).value()
@@ -67,6 +84,7 @@ def fixture():
         raise AssertionError((tools.property("hidden").toVariant(), warnings))
 
     apply(set())
+    assert tools.property("radial").toVariant() == chosen
     window.Open(["downloads"])
     assert "downloads" in window.pages
     window.hide()

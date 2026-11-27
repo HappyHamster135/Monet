@@ -94,9 +94,12 @@ class PlasmaPackages(unittest.TestCase):
         self.assertTrue((SHARE / "icons/Monet/index.theme").is_file())
 
     def test_inline_components_do_not_reach_outside(self):
-        # QML inline components can't see the ids of the file around them.
+        # Cross-component IDs require a bound creation context (Qt 6.4+).
+        # https://doc.qt.io/qt-6.8/qtqml-documents-structure.html#componentbehavior
         for qml in qml_files():
             text = qml.read_text()
+            if re.search(r"(?m)^pragma ComponentBehavior: Bound\s*$", text):
+                continue
             components = []
             for match in re.finditer(r"\n([ \t]*)component (\w+): ", text):
                 indent = match.group(1)
@@ -2155,7 +2158,7 @@ class SnapLikeWindows(unittest.TestCase):
         self.assertIn('property bool snapping: KWin.readConfig("Snapping", true)', main)
         self.assertIn("target: Options\n        function onConfigChanged() {", main)
         for guard in ("if (!snapping || !w.resizeable", "if (!snapping || !tile", "if (!snapping || placing || sharing",
-                      "w.normalWindow && root.snapping"):
+                      "if (!snapping || !w || w.deleted || !w.normalWindow"):
             self.assertIn(guard, main)
         self.assertNotIn("snapping", main[main.index("function lineUp()"):main.index("Component.onCompleted")])
         settings = settings_source()
@@ -2490,7 +2493,7 @@ class Crashes(unittest.TestCase):
         self.assertIn("ExecStart=@LIBEXECDIR@/monet-quick crash %i %b\n", service)
         self.assertIn("RuntimeMaxSec=5min", service)
         install = (ROOT / "linux/install.sh").read_text()
-        self.assertIn("monet-apps.timer monet-crash@.service monet-charge.service; do", install)
+        self.assertRegex(install, r"for unit in [^\n]*\bmonet-crash@\.service\b[^\n]*; do")
         self.assertIn('ln -sfn ../monet-crash@.service "$UNITDIR/systemd-coredump@.service.wants/monet-crash@.service"',
                       install)
         self.assertIn("/etc/systemd/system/systemd-coredump@.service.wants/monet-crash@.service",
@@ -2652,9 +2655,9 @@ class EverydayScreens(unittest.TestCase):
         explorer = SHARE / "monet/explorer"
         entry = (explorer / "WidgetExplorer.qml").read_text(encoding="utf-8")
         # What Plasma's Desktop.qml gives and reads; Monet's gallery, or KDE's if Monet's can't load.
-        for part in ("property QtObject containment", "property PlasmaCore.Dialog sidePanel", "readonly property bool preventWindowHide",
-                     "readonly property bool outputOnly", "signal closed()", 'Qt.resolvedUrl("MonetWidgetExplorer.qml")',
-                     "monet.status === Loader.Error", 'Qt.resolvedUrl("KdeWidgetExplorer.qml")'):
+        for part in ("property QtObject containment", "property PlasmaCore.Dialog sidePanel", "property bool preventWindowHide",
+                     "property bool outputOnly", "signal closed()", 'Qt.resolvedUrl("MonetWidgetExplorer.qml")',
+                     "host.openWidgets", 'Qt.resolvedUrl("KdeWidgetExplorer.qml")'):
             self.assertIn(part, entry)
         gallery = (explorer / "MonetWidgetExplorer.qml").read_text(encoding="utf-8")
         for part in ("root.widgetExplorer", "pendingUninstallTimer.running", "explorer.addApplet(pluginName)",
@@ -2690,7 +2693,7 @@ class EverydayScreens(unittest.TestCase):
                      "monet.status === Loader.Error", 'Qt.resolvedUrl("KdeDesktopEditMode.qml")'):
             self.assertIn(part, entry)
         page = (editmode / "MonetDesktopEditMode.qml").read_text(encoding="utf-8")
-        for part in ("containment.plasmoid.corona.editMode", "editModeRect", "containmentParent.scaleFactor",
+        for part in ("containment.plasmoid.corona.editMode", 'property: "scaleFactor"', "value: 1",
                      'internalAction("add widgets")', "sidePanel.visible"):
             self.assertIn(part, page)
         # No blur of the whole desktop at every change: a wash instead.
@@ -3144,9 +3147,11 @@ class Scripts(unittest.TestCase):
         found = lambda **p: quick.battery_state({k: {"type": "x", "data": v} for k, v in p.items()})
         # UPower: every battery together, with how long it lasts (or until full).
         self.assertEqual(found(IsPresent=True, Type=2, Percentage=76.4, State=2, TimeToEmpty=8100),
-                         {"battery": 76, "charging": False, "plugged": False, "minutes": 135})
+                         {"battery": 76, "charging": False, "plugged": False, "minutes": 135,
+                          "watts": None, "energyWh": None, "fullWh": None})
         self.assertEqual(found(IsPresent=True, Type=2, Percentage=40.0, State=1, TimeToFull=2400),
-                         {"battery": 40, "charging": True, "plugged": True, "minutes": 40})
+                         {"battery": 40, "charging": True, "plugged": True, "minutes": 40,
+                          "watts": None, "energyWh": None, "fullWh": None})
         # Full, or held at a charge limit: plugged in, not charging.
         self.assertEqual(found(IsPresent=True, Type=2, Percentage=100.0, State=4)["plugged"], True)
         with mock.patch.object(quick, "Path") as path:
@@ -3448,7 +3453,7 @@ GENERAL.STATE:100 (connected)
             (Path(tmp) / "hci0").mkdir()
             self.assertTrue(quick.bluetooth_here(Path(tmp)))
         main = (ROOT / "linux/share/plasma/plasmoids/org.monet.quick/contents/ui/main.qml").read_text(encoding="utf-8")
-        self.assertIn('visible: typeof root.info.volume === "number" || typeof root.info.brightness === "number"', main)
+        self.assertIn('visible: brightnessRows.count > 0 || typeof root.info.volume === "number" || typeof root.info.brightness === "number"', main)
         # And no Wi-Fi or Bluetooth tile on a PC without them, as in Windows (not "Unavailable"),
         # unless the PC is on a cable: then the tile says LAN.
         self.assertIn("visible: root.info.wifi !== null || wired", main)

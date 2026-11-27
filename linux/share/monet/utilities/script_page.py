@@ -125,9 +125,8 @@ class ScriptPage(QWidget):
 
     def edit(self, script):
         dialog = ScriptEditor(self.settings, script, self)
-        if dialog.exec():
-            self.refresh(dialog.script.ident)
-        dialog.deleteLater()
+        from inline_dialogs import present_dialog
+        present_dialog(dialog,self,lambda:self.refresh(dialog.script.ident))
 
     def remove(self):
         script = self.current()

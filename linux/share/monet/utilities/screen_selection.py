@@ -16,15 +16,20 @@ class ScreenSelection(QWidget):
         self.busy = False
         self.return_to_page = False
         self.closing = False
+        self.inline_dismiss = None
+        self.inline_completed = None
 
     def pick(self, from_catalog):
-        if any(isinstance(page, ScreenSelection) and page.busy for page in self.owner.pages.values()):
+        pages = [*self.owner.pages.values(), *getattr(self.owner,'compact_pages',{}).values()]
+        if self.busy or any(isinstance(page, ScreenSelection) and page.busy for page in pages):
             return
         self.busy = True
         self.setEnabled(False)
         self.closing = False
-        self.return_to_page = from_catalog and self.owner.isVisible()
-        if self.return_to_page:
+        self.return_to_page = from_catalog and (bool(self.inline_dismiss) or self.owner.isVisible())
+        if self.inline_dismiss:
+            self.inline_dismiss()
+        elif self.return_to_page:
             self.owner.hide()
         # KWin can still be painting the window or launcher after Qt hides it.
         # Check only during a pick so a fast click samples the uncovered pixel.
@@ -63,6 +68,11 @@ class ScreenSelection(QWidget):
         self.busy = False
         self.setEnabled(True)
         if self.closing:
+            return
+        if self.inline_dismiss:
+            self.return_to_page = False
+            if message: self.owner.issue(message)
+            if self.inline_completed:self.inline_completed()
             return
         restored = self.return_to_page and not self.owner.isVisible()
         self.return_to_page = False

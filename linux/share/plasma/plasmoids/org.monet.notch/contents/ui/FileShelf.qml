@@ -31,14 +31,14 @@ ColumnLayout {
         C.Label {
             text: page.selected.length ? i18np("%1 selected", "%1 selected", page.selected.length)
                 : i18np("%1 item", "%1 items", page.shelf.rows.length)
-            color: "#b9d7f9"; font.weight: Font.Medium; Layout.fillWidth: true
+            color: "#9999a4"; font.pixelSize: 11; font.weight: Font.Medium; Layout.fillWidth: true
         }
         IslandButton { caption: true; text: i18n("Open in Utilities"); onClicked: page.detachRequested() }
     }
     Rectangle {
         Layout.fillWidth: true; Layout.fillHeight: true
-        radius: 16; color: incoming.containsDrag ? "#253649" : "#1c2026"
-        border.width: 1; border.color: incoming.containsDrag ? "#98caff" : "#303944"
+        radius: 16; color: incoming.containsDrag ? "#253649" : "#17171b"
+        border.width: 1; border.color: incoming.containsDrag ? "#98caff" : "#24ffffff"
         C.ScrollView {
             id: scroll
             visible: !incoming.containsDrag
@@ -66,15 +66,15 @@ ColumnLayout {
                             source: file.highlighted ? "emblem-checked" : file.modelData.icon || "text-x-generic" }
                         }
                         ColumnLayout {
-                            Layout.fillWidth: true; spacing: 0
+                            Layout.fillWidth: true; Layout.minimumWidth: 0; spacing: 3
                             C.Label {
-                                font.weight: Font.Medium; Layout.fillWidth: true; text: file.modelData.name
+                                font.pixelSize: 12; font.weight: Font.Medium; Layout.fillWidth: true; text: file.modelData.name
                                 textFormat: Text.PlainText; elide: Text.ElideMiddle
                             }
                             C.Label {
                                 Layout.fillWidth: true; text: file.modelData.kind === "text" ? i18n("Text") : file.modelData.path
                                 textFormat: Text.PlainText; elide: Text.ElideLeft
-                                color: "#b2bac5"; font: Kirigami.Theme.smallFont
+                                color: "#9999a4"; font.pixelSize: 10
                             }
                         }
                     }
@@ -107,16 +107,16 @@ ColumnLayout {
             Rectangle {
                 Layout.alignment: Qt.AlignHCenter; implicitWidth: 50; implicitHeight: 48; radius: 15
                 color: incoming.containsDrag ? "#354e6b" : "#263445"
-                Kirigami.Icon { anchors.centerIn: parent; width: 26; height: width; source: "folder-download"; color: "#99caff" }
+                IslandGlyph { anchors.centerIn: parent; width: 26; height: width; source: "folder-download"; color: "#99caff" }
             }
             C.Label {
-                Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; font.weight: Font.DemiBold
+                Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; font.weight: Font.DemiBold; font.pixelSize: 13
                 text: incoming.containsDrag ? i18n("Release to add to shelf") : page.shelf.pending ? i18n("Loading…") : i18n("Drop items here")
             }
             C.Label {
                 Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.Wrap; font.pixelSize: 12
                 visible: !incoming.containsDrag && !page.shelf.pending
-                text: i18n("Keep files, folders, links and text here until you need them."); color: "#b2bac5"
+                text: i18n("Keep files, folders, links and text here until you need them."); color: "#9999a4"
             }
         }
         DropArea {
@@ -127,20 +127,20 @@ ColumnLayout {
         }
     }
     C.Label {
-        Layout.fillWidth: true; wrapMode: Text.Wrap
+        font.pixelSize: 11; color: "#9999a4"; Layout.fillWidth: true; wrapMode: Text.Wrap; maximumLineCount: 2; elide: Text.ElideRight
         visible: text.length > 0
         text: page.shelf.message || (page.shelf.rows.length && !page.selected.length
             ? i18n("Drag an item out, or select several to drag together.") : "")
     }
     RowLayout {
         visible: page.selected.length > 0 || !!page.shelf.message
-        C.Button {
-            visible: page.selected.length > 0
+        IslandButton {
+            caption: true; visible: page.selected.length > 0
             text: i18n("Remove from shelf"); icon.name: "list-remove"
             onClicked: page.shelf.change({action: "remove", keys: page.selected, urls: page.selected.filter(key => key.startsWith("file:///"))})
         }
-        C.Button {
-            visible: !!page.shelf.message
+        IslandButton {
+            caption: true; visible: !!page.shelf.message
             text: i18n("Refresh"); onClicked: { page.shelf.message = ""; page.shelf.refresh() }
         }
     }

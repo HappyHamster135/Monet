@@ -76,7 +76,7 @@ Item {
             raise AssertionError((one.property("statusText"), two.property("statusText"), warnings))
 
         def state():
-            return two.property("state").toVariant()
+            return two.property("sessionState").toVariant()
 
         QTest.qWait(140)
         assert not bus.name_has_owner(name)

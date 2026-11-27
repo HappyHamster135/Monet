@@ -1,10 +1,13 @@
+pragma ComponentBehavior: Bound
 // Edit the existing panel in place, so its widgets and pins keep their identities.
 import QtQuick
+import "file://@DATADIR@/monet/panel" as EditorUI
 import QtQuick.Layouts
 import QtQuick.Controls as C
 import QtQuick.Templates as T
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.core as PlasmaCore
+import org.kde.kquickcontrols
 import org.kde.plasma.shell
 import org.kde.plasma.plasma5support as P5Support
 
@@ -12,10 +15,8 @@ Item {
     id: editor
     objectName: "monetPanelEditor"
     required property QtObject panelConfiguration
-    property url advancedPage: Qt.resolvedUrl("KdePanelConfiguration.qml")
-    property Item panelRuler: showAdvanced && advanced.item ? advanced.item.panelRuler : null
+    property Item panelRuler: null
     signal closeContextMenu
-    onCloseContextMenu: if (advanced.item) advanced.item.closeContextMenu()
 
     readonly property bool vertical: panel.location === PlasmaCore.Types.LeftEdge || panel.location === PlasmaCore.Types.RightEdge
     readonly property color accent: Kirigami.Theme.highlightColor
@@ -23,16 +24,15 @@ Item {
     readonly property int maximumSize: Math.max(minimumSize, Math.min(120, Math.floor(
         Math.min(screenGeometry.width, screenGeometry.height) / 3)))
     readonly property rect screenGeometry: panel.screenToFollow ? panel.screenToFollow.geometry : Qt.rect(0, 0, Screen.width, Screen.height)
-    // Leave room for the bar at its largest selectable size, floating margins and
-    // Plasma's frame. The viewport stays the same size while resizing the bar.
-    readonly property int clearance: Math.max(maximumSize, panel.thickness) + 56
-    implicitWidth: Math.min(showAdvanced ? 640 : 460, Math.max(180, screenGeometry.width - clearance))
-    implicitHeight: Math.min(580, Math.max(200, screenGeometry.height - clearance))
+    // All pages share a fixed viewport, independent of the bar being edited.
+    implicitWidth: Math.min(640, Math.max(180, screenGeometry.width - 64))
+    implicitHeight: Math.min(760, Math.max(200, screenGeometry.height - 192))
     clip: true
     LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
     LayoutMirroring.childrenInherit: true
 
-    property int page: 0
+    readonly property bool notchPanel: Array.from(plasmoid.applets || []).some(applet => applet.pluginName === "org.monet.notch")
+    property int page: notchPanel ? 3 : 0
     property bool showAdvanced: false
     property bool addingPanel: false
     property string addStatus: ""
@@ -40,47 +40,49 @@ Item {
     property string notchProblem: ""
     property var scrollOffsets: ({})
     property int draftSize: panel.thickness
+    property bool resizingBar: false
+    property bool lengthEdited: false
+    property int draftLength: 600
+    property int draftOffset: 0
+    property int resizeAlignment: Qt.AlignCenter
+    readonly property int shownAlignment: resizingBar ? resizeAlignment : panel.alignment
+    readonly property int shownOffset: resizingBar ? draftOffset : panel.offset
+    readonly property int screenLength: Math.floor(vertical ? screenGeometry.height : screenGeometry.width)
+    readonly property int maximumBarLength: Math.max(1, screenLength - Math.abs(panel.offset) * (panel.alignment === Qt.AlignCenter ? 2 : 1))
+    readonly property int minimumBarLength: Math.min(240, maximumBarLength)
+    // Panel.length is the widgets' natural length, even in Custom mode. Showing
+    // it after a drag made the preview snap back instead of keeping the size set.
+    readonly property int shownLength: resizingBar || lengthEdited ? draftLength : panel.lengthMode === Panel.FillAvailable ? screenLength
+        : panel.lengthMode === Panel.Custom ? Math.min(screenLength, Math.max(panel.minimumLength, Math.min(panel.maximumLength, panel.length)))
+        : Math.min(screenLength, panel.length)
     property string icons: ""
     property var iconActions: ({})
     property bool iconsAvailable: false
     property string barLayout: ""
     property bool layoutAvailable: false
+    property var notchState: ({})
     property string notchMode: ""
     property bool notchBusy: false
+    property var notchQueue: []
     property var notchOptions: ({})
     property var notchTabs: []
     property var companionSettings: ({})
-    readonly property var tabTitles: ({music:i18nd("monet", "Music"), activity:i18nd("monet", "Activity"),
-        time:i18nd("monet", "Time"), calendar:i18nd("monet", "Calendar"), notes:i18nd("monet", "Notes"),
-        camera:i18nd("monet", "Camera"), clipboard:i18nd("monet", "Clipboard"),
-        tools:i18nd("monet", "Tools"), agents:i18nd("monet", "AI agents"), notifications:i18nd("monet", "Notifications")})
-    ListModel {
-        id: tabRows
-        ListElement { key: "music" }
-        ListElement { key: "activity" }
-        ListElement { key: "time" }
-        ListElement { key: "calendar" }
-        ListElement { key: "notes" }
-        ListElement { key: "camera" }
-        ListElement { key: "clipboard" }
-        ListElement { key: "tools" }
-        ListElement { key: "agents" }
-        ListElement { key: "notifications" }
-    }
-    onNotchTabsChanged: {
-        const order = notchTabs.concat(Object.keys(tabTitles).filter(key => !notchTabs.includes(key)))
-        order.forEach((key, index) => {
-            for (let i = index; i < tabRows.count; ++i) {
-                if (tabRows.get(i).key !== key) continue
-                if (i !== index) tabRows.move(i, index, 1)
-                break
-            }
-        })
-    }
     property bool layoutBusy: false
     property bool busy: false
     property string problem: ""
     property bool surfaceResizePending: false
+
+    Loader {
+        id: windowPlacement
+        active: configDialog.visualParent !== undefined && panel.contentItem instanceof Item
+        sourceComponent: EditorUI.EditorWindowPlacement {
+            host: configDialog
+            panelContent: panel.contentItem
+            screenGeometry: editor.screenGeometry
+            panelX: panel.x
+            panelY: panel.y
+        }
+    }
 
     function refreshPlacement() {
         // Plasma computes the popup position from the panel's current geometry.
@@ -105,7 +107,7 @@ Item {
         // PanelView sends a desired size to layer-shell. A live surface can keep
         // its old buffer size until it is resized locally or its edge changes.
         // Match PanelView's size calculation for both presets, including the
-        // floating insets. Leave KDE's custom-length ruler in charge of length.
+        // floating insets and the limits used by custom-length panels.
         const view = panel.contentItem?.children.find(item => item.fixedTopFloatingPadding !== undefined)
         if (!view) return
         const horizontalPadding = view.fixedLeftFloatingPadding + view.fixedRightFloatingPadding
@@ -116,6 +118,7 @@ Item {
         let length = vertical ? panel.height : panel.width
         if (panel.lengthMode === Panel.FillAvailable) length = available
         else if (panel.lengthMode === Panel.FitContent) length = Math.min(available, Math.max(thickness, natural))
+        else length = Math.max(panel.minimumLength, Math.min(panel.maximumLength, available - panel.offset, natural))
         if (length <= 0 || thickness <= 0) return
         const width = vertical ? thickness : length
         const height = vertical ? length : thickness
@@ -144,21 +147,22 @@ Item {
             // can otherwise apply the previous edge's buffer size to the new
             // edge after several quick moves.
             editor.surfaceResizePending = false
+            editor.lengthEdited = false
+            editor.resizingBar = false
             editor.schedulePlacement()
         }
         function onFloatingChanged() { editor.schedulePlacement(true) }
-        function onLengthModeChanged() { editor.schedulePlacement(true) }
+        function onLengthModeChanged() { editor.lengthEdited = false; editor.schedulePlacement(true) }
         function onAlignmentChanged() { editor.schedulePlacement() }
         function onVisibilityModeChanged() { editor.schedulePlacement() }
     }
 
     function selectPage(index) {
+        if ((index === 3 || index === 4) && !notchBusy) requestNotch("")
         if (page === index && !showAdvanced) return
         scrollOffsets[showAdvanced ? "advanced" : page] = scroll.contentItem.contentY
-        if (showAdvanced) panelConfiguration.panelRulerView.visible = false
         showAdvanced = false
         page = index
-        if ((index === 3 || index === 4) && !notchMode && !notchBusy) requestNotch("")
         restoreScroll()
     }
     function restoreScroll() {
@@ -177,7 +181,9 @@ Item {
         }
     }
     function revealFocus() {
+        // Mouse focus must not scroll the canvas out from under a resize grip.
         const item = editor.Window.window ? editor.Window.window.activeFocusItem : null
+        if (resizingBar || item?.dragging) return
         let ancestor = item
         while (ancestor && ancestor !== content) ancestor = ancestor.parent
         if (!ancestor) return
@@ -210,9 +216,24 @@ Item {
         layoutRunner.connectSource("@LIBEXECDIR@/monet-quick panel-layout " + plasmoid.id + (layout ? " " + layout : ""))
     }
     function requestNotch(mode) {
+        if (notchBusy) { notchQueue = notchQueue.concat([mode]); return }
         notchProblem = ""
         notchBusy = true
         notchRunner.connectSource("@LIBEXECDIR@/monet-quick panel-notch " + plasmoid.id + (mode ? " " + mode : ""))
+    }
+    function selectTaskbar() {
+        if (!notchPanel) { selectPage(0); return }
+        taskbarRunner.connectSource("@LIBEXECDIR@/monet-quick panel-taskbar-configure " + plasmoid.id)
+    }
+    P5Support.DataSource {
+        id: taskbarRunner
+        engine: "executable"
+        onNewData: (source, data) => {
+            disconnectSource(source)
+            let ok = false
+            try { ok = JSON.parse(data.stdout).ok } catch (_) {}
+            if (!ok) editor.notchProblem = i18nd("monet", "No taskbar was found on this screen. Use Add panel to create one.")
+        }
     }
     function addPanel(kind) {
         if (addingPanel) return
@@ -242,7 +263,7 @@ Item {
             }
         }
     }
-    Component.onCompleted: requestLayout("")
+    Component.onCompleted: { requestLayout(""); if (page === 3) requestNotch("") }
     P5Support.DataSource {
         id: notchRunner
         engine: "executable"
@@ -251,7 +272,8 @@ Item {
             editor.notchBusy = false
             try {
                 const result = JSON.parse(data.stdout)
-                if (!result.ok) throw new Error()
+                if (data["exit code"] !== 0 || !result.ok) throw new Error()
+                editor.notchState = result
                 editor.notchMode = result.mode
                 if (source.endsWith(" add") && editor.page === 4) editor.selectPage(3)
                 editor.notchOptions = result.options || ({})
@@ -259,6 +281,11 @@ Item {
                 editor.companionSettings = result.companionSettings || ({})
             } catch (error) {
                 editor.notchProblem = i18nd("monet", "Could not read or change the notch on this screen.")
+            }
+            if (editor.notchQueue.length) {
+                const next = editor.notchQueue[0]
+                editor.notchQueue = editor.notchQueue.slice(1)
+                editor.requestNotch(next)
             }
         }
     }
@@ -299,9 +326,28 @@ Item {
         }
     }
 
+    property string advancedStatus: ""
+    function panelAction(action) {
+        advancedStatus = ""
+        advancedRunner.connectSource("@LIBEXECDIR@/monet-quick panel-detail " + plasmoid.id + " " + action)
+    }
+    P5Support.DataSource {
+        id: advancedRunner
+        engine: "executable"
+        onNewData: (source, data) => {
+            disconnectSource(source)
+            let ok = false
+            try { ok = JSON.parse(data.stdout).ok === true } catch (_) {}
+            editor.advancedStatus = ok ? i18nd("monet", "Updated") : i18nd("monet", "Could not update this bar. Please try again.")
+        }
+    }
+
     function preset(compact) {
-        if (compact) panel.alignment = Qt.AlignCenter
+        if (compact) alignBar(Qt.AlignCenter)
+        lengthEdited = false
         panel.floating = compact
+        panel.maximumLength = screenLength
+        panel.minimumLength = minimumBarLength
         panel.lengthMode = compact ? Panel.FitContent : Panel.FillAvailable
         syncPanelSurface()
         schedulePlacement()
@@ -313,6 +359,30 @@ Item {
         selectSize(Number(value) || draftSize)
         panel.thickness = draftSize
         syncPanelSurface()
+    }
+    function alignBar(alignment) {
+        panel.offset = 0
+        panel.alignment = alignment
+        schedulePlacement()
+    }
+    function previewBarSize(length, thickness) {
+        draftLength = Math.max(minimumBarLength, Math.min(maximumBarLength, Math.round(length)))
+        lengthEdited = true
+        selectSize(thickness)
+    }
+    function applyBarSize() {
+        const length = lengthEdited || resizingBar ? draftLength : shownLength
+        if (resizingBar) { panel.offset = draftOffset; panel.alignment = resizeAlignment }
+        resizingBar = false
+        // Set both limits so the custom bar has the size shown in the preview.
+        // Grow the maximum first to avoid an intermediate invalid range.
+        if (length > panel.maximumLength) panel.maximumLength = length
+        panel.minimumLength = length
+        panel.maximumLength = length
+        panel.lengthMode = Panel.Custom
+        lengthEdited = false
+        applySize(draftSize)
+        schedulePlacement(true)
     }
 
     component Heading: C.Label {
@@ -331,6 +401,7 @@ Item {
         property bool primary: false
         Layout.fillWidth: true
         Layout.minimumWidth: 0
+        Layout.preferredWidth: choice.Layout.fillWidth ? 1 : implicitWidth
         implicitHeight: Math.max(38, implicitContentHeight + topPadding + bottomPadding)
         padding: 10
         activeFocusOnTab: true
@@ -389,50 +460,76 @@ Item {
         }
     }
 
+    Rectangle {
+        anchors.fill: parent
+        visible: configDialog.titleHeight === undefined
+        radius: 12
+        color: Kirigami.Theme.backgroundColor
+        border.width: 1
+        border.color: Qt.rgba(0.5,0.5,0.5,0.25)
+    }
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 12
         spacing: 10
         RowLayout {
+            visible: configDialog.titleHeight === undefined
             Layout.fillWidth: true
             C.Label {
-                text: i18nd("monet", "Home Bar")
+                id: windowTitle
+                visible: configDialog.titleHeight === undefined
+                Layout.minimumWidth: 0
+                elide: Text.ElideRight
+                text: i18nd("monet", "Desktop layout")
                 font.family: "Fraunces 72pt SuperSoft"
                 font.pixelSize: 26
                 Layout.fillWidth: true
+                MouseArea {
+                    anchors.fill: parent
+                    enabled: !!configDialog.startSystemMove || !!windowPlacement.item
+                    cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                    property point origin
+                    property point windowOrigin
+                    onDoubleClicked: { if (configDialog.visibility === Window.Maximized) configDialog.showNormal(); else if (configDialog.showMaximized) configDialog.showMaximized() }
+                    onPressed: mouse => {
+                        if (configDialog.startSystemMove) { configDialog.startSystemMove(); return }
+                        origin = mapToGlobal(mouse.x, mouse.y)
+                        windowOrigin = Qt.point(windowPlacement.item.windowX, windowPlacement.item.windowY)
+                    }
+                    onPositionChanged: mouse => {
+                        if (!pressed || !windowPlacement.item) return
+                        const point = mapToGlobal(mouse.x, mouse.y)
+                        windowPlacement.item.moveTo(windowOrigin.x + point.x - origin.x, windowOrigin.y + point.y - origin.y)
+                    }
+                }
             }
+            Item { visible: configDialog.titleHeight !== undefined; Layout.fillWidth: true }
+            EditorUI.WindowControls { host: configDialog; visible: configDialog.titleHeight === undefined }
+
+        }
+        RowLayout {
+            Layout.fillWidth: true; spacing: 6
+            Choice { objectName: "panelTaskbarPage"; text: i18nd("monet","Taskbar"); checked: !editor.showAdvanced && editor.page < 3; onClicked: editor.selectTaskbar() }
+            Choice { objectName: "panelNotchPage"; text: i18nd("monet","Notch"); checked: !editor.showAdvanced && editor.page === 3; onClicked: editor.selectPage(3) }
             Choice {
                 objectName: "panelDone"
                 Layout.fillWidth: false
                 text: i18nd("monet", "Done")
-                onClicked: plasmoid.internalAction("configure").trigger()
+                onClicked: configDialog.finishEditing ? configDialog.finishEditing() : configDialog.close()
             }
         }
         RowLayout {
-            Layout.fillWidth: true
-            Choice {
-                objectName: "panelAddPage"; text: i18nd("monet","Add panel"); primary: true
-                onClicked: editor.selectPage(4)
-            }
-            Choice {
-                objectName: "panelAddWidgets"; text: i18nd("monet", "Add widgets…")
-                onClicked: { configDialog.close(); configDialog.showAddWidgetDialog() }
-            }
-        }
-        GridLayout {
-            Layout.fillWidth: true
-            columns: editor.width >= 395 ? 4 : 2
-            columnSpacing: 4; rowSpacing: 4
+            visible: !editor.showAdvanced && editor.page < 3
+            Layout.fillWidth: true; spacing: 4
             Repeater {
                 model: [{page:0,id:"panelLayoutPage",name:i18nd("monet","Layout")},
-                        {page:3,id:"panelNotchPage",name:i18nd("monet","Notch")},
-                        {page:1,id:"panelAppearancePage",name:i18nd("monet","Appearance")},
+                        {page:1,id:"panelAppearancePage",name:i18nd("monet","Size & style")},
                         {page:2,id:"panelBehaviorPage",name:i18nd("monet","Behavior")}]
                 Choice {
                     required property var modelData
                     objectName: modelData.id; text: modelData.name
                     Layout.preferredWidth: 1; padding: 5
-                    checked: !editor.showAdvanced && editor.page === modelData.page
+                    checked: editor.page === modelData.page
                     onClicked: editor.selectPage(modelData.page)
                 }
             }
@@ -440,18 +537,178 @@ Item {
 
         C.ScrollView {
             id: scroll
+            objectName: "panelEditorScroll"
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
-            rightPadding: contentHeight > availableHeight ? 12 : 0
-            contentWidth: Math.max(availableWidth, advanced.visible && advanced.item ? advanced.item.implicitWidth : 0)
+            // Keep previews and controls still when a page starts scrolling.
+            rightPadding: 12
+            contentWidth: availableWidth
             contentHeight: content.implicitHeight
-            C.ScrollBar.horizontal.policy: contentWidth > availableWidth ? C.ScrollBar.AsNeeded : C.ScrollBar.AlwaysOff
+            C.ScrollBar.horizontal.policy: C.ScrollBar.AlwaysOff
 
             ColumnLayout {
                 id: content
                 width: scroll.contentWidth
                 spacing: 12
+
+                C.Pane {
+                    visible: !editor.showAdvanced && editor.page < 3
+                    Layout.fillWidth: true; padding: 16
+                    background: Rectangle { radius: 18; color: Qt.rgba(0.5,0.5,0.5,0.08) }
+                    contentItem: ColumnLayout {
+                    spacing: 10
+                    RowLayout {
+                        Heading { text: i18nd("monet","Shape and position") }
+                        C.Label { text: editor.shownLength+" × "+editor.draftSize+" px"; opacity: 0.65; font.pixelSize: 12 }
+                    }
+                    Rectangle {
+                        id: desktopPreview
+                        objectName: "taskbarPreviewCanvas"
+                        Layout.fillWidth: true; Layout.preferredHeight: 182; radius: 10
+                        color: Qt.rgba(editor.accent.r,editor.accent.g,editor.accent.b,0.07)
+                        border.width: 1; border.color: Qt.rgba(0.5,0.5,0.5,0.16)
+                        Rectangle {
+                            anchors.horizontalCenter: parent.horizontalCenter; width: 62; height: 13; radius: 7; color: "#151519"
+                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: editor.selectPage(3) }
+                        }
+                        Rectangle {
+                            anchors.centerIn: parent; width: parent.width*0.52; height: 68; radius: 8
+                            color: Qt.rgba(0.5,0.5,0.5,0.1); border.width: 1; border.color: Qt.rgba(0.5,0.5,0.5,0.12)
+                            C.Label { anchors.centerIn: parent; text: i18nd("monet","Your screen"); opacity: 0.5; font.pixelSize: 12 }
+                        }
+                        Rectangle { anchors.horizontalCenter: parent.horizontalCenter; width: 1; height: parent.height-24; y: 12; color: editor.accent; opacity: 0.22; visible: !editor.vertical }
+                        Rectangle { anchors.verticalCenter: parent.verticalCenter; height: 1; width: parent.width-24; x: 12; color: editor.accent; opacity: 0.22; visible: editor.vertical }
+                        Repeater {
+                            model: editor.barLayout === "three" && !editor.vertical ? [0,1] : []
+                            Rectangle {
+                                required property int modelData
+                                width: Math.min(64,desktopPreview.width*0.14); height: 18; radius: 6
+                                x: modelData ? desktopPreview.width-width-16 : 16
+                                y: panel.location === PlasmaCore.Types.TopEdge ? 24 : desktopPreview.height-height-16
+                                color: Qt.rgba(0.5,0.5,0.5,0.17)
+                            }
+                        }
+                        Rectangle {
+                            id: previewBar
+                            objectName: "taskbarSizePreview"
+                            readonly property real lengthScale: ((editor.vertical ? parent.height : parent.width)-32)/editor.screenLength
+                            readonly property real thicknessScale: 0.35
+                            readonly property real thickness: editor.draftSize*thicknessScale
+                            readonly property real span: editor.shownLength*lengthScale
+                            readonly property real remaining: (editor.vertical ? parent.height : parent.width)-32-span
+                            readonly property real position: 16 + (panel.lengthMode === Panel.FillAvailable && !editor.resizingBar && !editor.lengthEdited ? 0
+                                : editor.shownAlignment === Qt.AlignCenter ? remaining/2+editor.shownOffset*lengthScale
+                                : editor.shownAlignment === Qt.AlignRight ? remaining-editor.shownOffset*lengthScale : editor.shownOffset*lengthScale)
+                            width: editor.vertical ? thickness : span
+                            height: editor.vertical ? span : thickness
+                            x: editor.vertical ? (panel.location === PlasmaCore.Types.LeftEdge ? 16 : parent.width-width-16) : position
+                            y: !editor.vertical ? (panel.location === PlasmaCore.Types.TopEdge ? 24 : parent.height-height-16) : position
+                            radius: panel.floating ? 9 : 3; color: Qt.rgba(editor.accent.r,editor.accent.g,editor.accent.b,0.24)
+                            Row {
+                                objectName: "taskbarPreviewIconsHorizontal"
+                                x: editor.icons === "center" ? (parent.width-width)/2 : (Qt.application.layoutDirection === Qt.RightToLeft ? parent.width-width-8 : 8)
+                                anchors.verticalCenter: parent.verticalCenter; spacing: 4; visible: !editor.vertical
+                                readonly property real iconSize: Math.max(2,Math.min(10,(parent.width-36)/6,parent.height-4))
+                                Repeater { model: 6; Rectangle { required property int index; width: parent.iconSize; height: width; radius: 3; color: index % 2 ? editor.accent : Qt.rgba(editor.accent.r,editor.accent.g,editor.accent.b,0.55) } }
+                            }
+                            Column {
+                                objectName: "taskbarPreviewIconsVertical"
+                                y: editor.icons === "center" ? (parent.height-height)/2 : 8
+                                anchors.horizontalCenter: parent.horizontalCenter; spacing: 3; visible: editor.vertical
+                                readonly property real iconSize: Math.max(2,Math.min(9,(parent.height-28)/5,parent.width-4))
+                                Repeater { model: 5; Rectangle { width: parent.iconSize; height: width; radius: 3; color: editor.accent } }
+                            }
+                        }
+                        Repeater {
+                            model: [-1,1]
+                            EditorUI.ResizeGrip {
+                                required property int modelData
+                                objectName: modelData < 0 ? "taskbarResizeStart" : "taskbarResizeEnd"
+                                referenceItem: desktopPreview
+                                mirrored: editor.vertical ? (modelData < 0) === (panel.location === PlasmaCore.Types.LeftEdge) : (modelData < 0) === (panel.location === PlasmaCore.Types.TopEdge)
+                                description: i18nd("monet","Resize taskbar")
+                                x: previewBar.x + (editor.vertical ? (panel.location === PlasmaCore.Types.LeftEdge ? previewBar.width : 0) : (modelData < 0 ? 0 : previewBar.width)) - width/2
+                                y: previewBar.y + (editor.vertical ? (modelData < 0 ? 0 : previewBar.height) : (panel.location === PlasmaCore.Types.TopEdge ? previewBar.height : 0)) - height/2
+                                property int startLength
+                                property int startThickness
+                                property int startOffset
+                                property real startScale
+                                onStarted: {
+                                    startLength = editor.shownLength; startThickness = editor.draftSize
+                                    startScale = previewBar.lengthScale
+                                    startOffset = panel.lengthMode === Panel.FillAvailable ? 0 : panel.offset
+                                    editor.draftLength = startLength; editor.draftOffset = startOffset
+                                    editor.resizeAlignment = panel.lengthMode === Panel.FillAvailable ? Qt.AlignCenter : panel.alignment
+                                    editor.resizingBar = true
+                                }
+                                onDragged: (dx,dy) => {
+                                    const along = editor.vertical ? dy : dx
+                                    const inward = editor.vertical ? (panel.location === PlasmaCore.Types.LeftEdge ? dx : -dx) : (panel.location === PlasmaCore.Types.TopEdge ? dy : -dy)
+                                    const centered = editor.resizeAlignment === Qt.AlignCenter
+                                    const movingOffset = !centered && (editor.resizeAlignment === Qt.AlignLeft ? modelData < 0 : modelData > 0)
+                                    const maximum = centered ? editor.screenLength-2*Math.abs(startOffset) : movingOffset ? startLength+startOffset : editor.screenLength-startOffset
+                                    editor.draftLength = Math.round(Math.max(Math.min(240,maximum),Math.min(maximum,startLength+modelData*along/startScale*(centered ? 2 : 1))))
+                                    editor.draftOffset = movingOffset ? startOffset+startLength-editor.draftLength : startOffset
+                                    editor.lengthEdited = true
+                                    editor.selectSize(startThickness+inward/previewBar.thicknessScale)
+                                }
+                                onFinished: editor.applyBarSize()
+                                onCanceled: { editor.resizingBar = false; editor.lengthEdited = false; editor.draftSize = panel.thickness }
+                                onNudged: (dx,dy) => { editor.previewBarSize(editor.shownLength+(editor.vertical ? dy : dx),editor.draftSize+(editor.vertical ? dx : -dy)); editor.applyBarSize() }
+                            }
+                        }
+                    }
+                    Hint { text: i18nd("monet","Drag a corner to change length and thickness. Release to apply; Esc cancels."); font.pixelSize: 12 }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            C.Label { text: i18nd("monet", "Length (px)"); opacity: 0.7; font.pixelSize: 12 }
+                            C.TextField {
+                                id: exactLength
+                                objectName: "panelExactLength"
+                                Layout.fillWidth: true; Layout.minimumWidth: 0; Layout.preferredWidth: 1
+                                Accessible.name: i18nd("monet", "Bar length in pixels")
+                                inputMethodHints: Qt.ImhDigitsOnly
+                                validator: IntValidator { bottom: editor.minimumBarLength; top: editor.maximumBarLength }
+                                text: String(editor.shownLength)
+                                onTextEdited: if (acceptableInput) { editor.draftLength = Number(text); editor.lengthEdited = true }
+                                onAccepted: if (acceptableInput && exactThickness.acceptableInput) editor.applyBarSize()
+                                onEditingFinished: if (!acceptableInput) text = String(editor.shownLength)
+                            }
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            C.Label { text: editor.vertical ? i18nd("monet", "Width (px)") : i18nd("monet", "Height (px)"); opacity: 0.7; font.pixelSize: 12 }
+                            C.TextField {
+                                id: exactThickness
+                                objectName: "panelExactThickness"
+                                Layout.fillWidth: true; Layout.minimumWidth: 0; Layout.preferredWidth: 1
+                                Accessible.name: i18nd("monet", "Bar size in pixels")
+                                inputMethodHints: Qt.ImhDigitsOnly
+                                validator: IntValidator { bottom: editor.minimumSize; top: editor.maximumSize }
+                                text: String(editor.draftSize)
+                                onTextEdited: if (acceptableInput) editor.selectSize(Number(text))
+                                onAccepted: if (acceptableInput && exactLength.acceptableInput) editor.applyBarSize()
+                                onEditingFinished: if (!acceptableInput) text = String(editor.draftSize)
+                            }
+                        }
+                        Choice {
+                            objectName: "panelExactApply"
+                            Layout.fillWidth: false; Layout.alignment: Qt.AlignBottom
+                            text: i18nd("monet", "Apply")
+                            primary: true
+                            enabled: exactLength.acceptableInput && exactThickness.acceptableInput && (editor.lengthEdited || editor.draftSize !== panel.thickness)
+                            onClicked: editor.applyBarSize()
+                        }
+                    }
+                    RowLayout {
+                        Choice { objectName: "panelCenterBar"; text: i18nd("monet","Center bar"); checked: panel.alignment === Qt.AlignCenter && panel.offset === 0; onClicked: editor.alignBar(Qt.AlignCenter) }
+                        Choice { objectName: "panelCenterApps"; text: i18nd("monet","Center app icons"); visible: editor.iconsAvailable; enabled: !editor.busy; checked: editor.icons === "center"; onClicked: editor.requestIcons("center") }
+                    }
+                    }
+                }
 
                 EditorPage {
                     number: 0
@@ -545,7 +802,7 @@ Item {
                                     required property var modelData
                                     text: modelData.name
                                     checked: panel.alignment === modelData.alignment
-                                    onClicked: panel.alignment = modelData.alignment
+                                    onClicked: editor.alignBar(modelData.alignment)
                                 }
                             }
                         }
@@ -570,6 +827,7 @@ Item {
                             }
                         }
                         Hint { visible: editor.iconsAvailable; text: i18nd("monet", "Places app icons within the space between the other items on this bar.") }
+                        Hint { visible: panel.lengthMode === Panel.Custom; text: i18nd("monet", "Custom length. Drag the preview corners to reshape, or choose a bar shape above to reset.") }
                         Hint { visible: editor.problem !== ""; text: editor.problem }
                     }
                 }
@@ -602,7 +860,7 @@ Item {
                             from: editor.minimumSize
                             to: editor.maximumSize
                             stepSize: 1
-                            wheelEnabled: false
+                            wheelEnabled: false;
                             value: editor.draftSize
                             onMoved: editor.selectSize(value)
                         }
@@ -645,6 +903,18 @@ Item {
                                 onClicked: editor.applySize(sizeInput.text)
                             }
                         }
+
+                        Heading { text: i18nd("monet", "Bar length") }
+                        C.Slider {
+                            objectName: "panelLengthSlider"; Layout.fillWidth: true
+                            Accessible.name: i18nd("monet", "Bar length")
+                            from: editor.minimumBarLength; to: editor.maximumBarLength; stepSize: 2
+                            wheelEnabled: false; value: editor.shownLength
+                            onMoved: editor.previewBarSize(value,editor.draftSize)
+                            onPressedChanged: if (!pressed && editor.lengthEdited) editor.applyBarSize()
+                            Keys.onReleased: event => { if ([Qt.Key_Left,Qt.Key_Right,Qt.Key_Home,Qt.Key_End,Qt.Key_PageUp,Qt.Key_PageDown].includes(event.key) && editor.lengthEdited) editor.applyBarSize() }
+                        }
+                        Hint { text: i18nd("monet", "Length changes apply when you release the slider. Choose Compact dock on Layout to fit the bar to its contents.") }
 
                         Heading { text: i18nd("monet", "Floating bar") }
                         RowLayout {
@@ -704,6 +974,7 @@ Item {
                                 spacing: 3
                                 Heading { text: actionRow.modelData.label }
                                 C.ComboBox {
+            wheelEnabled: false;
                                     objectName: "panelClick-" + actionRow.modelData.key
                                     Layout.fillWidth: true
                                     Layout.minimumWidth: 0
@@ -746,175 +1017,13 @@ Item {
                 EditorPage {
                     number: 3
                     sourceComponent: ColumnLayout {
-                        spacing: 10
-                        Heading { text: i18nd("monet", "Top-center notch") }
-                        ActionRow {
-                            objectName: "notchEnable"
-                            visible: editor.notchMode === "off" || !!editor.notchProblem
-                            enabled: !editor.notchBusy
-                            text: i18nd("monet", "Add notch"); icon.name: "list-add"
-                            detail: i18nd("monet", "Open music, timers and quick controls from the top of this screen.")
-                            onClicked: editor.requestNotch("add")
+                        EditorUI.NotchEditor {
+                            Layout.fillWidth: true
+                            notchState: editor.notchState
+                            busy: editor.notchBusy
+                            onRequested: command => editor.requestNotch(command)
                         }
                         Hint { visible: !!editor.notchProblem; text: editor.notchProblem }
-                        RowLayout {
-                            visible: editor.notchMode === "compact" || editor.notchMode === "wide"
-                            Layout.fillWidth: true
-                            Repeater {
-                                model: [{id:"off", title:i18nd("monet", "Off")}, {id:"compact", title:i18nd("monet", "Compact")}, {id:"wide", title:i18nd("monet", "Wide")}]
-                                Choice {
-                                    required property var modelData
-                                    text: modelData.title
-                                    checked: editor.notchMode === modelData.id
-                                    enabled: !editor.notchBusy && editor.notchMode !== ""
-                                    onClicked: editor.requestNotch(modelData.id)
-                                }
-                            }
-                        }
-                        Repeater {
-                            model: [{key:"hoverControls", label:i18nd("monet", "Show quick controls when hovering over the notch")},
-                                    {key:"combined", label:i18nd("monet", "Show music and a running timer together")},
-                                    {key:"gestures", label:i18nd("monet", "Scroll to open the notch or skip tracks")},
-                                    {key:"levels", label:i18nd("monet", "Show music level")},
-                                    {key:"previews", label:i18nd("monet", "Preview notifications in the notch")},
-                                    {key:"countdown", label:i18nd("monet", "Show running timers in the closed notch")},
-                                    {key:"awake", label:i18nd("monet", "Show Keep awake in the closed notch")},
-                                    {key:"alerts", label:i18nd("monet", "Low accessory battery alerts")},
-                                    {key:"companion", label:i18nd("monet", "Show notch companion")}]
-                            C.CheckBox {
-                                required property var modelData
-                                objectName: "notchOption-" + modelData.key
-                                visible: editor.notchMode === "compact" || editor.notchMode === "wide"
-                                text: modelData.label; enabled: !editor.notchBusy
-                                checked: !!editor.notchOptions[modelData.key]
-                                onClicked: editor.requestNotch(modelData.key + (checked ? "-on" : "-off"))
-                            }
-                        }
-                        C.Button {
-                            id: editCompanion
-                            objectName: "editNotchCompanion"
-                            visible: editor.notchMode !== "off" && !!editor.notchOptions.companion
-                            text: i18nd("monet", "Customize companion")
-                            checkable: true
-                            icon.name: checked ? "arrow-down" : "arrow-right"
-                        }
-                        Loader {
-                            Layout.fillWidth: true
-                            active: editCompanion.visible && editCompanion.checked
-                            visible: active
-                            sourceComponent: ColumnLayout {
-                                RowLayout {
-                                    Rectangle {
-                                        Layout.preferredWidth: 74; Layout.preferredHeight: 38
-                                        radius: height / 2; color: "#202323"
-                                        Loader {
-                                            id: companionPreview
-                                            anchors.centerIn: parent; width: 34; height: 34
-                                            source: "file://@DATADIR@/plasma/plasmoids/org.monet.notch/contents/ui/NotchCompanion.qml"
-                                            onLoaded: {
-                                                item.visits = false
-                                                item.styleName = Qt.binding(() => editor.companionSettings.style || "soft")
-                                                item.shapeName = Qt.binding(() => editor.companionSettings.shape || "round")
-                                                item.paletteName = Qt.binding(() => editor.companionSettings.color || "mint")
-                                                item.side = Qt.binding(() => editor.companionSettings.side || "left")
-                                            }
-                                        }
-                                    }
-                                    C.Button {
-                                        objectName: "greetCompanion"
-                                        text: i18nd("monet", "Say hello")
-                                        enabled: !!companionPreview.item && !editor.notchBusy
-                                        onClicked: {
-                                            companionPreview.item.greet()
-                                            editor.requestNotch("hello")
-                                        }
-                                    }
-                                }
-                                Repeater {
-                                    model: [
-                                        {key:"style", title:i18nd("monet", "Style"), keys:["soft","robot"], names:[i18nd("monet","Soft"),i18nd("monet","Robot")]},
-                                        {key:"shape", title:i18nd("monet", "Shape"), keys:["round","egg","square","pill"], names:[i18nd("monet","Round"),i18nd("monet","Egg"),i18nd("monet","Rounded square"),i18nd("monet","Capsule")]},
-                                        {key:"color", title:i18nd("monet", "Color"), keys:["mint","pearl","lemon","peach","rose","lilac","sky"], names:[i18nd("monet","Mint"),i18nd("monet","Pearl"),i18nd("monet","Lemon"),i18nd("monet","Peach"),i18nd("monet","Rose"),i18nd("monet","Lilac"),i18nd("monet","Sky")]},
-                                        {key:"side", title:i18nd("monet", "Side"), keys:["left","right"], names:[i18nd("monet","Left"),i18nd("monet","Right")]},
-                                        {key:"visits", title:i18nd("monet", "Visits"), keys:["off","rare","normal","frequent"], names:[i18nd("monet","Off"),i18nd("monet","Rare"),i18nd("monet","Regular"),i18nd("monet","Frequent")]}
-                                    ]
-                                    RowLayout {
-                                        id: field
-                                        required property var modelData
-                                        Layout.fillWidth: true
-                                        C.Label { Layout.fillWidth: true; text: field.modelData.title; wrapMode: Text.Wrap }
-                                        C.ComboBox {
-                                            objectName: "companion-" + field.modelData.key
-                                            Accessible.name: field.modelData.title
-                                            enabled: !editor.notchBusy
-                                            model: field.modelData.names
-                                            currentIndex: field.modelData.keys.indexOf(editor.companionSettings[field.modelData.key])
-                                            onActivated: index => editor.requestNotch("companion-" + field.modelData.key + "-" + field.modelData.keys[index])
-                                        }
-                                    }
-                                }
-                                C.CheckBox {
-                                    objectName: "companion-reactions"
-                                    text: i18nd("monet", "React to desktop activity")
-                                    enabled: !editor.notchBusy
-                                    checked: editor.companionSettings.reactions === "on"
-                                    onClicked: editor.requestNotch("companion-reactions-" + (checked ? "on" : "off"))
-                                }
-                                C.CheckBox {
-                                    objectName: "companion-rest"
-                                    text: i18nd("monet", "Hide between visits and reactions")
-                                    enabled: !editor.notchBusy
-                                    checked: editor.companionSettings.rest === "hide"
-                                    onClicked: editor.requestNotch("companion-rest-" + (checked ? "hide" : "show"))
-                                }
-                            }
-                        }
-                        C.Button {
-                            id: editTabs
-                            objectName: "editNotchTabs"
-                            visible: editor.notchMode === "compact" || editor.notchMode === "wide"
-                            text: i18nd("monet", "Edit notch tabs")
-                            checkable: true
-                            icon.name: checked ? "arrow-down" : "arrow-right"
-                        }
-                        ColumnLayout {
-                            visible: editTabs.visible && editTabs.checked
-                            Layout.fillWidth: true
-                            Repeater {
-                                model: tabRows
-                                RowLayout {
-                                    id: tabRow
-                                    required property string key
-                                    required property int index
-                                    readonly property bool shown: editor.notchTabs.includes(key)
-                                    Layout.fillWidth: true
-                                    C.CheckBox {
-                                        objectName: "notchTab-" + tabRow.key
-                                        Layout.fillWidth: true
-                                        text: editor.tabTitles[tabRow.key]
-                                        checked: tabRow.shown
-                                        enabled: !editor.notchBusy
-                                        onClicked: editor.requestNotch("tab-" + tabRow.key + (checked ? "-show" : "-hide"))
-                                    }
-                                    C.ToolButton {
-                                        objectName: "notchEarlier-" + tabRow.key
-                                        icon.name: "arrow-up"
-                                        Accessible.name: i18nd("monet", "Move %1 earlier", editor.tabTitles[tabRow.key])
-                                        C.ToolTip.text: Accessible.name; C.ToolTip.visible: hovered
-                                        enabled: tabRow.shown && tabRow.index > 0 && !editor.notchBusy
-                                        onClicked: editor.requestNotch("tab-" + tabRow.key + "-earlier")
-                                    }
-                                    C.ToolButton {
-                                        objectName: "notchLater-" + tabRow.key
-                                        icon.name: "arrow-down"
-                                        Accessible.name: i18nd("monet", "Move %1 later", editor.tabTitles[tabRow.key])
-                                        C.ToolTip.text: Accessible.name; C.ToolTip.visible: hovered
-                                        enabled: tabRow.shown && tabRow.index < editor.notchTabs.length - 1 && !editor.notchBusy
-                                        onClicked: editor.requestNotch("tab-" + tabRow.key + "-later")
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
 
@@ -957,20 +1066,103 @@ Item {
                     }
                 }
 
-                Loader {
+                ColumnLayout {
                     id: advanced
-                    Layout.fillWidth: true
-                    property bool visited: false
-                    onLoaded: visited = true
-                    active: editor.showAdvanced || visited
                     visible: editor.showAdvanced
-                    onVisibleChanged: if (visible && !source.toString()) setSource(editor.advancedPage, {panelConfiguration: editor.panelConfiguration})
+                    Layout.fillWidth: true
+                    spacing: 14
+                    Heading { text: i18nd("monet", "More ways to arrange your bar") }
+                    Hint { text: i18nd("monet", "Fine-tune spacing, move to another display, or add room between widgets.") }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        implicitHeight: placementOptions.implicitHeight + 32
+                        radius: 16; color: Qt.rgba(0.5,0.5,0.5,0.07)
+                        ColumnLayout {
+                            id: placementOptions
+                            anchors.fill: parent; anchors.margins: 16; spacing: 10
+                            Heading { text: i18nd("monet", "Position and spacing") }
+                            C.Label { text: i18nd("monet", "Display"); Layout.fillWidth: true }
+                            C.ComboBox {
+                                id: displayChoice
+                                objectName: "panelDisplay"
+                                Layout.fillWidth: true; Layout.minimumWidth: 0
+                                model: Application.screens
+                                textRole: "name"
+                                wheelEnabled: false
+                                currentIndex: Math.max(0, Array.from(Application.screens).findIndex(s => s.name === panel.screenToFollow?.name))
+                                onActivated: index => editor.panelAction("screen-" + index)
+                            }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                C.Label { text: i18nd("monet", "Offset from alignment"); wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                                C.SpinBox {
+                                    objectName: "panelAdvancedOffset"
+                                    from: 0; to: Math.max(0, editor.screenLength - editor.shownLength)
+                                    value: panel.offset
+                                    editable: true; wheelEnabled: false
+                                    onValueModified: { panel.offset = value; editor.schedulePlacement() }
+                                }
+                            }
+                            C.CheckBox {
+                                objectName: "panelFloatingWidgets"
+                                text: i18nd("monet", "Float widgets individually")
+                                checked: panel.floatingApplets
+                                onToggled: { panel.floatingApplets = checked; if (checked) panel.floating = false }
+                            }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Choice { objectName: "panelAddSpacer"; text: i18nd("monet", "Add flexible space"); onClicked: editor.panelAction("spacer") }
+                                Choice { objectName: "panelAddSeparator"; text: i18nd("monet", "Add separator"); onClicked: editor.panelAction("separator") }
+                            }
+                        }
+                    }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        implicitHeight: shortcutOptions.implicitHeight + 32
+                        radius: 16; color: Qt.rgba(0.5,0.5,0.5,0.07)
+                        ColumnLayout {
+                            id: shortcutOptions
+                            anchors.fill: parent; anchors.margins: 16; spacing: 10
+                            Heading { text: i18nd("monet", "Keyboard access") }
+                            Hint { text: i18nd("monet", "Choose a shortcut to move keyboard focus to this bar.") }
+                            KeySequenceItem {
+                                objectName: "panelFocusShortcut"
+                                Layout.alignment: Qt.AlignLeft
+                                patterns: ShortcutPattern.Modifier | ShortcutPattern.ModifierAndKey
+                                keySequence: plasmoid.globalShortcut
+                                onCaptureFinished: plasmoid.globalShortcut = keySequence
+                            }
+                        }
+                    }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        implicitHeight: manageOptions.implicitHeight + 32
+                        radius: 16; color: Qt.rgba(0.5,0.5,0.5,0.07)
+                        ColumnLayout {
+                            id: manageOptions
+                            anchors.fill: parent; anchors.margins: 16; spacing: 10
+                            Heading { text: i18nd("monet", "Manage this bar") }
+                            Choice {
+                                objectName: "panelDuplicate"
+                                text: i18nd("monet", "Duplicate bar")
+                                onClicked: panel.clonePanelTo(panel.location, panel.screenToFollow)
+                            }
+                            Choice {
+                                objectName: "panelRemove"
+                                text: i18nd("monet", "Remove bar")
+                                onClicked: { plasmoid.internalAction("remove")?.trigger(); configDialog.close() }
+                            }
+                            Hint { visible: !!editor.advancedStatus; text: editor.advancedStatus }
+                        }
+                    }
                 }
             }
         }
 
         RowLayout {
             Layout.fillWidth: true
+            Choice { objectName: "panelAddPage"; text: i18nd("monet","Add panel"); onClicked: editor.selectPage(4) }
+            Choice { objectName: "panelAddWidgets"; visible: !editor.notchPanel; text: i18nd("monet","Add widgets…"); onClicked: { configDialog.close(); configDialog.showAddWidgetDialog() } }
             Choice {
                 objectName: "panelAdvanced"
                 text: editor.showAdvanced ? i18nd("monet", "Back") : i18nd("monet", "Advanced…")

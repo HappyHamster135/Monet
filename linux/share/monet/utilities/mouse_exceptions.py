@@ -39,9 +39,8 @@ class MouseExceptions(QWidget):
         from quit_protection import AppPicker
         self.config.sync()
         picker = AppPicker(applications(self.config), self)
-        if picker.exec():
-            self.save(picker.selection())
-        picker.deleteLater()
+        from inline_dialogs import present_dialog
+        present_dialog(picker,self,lambda:self.save(picker.selection()))
 
     def save(self, selected):
         self.config.setValue("applications", json.dumps(application_aliases(selected), ensure_ascii=False))

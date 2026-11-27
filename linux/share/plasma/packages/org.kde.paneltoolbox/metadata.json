@@ -1,0 +1,11 @@
+{
+    "KPackageStructure": "Plasma/Generic",
+    "KPlugin": {
+        "Id": "org.kde.paneltoolbox",
+        "Name": "Monet panel editing",
+        "Description": "Panel editing through Monet's layout editor",
+        "Version": "1.0",
+        "License": "GPL-2.0-or-later",
+        "Authors": [{"Name": "Monet"}]
+    }
+}

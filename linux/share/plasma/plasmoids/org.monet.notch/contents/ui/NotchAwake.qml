@@ -8,17 +8,17 @@ QtObject {
     readonly property string service: "org.monet.KeepAwake"
     readonly property string path: "/org/monet/KeepAwake"
     property string owner: ""
-    property var state: ({})
+    property var sessionState: ({})
     property double receivedAt: 0
-    readonly property double endTime: state.duration > 0 ? receivedAt + state.remaining * 1000 : 0
+    readonly property double endTime: sessionState.duration > 0 ? receivedAt + sessionState.remaining * 1000 : 0
     property bool failed: false
-    readonly property bool active: state.active === true
-    readonly property int minutes: Math.ceil((state.remaining || 0) / 60)
-    readonly property string compactText: state.duration > 0 ? i18n("%1 min", minutes) : i18n("Awake")
-    readonly property string statusText: failed || state.error ? i18n("Keep awake is unavailable. Choose a duration to try again.")
+    readonly property bool active: sessionState.active === true
+    readonly property int minutes: Math.ceil((sessionState.remaining || 0) / 60)
+    readonly property string compactText: sessionState.duration > 0 ? i18n("%1 min", minutes) : i18n("Awake")
+    readonly property string statusText: failed || sessionState.error ? i18n("Keep awake is unavailable. Choose a duration to try again.")
         : !active ? i18n("Uses your screen, lock and sleep settings")
-        : state.duration === 0 ? i18n("An automatic rule is keeping this PC awake")
-        : state.indefinite ? i18n("Until turned off or you sign out") : i18n("%1 min remaining", minutes)
+        : sessionState.duration === 0 ? i18n("An automatic rule is keeping this PC awake")
+        : sessionState.indefinite ? i18n("Until turned off or you sign out") : i18n("%1 min remaining", minutes)
     property DBus.DBusPendingReply read
     property DBus.DBusPendingReply write
     readonly property bool busy: !!write
@@ -28,7 +28,7 @@ QtObject {
         onRegisteredChanged: {
             awake.read = null
             awake.owner = ""
-            awake.state = {}
+            awake.sessionState = {}
             minute.stop()
             if (registered) awake.lookup()
         }
@@ -63,7 +63,7 @@ QtObject {
         if (typeof next?.active !== "boolean") return
         failed = false
         receivedAt = Date.now()
-        state = next
+        sessionState = next
         minute.stop()
         if (active && next.duration > 0 && next.remaining > 0) {
             minute.interval = ((next.remaining - 1) % 60 + 1) * 1000
@@ -82,7 +82,7 @@ QtObject {
         }
     }
     function setDuration(seconds) {
-        if (busy || (seconds === 0 && !state.duration)) return
+        if (busy || (seconds === 0 && !sessionState.duration)) return
         failed = false
         write = DBus.SessionBus.asyncCall({service: service, path: path, iface: service, member: "SetDuration",
             signature: "(i)", arguments: [seconds]})
@@ -92,8 +92,8 @@ QtObject {
         if (!write?.isFinished) return
         const reply = write
         write = null
-        // StatusChanged reports the ordered session state to every notch.
-        // A reply can outlive that state if another client already changed it.
+        // StatusChanged reports the ordered session sessionState to every notch.
+        // A reply can outlive that sessionState if another client already changed it.
         try { failed = !reply.isValid || !JSON.parse(reply.value).ok } catch (_) { failed = true }
     }
     readonly property Connections writeFinished: Connections {

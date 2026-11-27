@@ -744,6 +744,8 @@ fi
 # Apply focus and stacking on the press so the receiving window owns the
 # complete click, even when another window used to cover part of it.
 kw_default kwinrc MouseBindings CommandWindow1 "Activate, raise and pass click"
+kw_default kwinrc MouseBindings CommandAllKey Meta
+kw_default kwinrc MouseBindings CommandAll1 Move
 kw_default dolphinrc IconsMode IconSize 80
 kw_default dolphinrc IconsMode PreviewSize 96
 kw_default dolphinrc PlacesPanel IconSize 22

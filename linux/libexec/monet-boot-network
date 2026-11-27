@@ -1,0 +1,62 @@
+#!/usr/bin/python3
+"""Wait for networking only when a boot health check might need it.
+
+All health checks and rollback gates still run. Unknown/custom checks retain
+the original network-online wait. This does not disable network wait globally.
+"""
+import hashlib
+from pathlib import Path
+import re
+import subprocess
+
+KNOWN = {
+    "01_repository_dns_check.sh": "ac443ebef6dbe0350e265b31b454f02a23ae1cabbadac83956fcee4ce63673d0",
+    "02_watchdog.sh": "e35e5907ae45a706d49d7bf32fcf69b410cfa8d3e1fe0e5827c9185160fc92ff",
+}
+
+
+def needs_network(root=Path("/")):
+    try:
+        remotes = root / "etc/ostree/remotes.d"
+        if not remotes.is_dir() or any(remotes.iterdir()):
+            return True
+        disabled = set()
+        config = root / "etc/greenboot/greenboot.conf"
+        if config.exists():
+            # This file is sourced by the watchdog check. Unknown shell code
+            # could need networking; only the documented scalar settings skip.
+            for line in config.read_text().splitlines():
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if re.fullmatch(r"GREENBOOT_(?:MAX_BOOT_ATTEMPTS|WATCHDOG_GRACE_PERIOD)=\d+", line):
+                    continue
+                if re.fullmatch(r"GREENBOOT_WATCHDOG_CHECK_ENABLED=(?:true|false)", line):
+                    continue
+                if re.fullmatch(r'DISABLED_HEALTHCHECKS=\((?:"[\w.-]+"\s*)*\)', line):
+                    disabled = set(re.findall(r'"([\w.-]+)"', line))
+                    continue
+                return True
+        for base in ("etc", "usr/lib"):
+            for kind in ("required.d", "wanted.d"):
+                directory = root / base / "greenboot/check" / kind
+                if directory.is_symlink():
+                    return True
+                for path in directory.iterdir() if directory.exists() else ():
+                    if path.name in disabled:
+                        continue
+                    if (base != "usr/lib" or kind != "required.d" or path.is_symlink()
+                            or not path.is_file() or path.name not in KNOWN
+                            or hashlib.sha256(path.read_bytes()).hexdigest() != KNOWN[path.name]):
+                        return True
+        return False
+    except (OSError, UnicodeError):
+        return True
+
+
+if __name__ == "__main__":
+    if needs_network():
+        # Original After/Wants ordering waits for completion, not success.
+        subprocess.run(["systemctl", "start", "network-online.target"], check=False)
+    else:
+        print("Boot health checks are local; networking can finish in parallel.")

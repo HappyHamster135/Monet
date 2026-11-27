@@ -9,6 +9,7 @@ MouseArea {
     required property bool vertical
     required property bool sampling
     required property var power
+    property var graphicsPolicy: null
     signal pressedReading()
     readonly property bool thin: !vertical && height < metrics.height * 2 + 5
     readonly property real rowHeight: Math.ceil(metrics.height * 2) + 7
@@ -50,6 +51,7 @@ MouseArea {
                 required property string modelData
                 reading: modelData; names: readingNames
                 style: strip.style; power: strip.power; sampling: strip.sampling
+                graphicsPolicy: strip.graphicsPolicy
                 inlineLabel: strip.thin
                 width: strip.vertical ? Math.max(0, strip.width - 4) : (inlineLabel ? wideSlot : slotWidth)
                 height: strip.vertical ? strip.rowHeight : strip.height

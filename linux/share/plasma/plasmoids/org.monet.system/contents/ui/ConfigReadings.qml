@@ -10,6 +10,8 @@ KCM.SimpleKCM {
     property var cfg_readingsDefault: []
     property string cfg_readingStyle
     property string cfg_readingStyleDefault
+    property bool cfg_monitorDedicatedGraphics
+    property bool cfg_monitorDedicatedGraphicsDefault
 
     readonly property ReadingNames names: ReadingNames {}
     readonly property var available: names.choices(catalog.sensorIds).filter(key => !cfg_readings.includes(key))
@@ -22,6 +24,16 @@ KCM.SimpleKCM {
 
     Kirigami.FormLayout {
         SensorCatalog { id: catalog }
+        Controls.CheckBox {
+            text: i18nd("monet", "Monitor dedicated graphics on laptops")
+            checked: page.cfg_monitorDedicatedGraphics
+            onToggled: page.cfg_monitorDedicatedGraphics = checked
+        }
+        Controls.Label {
+            Layout.fillWidth: true
+            wrapMode: Text.Wrap
+            text: i18nd("monet", "Live NVIDIA readings can keep the graphics chip awake and use more power. Leave this off for longer battery life; Task Manager still offers detailed readings.")
+        }
         Controls.ComboBox {
             id: style
             Kirigami.FormData.label: i18nd("monet", "Display style")

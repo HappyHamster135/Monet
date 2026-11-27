@@ -8,10 +8,13 @@ Shape {
     property real chin: 16
     property color topColor: "#060608"
     property color bottomColor: "#1c1c20"
+    property color outlineColor: "transparent"
+    property real outlineWidth: -1
     property real bottomRadius: Math.max(0, Math.min(chin, height - shoulder, width / 3))
     preferredRendererType: Shape.CurveRenderer
     ShapePath {
-        strokeWidth: -1
+        strokeWidth: surface.outlineWidth
+        strokeColor: surface.outlineColor
         fillGradient: LinearGradient {
             x1: 0; y1: 0; x2: 0; y2: surface.height
             GradientStop { position: 0; color: surface.topColor }

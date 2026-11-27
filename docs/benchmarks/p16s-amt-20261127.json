@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "recorded_utc": "2026-11-27T12:13:31Z",
+  "hardware": "ThinkPad P16s Gen 2",
+  "bios": "N3QET52W (1.52)",
+  "scope": "Local reversible Intel AMT experiment; reverted after the owner reported a roughly two-minute restart",
+  "baseline": {
+    "boot_id": "b40af4cc-9a08-4a6f-b713-fb54ff5192ef",
+    "firmware_s": 14.585528789,
+    "systemd_total_s": 32.647,
+    "user_reported_restart_s": 42
+  },
+  "change": {
+    "setting": "AMTControl",
+    "before": "Enable",
+    "after": "Disable",
+    "reversible": true,
+    "status": "reverted-and-verified-after-restart",
+    "pending_reboot": false,
+    "receipt": "/var/lib/monet/firmware-tests/20261127T121331Z-amt/receipt.json"
+  },
+  "verification": {
+    "only_amt_changed": true,
+    "boot_files_unchanged": true,
+    "efi_unchanged": true,
+    "grubenv_unchanged": true,
+    "wifi_and_bluetooth_unblocked": true,
+    "mouse_connected": true,
+    "game_key_service_active": true
+  },
+  "bios_log_inspection": {
+    "smbios_access_method": 4,
+    "metadata_status": "Valid, Not Full",
+    "events_read": false,
+    "read_error": "EIO; kernel reports dmi-sysfs: GPNV support missing",
+    "vendor_efi_variable_bytes": 68,
+    "vendor_efi_variable_decoded": false,
+    "persistent_crash_records": 0,
+    "manual_viewer": "F1 > Main > BIOS Event Log",
+    "limitation": "Cannot determine whether POST errors or recovery events exist from the available Linux reader. Logs were not cleared."
+  },
+  "restore": "F1 > Config > Intel(R) AMT > Intel(R) AMT Control > Enabled; save with F10",
+  "after_restart": {
+    "boot_id": "0a944dd6-cfb0-48e0-b9f8-0f901150e383",
+    "user_reported_restart_s_approx": 120,
+    "firmware_s": 14.674,
+    "loader_s": 4.386,
+    "kernel_s": 1.799,
+    "initrd_s": 4.765,
+    "userspace_s": 6.397,
+    "systemd_total_s": 32.023,
+    "previous_shutdown_services_s": 16.094,
+    "previous_mpris_proxy_stop_s": 15.115,
+    "limitation": "Systemd's startup timing does not account for the full reported restart interval. The journal identifies a separate media-proxy shutdown timeout but cannot attribute the remaining interval to a specific firmware operation."
+  },
+  "reversion": {
+    "requested_utc": "2026-11-27T12:20:15.267812+00:00",
+    "setting": "AMTControl",
+    "before": "Disable",
+    "after": "Enable",
+    "only_amt_changed": true,
+    "status": "verified-after-restart",
+    "verified_boot_id": "e85e1585-ed97-4d48-8c4a-6d175d58e504",
+    "verified_value": "Enable",
+    "pending_reboot": false
+  },
+  "after_reversion_restart": {
+    "boot_id": "e85e1585-ed97-4d48-8c4a-6d175d58e504",
+    "user_reported_black_screen_to_ready_s_approx": 50,
+    "user_reported_longest_wait": "Black screen before the Lenovo logo",
+    "firmware_s": 14.510,
+    "loader_s": 4.360,
+    "kernel_s": 1.719,
+    "initrd_s": 4.857,
+    "userspace_s": 6.419,
+    "systemd_total_s": 31.867,
+    "plasma_workspace_target_kernel_monotonic_s": 13.472,
+    "previous_shutdown_services_s": 5.795,
+    "previous_mpris_proxy_stop_s": 0.024,
+    "pending_os_deployment": false,
+    "kernel_reboot_type": "acpi",
+    "kernel_reboot_mode": "cold",
+    "persistent_crash_records": 0,
+    "limitation": "This restart applied the AMT rollback. The owner locates most of the wait before the Lenovo logo. Systemd's timestamps do not directly measure that interval or distinguish final kernel shutdown from early firmware work. A normal restart without pending firmware changes is needed for a steady-state comparison."
+  }
+}

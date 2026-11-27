@@ -1,4 +1,6 @@
+pragma ComponentBehavior: Bound
 import QtQuick
+import QtQuick.Effects
 import QtQuick.Layouts
 import "IslandLayout.js" as IslandLayout
 import QtQuick.Controls as C
@@ -16,7 +18,30 @@ PlasmoidItem {
     // Plasma instantiates the compact item only for applets with both representations.
     fullRepresentation: Item {}
     preferredRepresentation: compactRepresentation
+    Plasmoid.contextualActions: [
+        PlasmaCore.Action {
+            text: i18n("Notch & Tools settings…")
+            icon.name: "configure"
+            onTriggered: root.openNotchSettings()
+        },
+        PlasmaCore.Action {
+            text: i18n("Edit notch…")
+            icon.name: "configure"
+            onTriggered: {
+                root.collapse()
+                runner.connectSource("@LIBEXECDIR@/monet-quick panel-configure " + Plasmoid.containment.id)
+            }
+        }
+    ]
     property bool islandOpen: false
+    property bool rememberRoute: true
+    readonly property string shortcutOwner: String(Plasmoid.id)
+    NotchShortcut {
+        ownerId: root.shortcutOwner
+        onRequested: command => {
+            if (command === "toggle") root.openPill()
+        }
+    }
     property bool folding: false
     property bool pinned: false
     readonly property bool combined: Plasmoid.configuration.combined && timerStrip && !!media && visibleTabs.includes(0)
@@ -28,18 +53,39 @@ PlasmoidItem {
     readonly property bool motion: Kirigami.Units.longDuration > 1
     readonly property bool editing: !!Plasmoid.containment?.corona.editMode
     readonly property bool ownEdge: Plasmoid.location === PlasmaCore.Types.TopEdge && Plasmoid.containment?.applets.length === 1
-    readonly property int surfaceWidth: Math.min(464, Math.max(1, (root.Screen.width || 648) - 16))
+    readonly property int surfaceWidth: Math.min(Math.max(340, Math.min(640, Plasmoid.configuration.expandedWidth || 464)), Math.max(1, (root.Screen.width || 648) - 16))
     readonly property bool railSpace: ownEdge && root.Screen.width >= surfaceWidth + 112
     readonly property int restWidth: Plasmoid.configuration.wide ? 244 : 178
     readonly property var panelSurface: pages
     Binding {
         target: Plasmoid.containment
         property: "backgroundHints"
-        when: root.ownEdge && !root.editing
+        when: root.ownEdge
         value: PlasmaCore.Types.NoBackground
         restoreMode: Binding.RestoreBindingOrValue
     }
+    NotchHoverPreview {
+        id: hoverPreview
+        allowed: Plasmoid.configuration.hoverControls && !root.editing && power.active
+        opened: root.islandOpen
+        overPill: root.compactRepresentationItem?.hoveredForPreview ?? false
+        overPreview: popupPointer.hovered || (root.compactRepresentationItem?.railHovered ?? false)
+        held: root.pinned || root.draggingShelf || root.searching || !!body.item?.menuOpen
+            || !!body.item?.choosingFile || !!body.item?.ownsSurface
+        onRequested: root.showPill()
+        onDismissed: root.collapse()
+        onAdopted: { root.rememberRoute = true; Qt.callLater(() => { popup.requestActivate(); pages.focusPage() }) }
+    }
     function collapse() {
+        hoverPreview.cancel()
+        if (folding || !islandOpen) return
+        if (body.current?.modelData === toolDetails && body.item?.ownsSurface) {
+            body.item.releaseForNavigation(() => root.finishCollapse())
+            return
+        }
+        finishCollapse()
+    }
+    function finishCollapse() {
         if (folding || !islandOpen) return
         if (!motion) { islandOpen = false; return }
         folding = true
@@ -57,6 +103,9 @@ PlasmoidItem {
         : showingWatch ? "watch" : viewingDownloads ? "downloads" : viewingAgenda ? "agenda"
         : viewingAwake ? "awake" : tab === 0 ? ["music", "lyrics", "queue", "mixer"][musicView] : tabNames[tab]) || "sections"
     function availableRoute(key) {
+        const inlineTool = ({camera:"camera", clipboard:"clipboard", notes:"notes", queue:"media", mixer:"mixer", agents:"agents", files:"shelf", agenda:"calendars"})[key]
+        if (inlineTool && visibleTabs.includes(7) && tools.offers(inlineTool)) return true
+        if (key === "radial") return false
         if (key.startsWith("agent-")) return (visibleTabs.includes(8) || visibleTabs.includes(1)) && offerAgents
         if (key.startsWith("tool-")) {
             const tool = key.slice(5)
@@ -76,7 +125,17 @@ PlasmoidItem {
             body.anticipated = key === "music" ? musicPage : key === "time" ? timerPage : mixerPage
     }
     function displayRoute(key, backwards) {
-        if (key === currentRoute) return
+        if (key === currentRoute && !body.item?.releasing) return
+        if (body.current?.modelData === toolDetails && body.item?.ownsSurface) {
+            body.item.releaseForNavigation(() => {
+                root.finishDisplayRoute(key, backwards)
+                popup.requestActivate()
+            })
+            return
+        }
+        finishDisplayRoute(key, backwards)
+    }
+    function finishDisplayRoute(key, backwards) {
         slideDirection = backwards ? -1 : 1
         overview = key === "sections"
         utilityPage = key.startsWith("agent-") || key.startsWith("tool-") || ["controls","system","together","captures"].includes(key) ? key : ""
@@ -119,7 +178,7 @@ PlasmoidItem {
         : utilityPage.startsWith("agent-") ? (utilityPage === "agent-claude" ? "Claude Code" : utilityPage === "agent-codex" ? "Codex" : i18n("Session file"))
         : utilityPage.startsWith("tool-") ? (toolRows.find(entry => entry.key === utilityPage.slice(5))?.label || (utilityPage === "tool-calendars" ? i18n("Link a calendar…") : utilityPage === "tool-downloads" ? i18n("Watch downloads") : i18n("Tools")))
         : utilityPage === "captures" ? i18n("Recent captures") : utilityPage === "system" ? i18n("System") : utilityPage === "together" ? i18n("Music and timer") : displayShelf ? i18n("File shelf") : showingWatch ? i18n("Watch")
-        : viewingDownloads ? i18n("Downloads") : tab === 0 && musicView === 3 ? i18n("Volume mixer") : tabLabels[tab] || i18n("Sections")
+        : viewingDownloads ? i18n("Downloads") : tab === 0 ? [i18n("Now Playing"), i18n("Lyrics"), i18n("Up next"), i18n("Volume mixer")][musicView] : tabLabels[tab] || i18n("Sections")
     // Keep keyboard activation through Plasma on a custom, edge-attached surface.
     onExpandedChanged: if (expanded) { expanded = false; openPill() }
 
@@ -159,7 +218,7 @@ PlasmoidItem {
         if (readingActivity) Qt.callLater(refreshActivity)
     }
     onOfferAgentsChanged: {
-        if (!offerAgents) { agentsVisible = false; sessionSelected = false; codexKey = ""; claudeKey = "" }
+        if (!offerAgents) { agentsVisible = false; sessionSelected = false; lastSessionReading = "" }
         if (readingActivity) Qt.callLater(refreshActivity)
     }
     readonly property bool offerAgenda: tools.offers("calendars")
@@ -218,17 +277,32 @@ PlasmoidItem {
         source: "NoticePreview.qml"
         onLoaded: item.watching = Qt.binding(() => !root.islandOpen)
     }
+    property string lastRoute: "sections"
+    function railEntries(side) {
+        const saved = side === "left" ? Plasmoid.configuration.leftRail : Plasmoid.configuration.rightRail
+        const keys = String(saved || (side === "left" ? "time" : "controls,mixer,files")).split(",")
+        return keys.map(key => sections.find(item => item.key === key)).filter(item => !!item).slice(0,4)
+    }
     function openPill() {
+        if (hoverPreview.previewing) { hoverPreview.adopt(); return }
         if (folding) { folding = false; pages.animateTo(1); return }
         if (islandOpen) { collapse(); return }
+        showPill()
+    }
+    function showPill() {
+        rememberRoute = !hoverPreview.previewing
         const notice = preview.item?.noticeId || 0
         const toAwake = awakeStrip
-        if (notice) { navigation.openTab(visibleTabs.includes(9) ? "notifications" : "activity"); requestedNotice = notice }
+        if (!(Plasmoid.configuration.openActivity ?? true)) {
+            navigation.openTab(Plasmoid.configuration.reopen === "last" && availableRoute(lastRoute) ? lastRoute : "sections")
+        }
+        else if (notice) { navigation.openTab(visibleTabs.includes(9) ? "notifications" : "activity"); requestedNotice = notice }
         else if (combined) navigation.openTab("together")
         else if (timerStrip) navigation.openTab("time")
         else if (watch.registered) navigation.openTab("watch")
         else if (toAwake) navigation.openTab("awake")
-        else if (playing && visibleTabs.includes(0)) navigation.openTab("music")
+        else if (media && visibleTabs.includes(0)) navigation.openTab("music")
+        else navigation.openTab(Plasmoid.configuration.reopen === "last" && availableRoute(lastRoute) ? lastRoute : "sections")
         islandOpen = true
     }
     property bool padsOpened: false
@@ -269,21 +343,33 @@ PlasmoidItem {
     }
     property string message: ""
     property bool sessionSelected: false
-    property string codexKey: ""
-    property string claudeKey: ""
     property bool agentsVisible: false
+    property string lastSessionReading: ""
+    AgentHistory {
+        id: agentHistory
+        presented: root.offerAgents && root.agentPageOpen && power.active
+    }
+    AgentUsage {
+        id: codexUsage; provider: "codex"
+        presented: root.offerAgents && power.active && (root.readingActivity || (root.islandOpen && root.currentRoute === "agent-codex"))
+        onSettingsChanged: root.refreshActivity()
+    }
+    AgentUsage {
+        id: claudeUsage; provider: "claude"
+        presented: root.offerAgents && power.active && (root.readingActivity || (root.islandOpen && root.currentRoute === "agent-claude"))
+        onSettingsChanged: root.refreshActivity()
+    }
     DBus.SignalWatcher {
-        enabled: root.readingActivity && root.offerAgents
+        enabled: root.offerAgents
         busType: DBus.BusType.Session; service: "org.monet.Utilities"
         path: "/Utilities"; iface: "org.monet.Utilities"
-        function dbusCodexLimitsChanged(key) { root.codexKey = key; if (root.checkingDownloads) root.refreshPending = true }
-        function dbusClaudeLimitsChanged(key) { root.claudeKey = key; if (root.checkingDownloads) root.refreshPending = true }
         function dbusAgentFileChanged(selected) {
+            root.lastSessionReading = ""
             root.sessionSelected = selected
             if (root.checkingDownloads) root.refreshPending = true
         }
         function dbusAgentVisibilityChanged() {
-            root.sessionSelected = false; root.agentsVisible = false
+            root.sessionSelected = false; root.agentsVisible = false; root.lastSessionReading = ""
             root.refreshActivity()
         }
     }
@@ -306,7 +392,6 @@ PlasmoidItem {
         if (readingActivity) refreshActivity()
         else {
             downloadAvailable = false; downloadPath = ""; downloadFolder = ""
-            codexKey = ""; claudeKey = ""; agentsVisible = false; sessionSelected = false
         }
     }
     Loader {
@@ -318,8 +403,9 @@ PlasmoidItem {
             onDownloadCompleted: root.react("download")
         }
     }
-    toolTipMainText: i18n("Monet Notch")
-    toolTipSubText: preview.item?.title ? [preview.item.sender, preview.item.title].filter(Boolean).join(" · ")
+    toolTipMainText: ""
+    toolTipSubText: ""
+    readonly property string accessibleStatus: preview.item?.title ? [preview.item.sender, preview.item.title].filter(Boolean).join(" · ")
         : timerStrip ? timerSummary : watch.registered ? i18n("Watching a window")
         : awakeStrip ? i18n("Keep awake") + " · " + awakeModel.item.statusText : media?.track || i18n("Music, activity and tools")
     Mpris.Mpris2Model { id: players }
@@ -371,20 +457,26 @@ PlasmoidItem {
     }
     property var toolRows: []
     property var toolGroups: []
-    property string toolGroup: "all"
+    property string toolGroup: "favorites"
     property string toolQuery: ""
     function catalogReady(rows, groups) { toolRows = rows; toolGroups = groups }
+    function runDesktopTool(key) {
+        if (!tools.offers(key)) return
+        DBus.SessionBus.asyncCall({service:"org.monet.Utilities", path:"/NotchTools", iface:"org.monet.Utilities",
+            member:"Tool", signature:"(s)", arguments:[JSON.stringify({action:"run", key:key})]})
+        if (!["mic","output","keyboard-light","automatic-appearance","switch-appearance","clean","plain"].includes(key)) collapse()
+    }
     function selectTool(key) {
         if (!tools.offers(key)) return
+        if (key === "wheel") { openRadialMenu(); return }
+        if (key === "notch-settings") { openNotchSettings(); return }
         const route = ({shelf:"files", notes:"notes", downloads:"downloads", calendars:"agenda", agents:"agents",
-            media:"queue", mixer:"mixer", camera:"camera", clipboard:"clipboard", awake:"awake"})[key]
+            media:"queue", mixer:"mixer", camera:"camera",watch:"watch", clipboard:"clipboard", awake:"awake"})[key]
         if (route && availableRoute(route)) { navigation.openDetail(route); return }
         if (key === "command-bar" && offerSearch) { searching = true; return }
         if (toolRows.find(item => item.key === key)?.immediate) {
             // The catalogue is already visible. Issue actions once, directly to their owner.
-            DBus.SessionBus.asyncCall({service:"org.monet.Utilities", path:"/NotchTools", iface:"org.monet.Utilities",
-                member:"Tool", signature:"(s)", arguments:[JSON.stringify({action:"run", key:key})]})
-            if (!["mic","output","keyboard-light","automatic-appearance","switch-appearance","clean","plain"].includes(key)) collapse()
+            runDesktopTool(key)
             return
         }
         navigation.openDetail("tool-" + key)
@@ -392,6 +484,16 @@ PlasmoidItem {
     function openTool(page) {
         runner.connectSource(helper + " utilities " + page)
         islandOpen = false
+    }
+    function openNotchSettings(page = "overview") {
+        root.collapse()
+        DBus.SessionBus.asyncCall({service:"org.monet.Utilities",path:"/Utilities",iface:"org.monet.Utilities",
+            member:"Present",signature:"(s)",arguments:[JSON.stringify(["notch-settings",page])]})
+    }
+    function openRadialMenu() {
+        root.collapse()
+        DBus.SessionBus.asyncCall({service:"org.monet.Utilities",path:"/Utilities",iface:"org.monet.Utilities",
+            member:"Present",signature:"(s)",arguments:[JSON.stringify(["radial"])]})
     }
     NotchTimer {
         id: countdown
@@ -436,6 +538,7 @@ PlasmoidItem {
     Component.onCompleted: { selectVisibleTab(); refreshTime() }
     onIslandOpenChanged: {
         if (!islandOpen) {
+            if (rememberRoute) lastRoute = currentRoute
             folding = false; pinned = false; navigation.dismiss(); pages.resetReveal(); overview = true; utilityPage = ""
             viewingAwake = false; searching = false; requestedNotice = 0; viewingDownloads = false; viewingShelf = false
             return
@@ -467,8 +570,6 @@ PlasmoidItem {
                     const state = JSON.parse(data.stdout)
                     root.sessionSelected = root.offerAgents && !!state.sessionSelected
                     root.agentsVisible = root.offerAgents && state.agentsVisible !== false
-                    root.codexKey = state.codexKey || ""
-                    root.claudeKey = state.claudeKey || ""
                     root.downloadPath = state.path
                     root.downloadFolder = state.folder
                     root.downloadAvailable = root.offerDownloads && state.available && state.folder.startsWith("file:///")
@@ -501,6 +602,28 @@ PlasmoidItem {
     compactRepresentation: C.AbstractButton {
         id: pill
         readonly property alias edgeAnchor: edge
+        readonly property bool hoveredForPreview: conceal.hovered
+        readonly property bool railHovered: leftRail.hovered || rightRail.hovered
+        readonly property bool revealed: conceal.shown
+        property real faceOpacity: conceal.shown ? 1 : 0
+        Behavior on faceOpacity { NumberAnimation { duration: root.motion && !conceal.shown ? 160 : 0 } }
+        NotchAutoHide {
+            id: conceal
+            // Plasma insets and clips applets. Observe the standalone panel's
+            // full input area, independently of the translated compact face.
+            parent: root.ownEdge ? (pill.Window.window?.contentItem ?? pill) : pill
+            anchors.fill: parent
+            z: 1000
+            automatic: Plasmoid.configuration.autoHide
+            occupied: root.islandOpen || root.editing || pill.visualFocus || shelfDrop.containsDrag
+            onHoveredChanged: {
+                if (hovered && !root.editing) {
+                    root.prepareSections = true
+                    if (companionLoader.item?.visits && !companionLoader.item.moment) companionLoader.item.greet()
+                }
+                else if (!hovered) leavePill.restart()
+            }
+        }
         Item {
             id: edge
             width: 1; height: 1
@@ -527,37 +650,26 @@ PlasmoidItem {
                 width: 33; height: 33; base: "#141416"
                 enabled: navigation.canGoBack; opacity: enabled ? 1 : 0.4
                 showsSections: pages.backShowsSections
-                onClicked: pages.back()
+                onClicked: { hoverPreview.adopt(); pages.back() }
             }
-            entries: root.visibleTabs.includes(2) ? [{key: "time", label: i18n("Time"), icon: "chronometer"}] : []
+            entries: root.railEntries("left")
             onPreviewRequested: key => root.preparePage(key)
-            onSelected: key => navigation.openTab(key)
+            onSelected: key => { hoverPreview.adopt(); navigation.openTab(key) }
         }
         IslandRail {
             id: rightRail
             visualParent: rightAnchor
             presented: popup.visible && root.railSpace && !root.editing
             reveal: pages.revealProgress
-            entries: root.sections.filter(item => ["controls", "mixer", "files"].includes(item.key))
+            entries: root.railEntries("right")
             onPreviewRequested: key => root.preparePage(key)
-            onSelected: key => navigation.openTab(key)
-        }
-        HoverHandler {
-            id: overPill
-            blocking: false
-            onHoveredChanged: {
-                if (hovered && !root.editing) {
-                    root.prepareSections = true
-                    if (companionLoader.item?.visits && !companionLoader.item.moment) companionLoader.item.greet()
-                }
-                else if (!hovered) leavePill.restart()
-            }
+            onSelected: key => { hoverPreview.adopt(); navigation.openTab(key) }
         }
         Timer { id: leavePill; interval: 160 }
         // On its own panel the compact face stays in place until the new surface actually covers it.
         readonly property bool sharedOpen: root.islandOpen && !root.ownEdge
         readonly property real covered: root.islandOpen && root.ownEdge ? Math.min(1, pages.revealProgress * 4) : 0
-        readonly property bool glance: (overPill.hovered || quickButtons.underPointer || leavePill.running || visualFocus) && !root.editing && !sharedOpen && covered < 1
+        readonly property bool glance: (conceal.hovered || leavePill.running || visualFocus) && !root.editing && !sharedOpen && covered < 1
         readonly property bool activeStrip: shelfDrop.containsDrag || preview.item?.noticeId > 0 || root.timerStrip || watch.registered || root.awakeStrip || !!root.media
         readonly property bool titleVisible: sharedOpen || glance || !!preview.item?.noticeId || root.timerStrip || watch.registered || root.awakeStrip || shelfDrop.containsDrag || (Plasmoid.configuration.wide && !!root.media)
         readonly property real stripWidth: glance ? root.restWidth : root.restWidth - 10
@@ -579,10 +691,11 @@ PlasmoidItem {
         }
         hoverEnabled: true
         leftPadding: 13; rightPadding: glance && quickButtons.visible ? 5 : 13; topPadding: 0; bottomPadding: 0
-        Accessible.name: root.toolTipMainText + ". " + root.toolTipSubText
+        Accessible.name: i18n("Monet Notch") + ". " + root.accessibleStatus
         Accessible.description: companionLoader.item?.showing ? i18n("Notch companion") : ""
         onClicked: root.openPill()
         background: Item {
+            opacity: pill.faceOpacity
             IslandSurface {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: pill.stripWidth
@@ -598,17 +711,29 @@ PlasmoidItem {
                 chin: 8
                 topColor: "#050506"
                 bottomColor: shelfDrop.containsDrag ? "#1d4c40" : "#09090b"
+                NotchEditHighlight {
+                    anchors.fill: parent
+                    applet: root
+                    active: root.editing
+                    standalone: root.ownEdge
+                    shoulder: parent.shoulder
+                    chin: parent.chin
+                }
             }
         }
         contentItem: RowLayout {
-            opacity: 1 - pill.covered
+            opacity: (1 - pill.covered) * pill.faceOpacity
             transform: Translate { y: root.ownEdge ? (Math.min(25, pill.Window.window?.height ?? pill.height) - (pill.Window.window?.height ?? pill.height)) / 2 : 0 }
             spacing: 5
             Image {
+                id: compactCover
                 visible: status === Image.Ready && !pill.sharedOpen && !!root.media && (!root.timerStrip || root.combined) && !root.awakeStrip && !watch.registered && !preview.item?.noticeId && !shelfDrop.containsDrag
                 Layout.preferredWidth: 20; Layout.preferredHeight: 20
                 source: root.media?.artUrl || ""; sourceSize: Qt.size(40, 40)
                 asynchronous: true; fillMode: Image.PreserveAspectCrop
+                layer.enabled: status === Image.Ready && GraphicsInfo.api !== GraphicsInfo.Software && GraphicsInfo.api !== GraphicsInfo.Unknown
+                layer.effect: MultiEffect { maskEnabled: true; maskSource: compactCoverMask }
+                Rectangle { id: compactCoverMask; anchors.fill: parent; radius: 4; visible: false; layer.enabled: compactCover.layer.enabled }
             }
             Kirigami.Icon {
                 visible: !companionLoader.item?.showing && (pill.titleVisible || pill.activeStrip) && (pill.sharedOpen || !root.media?.artUrl || !pill.activeStrip || root.timerStrip || root.awakeStrip || watch.registered || !!preview.item?.noticeId || shelfDrop.containsDrag)
@@ -631,25 +756,22 @@ PlasmoidItem {
                     : watch.registered ? i18n("Watching") : root.awakeStrip ? awakeModel.item.compactText : root.media?.track || i18n("Monet Notch"))
             }
             Loader {
-                Layout.preferredWidth: active ? 13 : 0; Layout.preferredHeight: 18
-                visible: active; active: Plasmoid.configuration.levels && root.playing && power.active && !root.islandOpen
+                objectName: "notchCompactWave"
+                Layout.preferredWidth: active ? 35 : 0; Layout.preferredHeight: 16
+                visible: active
+                active: conceal.shown && !!root.media && power.active && !root.islandOpen && !pill.sharedOpen &&
+                    !root.timerStrip && !root.awakeStrip && !watch.registered && !preview.item?.noticeId && !shelfDrop.containsDrag
                 source: "MusicLevel.qml"
                 onLoaded: {
                     item.sources = players
                     item.player = Qt.binding(() => root.media)
+                    item.playing = Qt.binding(() => root.playing)
+                    item.monitoring = Qt.binding(() => Plasmoid.configuration.levels)
+                    item.motion = Qt.binding(() => root.motion)
                 }
-            }
-            Kirigami.Icon {
-                visible: !!root.media && !pill.glance && !pill.sharedOpen && !root.timerStrip &&
-                    !root.awakeStrip && !watch.registered && !preview.item?.noticeId && !shelfDrop.containsDrag &&
-                    !(Plasmoid.configuration.levels && root.playing) && !companionLoader.item?.showing
-                Layout.preferredWidth: 14; Layout.preferredHeight: 14
-                source: root.playing ? "audio-volume-high" : "media-playback-pause"
-                color: "#c6c6cb"; isMask: true
             }
             RowLayout {
                 id: quickButtons
-                readonly property bool underPointer: playQuick.hovered || nextQuick.hovered || timerQuick.hovered || searchQuick.hovered
                 visible: pill.glance && Plasmoid.configuration.hoverControls
                 enabled: !root.islandOpen
                 spacing: 3
@@ -695,7 +817,7 @@ PlasmoidItem {
             anchors.fill: parent
             active: Plasmoid.configuration.companion && power.active
             sourceComponent: NotchCompanion {
-                presented: power.active && (root.islandOpen || (!preview.item?.noticeId && !shelfDrop.containsDrag))
+                presented: conceal.shown && power.active && (root.islandOpen || (!preview.item?.noticeId && !shelfDrop.containsDrag))
                 motionAllowed: root.motion
                 styleName: Plasmoid.configuration.companionStyle
                 shapeName: Plasmoid.configuration.companionShape
@@ -716,7 +838,7 @@ PlasmoidItem {
                 }
             }
         }
-        NotchGestureSurface { gestures: notchGestures }
+        NotchGestureSurface { gestures: notchGestures; enabled: conceal.shown }
         DropArea {
             id: shelfDrop
             enabled: root.offerShelf
@@ -733,6 +855,7 @@ PlasmoidItem {
         visualParent: root.ownEdge ? (root.compactRepresentationItem?.edgeAnchor ?? null) : root.compactRepresentationItem
         location: Plasmoid.location
         type: PlasmaCore.Dialog.AppletPopup
+        flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | (hoverPreview.previewing ? Qt.WindowDoesNotAcceptFocus : 0)
         backgroundHints: PlasmaCore.Dialog.NoBackground
         hideOnWindowDeactivate: false
         property bool receivedFocus: false
@@ -742,7 +865,7 @@ PlasmoidItem {
         }
         visible: root.islandOpen && !!visualParent
         onVisibleChanged: {
-            if (visible) { requestActivate(); pages.reveal() }
+            if (visible) { if (!hoverPreview.previewing) requestActivate(); pages.reveal() }
             else {
                 receivedFocus = false
                 if (root.islandOpen) root.islandOpen = false
@@ -750,6 +873,15 @@ PlasmoidItem {
         }
         mainItem: FocusScope {
         id: pages
+        HoverHandler { id: popupPointer; blocking: false }
+        // Observe presses without taking them away from sliders, buttons, or editors.
+        Item {
+            anchors.fill: parent; z: 10000
+            PointHandler {
+                onActiveChanged: if (active) hoverPreview.adopt()
+            }
+        }
+        IslandPopupOverlay {}
         readonly property Item companionSeat: Plasmoid.configuration.companionSide === "right" ? headerRight : headerLeft
         component CompanionSeat: Item {
             readonly property var buddy: root.compactRepresentationItem?.companion
@@ -767,7 +899,7 @@ PlasmoidItem {
         }
         width: root.surfaceWidth
         // Common pages share a native surface. Moving between tiles only changes its contents.
-        readonly property int wantedHeight: Math.min(Math.max(1, (root.Screen.height || 800) - 48), 316)
+        readonly property int wantedHeight: Math.min(Math.max(1, (root.Screen.height || 800) - 48), root.currentRoute === "music" ? (root.surfaceWidth < 402 ? 316 : 252) : root.currentRoute === "agents" ? 512 : root.currentRoute.startsWith("tool-") ? Math.max(316, Math.min(640, Plasmoid.configuration.toolHeight || 420)) : ["tools"].includes(root.currentRoute) ? 372 : 316)
         property real visualHeight: 1
         property real reservedHeight: 0
         height: Math.max(wantedHeight, reservedHeight)
@@ -775,7 +907,8 @@ PlasmoidItem {
         function resizePage() {
             resizeMotion.stop()
             reservedHeight = Math.max(visualHeight, wantedHeight)
-            if (!root.motion || !popup.visible || revealProgress < 1 || !visualHeight) {
+            if (!root.motion || !popup.visible || revealProgress < 1 || !visualHeight
+                    || root.currentRoute.startsWith("tool-") || body.current?.modelData === toolDetails) {
                 visualHeight = wantedHeight
                 reservedHeight = 0
                 return
@@ -811,13 +944,16 @@ PlasmoidItem {
             morph.duration = Math.max(1, Math.round(Kirigami.Units.longDuration * (goal ? 1.55 : 1.15) * Math.sqrt(distance)))
             morph.start()
         }
+        function focusPage() {
+            Qt.callLater(() => { if (root.overview) body.item?.focusFirst?.(); else sectionsButton.forceActiveFocus(Qt.OtherFocusReason) })
+        }
         function reveal() {
             resetReveal()
             // Let Plasma map the surface before advancing its first animation frame.
             resizePage()
             if (root.motion) awaitingFrame = true
             else revealProgress = 1
-            Qt.callLater(() => { if (root.overview) body.item?.focusFirst?.(); else sectionsButton.forceActiveFocus(Qt.OtherFocusReason) })
+            if (!hoverPreview.previewing) focusPage()
         }
         Connections {
             target: popup
@@ -867,7 +1003,7 @@ PlasmoidItem {
                 contentItem: Item {
                     ColumnLayout {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        y: 2; width: parent.width - 16; height: pages.wantedHeight - 12
+                        y: 2; width: parent.width - 16; height: pages.wantedHeight - 24
                         opacity: Math.max(0, (pages.revealProgress - 0.15) / 0.85)
                         transform: Translate { y: -5 * (1 - pages.revealProgress) }
                         spacing: 3
@@ -895,6 +1031,7 @@ PlasmoidItem {
                             IslandButton { id: searchButton; plain: true; visible: root.offerSearch; icon.name: "system-search"; text: i18n("Command Bar"); onClicked: root.searching = true }
                             IslandButton { plain: true; icon.name: "pin-symbolic"; text: root.pinned ? i18n("Unpin") : i18n("Keep open"); checked: root.pinned; onClicked: root.pinned = !root.pinned }
                             IslandButton { plain: true; icon.name: "application-menu"; text: i18n("Tools"); visible: root.visibleTabs.includes(7); onClicked: navigation.openTab("tools") }
+                            IslandButton { plain: true; icon.name: "configure"; text: i18n("Notch settings"); visible: root.overview; onClicked: root.openNotchSettings() }
                             IslandButton { plain: true; visible: root.overview && navigation.canGoBack
                                 icon.name: "window-close"; text: i18n("Close"); onClicked: root.collapse() }
                         }
@@ -909,6 +1046,7 @@ PlasmoidItem {
                                 awakePage, mixerPage, controlsPage, systemPage, capturesPage, pairedPage, toolPage, agentsPage, notificationsPage, sessionDetails, codexDetails, claudeDetails, toolDetails]
                             reusable: [musicPage, timerPage, mixerPage, toolPage, controlsPage, systemPage]
                             privatePages: [clipboardPage, cameraPage, activityPage, watchPage, notificationsPage, toolDetails]
+                            externalPages: [toolDetails]
                             navigationDirection: root.slideDirection
                             requested: root.overview ? sectionPage : root.utilityPage === "agent-session" ? sessionDetails
                                 : root.utilityPage === "agent-codex" ? codexDetails : root.utilityPage === "agent-claude" ? claudeDetails
@@ -956,7 +1094,7 @@ PlasmoidItem {
         C.Popup {
             id: searchPopup
             parent: skin
-            x: 8; y: 5; width: pages.width - 16; height: pages.height - 16
+            x: 8; y: 5; width: skin.width - 16; height: skin.height - 16
             padding: Kirigami.Units.smallSpacing
             background: Rectangle {
                 radius: Kirigami.Units.cornerRadius
@@ -1016,7 +1154,7 @@ PlasmoidItem {
                 if (key === "calendar") return Qt.formatDate(root.agendaDay, "ddd d MMM")
                 return ""
             }
-            onSelected: key => navigation.openTab(key)
+            onSelected: key => { hoverPreview.adopt(); navigation.openTab(key) }
             onPreviewRequested: key => root.preparePage(key)
         }
     }
@@ -1031,7 +1169,21 @@ PlasmoidItem {
             onAddFile: url => fileShelf.change({action: "add", urls: [url]})
         }
     }
-    Component { id: controlsPage; IslandControls { soundAvailable: tools.offers("sound"); brightnessAvailable: tools.offers("display") } }
+    Component {
+        id: controlsPage
+        IslandControls {
+            soundAvailable: tools.offers("sound"); brightnessAvailable: tools.offers("display")
+            shortcuts: root.sections.filter(item => ["time", "calendar", "notes", "mixer"].includes(item.key)).concat(
+                root.offerAwake ? [{key: "awake", label: i18n("Keep awake"), icon: "system-suspend-inhibited", color: "#ffd477"}] : [],
+                tools.offers("screenshot") ? [{key: "tool-screenshot", label: i18n("Screenshot"), icon: "spectacle", color: "#a1d9ff"}] : [],
+                tools.offers("record") ? [{key: "tool-record", label: i18n("Record screen"), icon: "media-record", color: "#ff8797"}] : [])
+            onSelected: key => {
+                // These two actions also work before the Tools catalogue has loaded.
+                if (key === "tool-screenshot" || key === "tool-record") root.selectTool(key.slice(5))
+                else navigation.openDetail(key)
+            }
+        }
+    }
     Component {
         id: pairedPage
         GridLayout {
@@ -1150,6 +1302,7 @@ PlasmoidItem {
         Music {
             id: playerPage
             player: visible ? root.media : null; sources: players; playing: visible && root.playing
+            liveLevels: Plasmoid.configuration.levels
             view: 0
             Binding {
                 target: playerPage; property: "view"; value: root.musicView
@@ -1188,11 +1341,14 @@ PlasmoidItem {
     Component {
         id: toolPage
         ToolDirectory {
+            motion: root.motion
             rows: root.toolRows; groups: root.toolGroups; hidden: tools.hidden; favorites: tools.favorites
             group: root.toolGroup; query: root.toolQuery
             onFilterChanged: (group, query) => { root.toolGroup = group; root.toolQuery = query }
             onLoaded: (rows, groups) => root.catalogReady(rows, groups)
             onSelected: key => root.selectTool(key)
+            onManageRequested: root.openNotchSettings("tools")
+            onRadialRequested: root.openRadialMenu()
         }
     }
     Component {
@@ -1200,7 +1356,8 @@ PlasmoidItem {
         NotchTool {
             tool: root.utilityPage.startsWith("tool-") ? root.utilityPage.slice(5) : ""
             ownerId: String(Plasmoid.id)
-            active: root.islandOpen && !root.folding && power.active && !!tool && tools.offers(tool) && body.progress === 1 && body.current?.item === this
+            active: root.islandOpen && !root.folding && !root.searching && power.active && !!tool && tools.offers(tool)
+                && pages.revealProgress === 1 && !resizeMotion.running && body.progress === 1 && body.current?.item === this
             screenName: Screen.name
             property point popupPosition: Qt.point(popup.x, popup.y)
             onPopupPositionChanged: Qt.callLater(reposition)
@@ -1209,69 +1366,33 @@ PlasmoidItem {
         }
     }
     component ProviderDetail: AgentDetail {
+        usage: provider === "codex" ? codexUsage : provider === "claude" ? claudeUsage : null
         presented: power.active && root.islandOpen && root.utilityPage === "agent-" + provider
         onSettingsChanged: root.refreshActivity()
     }
     Component { id: sessionDetails; ProviderDetail { provider: "session" } }
     Component { id: codexDetails; ProviderDetail { provider: "codex" } }
     Component { id: claudeDetails; ProviderDetail { provider: "claude" } }
-    component AgentReadings: ColumnLayout {
-        required property bool showReadings
-        SessionButton {
-            Layout.fillWidth: true
-            widgetId: String(Plasmoid.id)
-            active: root.agentsVisible && root.sessionSelected && showReadings && power.active
-            onClicked: {
-                navigation.openDetail("agent-session")
-            }
-        }
-        Repeater {
-            model: ["codex", "claude"]
-            delegate: AccountLimitButton {
-                required property string modelData
-                Layout.fillWidth: true
-                active: root.agentsVisible && showReadings
-                generation: modelData === "claude" ? root.claudeKey : root.codexKey
-                command: root.helper + " notch-" + modelData + "-limits"
-                pendingLabel: modelData === "claude" ? i18n("Checking Claude Code limits…") : i18n("Checking Codex limits…")
-                onPreferencesChanged: root.refreshActivity()
-                onClicked: {
-                    navigation.openDetail("agent-" + modelData)
-                }
-            }
-        }
-    }
     Component {
         id: agentsPage
-        ColumnLayout {
-            spacing: 6
-            C.Label { text: i18n("Session activity"); font.bold: true }
-            AgentReadings { Layout.fillWidth: true; showReadings: root.agentPageOpen }
-            C.Label {
-                visible: !root.sessionSelected && !root.codexKey && !root.claudeKey
-                Layout.fillWidth: true; wrapMode: Text.Wrap; color: "#c4c4ca"
-                text: i18n("Choose a session file to follow its latest activity, or connect Codex or Claude Code usage readings.")
+        TimeScrollView {
+            id: agentScroll
+            C.ScrollBar.vertical.policy: C.ScrollBar.AlwaysOn
+            C.ScrollBar.vertical.active: true
+            AgentOverview {
+                width: agentScroll.availableWidth
+                codex: codexUsage; claude: claudeUsage
+                history: agentHistory
+                presented: root.agentPageOpen && power.active
+                sessionSelected: root.agentsVisible && root.sessionSelected
+                widgetId: String(Plasmoid.id)
+                sessionReading: root.lastSessionReading
+                onSessionReadingChanged: root.lastSessionReading = sessionReading
+                onSelected: provider => navigation.openDetail("agent-" + provider)
             }
-            RowLayout {
-                Layout.fillWidth: true; spacing: 6
-                Repeater {
-                    model: [
-                        {key:"session", label:i18n("Session file"), icon:"document-open", detail:i18n("Session activity"), color:"#bca2ff"},
-                        {key:"codex", label:"Codex", icon:"utilities-terminal", detail:i18n("Account limits"), color:"#93dbbf"},
-                        {key:"claude", label:"Claude Code", icon:"utilities-terminal", detail:i18n("Account limits"), color:"#f1b38e"}
-                    ]
-                    IslandButton {
-                        required property var modelData
-                        tile: true; Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.minimumWidth: 0
-                        text: modelData.label; detail: modelData.detail; icon.name: modelData.icon; tint: modelData.color
-                        Accessible.description: detail
-                        onClicked: navigation.openDetail("agent-" + modelData.key)
-                    }
-                }
-            }
-            Item { Layout.fillHeight: true }
         }
     }
+
     Component {
         id: notificationsPage
         NoticeInbox {
@@ -1293,12 +1414,20 @@ PlasmoidItem {
                 else notices.back()
             }
 
-            Repeater {
-                model: notices.inDetail ? [] : power.batteries
-                C.Label {
+            ListView {
+                visible: !notices.inDetail && count > 0
+                Layout.fillWidth: true; Layout.preferredHeight: 40
+                orientation: ListView.Horizontal; spacing: 6; clip: true
+                model: power.batteries
+                delegate: Rectangle {
                     required property var modelData
-                    Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText
-                    text: i18n("%1 · %2%", modelData.name || modelData.kind, modelData.level)
+                    width: Math.min(180,batteryRow.implicitWidth + 20); height: 36; radius: 10; color: "#17171b"
+                    RowLayout {
+                        id: batteryRow; anchors.fill: parent; anchors.margins: 8; spacing: 7
+                        IslandGlyph { source: "battery"; color: modelData.level < 20 ? "#ffad53" : "#b8cbbb"; Layout.preferredWidth: 18; Layout.preferredHeight: 18 }
+                        Text { Layout.fillWidth: true; text: modelData.name || modelData.kind; textFormat: Text.PlainText; elide: Text.ElideRight; font.pixelSize: 10; color: "#aaaab2" }
+                        Text { text: modelData.level + "%"; font.pixelSize: 12; color: "white" }
+                    }
                 }
             }
             NoticeInbox {
@@ -1309,28 +1438,23 @@ PlasmoidItem {
                 onPreviewFinished: root.requestedNotice = 0
                 onActivated: root.islandOpen = false
             }
-            AgentReadings {
-                Layout.fillWidth: true
-                showReadings: root.activityOpen && !root.viewingDownloads && !notices.inDetail
-            }
             C.Label {
                 readonly property string latestName: downloadFeed.item?.latestFinished ?? ""
-                Layout.fillWidth: true; visible: !notices.inDetail && !!latestName; elide: Text.ElideMiddle
+                font.pixelSize: 10; color: "#9999a4"; Layout.fillWidth: true; visible: !notices.inDetail && !!latestName; elide: Text.ElideMiddle
                 textFormat: Text.PlainText
                 text: latestName ? i18n("Latest download · %1", latestName) : ""
             }
             RowLayout {
                 visible: !notices.inDetail
-                C.Button { visible: root.offerDownloads; text: i18n("Downloads"); onClicked: navigation.openDetail("downloads") }
-                C.Button { visible: root.agentsVisible && !root.codexKey && !root.claudeKey; text: i18n("Agent usage"); onClicked: navigation.openDetail("agents") }
-                C.Button {
-                    visible: root.offerWatch
+                IslandButton { caption: true; visible: root.offerDownloads; text: i18n("Downloads"); onClicked: navigation.openDetail("downloads") }
+                IslandButton { caption: true; visible: root.agentsVisible; text: i18n("Agent usage"); onClicked: navigation.openDetail("agents") }
+                IslandButton {
+                    caption: true; visible: root.offerWatch
                     text: i18n("Watch")
                     onClicked: {
                         if (watch.registered) navigation.openDetail("watch")
                         else {
-                            runner.connectSource(root.helper + " utilities watch " + Plasmoid.id)
-                            root.islandOpen = false
+                            root.selectTool("watch")
                         }
                     }
                 }
@@ -1367,8 +1491,9 @@ PlasmoidItem {
         id: calendarPage
         ColumnLayout {
             id: calendar
-            readonly property bool editingEvent: !!dailyAgenda.item?.editingEvent
-            function closeEditor() { dailyAgenda.item?.closeEditor() }
+            readonly property bool editingEvent: edit.visible || !!dailyAgenda.item?.editingEvent
+            function closeEditor() { if (edit.visible) edit.close(); else dailyAgenda.item?.closeEditor() }
+            onEnabledChanged: if (!enabled) edit.close()
             readonly property bool split: width >= 410 && height >= 235 && root.offerAgenda
             spacing: 5
             NoteStore { id: notes; helper: root.helper; Component.onCompleted: refresh() }
@@ -1385,7 +1510,7 @@ PlasmoidItem {
                     property bool ready: false
                     Component.onCompleted: { choose(root.agendaDay); ready = true }
                     onChosenChanged: if (ready) root.agendaDay = chosen
-                    onOpened: day => { edit.day = day; entry.text = notes.noteFor(day); edit.open() }
+                    onOpened: day => { edit.day = day; edit.text = notes.noteFor(day); edit.open() }
                 }
                 Rectangle {
                     visible: calendar.split
@@ -1411,17 +1536,10 @@ PlasmoidItem {
                 text: i18n("Upcoming events")
                 onClicked: { root.agendaDay = month.chosen; navigation.openDetail("agenda") }
             }
-            C.Dialog {
+            DayNoteDialog {
                 id: edit
-                property date day
                 parent: pages
-                popupType: C.Popup.Item
-                anchors.centerIn: parent
-                width: Math.max(180, parent.width - 26)
-                title: Qt.formatDate(day, Qt.locale().dateFormat(Locale.ShortFormat))
-                standardButtons: C.Dialog.Save | C.Dialog.Cancel
-                C.TextArea { id: entry; width: parent.width; wrapMode: TextEdit.Wrap; placeholderText: i18n("Day note") }
-                onAccepted: notes.write(day, entry.text)
+                onSaved: (day, text) => notes.write(day, text)
             }
         }
     }

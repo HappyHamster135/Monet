@@ -92,7 +92,8 @@ class Calendars(QWidget):
             dialog.accept()
         buttons.accepted.connect(accept)
         buttons.rejected.connect(dialog.reject)
-        dialog.exec()
+        from inline_dialogs import present_dialog
+        present_dialog(dialog,self)
 
     def remove(self):
         item = self.list.currentItem()

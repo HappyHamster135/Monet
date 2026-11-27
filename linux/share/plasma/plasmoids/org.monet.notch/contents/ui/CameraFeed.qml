@@ -7,6 +7,7 @@ import org.kde.ki18n as I18n
 
 ColumnLayout {
     id: feed
+    readonly property bool menuOpen: picker.popup.visible
     signal stopRequested()
     readonly property bool software: GraphicsInfo.api === GraphicsInfo.Software
     property bool opened: false
@@ -125,8 +126,9 @@ ColumnLayout {
     }
     RowLayout {
         Layout.fillWidth: true
-        C.ComboBox {
+        IslandComboBox {
             id: picker
+            popupBounds: feed
             objectName: "cameraDevicePicker"
             Layout.fillWidth: true
             Layout.minimumWidth: 0
@@ -143,8 +145,8 @@ ColumnLayout {
             }
         }
         Item { visible: !picker.visible; Layout.fillWidth: true }
-        C.ToolButton {
-            text: feed.started ? i18n("Stop camera") : i18n("Back")
+        IslandButton {
+            plain: true; text: feed.started ? i18n("Stop camera") : i18n("Back")
             icon.name: feed.started ? "media-playback-stop" : "go-previous"
             onClicked: feed.stopRequested()
         }
@@ -152,7 +154,7 @@ ColumnLayout {
     Rectangle {
         Layout.fillWidth: true
         Layout.fillHeight: true
-        color: "#171719"
+        color: "#171719"; radius: 12
         clip: true
         Media.VideoOutput {
             id: video
@@ -197,7 +199,7 @@ ColumnLayout {
                 text: !feed.inputs.length ? i18n("No camera connected.")
                     : feed.problem || (feed.started ? i18n("Starting camera…") : i18n("Camera stopped."))
             }
-            C.Button {
+            IslandButton { caption: true;
                 objectName: "retryCamera"
                 Layout.alignment: Qt.AlignHCenter
                 visible: !feed.started && picker.currentIndex >= 0

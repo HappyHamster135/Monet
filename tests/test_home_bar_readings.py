@@ -47,6 +47,10 @@ Item {
     property alias percentBar: charge.showBar
     property alias percentValue: charge.showValue
     property bool hasSensor: cpu.sensor !== null
+    property bool monitorGpu: false
+    property bool hasGpuSensor: gpu.sensor !== null
+    property string gpuDisplay: gpu.display
+    QtObject { id: policy; function allows(id) { return scene.monitorGpu } }
     ReadingNames { id: labels }
     ReadingStrip {
         id: strip; width: 120; height: 44
@@ -56,6 +60,10 @@ Item {
     ReadingCell {
         id: charge; names: labels; reading: "battery/charge"
         power: scene.power; sampling: scene.sampling; style: scene.style
+    }
+    ReadingCell {
+        id: gpu; names: labels; reading: "gpu/gpu1/usage"; power: ({}); sampling: scene.sampling; style: scene.style
+        graphicsPolicy: policy
     }
     ReadingCell {
         id: cpu; names: labels; reading: "cpu/all/usage"; power: ({}); sampling: scene.sampling; style: scene.style
@@ -110,3 +118,12 @@ Item {
         self.assertTrue(self.scene.property("hasSensor"))
         self.scene.setProperty("sampling", False)
         self.assertFalse(self.scene.property("hasSensor"))
+
+    def test_paused_gpu_does_not_subscribe_or_invent_zero_load(self):
+        self.scene.setProperty('sampling', True)
+        self.assertFalse(self.scene.property('hasGpuSensor'))
+        self.assertEqual(self.scene.property('gpuDisplay'), 'Paused')
+        self.scene.setProperty('monitorGpu', True)
+        self.assertTrue(self.scene.property('hasGpuSensor'))
+        self.scene.setProperty('monitorGpu', False)
+        self.assertFalse(self.scene.property('hasGpuSensor'))

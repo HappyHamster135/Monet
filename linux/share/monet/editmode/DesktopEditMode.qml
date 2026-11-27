@@ -10,8 +10,10 @@ Item {
     id: editMode
 
     readonly property Item page: monet.item || kde.item
-    property real centerX: page ? page.centerX : Math.round(width / 2)
-    property real centerY: page ? page.centerY : Math.round(height / 2)
+    property real centerX: root.width / 2
+    property real centerY: root.height / 2
+
+    Binding { target: containmentParent; property: "scaleFactor"; value: 1; restoreMode: Binding.RestoreBindingOrValue }
 
     Loader {
         id: monet

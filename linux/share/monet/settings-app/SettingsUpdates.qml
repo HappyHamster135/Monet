@@ -335,6 +335,7 @@ ColumnLayout {
             && !(sheet.wentBack.version && sheet.wentBack.version === sheet.previous.version)
         SettingsControls.SettingRow {
             id: backRow
+            objectName: "previousBuildRow"
             property bool asking: false
             tone: look
             divider: false
@@ -342,8 +343,7 @@ ColumnLayout {
                 : i18n("Go back to %1", sheet.previousName())
             detail: sheet.previous.pending === true ? i18n("The one you're using now stays too, to come back to.")
                 : backRow.asking ? i18n("It starts the next time you restart. Your files and apps stay as they are.")
-                : sheet.previous.date ? i18n("From %1. If something stopped working after an update, the one before is still here.", sheet.previous.date)
-                : i18n("If something stopped working after an update, the one before is still here.")
+                : sheet.previousDetail()
             Row {
                 spacing: 8
                 SettingsControls.Pill {

@@ -136,6 +136,23 @@ class SettingsNavigation(unittest.TestCase):
                 self.assertIsNotNone(self.window.findChild(QObject, "settingsPageLoader").property("item"))
                 self.assertFalse(self.errors, "\n".join(self.errors))
 
+    def test_game_function_keys_show_actual_readiness_and_use_saved_preference(self):
+        self.helper.replies['gaming'] = json.dumps({'functionKeys': {'supported': True, 'ready': False, 'enabled': True}})
+        select_settings_page(self.window, 'games')
+        QTest.qWait(150)
+        row = self.window.findChild(QObject, 'gameFunctionKeysSetting')
+        self.assertIsNotNone(row)
+        self.assertFalse(row.property('tappable'))
+        self.window.setProperty('gameInfo', {'functionKeys': {'supported': True, 'ready': True, 'enabled': True}})
+        QTest.qWait(50)
+        self.assertTrue(row.property('tappable'))
+        self.assertIn('Hold Fn', row.property('detail'))
+        self.helper.replies['game-function-keys'] = json.dumps({'functionKeys': {'supported': True, 'ready': True, 'enabled': False}})
+        QMetaObject.invokeMethod(row, 'tapped')
+        QTest.qWait(80)
+        self.assertEqual(self.helper.commands[-1][1:], ['game-function-keys', 'off'])
+        self.assertFalse(self.window.property('gameInfo').toVariant()['functionKeys']['enabled'])
+
     def test_mouse_settings_opens_the_wheel_profile_editor(self):
         from PySide6.QtQuick import QQuickItem
         select_settings_page(self.window, "input")
@@ -144,6 +161,26 @@ class SettingsNavigation(unittest.TestCase):
         row.forceActiveFocus()
         QTest.keyClick(self.window, Qt.Key_Return)
         self.assertIn(["helper", "utilities", "wheel-scrolling"], self.helper.commands)
+
+    def test_battery_details_distinguish_charging_from_drain(self):
+        self.helper.replies['status'] = json.dumps(dict(battery=70, plugged=False, charging=False,
+            minutes=90, watts=22.1, energyWh=33.1, fullWh=47.4, batteryHealth=90.2))
+        select_settings_page(self.window, 'power')
+        QTest.qWait(200)
+        energy = self.window.findChild(QObject, 'batteryEnergyRow')
+        draw = self.window.findChild(QObject, 'batteryDrawRow')
+        health = self.window.findChild(QObject, 'batteryHealthRow')
+        self.assertIsNotNone(energy)
+        self.assertIn('33.1', energy.property('detail'))
+        self.assertIn('47.4', energy.property('detail'))
+        self.assertIn('22.1', draw.property('title'))
+        self.assertIn('90%', health.property('title'))
+        state = self.window.findChild(QObject, 'batteryStatusRow')
+        self.assertIn('current usage', state.property('detail'))
+        self.window.setProperty('info', dict(battery=80, plugged=True, charging=False, minutes=None, watts=None,
+            energyWh=37.7, fullWh=47.4, batteryHealth=90.2))
+        self.assertFalse(draw.property('visible'))
+        self.assertIn('charging paused', state.property('detail'))
 
     def test_input_deep_link_loads_devices_when_window_is_first_exposed(self):
         self.activity = self.games.WindowActivity()

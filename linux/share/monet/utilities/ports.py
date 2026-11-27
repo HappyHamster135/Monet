@@ -12,7 +12,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QDialog, QDialogBut
 from actions import tr
 from local_ports import Listener, Process, selected_branch
 
-WORKER = [sys.executable, str(Path(__file__).with_name("local_ports.py"))]
+import local_ports
+WORKER = [sys.executable, str(Path(local_ports.__file__))]
 
 
 def table(headers):
@@ -115,10 +116,12 @@ class ProcessDialog(QDialog):
         question.addButton(QMessageBox.Cancel).setText(tr("Cancel"))
         proceed = question.addButton(verb, QMessageBox.DestructiveRole)
         question.setDefaultButton(QMessageBox.Cancel)
-        question.exec()
-        if question.clickedButton() is proceed:
-            self.accept()
-            self.page.apply_action(self.listener, self.members, selected, include, action, self.apps.get(selected.pid))
+        def confirmed(_):
+            if question.clickedButton() is proceed:
+                self.accept()
+                self.page.apply_action(self.listener, self.members, selected, include, action, self.apps.get(selected.pid))
+        from inline_dialogs import present_dialog
+        present_dialog(question,self,finished=confirmed)
 
 
 class ProcessTable(QAbstractTableModel):
@@ -321,8 +324,9 @@ class ProcessBrowser(QWidget):
             if self.isVisible():
                 self.detail = ProcessDialog(self, entry if self.ports else None, members)
                 self.detail.finished.connect(self.close_detail)
-                self.detail.open()
                 self.find_apps(self.detail)
+                from inline_dialogs import present_dialog
+                present_dialog(self.detail,self)
         self.home.worker([*WORKER, "tree", str(owner.pid), str(owner.start)], loaded, failed)
 
     def find_apps(self, dialog):

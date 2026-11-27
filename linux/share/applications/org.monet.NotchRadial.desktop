@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Radial menu
+Icon=view-more
+Exec=@LIBEXECDIR@/monet-utilities radial
+NoDisplay=true
+StartupNotify=false
+X-KDE-Shortcuts=Ctrl+Shift+Space

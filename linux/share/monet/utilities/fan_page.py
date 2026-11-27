@@ -283,19 +283,20 @@ class Fans(QWidget):
         uid = (self.mode.currentData() or "").removeprefix("profile/")
         old = self.profiles[uid] if existing else {}
         dialog = CurveEditor(self.sensors, old, self)
-        try:
-            if dialog.exec() != QDialog.Accepted:
-                return
+        from inline_dialogs import present_dialog
+        def accepted():
             source, temp = dialog.sensor.currentData()
             graph = dict(old, uid=old.get("uid", str(uuid4())), name=dialog.name.text().strip(), p_type="Graph",
                          function_uid=old.get("function_uid", "0"), speed_profile=dialog.points(),
                          temp_source={"device_uid": source, "temp_name": temp})
-        finally:
-            dialog.deleteLater()
-        if existing and QMessageBox.question(self, tr("Update temperature curve"),
-                tr("Save changes for every fan using this curve?")) != QMessageBox.Yes:
-            return
+            if existing:
+                question = QMessageBox(QMessageBox.Question, tr("Update temperature curve"),
+                    tr("Save changes for every fan using this curve?"), QMessageBox.Yes | QMessageBox.No, self)
+                present_dialog(question,self,finished=lambda result:self.save_curve(uid,old,graph,existing) if result == QMessageBox.Yes else None)
+            else:self.save_curve(uid,old,graph,existing)
+        present_dialog(dialog,self,accepted)
 
+    def save_curve(self,uid,old,graph,existing):
         def save():
             live = self.api.request("GET", "/profiles")["profiles"]
             if existing:
@@ -322,11 +323,13 @@ class Fans(QWidget):
         self.task(save, saved)
 
     def enter_token(self):
-        token, ok = QInputDialog.getText(self, tr("Connect to CoolerControl"),
-                tr("Enter an access token from CoolerControl → Access Protection."), QLineEdit.Password)
-        if ok and token.strip() and token.strip().isascii() and token.strip().isprintable():
-            self.api.token = token.strip()
-            self.reload()
+        from inline_dialogs import text_prompt
+        def accepted(token):
+            if token.strip() and token.strip().isascii() and token.strip().isprintable():
+                self.api.token = token.strip()
+                self.reload()
+        text_prompt(self,tr("Connect to CoolerControl"),
+                    tr("Enter an access token from CoolerControl → Access Protection."),accepted,password=True)
 
     def open_controller(self):
         import shutil

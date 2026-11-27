@@ -325,4 +325,5 @@ class WallpaperPage(QWidget):
         buttons.rejected.connect(dialog.reject)
         box.addWidget(buttons)
         dialog.resize(440, 290)
-        dialog.exec()
+        from inline_dialogs import present_dialog
+        present_dialog(dialog,self)

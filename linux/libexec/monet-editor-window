@@ -1,0 +1,92 @@
+#!/usr/bin/python3
+"""Remember only Monet editor window geometry, including native Wayland positions."""
+import importlib.machinery
+import importlib.util
+import json
+import os
+from pathlib import Path
+import re
+import sys
+import tempfile
+from urllib.parse import unquote
+
+LIBEXECDIR = "@LIBEXECDIR@"
+STATE = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "monet/editor-windows"
+
+
+def placement(saved, areas, current):
+    """Restore logical pixels on the original output, clamped after hot-unplug."""
+    area = next((a for a in areas if a['name'] == saved.get('screen')), current)
+    old_area = saved.get('origin', saved.get('area', area))
+    origin = area.get('origin', area)
+    # Auto-hidden bars change work-area margins, not the monitor origin.
+    same_output = area.get('name') == saved.get('screen')
+    dx = 0 if same_output and 'origin' not in saved else origin['x'] - old_area['x']
+    dy = 0 if same_output and 'origin' not in saved else origin['y'] - old_area['y']
+    rect = saved['rect']
+    width = min(max(320, rect['width']), area['width'])
+    height = min(max(300, rect['height']), area['height'])
+    return dict(x=area['x'] + max(0, min(rect['x'] + dx - area['x'], area['width'] - width)),
+                y=area['y'] + max(0, min(rect['y'] + dy - area['y'], area['height'] - height)),
+                width=width, height=height)
+
+
+def script_runner():
+    loader = importlib.machinery.SourceFileLoader('monet_editor_resume', str(Path(LIBEXECDIR) / 'monet-resume'))
+    module = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
+    loader.exec_module(module)
+    return module.kwin_script
+
+
+def run(action, key, caption, ident='', runner=None):
+    if action not in ('capture', 'restore', 'activate') or not re.fullmatch(r'(Panel|Widgets)-[0-9]{1,10}', key):
+        return {'ok': False}
+    caption = unquote(caption)
+    if not caption or len(caption) > 200 or (ident and not re.fullmatch(r'[0-9a-fA-F{}-]{32,38}', ident)):
+        return {'ok': False}
+    runner = runner or script_runner()
+    # The window ID pins later calls to this exact instance, even if another
+    # editor has the same translated caption on a different monitor.
+    find = 'const w = workspace.stackingOrder.slice().reverse().find(w => w.normalWindow && String(w.resourceClass).includes("plasmashell") && '
+    find += ('String(w.internalId) === ' + json.dumps(ident) if ident else 'w.caption === ' + json.dumps(caption)) + ');'
+    if action == 'activate':
+        result = runner(find + 'if(w) { w.minimized = false; workspace.activeWindow = w; } reply(w ? {id:String(w.internalId)} : null);')
+        return {'ok': bool(result), 'id': result.get('id', '') if result else ''}
+    info = runner(find + 'reply(w ? {id:String(w.internalId), rect:rect(w.frameGeometry), area:rect(workspace.clientArea(KWin.MaximizeArea,w)), screen:w.output.name, origin:rect(w.output.geometry), mode:Number(w.maximizeMode), outputs:workspace.screens.map(o=>Object.assign({name:o.name,origin:rect(o.geometry)},rect(workspace.clientArea(KWin.MaximizeArea,o,workspace.currentDesktop))))} : null);')
+    if not info:
+        return {'ok': False}
+    path = STATE / (key + '.json')
+    if action == 'capture':
+        # Maximizing must not overwrite the normal window's saved dimensions.
+        if not info['mode']:
+            STATE.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(mode='w', dir=STATE, delete=False) as stream:
+                json.dump(info, stream)
+                temporary = Path(stream.name)
+            temporary.replace(path)
+    else:
+        try:
+            saved = json.loads(path.read_text())
+            rect = placement(saved, info['outputs'], dict(info['area'],name=info['screen'],origin=info.get('origin',info['area'])))
+        except (OSError, ValueError, KeyError, TypeError):
+            rect = None
+        if rect:
+            bounds = json.dumps(rect)
+            if info['mode']:
+                # Give a newly maximized Wayland window its normal geometry too,
+                # so Restore returns to the user's position instead of (0, 0).
+                mode = int(info['mode'])
+                runner(find + 'if(w) { w.setMaximize(false,false); w.frameGeometry = ' + bounds
+                       + '; w.setMaximize(' + json.dumps(bool(mode & 1)) + ',' + json.dumps(bool(mode & 2))
+                       + ',' + bounds + '); } reply(!!w);')
+            else:
+                runner(find + 'if(w) w.frameGeometry = ' + bounds + '; reply(!!w);')
+    return {'ok': True, 'id': info['id']}
+
+
+if __name__ == '__main__':
+    try:
+        result = run(*sys.argv[1:])
+    except (OSError, RuntimeError, ImportError, TypeError, ValueError, KeyError):
+        result = {'ok': False}
+    print(json.dumps(result))
